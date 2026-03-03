@@ -1,0 +1,53 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --ro-black: #1A1A1A;
+    --ro-gold: #C9A84C;
+    --ro-gold-light: #D4B965;
+    --ro-gold-dark: #A88A3D;
+    --ro-white: #FFFFFF;
+    --font-heading: 'Oswald', sans-serif;
+    --font-body: 'Barlow', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-ro-black text-ro-white font-body;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection { background-color: rgba(201,168,76,0.3); color: #FFFFFF; }
+}
+
+@layer components {
+  .blueprint-overlay {
+    background-image: linear-gradient(rgba(201,168,76,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,168,76,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .steel-texture {
+    background: linear-gradient(135deg, rgba(26,26,26,1) 0%, rgba(42,42,42,1) 25%, rgba(26,26,26,1) 50%, rgba(35,35,35,1) 75%, rgba(26,26,26,1) 100%);
+  }
+  .gold-line { @apply h-[2px] bg-gradient-to-r from-transparent via-ro-gold to-transparent; }
+  .caution-stripe {
+    background: repeating-linear-gradient(-45deg, #C9A84C, #C9A84C 10px, #1A1A1A 10px, #1A1A1A 20px);
+  }
+  .gsap-build-section { opacity: 0; transform: translateY(60px); }
+  .gsap-build-section.is-built { opacity: 1; transform: translateY(0); }
+  .gsap-beam { opacity: 0; transform: translateY(-100px) rotate(2deg); }
+  .gsap-wall { opacity: 0; clip-path: inset(100% 0 0 0); }
+  .gsap-bolt { opacity: 0; transform: scale(0) rotate(180deg); }
+  .gsap-crane-drop { opacity: 0; transform: translateY(-200px); }
+  .gsap-slide-left { opacity: 0; transform: translateX(-100px); }
+  .gsap-slide-right { opacity: 0; transform: translateX(100px); }
+  .gsap-scaffold { opacity: 0; clip-path: inset(100% 0 0 0); }
+}
+
+@layer utilities {
+  .text-shadow-gold { text-shadow: 0 0 20px rgba(201,168,76,0.3), 0 0 40px rgba(201,168,76,0.1); }
+  .border-gold-glow { box-shadow: 0 0 15px rgba(201,168,76,0.15), inset 0 0 15px rgba(201,168,76,0.05); }
+  .gradient-text-gold { @apply bg-clip-text text-transparent bg-gradient-to-r from-ro-gold-dark via-ro-gold to-ro-gold-light; }
+}
