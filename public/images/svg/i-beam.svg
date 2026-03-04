@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 40" width="800" height="40">
+  <defs>
+    <linearGradient id="beamGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#D4B965"/>
+      <stop offset="20%" style="stop-color:#C9A84C"/>
+      <stop offset="50%" style="stop-color:#8A7233"/>
+      <stop offset="80%" style="stop-color:#C9A84C"/>
+      <stop offset="100%" style="stop-color:#D4B965"/>
+    </linearGradient>
+    <linearGradient id="flangeGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#C9A84C"/>
+      <stop offset="100%" style="stop-color:#A88A3D"/>
+    </linearGradient>
+  </defs>
+  <!-- Top flange -->
+  <rect x="0" y="0" width="800" height="6" rx="1" fill="url(#flangeGold)"/>
+  <!-- Web (vertical center) -->
+  <rect x="0" y="6" width="800" height="28" fill="url(#beamGold)" opacity="0.6"/>
+  <!-- Web detail lines -->
+  <line x1="0" y1="20" x2="800" y2="20" stroke="#C9A84C" stroke-width="0.5" opacity="0.3"/>
+  <!-- Bottom flange -->
+  <rect x="0" y="34" width="800" height="6" rx="1" fill="url(#flangeGold)"/>
+  <!-- Rivet holes along flanges -->
+  <circle cx="40" cy="3" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="120" cy="3" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="200" cy="3" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="280" cy="3" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="360" cy="3" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="440" cy="3" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="520" cy="3" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="600" cy="3" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="680" cy="3" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="760" cy="3" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="40" cy="37" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="120" cy="37" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="200" cy="37" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="280" cy="37" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="360" cy="37" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="440" cy="37" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="520" cy="37" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="600" cy="37" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="680" cy="37" r="2" fill="#1A1A1A" opacity="0.4"/>
+  <circle cx="760" cy="37" r="2" fill="#1A1A1A" opacity="0.4"/>
+</svg>

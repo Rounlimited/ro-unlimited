@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <radialGradient id="boltGrad">
+      <stop offset="0%" style="stop-color:#D4B965"/>
+      <stop offset="60%" style="stop-color:#C9A84C"/>
+      <stop offset="100%" style="stop-color:#8A7233"/>
+    </radialGradient>
+    <filter id="boltGlow">
+      <feGaussianBlur stdDeviation="1" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  <!-- Hex bolt head -->
+  <polygon points="12,2 20.5,6.5 20.5,17.5 12,22 3.5,17.5 3.5,6.5" fill="url(#boltGrad)" stroke="#A88A3D" stroke-width="0.8"/>
+  <!-- Inner circle -->
+  <circle cx="12" cy="12" r="5" fill="none" stroke="#8A7233" stroke-width="0.6" opacity="0.5"/>
+  <!-- Phillips/slot mark -->
+  <line x1="12" y1="8" x2="12" y2="16" stroke="#1A1A1A" stroke-width="1" opacity="0.3"/>
+  <line x1="8" y1="12" x2="16" y2="12" stroke="#1A1A1A" stroke-width="1" opacity="0.3"/>
+  <!-- Highlight -->
+  <circle cx="10" cy="9" r="2" fill="#FFFFFF" opacity="0.15"/>
+</svg>

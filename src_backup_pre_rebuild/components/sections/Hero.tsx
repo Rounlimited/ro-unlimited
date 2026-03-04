@@ -4,26 +4,10 @@ import { useRef } from 'react';
 import Link from 'next/link';
 import { COMPANY, TRUST_STATS } from '@/lib/constants';
 import { ArrowRight, Phone } from 'lucide-react';
-import { gsap, ScrollTrigger, useGSAP } from '@/components/animations/GSAPProvider';
+import { gsap, useGSAP } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
 import CountUp from '@/components/animations/CountUp';
 
-/**
- * HERO — Pinned scrub-linked construction sequence.
- * 
- * The hero pins at top and builds as you scroll through ~120vh:
- *   0.00–0.05  Badge slides from left
- *   0.05–0.20  "WE BUILD" drops like steel beam (bounce)
- *   0.20–0.35  "EVERYTHING" scales up from center (back ease)
- *   0.35–0.48  "FROM THE GROUND UP" rises via clipPath
- *   0.48–0.58  Gold welding line draws across
- *   0.58–0.68  Description fades up
- *   0.68–0.80  CTA buttons bolt in with stagger
- *   0.80–1.00  Stats rise + CountUp triggers
- * 
- * Uses fromTo() for every tween — explicit start/end states.
- * useGSAP hook handles all cleanup automatically.
- */
 export default function Hero() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
@@ -35,90 +19,74 @@ export default function Hero() {
   const ctaRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
 
+  // ─── useGSAP replaces useEffect ───
+  // Auto-cleanup via gsap.context(), scoped selectors, SSR-safe
   useGSAP(() => {
-    if (!sectionRef.current) return;
-
-    // Set initial hidden states explicitly via gsap.set
-    // This prevents flash-of-content before ScrollTrigger initializes
-    gsap.set([badgeRef.current, line1Ref.current, line2Ref.current, line3Ref.current,
-      goldLineRef.current, descRef.current, statsRef.current], { opacity: 0 });
-    if (ctaRef.current?.children.length) {
-      gsap.set(ctaRef.current.children, { opacity: 0 });
-    }
-
     const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: sectionRef.current,
-        start: 'top top',
-        end: '+=120%',
-        scrub: 1,
-        pin: true,
-        anticipatePin: 1,
-        id: 'hero-build',
-      },
+      defaults: { ease: 'power3.out' },
+      delay: 1.0, // After LoadingSequence
     });
 
-    // 0.00–0.05: Badge slides from left
+    // Badge slides from left
     tl.fromTo(badgeRef.current,
-      { x: -80, opacity: 0 },
-      { x: 0, opacity: 1, duration: 0.05, ease: 'power2.out' },
-      0
+      { x: -60, opacity: 0 },
+      { x: 0, opacity: 1, duration: 0.6 }
     );
 
-    // 0.05–0.20: "WE BUILD" drops like steel beam
+    // "WE BUILD" drops like a steel beam
     tl.fromTo(line1Ref.current,
-      { y: -100, rotation: -3, opacity: 0 },
-      { y: 0, rotation: 0, opacity: 1, duration: 0.15, ease: 'bounce.out' },
-      0.05
+      { y: -80, rotation: -2, opacity: 0 },
+      { y: 0, rotation: 0, opacity: 1, duration: 0.8, ease: 'bounce.out' },
+      '-=0.2'
     );
 
-    // 0.20–0.35: "EVERYTHING" scales up from center
+    // "EVERYTHING" scales up from center
     tl.fromTo(line2Ref.current,
-      { scale: 0.2, opacity: 0 },
-      { scale: 1, opacity: 1, duration: 0.15, ease: 'back.out(1.5)' },
-      0.20
+      { scale: 0.3, opacity: 0 },
+      { scale: 1, opacity: 1, duration: 0.7, ease: 'back.out(1.5)' },
+      '-=0.3'
     );
 
-    // 0.35–0.48: "FROM THE GROUND UP" rises via clipPath
+    // "FROM THE GROUND UP" rises via clipPath
     tl.fromTo(line3Ref.current,
-      { clipPath: 'inset(100% 0% 0% 0%)', y: 40, opacity: 0 },
-      { clipPath: 'inset(0% 0% 0% 0%)', y: 0, opacity: 1, duration: 0.13, ease: 'power3.out' },
-      0.35
+      { clipPath: 'inset(100% 0% 0% 0%)', y: 30, opacity: 0 },
+      { clipPath: 'inset(0% 0% 0% 0%)', y: 0, opacity: 1, duration: 0.6 },
+      '-=0.2'
     );
 
-    // 0.48–0.58: Gold welding line draws
+    // Gold welding line draws across
     tl.fromTo(goldLineRef.current,
-      { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-      { scaleX: 1, opacity: 1, duration: 0.10, ease: 'power2.inOut' },
-      0.48
+      { scaleX: 0, transformOrigin: 'left center' },
+      { scaleX: 1, duration: 0.5, ease: 'power2.inOut' },
+      '-=0.1'
     );
 
-    // 0.58–0.68: Description fades up
+    // Description fades up
     tl.fromTo(descRef.current,
-      { y: 30, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.10, ease: 'power2.out' },
-      0.58
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5 },
+      '-=0.2'
     );
 
-    // 0.68–0.80: CTA buttons bolt in
+    // CTAs bolt in with stagger
     if (ctaRef.current?.children.length) {
       tl.fromTo(ctaRef.current.children,
-        { scale: 0, rotation: 180, opacity: 0 },
-        { scale: 1, rotation: 0, opacity: 1, duration: 0.12, stagger: 0.04, ease: 'back.out(2)' },
-        0.68
+        { scale: 0.8, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.4, stagger: 0.15, ease: 'back.out(2)' },
+        '-=0.2'
       );
     }
 
-    // 0.80–1.00: Stats rise into place
+    // Stats section rises
     tl.fromTo(statsRef.current,
-      { y: 50, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.20, ease: 'power3.out' },
-      0.80
+      { y: 30, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5 },
+      '-=0.2'
     );
 
-  }, { scope: sectionRef });
+  }, { scope: sectionRef }); // ← scoped + auto-cleanup
 
-  // Parse numeric values for CountUp
+  // Parse numeric values from trust stats for CountUp
   const parseStatValue = (val: string): { num: number; suffix: string } => {
     const match = val.match(/^(\d+)(.*)$/);
     if (match) return { num: parseInt(match[1]), suffix: match[2] };
@@ -147,7 +115,7 @@ export default function Hero() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
         <div className="text-center">
           {/* Badge */}
-          <div ref={badgeRef} className="inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/20 bg-ro-gold/5 mb-8 opacity-0">
+          <div ref={badgeRef} className="inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/20 bg-ro-gold/5 mb-8">
             <span className="w-2 h-2 bg-ro-gold rounded-full animate-pulse" />
             <span className="text-ro-gold text-xs font-mono tracking-wider uppercase">
               {COMPANY.experience} Years Building Excellence
@@ -156,39 +124,39 @@ export default function Hero() {
 
           {/* Heading */}
           <h1>
-            <span ref={line1Ref} className="block text-ro-white font-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.9] mb-4 opacity-0">
+            <span ref={line1Ref} className="block text-ro-white font-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.9] mb-4">
               We Build
             </span>
-            <span ref={line2Ref} className="block gradient-text-gold font-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.9] mb-4 opacity-0">
+            <span ref={line2Ref} className="block gradient-text-gold font-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.9] mb-4">
               Everything
             </span>
-            <span ref={line3Ref} className="block text-ro-white font-heading text-3xl sm:text-4xl md:text-5xl tracking-wider uppercase leading-[0.9] opacity-0">
+            <span ref={line3Ref} className="block text-ro-white font-heading text-3xl sm:text-4xl md:text-5xl tracking-wider uppercase leading-[0.9]">
               From the Ground Up
             </span>
           </h1>
 
           {/* Gold welding line */}
-          <div ref={goldLineRef} className="mx-auto my-8 w-32 h-[2px] bg-ro-gold opacity-0"
+          <div ref={goldLineRef} className="mx-auto my-8 w-32 h-[2px] bg-ro-gold"
             style={{ boxShadow: '0 0 8px rgba(201,168,76,0.4), 0 0 16px rgba(201,168,76,0.2)' }}
           />
 
           {/* Description */}
-          <p ref={descRef} className="max-w-2xl mx-auto text-ro-gray-400 text-lg sm:text-xl font-body leading-relaxed mb-12 opacity-0">
+          <p ref={descRef} className="max-w-2xl mx-auto text-ro-gray-400 text-lg sm:text-xl font-body leading-relaxed mb-12">
             Complete commercial and residential construction. Land grading to luxury finishes. One company — total capability.
           </p>
 
           {/* CTAs */}
           <div ref={ctaRef} className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300 opacity-0">
+            <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300">
               Send Us Your Project <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
-            <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="group flex items-center gap-3 px-8 py-4 border border-ro-gold/30 text-ro-gold font-heading text-sm tracking-wider uppercase hover:bg-ro-gold/5 hover:border-ro-gold/50 transition-all duration-300 opacity-0">
+            <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="group flex items-center gap-3 px-8 py-4 border border-ro-gold/30 text-ro-gold font-heading text-sm tracking-wider uppercase hover:bg-ro-gold/5 hover:border-ro-gold/50 transition-all duration-300">
               <Phone size={16} />{COMPANY.phone}
             </a>
           </div>
 
-          {/* Trust Stats */}
-          <div ref={statsRef} className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto opacity-0">
+          {/* Trust Stats with CountUp */}
+          <div ref={statsRef} className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
             {TRUST_STATS.map((stat) => {
               const { num, suffix } = parseStatValue(stat.value);
               return (

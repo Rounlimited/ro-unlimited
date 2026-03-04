@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400" width="300" height="400">
+  <defs>
+    <linearGradient id="scaffGold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#A88A3D;stop-opacity:0.8"/>
+      <stop offset="50%" style="stop-color:#C9A84C"/>
+      <stop offset="100%" style="stop-color:#A88A3D;stop-opacity:0.8"/>
+    </linearGradient>
+  </defs>
+  <!-- Left vertical pole -->
+  <rect class="scaffold-left" x="20" y="0" width="6" height="400" fill="url(#scaffGold)" rx="1"/>
+  <!-- Right vertical pole -->
+  <rect class="scaffold-right" x="274" y="0" width="6" height="400" fill="url(#scaffGold)" rx="1"/>
+  <!-- Horizontal bars -->
+  <rect class="scaffold-h1" x="20" y="0" width="260" height="4" fill="#C9A84C" opacity="0.7" rx="1"/>
+  <rect class="scaffold-h2" x="20" y="98" width="260" height="4" fill="#C9A84C" opacity="0.7" rx="1"/>
+  <rect class="scaffold-h3" x="20" y="198" width="260" height="4" fill="#C9A84C" opacity="0.7" rx="1"/>
+  <rect class="scaffold-h4" x="20" y="298" width="260" height="4" fill="#C9A84C" opacity="0.7" rx="1"/>
+  <rect class="scaffold-h5" x="20" y="396" width="260" height="4" fill="#C9A84C" opacity="0.7" rx="1"/>
+  <!-- X braces -->
+  <line class="scaffold-x1" x1="26" y1="4" x2="274" y2="98" stroke="#C9A84C" stroke-width="1.5" opacity="0.4"/>
+  <line class="scaffold-x2" x1="274" y1="4" x2="26" y2="98" stroke="#C9A84C" stroke-width="1.5" opacity="0.4"/>
+  <line class="scaffold-x3" x1="26" y1="102" x2="274" y2="198" stroke="#C9A84C" stroke-width="1.5" opacity="0.4"/>
+  <line class="scaffold-x4" x1="274" y1="102" x2="26" y2="198" stroke="#C9A84C" stroke-width="1.5" opacity="0.4"/>
+  <line class="scaffold-x5" x1="26" y1="202" x2="274" y2="298" stroke="#C9A84C" stroke-width="1.5" opacity="0.4"/>
+  <line class="scaffold-x6" x1="274" y1="202" x2="26" y2="298" stroke="#C9A84C" stroke-width="1.5" opacity="0.4"/>
+  <line class="scaffold-x7" x1="26" y1="302" x2="274" y2="396" stroke="#C9A84C" stroke-width="1.5" opacity="0.4"/>
+  <line class="scaffold-x8" x1="274" y1="302" x2="26" y2="396" stroke="#C9A84C" stroke-width="1.5" opacity="0.4"/>
+  <!-- Joint bolts at intersections -->
+  <circle cx="23" cy="2" r="3" fill="#C9A84C" opacity="0.6"/>
+  <circle cx="277" cy="2" r="3" fill="#C9A84C" opacity="0.6"/>
+  <circle cx="23" cy="100" r="3" fill="#C9A84C" opacity="0.6"/>
+  <circle cx="277" cy="100" r="3" fill="#C9A84C" opacity="0.6"/>
+  <circle cx="23" cy="200" r="3" fill="#C9A84C" opacity="0.6"/>
+  <circle cx="277" cy="200" r="3" fill="#C9A84C" opacity="0.6"/>
+  <circle cx="23" cy="300" r="3" fill="#C9A84C" opacity="0.6"/>
+  <circle cx="277" cy="300" r="3" fill="#C9A84C" opacity="0.6"/>
+  <circle cx="23" cy="398" r="3" fill="#C9A84C" opacity="0.6"/>
+  <circle cx="277" cy="398" r="3" fill="#C9A84C" opacity="0.6"/>
+</svg>
