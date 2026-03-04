@@ -16,13 +16,12 @@ const ICONS: Record<string, any> = {
 };
 
 /**
- * DivisionCards — Construction-themed division showcase.
+ * DivisionCards — Scroll-triggered accordion.
  *
- * Desktop: Pinned scrub-linked sequence. Cards stacked absolutely, one builds
- * at a time via scroll. Wall rises, border welds, bolts screw, icon drops, etc.
+ * Desktop: All 4 cards visible. One card body expanded at a time. As user
+ * scrolls, current card collapses and next expands — steel panels folding.
  *
- * Mobile: Cards flow vertically. Each card gets its own ScrollTrigger and
- * auto-plays its build (~1s) when entering viewport.
+ * Mobile: Cards flow vertically with individual fade+rise ScrollTriggers.
  */
 export default function DivisionCards() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -37,31 +36,32 @@ export default function DivisionCards() {
     const mm = gsap.matchMedia();
 
     // ═══════════════════════════════════════════════
-    //  DESKTOP — Scrub-linked card construction
+    //  DESKTOP — Accordion scrub
     // ═══════════════════════════════════════════════
     mm.add(MEDIA_QUERIES.desktop, () => {
       if (!spacerRef.current) return;
 
       const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
-      allCards.forEach(card => { gsap.set(card, { opacity: 0 }); });
+      const bodies = allCards.map(c => c.querySelector('.card-body') as HTMLElement);
+      const bodyInners = allCards.map(c => c.querySelector('.card-body-inner') as HTMLElement);
+      const bottomLines = allCards.map(c => c.querySelector('.division-bottom-line') as HTMLElement);
+
+      // Measure natural body heights BEFORE collapsing anything
+      const bodyHeights = bodies.map(b => b ? b.scrollHeight : 0);
+
+      // Initial state: all cards hidden, card 0 body expanded, rest collapsed
+      allCards.forEach((card, i) => {
+        gsap.set(card, { opacity: 0, marginBottom: i < allCards.length - 1 ? 16 : 0 });
+        if (i > 0) {
+          gsap.set(bodies[i], { height: 0 });
+          gsap.set(bodyInners[i], { opacity: 0 });
+          if (bottomLines[i]) gsap.set(bottomLines[i], { scaleX: 0, opacity: 0 });
+        }
+      });
+
       if (headerRef.current) {
         gsap.set(headerRef.current.children, { opacity: 0 });
       }
-
-      // Setup SVG border rects with desktop dimensions
-      allCards.forEach(card => {
-        const rect = card.querySelector('.card-border-rect') as SVGRectElement | null;
-        const svg = card.querySelector('.card-border-svg') as SVGSVGElement | null;
-        if (rect && svg) {
-          const { width, height } = card.getBoundingClientRect();
-          svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-          rect.setAttribute('width', String(width - 2));
-          rect.setAttribute('height', String(height - 2));
-          const perimeter = 2 * (width - 2 + height - 2);
-          rect.style.strokeDasharray = String(perimeter);
-          rect.style.strokeDashoffset = String(perimeter);
-        }
-      });
 
       const tl = gsap.timeline({
         scrollTrigger: {
@@ -69,11 +69,11 @@ export default function DivisionCards() {
           start: 'top top',
           end: 'bottom bottom',
           scrub: 1.5,
-          id: 'division-cards-build',
+          id: 'division-cards-accordion',
         },
       });
 
-      // Section Header Construction (0.00–0.06)
+      // ── Phase 0: Header + Cards appear (0.00 – 0.06) ──
       if (headerRef.current) {
         const badge = headerRef.current.querySelector('.section-badge');
         const heading = headerRef.current.querySelector('.section-heading');
@@ -82,48 +82,107 @@ export default function DivisionCards() {
         if (badge) {
           tl.fromTo(badge,
             { x: -60, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.02, ease: 'power2.out' },
+            { x: 0, opacity: 1, duration: 0.015, ease: 'power2.out' },
             0
           );
         }
         if (heading) {
           tl.fromTo(heading,
             { scale: 0, rotation: 90, opacity: 0 },
-            { scale: 1, rotation: 0, opacity: 1, duration: 0.025, ease: 'back.out(2)' },
-            0.02
+            { scale: 1, rotation: 0, opacity: 1, duration: 0.02, ease: 'back.out(2)' },
+            0.015
           );
         }
         if (goldLine) {
           tl.fromTo(goldLine,
             { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-            { scaleX: 1, opacity: 1, duration: 0.02, ease: 'power2.inOut' },
-            0.04
+            { scaleX: 1, opacity: 1, duration: 0.015, ease: 'power2.inOut' },
+            0.03
           );
         }
       }
 
-      // Card builds
-      const CARD_STARTS = [0.06, 0.30, 0.54, 0.78];
-      const CARD_DURATION = 0.22;
-
+      // Fade in all 4 cards with stagger
       allCards.forEach((card, i) => {
-        const start = CARD_STARTS[i];
-        buildCard(tl, card, start);
+        tl.fromTo(card,
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.02, ease: 'power2.out' },
+          0.04 + i * 0.004
+        );
+      });
 
-        // Fade out completed card before next
-        if (i < allCards.length - 1) {
-          tl.fromTo(card,
-            { opacity: 1, y: 0 },
-            { opacity: 0, y: -30, duration: 0.02, ease: 'power2.in' },
-            start + CARD_DURATION
+      // ── Phases 1-3: Accordion collapse/expand ──
+      const PHASE_START = 0.07;
+      const PHASE_DURATION = 0.30;
+
+      for (let i = 0; i < allCards.length - 1; i++) {
+        const ps = PHASE_START + i * PHASE_DURATION;
+
+        // Current card: gold weld line retracts from right
+        if (bottomLines[i]) {
+          tl.fromTo(bottomLines[i],
+            { scaleX: 1, opacity: 1 },
+            { scaleX: 0, opacity: 0, duration: 0.03, ease: 'power2.in', transformOrigin: 'right center' },
+            ps
           );
         }
-      });
+
+        // Current card: body content fades out
+        if (bodyInners[i]) {
+          tl.fromTo(bodyInners[i],
+            { opacity: 1 },
+            { opacity: 0, duration: 0.04, ease: 'power2.in' },
+            ps + 0.01
+          );
+        }
+
+        // Current card: body collapses (height → 0)
+        if (bodies[i]) {
+          tl.fromTo(bodies[i],
+            { height: bodyHeights[i] },
+            { height: 0, duration: 0.09, ease: 'power3.inOut' },
+            ps + 0.03
+          );
+        }
+
+        // Current card: margin tightens
+        tl.fromTo(allCards[i],
+          { marginBottom: 16 },
+          { marginBottom: 4, duration: 0.06, ease: 'power2.inOut' },
+          ps + 0.06
+        );
+
+        // Next card: body expands (height 0 → natural)
+        if (bodies[i + 1]) {
+          tl.fromTo(bodies[i + 1],
+            { height: 0 },
+            { height: bodyHeights[i + 1], duration: 0.09, ease: 'power3.inOut' },
+            ps + 0.10
+          );
+        }
+
+        // Next card: body content fades in
+        if (bodyInners[i + 1]) {
+          tl.fromTo(bodyInners[i + 1],
+            { opacity: 0 },
+            { opacity: 1, duration: 0.05, ease: 'power2.out' },
+            ps + 0.15
+          );
+        }
+
+        // Next card: gold weld line draws from left
+        if (bottomLines[i + 1]) {
+          tl.fromTo(bottomLines[i + 1],
+            { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
+            { scaleX: 1, opacity: 1, duration: 0.04, ease: 'power2.inOut' },
+            ps + 0.20
+          );
+        }
+      }
     });
 
     // ═══════════════════════════════════════════════
-    //  MOBILE — Clean fade+rise, no micro-animations
-    //  Trigger at 50% so user sees the animation happen
+    //  MOBILE — Clean fade+rise per card
     // ═══════════════════════════════════════════════
     mm.add(MEDIA_QUERIES.mobile, () => {
       // Header auto-play
@@ -166,12 +225,11 @@ export default function DivisionCards() {
         }
       }
 
-      // Each card: simple fade+rise. SVG borders + bolts hidden on mobile via CSS.
+      // Each card: simple fade+rise
       const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
       allCards.forEach((card, i) => {
         gsap.set(card, { opacity: 0 });
 
-        // Simple fade+rise for entire card
         gsap.fromTo(card,
           { y: 40, opacity: 0 },
           {
@@ -216,90 +274,77 @@ export default function DivisionCards() {
           />
         </div>
 
-        {/* Card Stage — stacked on desktop, flowing column on mobile */}
-        <div ref={stageRef} className="relative flex-1 max-w-2xl mx-auto w-full flex flex-col gap-6 lg:block">
+        {/* Card Stage — accordion on desktop, flowing column on mobile */}
+        <div ref={stageRef} className="relative flex-1 max-w-2xl mx-auto w-full flex flex-col gap-6 lg:gap-0 lg:justify-center">
           {DIVISIONS.map((division, index) => {
             const Icon = ICONS[division.icon] || Building2;
             return (
               <div
                 key={division.id}
                 ref={el => { cardRefs.current[index] = el; }}
-                className="lg:absolute lg:inset-0 flex items-center"
+                className="division-card"
               >
                 <Link
                   href={division.href}
-                  className="relative w-full bg-ro-gray-900/80 lg:bg-ro-gray-900/60 lg:backdrop-blur-sm overflow-visible block"
+                  className="relative w-full bg-ro-gray-900/80 lg:bg-ro-gray-900/60 lg:backdrop-blur-sm overflow-hidden block border border-ro-gold/20"
                 >
-                  {/* SVG Border Trace — welds clockwise */}
-                  {/* SVG Border + Bolts — desktop only (too expensive on mobile) */}
-                  <svg
-                      className="card-border-svg absolute inset-0 w-full h-full pointer-events-none z-20 hidden lg:block"
-                      preserveAspectRatio="none"
-                    >
-                      <rect
-                        className="card-border-rect"
-                        x="1" y="1"
-                        fill="none"
-                        stroke="#C9A84C"
-                        strokeWidth="1.5"
-                        rx="0"
-                      />
-                    </svg>
-
-                  <div className="card-bolt card-bolt-tl absolute top-2 left-2 w-2 h-2 rounded-full hidden lg:block"
+                  {/* Corner Bolts — desktop only */}
+                  <div className="card-bolt absolute top-2 left-2 w-2 h-2 rounded-full hidden lg:block"
                     style={{ background: 'radial-gradient(circle, #D4B965 0%, #C9A84C 60%, #8A7233 100%)', boxShadow: '0 0 4px rgba(201,168,76,0.3)' }}
                   />
-                  <div className="card-bolt card-bolt-tr absolute top-2 right-2 w-2 h-2 rounded-full hidden lg:block"
+                  <div className="card-bolt absolute top-2 right-2 w-2 h-2 rounded-full hidden lg:block"
                     style={{ background: 'radial-gradient(circle, #D4B965 0%, #C9A84C 60%, #8A7233 100%)', boxShadow: '0 0 4px rgba(201,168,76,0.3)' }}
                   />
-                  <div className="card-bolt card-bolt-bl absolute bottom-2 left-2 w-2 h-2 rounded-full hidden lg:block"
+                  <div className="card-bolt absolute bottom-2 left-2 w-2 h-2 rounded-full hidden lg:block"
                     style={{ background: 'radial-gradient(circle, #D4B965 0%, #C9A84C 60%, #8A7233 100%)', boxShadow: '0 0 4px rgba(201,168,76,0.3)' }}
                   />
-                  <div className="card-bolt card-bolt-br absolute bottom-2 right-2 w-2 h-2 rounded-full hidden lg:block"
+                  <div className="card-bolt absolute bottom-2 right-2 w-2 h-2 rounded-full hidden lg:block"
                     style={{ background: 'radial-gradient(circle, #D4B965 0%, #C9A84C 60%, #8A7233 100%)', boxShadow: '0 0 4px rgba(201,168,76,0.3)' }}
                   />
-
-                  {/* Mobile: simple gold border instead of SVG + bolts */}
-                  <div className="absolute inset-0 border border-ro-gold/20 lg:hidden pointer-events-none" />
 
                   {/* Card Content */}
-                  <div className="p-6 sm:p-8">
-                    {/* Icon */}
-                    <div className="division-icon w-14 h-14 border border-ro-gold/30 flex items-center justify-center text-ro-gold mb-4">
-                      <Icon size={28} />
+                  <div className="p-5 sm:p-6">
+                    {/* Card Header — always visible (icon + title inline) */}
+                    <div className="card-header flex items-center gap-4">
+                      <div className="division-icon w-10 h-10 border border-ro-gold/30 flex items-center justify-center text-ro-gold flex-shrink-0">
+                        <Icon size={22} />
+                      </div>
+                      <h3 className="division-name text-ro-white font-heading text-xl sm:text-2xl tracking-wider uppercase">
+                        {division.name}
+                      </h3>
                     </div>
 
-                    {/* Division Name */}
-                    <h3 className="division-name text-ro-white font-heading text-2xl sm:text-3xl tracking-wider uppercase mb-2">
-                      {division.name}
-                    </h3>
+                    {/* Card Body — collapses on desktop scroll */}
+                    <div className="card-body overflow-hidden">
+                      <div className="card-body-inner pt-4">
+                        {/* Target Audience */}
+                        <p className="division-audience text-ro-gold/50 text-xs tracking-wider uppercase mb-3">
+                          {division.targetAudience}
+                        </p>
 
-                    {/* Target Audience */}
-                    <p className="division-audience text-ro-gold/50 text-xs tracking-wider uppercase mb-4">
-                      {division.targetAudience}
-                    </p>
+                        {/* Description */}
+                        <p className="division-desc text-ro-gray-400 text-sm sm:text-base leading-relaxed mb-4">
+                          {division.description}
+                        </p>
 
-                    {/* Description */}
-                    <p className="division-desc text-ro-gray-400 text-sm sm:text-base leading-relaxed mb-5">
-                      {division.description}
-                    </p>
+                        {/* Service Tags */}
+                        <div className="division-tags flex flex-wrap gap-2 mb-4">
+                          {division.services.slice(0, 3).map(service => (
+                            <span
+                              key={service}
+                              className="division-tag px-3 py-1 text-xs font-mono text-ro-gray-500 border border-ro-gray-800"
+                            >
+                              {service}
+                            </span>
+                          ))}
+                        </div>
 
-                    {/* Service Tags */}
-                    <div className="division-tags flex flex-wrap gap-2 mb-5">
-                      {division.services.slice(0, 3).map(service => (
-                        <span
-                          key={service}
-                          className="division-tag px-3 py-1 text-xs font-mono text-ro-gray-500 border border-ro-gray-800"
-                        >
-                          {service}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Explore Arrow */}
-                    <div className="division-arrow flex items-center gap-2 text-ro-gold text-sm tracking-wider uppercase font-heading">
-                      <span>Explore Division</span>
-                      <ArrowRight size={14} />
+                        {/* Explore Arrow */}
+                        <div className="division-arrow flex items-center gap-2 text-ro-gold text-sm tracking-wider uppercase font-heading">
+                          <span>Explore Division</span>
+                          <ArrowRight size={14} />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -313,132 +358,10 @@ export default function DivisionCards() {
           })}
         </div>
 
-        {/* Card counter indicator — desktop only */}
-        <div className="flex-shrink-0 pb-8 hidden lg:flex justify-center gap-2">
-          {DIVISIONS.map((_, i) => (
-            <div key={i} className="w-8 h-[2px] bg-ro-gray-800" />
-          ))}
-        </div>
-
-        {/* Mobile bottom spacer */}
-        <div className="flex-shrink-0 pb-8 lg:hidden" />
+        {/* Bottom spacer */}
+        <div className="flex-shrink-0 pb-8" />
       </div>
     </section>
     </div>
   );
-}
-
-/**
- * Builds a single card within the desktop scrub timeline.
- * Each element is physically "constructed" in sequence.
- */
-function buildCard(tl: gsap.core.Timeline, card: HTMLDivElement, start: number) {
-  const borderRect = card.querySelector('.card-border-rect') as SVGRectElement | null;
-  const boltTL = card.querySelector('.card-bolt-tl');
-  const boltTR = card.querySelector('.card-bolt-tr');
-  const boltBL = card.querySelector('.card-bolt-bl');
-  const boltBR = card.querySelector('.card-bolt-br');
-  const icon = card.querySelector('.division-icon');
-  const name = card.querySelector('.division-name');
-  const audience = card.querySelector('.division-audience');
-  const desc = card.querySelector('.division-desc');
-  const tags = card.querySelectorAll('.division-tag');
-  const arrow = card.querySelector('.division-arrow');
-  const bottomLine = card.querySelector('.division-bottom-line');
-
-  // Card background rises from ground (wall rise)
-  tl.fromTo(card,
-    { clipPath: 'inset(100% 0% 0% 0%)', opacity: 0 },
-    { clipPath: 'inset(0% 0% 0% 0%)', opacity: 1, duration: 0.03, ease: 'power3.out' },
-    start
-  );
-
-  // Border welds clockwise (strokeDashoffset → 0)
-  if (borderRect) {
-    tl.fromTo(borderRect,
-      { strokeDashoffset: borderRect.style.strokeDasharray, opacity: 0 },
-      { strokeDashoffset: 0, opacity: 1, duration: 0.04, ease: 'power1.inOut' },
-      start + 0.025
-    );
-  }
-
-  // Corner bolts screw in
-  const bolts = [
-    { el: boltTL, pos: start + 0.055 },
-    { el: boltTR, pos: start + 0.065 },
-    { el: boltBL, pos: start + 0.075 },
-    { el: boltBR, pos: start + 0.080 },
-  ];
-  bolts.forEach(({ el, pos }) => {
-    if (el) {
-      tl.fromTo(el,
-        { scale: 0, rotation: 180, opacity: 0 },
-        { scale: 1, rotation: 0, opacity: 1, duration: 0.012, ease: 'back.out(2)' },
-        pos
-      );
-    }
-  });
-
-  // Icon drops from above (steel piece falling into place)
-  if (icon) {
-    tl.fromTo(icon,
-      { y: -60, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.025, ease: 'bounce.out' },
-      start + 0.090
-    );
-  }
-
-  // Division name stamps in (mechanical press)
-  if (name) {
-    tl.fromTo(name,
-      { scaleY: 0, transformOrigin: 'top center', opacity: 0 },
-      { scaleY: 1, opacity: 1, duration: 0.02, ease: 'elastic.out(0.5, 0.3)' },
-      start + 0.110
-    );
-  }
-
-  // Audience line fades
-  if (audience) {
-    tl.fromTo(audience,
-      { y: 10, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.015, ease: 'power2.out' },
-      start + 0.125
-    );
-  }
-
-  // Description pours in (concrete pour — clipPath from bottom)
-  if (desc) {
-    tl.fromTo(desc,
-      { clipPath: 'inset(100% 0% 0% 0%)', y: 20, opacity: 0 },
-      { clipPath: 'inset(0% 0% 0% 0%)', y: 0, opacity: 1, duration: 0.025, ease: 'power2.out' },
-      start + 0.130
-    );
-  }
-
-  // Service tags weld on (staggered)
-  if (tags.length) {
-    tl.fromTo(tags,
-      { scale: 0, opacity: 0 },
-      { scale: 1, opacity: 1, duration: 0.02, stagger: 0.008, ease: 'back.out(1.5)' },
-      start + 0.155
-    );
-  }
-
-  // Arrow slides from left (beam sliding into place)
-  if (arrow) {
-    tl.fromTo(arrow,
-      { x: -40, opacity: 0 },
-      { x: 0, opacity: 1, duration: 0.015, ease: 'power3.out' },
-      start + 0.180
-    );
-  }
-
-  // Bottom gold weld line seals
-  if (bottomLine) {
-    tl.fromTo(bottomLine,
-      { scaleX: 0, opacity: 0 },
-      { scaleX: 1, opacity: 1, duration: 0.018, ease: 'power2.inOut' },
-      start + 0.200
-    );
-  }
 }
