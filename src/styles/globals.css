@@ -13,7 +13,8 @@
     --font-body: 'Barlow', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
-  html { scroll-behavior: smooth; }
+  /* scroll-behavior: smooth removed — conflicts with GSAP ScrollTrigger pin calculations */
+  html { scroll-behavior: auto; }
   body {
     @apply bg-ro-black text-ro-white font-body;
     -webkit-font-smoothing: antialiased;
@@ -35,16 +36,14 @@
   .caution-stripe {
     background: repeating-linear-gradient(-45deg, #C9A84C, #C9A84C 10px, #1A1A1A 10px, #1A1A1A 20px);
   }
-  .gsap-build-section { opacity: 0; transform: translateY(60px); }
-  .gsap-build-section.is-built { opacity: 1; transform: translateY(0); }
-  .gsap-beam { opacity: 0; transform: translateY(-100px) rotate(2deg); }
-  .gsap-wall { opacity: 0; clip-path: inset(100% 0 0 0); }
-  .gsap-bolt { opacity: 0; transform: scale(0) rotate(180deg); }
-  .gsap-crane-drop { opacity: 0; transform: translateY(-200px); }
-  .gsap-slide-left { opacity: 0; transform: translateX(-100px); }
-  .gsap-slide-right { opacity: 0; transform: translateX(100px); }
-  .gsap-scaffold { opacity: 0; clip-path: inset(100% 0 0 0); }
+  /* GSAP initial states handled by gsap.set() in useGSAP — no CSS classes needed */
 }
+
+/* ─── Reduced motion: handled by GSAPProvider.tsx via matchMedia ───
+ * GSAP animations are controlled entirely by JavaScript.
+ * CSS !important rules on opacity/transform/transition-duration
+ * conflict with GSAP's inline style updates. Reduced motion
+ * preference is detected in GSAPProvider and skips animations. */
 
 @layer utilities {
   .text-shadow-gold { text-shadow: 0 0 20px rgba(201,168,76,0.3), 0 0 40px rgba(201,168,76,0.1); }

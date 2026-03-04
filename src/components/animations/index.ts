@@ -1,7 +1,7 @@
 // Animation system barrel exports
 
 // Core
-export { default as GSAPProvider, gsap, ScrollTrigger, useGSAP, usePrefersReducedMotion } from './GSAPProvider';
+export { default as GSAPProvider, gsap, ScrollTrigger, SplitText, useGSAP, usePrefersReducedMotion } from './GSAPProvider';
 export { default as useScrollAnimation } from './useScrollAnimation';
 export { default as useMediaQuery, useDeviceContext, BREAKPOINTS } from './useMediaQuery';
 
@@ -15,3 +15,4 @@ export { default as BoltIn } from './BoltIn';
 export { default as WeldingSpark } from './WeldingSpark';
 export { default as CraneAnimation } from './CraneAnimation';
 export { default as CountUp } from './CountUp';
+export { default as SectionTransition } from './SectionTransition';

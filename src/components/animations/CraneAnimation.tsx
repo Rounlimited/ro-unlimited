@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { gsap, ScrollTrigger, useGSAP } from '@/components/animations/GSAPProvider';
 
 interface CraneAnimationProps {
@@ -32,23 +32,18 @@ export default function CraneAnimation({
   const cableRef = useRef<SVGLineElement>(null);
   const hookRef = useRef<SVGGElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-
-  // Hydration guard — render crane SVG only on client
-  useEffect(() => { setMounted(true); }, []);
+  const spacerRef = useRef<HTMLDivElement>(null);
 
   // ─── useGSAP: single scrub timeline, auto-cleanup ───
   useGSAP(() => {
-    if (!mounted || !sectionRef.current) return;
+    if (!sectionRef.current || !spacerRef.current) return;
 
     const tl = gsap.timeline({
       scrollTrigger: {
-        trigger: sectionRef.current,
+        trigger: spacerRef.current,
         start: 'top top',
-        end: scrollDistance,
+        end: 'bottom bottom',
         scrub: 1,
-        pin: true,
-        anticipatePin: 1,
         id: 'crane-sequence',
       },
     });
@@ -116,19 +111,11 @@ export default function CraneAnimation({
       );
     }
 
-  }, { scope: sectionRef, dependencies: [mounted, scrollDistance] });
-
-  // Server placeholder — no crane on SSR
-  if (!mounted) {
-    return (
-      <div className={`relative min-h-screen overflow-hidden ${className}`}>
-        {children}
-      </div>
-    );
-  }
+  }, { scope: sectionRef });
 
   return (
-    <div ref={sectionRef} className={`relative min-h-screen overflow-hidden ${className}`}>
+    <div ref={spacerRef} className={`relative z-[10] ${className}`} style={{ height: '250vh' }}>
+    <div ref={sectionRef} className="sticky top-0 h-screen overflow-hidden">
       {/* Blueprint grid background */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -213,6 +200,7 @@ export default function CraneAnimation({
       >
         {children}
       </div>
+    </div>
     </div>
   );
 }
