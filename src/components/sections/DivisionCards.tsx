@@ -122,7 +122,8 @@ export default function DivisionCards() {
     });
 
     // ═══════════════════════════════════════════════
-    //  MOBILE — Auto-play cards on viewport entry
+    //  MOBILE — Clean fade+rise, no micro-animations
+    //  Trigger at 50% so user sees the animation happen
     // ═══════════════════════════════════════════════
     mm.add(MEDIA_QUERIES.mobile, () => {
       // Header auto-play
@@ -136,7 +137,7 @@ export default function DivisionCards() {
         const headerTl = gsap.timeline({
           scrollTrigger: {
             trigger: headerRef.current,
-            start: 'top 80%',
+            start: 'top 65%',
             toggleActions: 'play none none none',
             id: 'divisions-header-mobile',
           },
@@ -144,33 +145,33 @@ export default function DivisionCards() {
 
         if (badge) {
           headerTl.fromTo(badge,
-            { x: -40, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+            { y: 15, opacity: 0 },
+            { x: 0, y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' },
             0
           );
         }
         if (heading) {
           headerTl.fromTo(heading,
-            { scale: 0.8, opacity: 0 },
-            { scale: 1, opacity: 1, duration: 0.4, ease: 'back.out(1.5)' },
-            0.1
+            { y: 20, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out' },
+            0.15
           );
         }
         if (goldLine) {
           headerTl.fromTo(goldLine,
             { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-            { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' },
-            0.3
+            { scaleX: 1, opacity: 1, duration: 0.4, ease: 'power2.inOut' },
+            0.4
           );
         }
       }
 
-      // Each card builds independently
+      // Each card: simple fade+rise. No border draw, no bolt spin.
       const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
       allCards.forEach((card, i) => {
         gsap.set(card, { opacity: 0 });
 
-        // Setup SVG border rects with mobile dimensions
+        // Pre-set SVG border rects so they show immediately when card fades in
         const rect = card.querySelector('.card-border-rect') as SVGRectElement | null;
         const svg = card.querySelector('.card-border-svg') as SVGSVGElement | null;
         if (rect && svg) {
@@ -180,114 +181,24 @@ export default function DivisionCards() {
           rect.setAttribute('height', String(height - 2));
           const perimeter = 2 * (width - 2 + height - 2);
           rect.style.strokeDasharray = String(perimeter);
-          rect.style.strokeDashoffset = String(perimeter);
+          rect.style.strokeDashoffset = '0'; // Already drawn — no animation
         }
 
-        const bolts = card.querySelectorAll('[class*="card-bolt"]');
-        const icon = card.querySelector('.division-icon');
-        const name = card.querySelector('.division-name');
-        const audience = card.querySelector('.division-audience');
-        const desc = card.querySelector('.division-desc');
-        const tags = card.querySelectorAll('.division-tag');
-        const arrow = card.querySelector('.division-arrow');
-        const bottomLine = card.querySelector('.division-bottom-line');
-
-        const cardTl = gsap.timeline({
-          scrollTrigger: {
-            trigger: card,
-            start: 'top 85%',
-            toggleActions: 'play none none none',
-            id: `division-card-${i}-mobile`,
-          },
-        });
-
-        // Card rises
-        cardTl.fromTo(card,
+        // Simple fade+rise for entire card
+        gsap.fromTo(card,
           { y: 40, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' },
-          0
+          {
+            y: 0, opacity: 1,
+            duration: 0.7,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 70%',
+              toggleActions: 'play none none none',
+              id: `division-card-${i}-mobile`,
+            },
+          }
         );
-
-        // Border draws
-        if (rect) {
-          cardTl.fromTo(rect,
-            { strokeDashoffset: rect.style.strokeDasharray, opacity: 0 },
-            { strokeDashoffset: 0, opacity: 1, duration: 0.5, ease: 'power1.inOut' },
-            0.15
-          );
-        }
-
-        // Bolts screw in
-        if (bolts.length) {
-          cardTl.fromTo(bolts,
-            { scale: 0, rotation: 180, opacity: 0 },
-            { scale: 1, rotation: 0, opacity: 1, duration: 0.2, stagger: 0.04, ease: 'back.out(2)' },
-            0.3
-          );
-        }
-
-        // Icon drops
-        if (icon) {
-          cardTl.fromTo(icon,
-            { y: -30, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.3, ease: 'bounce.out' },
-            0.4
-          );
-        }
-
-        // Name stamps
-        if (name) {
-          cardTl.fromTo(name,
-            { y: 10, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
-            0.5
-          );
-        }
-
-        // Audience fades
-        if (audience) {
-          cardTl.fromTo(audience,
-            { y: 10, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.2, ease: 'power2.out' },
-            0.6
-          );
-        }
-
-        // Description pours
-        if (desc) {
-          cardTl.fromTo(desc,
-            { y: 15, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
-            0.65
-          );
-        }
-
-        // Tags weld
-        if (tags.length) {
-          cardTl.fromTo(tags,
-            { scale: 0, opacity: 0 },
-            { scale: 1, opacity: 1, duration: 0.2, stagger: 0.05, ease: 'back.out(1.5)' },
-            0.8
-          );
-        }
-
-        // Arrow slides
-        if (arrow) {
-          cardTl.fromTo(arrow,
-            { x: -20, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.2, ease: 'power3.out' },
-            0.9
-          );
-        }
-
-        // Bottom weld line
-        if (bottomLine) {
-          cardTl.fromTo(bottomLine,
-            { scaleX: 0, opacity: 0 },
-            { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' },
-            1.0
-          );
-        }
       });
     });
 

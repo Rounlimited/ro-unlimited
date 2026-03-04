@@ -126,14 +126,14 @@ export default function CraneAnimation({
       gsap.set(contentRef.current, { opacity: 0 });
 
       gsap.fromTo(contentRef.current,
-        { opacity: 0, y: 40, scale: 0.95 },
+        { opacity: 0, y: 30 },
         {
-          opacity: 1, y: 0, scale: 1,
-          duration: 0.8,
-          ease: 'power3.out',
+          opacity: 1, y: 0,
+          duration: 0.7,
+          ease: 'power2.out',
           scrollTrigger: {
             trigger: sectionRef.current,
-            start: 'top 80%',
+            start: 'top 60%',
             toggleActions: 'play none none none',
             id: 'crane-mobile',
           },

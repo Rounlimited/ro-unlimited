@@ -134,8 +134,9 @@ export default function WhyRO() {
     });
 
     // ═══════════════════════════════════════════════
-    //  MOBILE — Auto-play on viewport entry
-    //  Header builds first, then each card triggers independently
+    //  MOBILE — Clean fade+rise, trigger when well in view
+    //  Header keeps SplitText for "Built Different" wow factor,
+    //  cards just fade up simply — no bolt/weld micro-animations
     // ═══════════════════════════════════════════════
     mm.add(MEDIA_QUERIES.mobile, () => {
       // Set initial hidden states
@@ -148,46 +149,37 @@ export default function WhyRO() {
       const split = SplitText.create(titleRef.current!, { type: 'chars' });
       gsap.set(split.chars, { opacity: 0 });
 
-      // ─── Header auto-play (~1.2s) ───
+      // ─── Header auto-play — trigger at 65% ───
       const headerTl = gsap.timeline({
         scrollTrigger: {
           trigger: sectionRef.current,
-          start: 'top 75%',
+          start: 'top 65%',
           toggleActions: 'play none none none',
           id: 'whyro-header-mobile',
         },
       });
 
-      // Badge slides in
+      // Badge fades up
       headerTl.fromTo(badgeRef.current,
-        { x: -40, opacity: 0 },
-        { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+        { y: 15, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' },
         0
       );
 
-      // Scaffolding rises
-      if (scaffoldRef.current) {
-        headerTl.fromTo(scaffoldRef.current,
-          { scaleY: 0, transformOrigin: 'bottom center', opacity: 0 },
-          { scaleY: 1, opacity: 1, duration: 0.3, ease: 'power2.out' },
-          0.1
-        );
-      }
-
-      // Letters scatter-to-bolt
+      // Letters scatter-to-bolt (keep this — it's the signature effect)
       headerTl.fromTo(split.chars,
         {
-          x: () => gsap.utils.random(-100, 100),
-          y: () => gsap.utils.random(-80, 80),
-          rotation: () => gsap.utils.random(-120, 120),
-          scale: 0.3,
+          x: () => gsap.utils.random(-80, 80),
+          y: () => gsap.utils.random(-60, 60),
+          rotation: () => gsap.utils.random(-90, 90),
+          scale: 0.4,
           opacity: 0,
         },
         {
           x: 0, y: 0, rotation: 0, scale: 1, opacity: 1,
-          stagger: 0.03,
-          ease: 'back.out(2)',
-          duration: 0.5,
+          stagger: 0.04,
+          ease: 'back.out(1.7)',
+          duration: 0.6,
         },
         0.2
       );
@@ -195,86 +187,27 @@ export default function WhyRO() {
       // Gold line draws
       headerTl.fromTo(goldLineRef.current,
         { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-        { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' },
-        0.8
+        { scaleX: 1, opacity: 1, duration: 0.4, ease: 'power2.inOut' },
+        1.0
       );
 
-      // Scaffolding fades out
-      if (scaffoldRef.current) {
-        headerTl.to(scaffoldRef.current,
-          { opacity: 0, duration: 0.3, ease: 'power1.in' },
-          0.9
-        );
-      }
-
-      // ─── Cards: each card gets its own ScrollTrigger ───
+      // ─── Cards: simple fade+rise, stagger pairs ───
+      // WhyRO cards are in a 2-col grid, so stagger left-right pairs
       allCards.forEach((card, i) => {
-        const bolts = card.querySelectorAll('.reason-bolt');
-        const icon = card.querySelector('.reason-icon');
-        const title = card.querySelector('.reason-title');
-        const desc = card.querySelector('.reason-desc');
-        const bottomLine = card.querySelector('.reason-bottom-line');
-
-        const cardTl = gsap.timeline({
-          scrollTrigger: {
-            trigger: card,
-            start: 'top 85%',
-            toggleActions: 'play none none none',
-            id: `whyro-card-${i}-mobile`,
-          },
-        });
-
-        // Card rises
-        cardTl.fromTo(card,
-          { y: 40, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' },
-          0
+        gsap.fromTo(card,
+          { y: 30, opacity: 0 },
+          {
+            y: 0, opacity: 1,
+            duration: 0.6,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 70%',
+              toggleActions: 'play none none none',
+              id: `whyro-card-${i}-mobile`,
+            },
+          }
         );
-
-        // Bolts screw in
-        if (bolts.length) {
-          cardTl.fromTo(bolts,
-            { scale: 0, rotation: 180, opacity: 0 },
-            { scale: 1, rotation: 0, opacity: 1, duration: 0.2, stagger: 0.03, ease: 'back.out(2)' },
-            0.2
-          );
-        }
-
-        // Icon bolts in
-        if (icon) {
-          cardTl.fromTo(icon,
-            { scale: 0, rotation: -90, opacity: 0 },
-            { scale: 1, rotation: 0, opacity: 1, duration: 0.3, ease: 'back.out(2)' },
-            0.3
-          );
-        }
-
-        // Title stamps
-        if (title) {
-          cardTl.fromTo(title,
-            { y: 10, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
-            0.4
-          );
-        }
-
-        // Description fades up
-        if (desc) {
-          cardTl.fromTo(desc,
-            { y: 10, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
-            0.5
-          );
-        }
-
-        // Bottom weld line
-        if (bottomLine) {
-          cardTl.fromTo(bottomLine,
-            { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-            { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' },
-            0.6
-          );
-        }
       });
 
       return () => { split.revert(); };

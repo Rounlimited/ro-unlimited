@@ -122,8 +122,8 @@ export default function Hero() {
     });
 
     // ═══════════════════════════════════════════════
-    //  MOBILE — Auto-play on viewport entry
-    //  Top-to-bottom reading order, time-based (~1.4s)
+    //  MOBILE — Auto-play on page load
+    //  Longer delay so user sees the build. Smooth cascade ~2.5s.
     // ═══════════════════════════════════════════════
     mm.add(MEDIA_QUERIES.mobile, () => {
       gsap.set([badgeRef.current, line1Ref.current, line2Ref.current, line3Ref.current,
@@ -133,65 +133,65 @@ export default function Hero() {
       }
 
       // Hero is always in-viewport on load — no ScrollTrigger needed.
-      // Just play after a short delay so the gsap.set() → fromTo() don't race.
-      const tl = gsap.timeline({ delay: 0.3 });
+      // 0.8s delay lets the page fully render before animation starts.
+      const tl = gsap.timeline({ delay: 0.8 });
 
-      // Badge slides down
+      // Badge fades down
       tl.fromTo(badgeRef.current,
         { y: -20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' },
         0
       );
 
       // "WE BUILD" drops in
       tl.fromTo(line1Ref.current,
         { y: -30, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' },
-        0.1
+        { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' },
+        0.2
       );
 
       // "EVERYTHING" scales up
       tl.fromTo(line2Ref.current,
-        { scale: 0.8, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.4, ease: 'back.out(1.5)' },
-        0.25
+        { scale: 0.85, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(1.4)' },
+        0.5
       );
 
       // "FROM THE GROUND UP" rises
       tl.fromTo(line3Ref.current,
-        { y: 30, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
-        0.4
+        { y: 25, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' },
+        0.8
       );
 
       // Gold line draws
       tl.fromTo(goldLineRef.current,
         { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-        { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' },
-        0.55
+        { scaleX: 1, opacity: 1, duration: 0.4, ease: 'power2.inOut' },
+        1.1
       );
 
       // Description fades up
       tl.fromTo(descRef.current,
-        { y: 20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
-        0.65
+        { y: 15, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' },
+        1.3
       );
 
       // CTA buttons stagger in
       if (ctaRef.current?.children.length) {
         tl.fromTo(ctaRef.current.children,
-          { y: 20, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.3, stagger: 0.1, ease: 'power2.out' },
-          0.8
+          { y: 15, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.4, stagger: 0.15, ease: 'power2.out' },
+          1.6
         );
       }
 
       // Stats rise from below
       tl.fromTo(statsRef.current,
-        { y: 30, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' },
-        1.0
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' },
+        2.0
       );
     });
 
