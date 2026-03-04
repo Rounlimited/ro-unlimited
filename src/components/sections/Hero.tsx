@@ -135,94 +135,85 @@ export default function Hero() {
         gsap.set(ctaRef.current.children, { opacity: 0 });
       }
 
-      // SplitText on WE BUILD and FROM THE GROUND UP only.
-      // EVERYTHING skips SplitText — gradient-text-gold (bg-clip-text
-      // + text-transparent) breaks SplitText char divs. Scale+fade instead.
+      // SplitText on phone, CTA, heading lines (not EVERYTHING — gradient breaks it)
+      const splitPhone = ctaRef.current?.children[1]
+        ? SplitText.create(ctaRef.current.children[1] as HTMLElement, { type: 'chars' }) : null;
+      const splitCta = ctaRef.current?.children[0]
+        ? SplitText.create(ctaRef.current.children[0] as HTMLElement, { type: 'chars' }) : null;
       const split3 = SplitText.create(line3Ref.current!, { type: 'chars' });
       const split1 = SplitText.create(line1Ref.current!, { type: 'chars' });
-      gsap.set([split3.chars, split1.chars], { opacity: 0, willChange: 'transform, opacity' });
 
-      const tl = gsap.timeline({ delay: 0.8 });
+      const allChars = [
+        ...(splitPhone?.chars || []),
+        ...(splitCta?.chars || []),
+        ...split3.chars,
+        ...split1.chars,
+      ];
+      gsap.set(allChars, { opacity: 0, willChange: 'transform, opacity' });
 
-      // 1. Phone number rises in — first thing user sees
-      if (ctaRef.current?.children[1]) {
-        tl.fromTo(ctaRef.current.children[1],
-          { y: 40, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out' },
+      const tl = gsap.timeline({ delay: 0.6 });
+
+      // 1. Phone number — letters build from below (0s)
+      if (splitPhone) {
+        tl.fromTo(splitPhone.chars,
+          { y: () => gsap.utils.random(20, 50), opacity: 0 },
+          { y: 0, opacity: 1, stagger: 0.02, duration: 0.35, ease: 'power2.out' },
           0
         );
       }
 
-      // 2. Gold CTA button pops in
-      if (ctaRef.current?.children[0]) {
-        tl.fromTo(ctaRef.current.children[0],
-          { y: 40, scale: 0.85, opacity: 0 },
-          { y: 0, scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(1.3)' },
-          0.5
+      // 2. Gold CTA — letters build from below, overlaps with phone (0.25s)
+      if (splitCta) {
+        tl.fromTo(splitCta.chars,
+          { y: () => gsap.utils.random(20, 50), opacity: 0 },
+          { y: 0, opacity: 1, stagger: 0.015, duration: 0.35, ease: 'power2.out' },
+          0.25
         );
       }
 
-      // 3. Description fades up
+      // 3. Description + gold line — come in together, fast (0.6s)
       tl.fromTo(descRef.current,
-        { y: 30, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out' },
-        1.0
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
+        0.6
       );
-
-      // 4. Gold weld line draws across
       tl.fromTo(goldLineRef.current,
         { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-        { scaleX: 1, opacity: 1, duration: 0.5, ease: 'power2.inOut' },
-        1.5
+        { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' },
+        0.7
       );
 
-      // 5. "FROM THE GROUND UP" — letters assemble from below
+      // 4. "FROM THE GROUND UP" — letters rise from below (0.95s)
       tl.fromTo(split3.chars,
-        {
-          y: () => gsap.utils.random(30, 90),
-          opacity: 0,
-        },
-        {
-          y: 0, opacity: 1,
-          stagger: 0.03,
-          ease: 'power2.out',
-          duration: 0.6,
-        },
-        2.0
+        { y: () => gsap.utils.random(25, 60), opacity: 0 },
+        { y: 0, opacity: 1, stagger: 0.02, duration: 0.4, ease: 'power2.out' },
+        0.95
       );
 
-      // 6. "EVERYTHING" — rises from below (no SplitText, preserves gradient)
+      // 5. "EVERYTHING" — rises from below (1.35s)
       tl.fromTo(line2Ref.current,
-        { y: 60, scale: 0.5, opacity: 0 },
-        { y: 0, scale: 1, opacity: 1, duration: 0.7, ease: 'back.out(1.3)' },
-        2.8
+        { y: 40, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' },
+        1.35
       );
 
-      // 7. "WE BUILD" — letters rise from below like stacking blocks
+      // 6. "WE BUILD" — letters rise from below (1.55s)
       tl.fromTo(split1.chars,
-        {
-          y: () => gsap.utils.random(30, 90),
-          opacity: 0,
-        },
-        {
-          y: 0, opacity: 1,
-          stagger: 0.035,
-          ease: 'power2.out',
-          duration: 0.6,
-        },
-        3.2
+        { y: () => gsap.utils.random(25, 60), opacity: 0 },
+        { y: 0, opacity: 1, stagger: 0.025, duration: 0.4, ease: 'power2.out' },
+        1.55
       );
 
-      // 8. Badge — final sign bolted on top
+      // 7. Badge — drops in from top (1.95s)
       tl.fromTo(badgeRef.current,
         { y: -15, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' },
-        3.9
+        { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
+        1.95
       );
 
       // Clean up GPU layers after build finishes
       tl.call(() => {
-        gsap.set([split3.chars, split1.chars], { willChange: 'auto' });
+        gsap.set(allChars, { willChange: 'auto' });
       });
 
       // ─── Stats: below fold, animate when scrolled into view ───
@@ -240,7 +231,7 @@ export default function Hero() {
         }
       );
 
-      return () => { split1.revert(); split3.revert(); };
+      return () => { split1.revert(); split3.revert(); splitPhone?.revert(); splitCta?.revert(); };
     });
 
   }, { scope: sectionRef });
