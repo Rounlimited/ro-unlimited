@@ -76,6 +76,13 @@ export default function GSAPProvider({ children }: { children: React.ReactNode }
   );
 }
 
+// ─── Shared breakpoints for gsap.matchMedia() ───
+// Desktop: scrub + sticky scroll. Mobile: auto-play on viewport entry.
+export const MEDIA_QUERIES = {
+  mobile: '(max-width: 1023px)',
+  desktop: '(min-width: 1024px)',
+} as const;
+
 // ─── Re-export everything from here ───
 // All components import { gsap, ScrollTrigger, useGSAP } from this file.
 // Never import gsap or ScrollTrigger directly from 'gsap' elsewhere.

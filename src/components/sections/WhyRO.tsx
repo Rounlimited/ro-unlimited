@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { Shield, Clock, Wrench, Award } from 'lucide-react';
-import { gsap, ScrollTrigger, SplitText, useGSAP } from '@/components/animations/GSAPProvider';
+import { gsap, ScrollTrigger, SplitText, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
 
 const REASONS = [
@@ -15,25 +15,13 @@ const REASONS = [
 /**
  * WhyRO — "BUILT DIFFERENT" Letter Construction.
  *
- * Pinned scrub-linked construction sequence. The headline IS a construction
- * project: scaffolding grid rises, individual steel letters fly in from
- * off-screen scatter positions and BOLT into place using SplitText. After
- * all letters are set, scaffolding is removed, value prop cards wall-rise
- * from the ground.
+ * Desktop: Pinned scrub-linked sequence. Scaffolding rises, SplitText letters
+ * scatter-to-bolt, gold line draws, cards build in sequence.
  *
- * Mobile-first: designed for iPhone 16 Pro Max (430×932) thumb scrolling.
+ * Mobile: Auto-play on viewport entry. Header builds (~1.2s), then each card
+ * gets its own ScrollTrigger for staggered entry as you scroll.
  *
- * Timeline across +=180% scroll:
- *   0.00–0.03  Badge slides from left
- *   0.03–0.05  Scaffolding grid rises behind title
- *   0.05–0.40  Letters bolt into position (SplitText chars)
- *   0.40–0.45  Gold weld line draws
- *   0.45–0.48  Scaffolding fades out (removed from site)
- *   0.48–0.60  Card 1 builds (wall rise, bolt, stamp, pour)
- *   0.60–0.72  Card 2 builds
- *   0.72–0.84  Card 3 builds
- *   0.84–0.96  Card 4 builds
- *   0.96–1.00  All card bottom lines weld seal
+ * SplitText is created INSIDE each matchMedia context for proper cleanup.
  */
 export default function WhyRO() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -45,119 +33,267 @@ export default function WhyRO() {
   const spacerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    if (!sectionRef.current || !titleRef.current || !spacerRef.current) return;
+    if (!sectionRef.current || !titleRef.current) return;
 
-    // ─── Set initial hidden states ───
-    gsap.set([badgeRef.current, goldLineRef.current], { opacity: 0 });
-    if (scaffoldRef.current) gsap.set(scaffoldRef.current, { opacity: 0 });
-    const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
-    allCards.forEach(card => { gsap.set(card, { opacity: 0 }); });
+    const mm = gsap.matchMedia();
 
-    // ─── SplitText: split "BUILT DIFFERENT" into individual characters ───
-    const split = SplitText.create(titleRef.current, {
-      type: 'chars',
-    });
+    // ═══════════════════════════════════════════════
+    //  DESKTOP — Scrub-linked "BUILT DIFFERENT" sequence
+    // ═══════════════════════════════════════════════
+    mm.add(MEDIA_QUERIES.desktop, () => {
+      if (!spacerRef.current) return;
 
-    // Hide all chars before animation starts
-    gsap.set(split.chars, { opacity: 0 });
+      // Set initial hidden states
+      gsap.set([badgeRef.current, goldLineRef.current], { opacity: 0 });
+      if (scaffoldRef.current) gsap.set(scaffoldRef.current, { opacity: 0 });
+      const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
+      allCards.forEach(card => { gsap.set(card, { opacity: 0 }); });
 
-    // ─── Main scrub timeline ───
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: spacerRef.current,
-        start: 'top top',
-        end: 'bottom bottom',
-        scrub: 1.5,
-        id: 'built-different',
-      },
-    });
+      // SplitText inside context — auto-reverted when context changes
+      const split = SplitText.create(titleRef.current!, { type: 'chars' });
+      gsap.set(split.chars, { opacity: 0 });
 
-    // ─── Phase 1: Badge slides from left (0.00–0.03) ───
-    tl.fromTo(badgeRef.current,
-      { x: -80, opacity: 0 },
-      { x: 0, opacity: 1, duration: 0.03, ease: 'power2.out' },
-      0
-    );
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: spacerRef.current,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 1.5,
+          id: 'built-different',
+        },
+      });
 
-    // ─── Phase 2: Scaffolding rises (0.03–0.05) ───
-    if (scaffoldRef.current) {
-      tl.fromTo(scaffoldRef.current,
-        { scaleY: 0, transformOrigin: 'bottom center', opacity: 0 },
-        { scaleY: 1, opacity: 1, duration: 0.02, ease: 'power2.out' },
-        0.03
+      // Phase 1: Badge slides from left (0.00–0.03)
+      tl.fromTo(badgeRef.current,
+        { x: -80, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.03, ease: 'power2.out' },
+        0
       );
-    }
 
-    // ─── Phase 3: Letters bolt into place (0.05–0.40) ───
-    // Each character starts at a random scattered position (off-screen chaos)
-    // and bolts into its final text position with back.out overshoot
-    tl.fromTo(split.chars,
-      {
-        x: () => gsap.utils.random(-150, 150),
-        y: () => gsap.utils.random(-120, 120),
-        rotation: () => gsap.utils.random(-180, 180),
-        scale: 0.3,
-        opacity: 0,
-      },
-      {
-        x: 0, y: 0, rotation: 0, scale: 1, opacity: 1,
-        stagger: 0.02,
-        ease: 'back.out(2)',
-        duration: 0.35,
-      },
-      0.05
-    );
-
-    // ─── Phase 4: Gold weld line draws (0.40–0.45) ───
-    tl.fromTo(goldLineRef.current,
-      { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-      { scaleX: 1, opacity: 1, duration: 0.05, ease: 'power2.inOut' },
-      0.40
-    );
-
-    // ─── Phase 5: Scaffolding fades out (0.45–0.48) ───
-    if (scaffoldRef.current) {
-      tl.to(scaffoldRef.current,
-        { opacity: 0, duration: 0.03, ease: 'power1.in' },
-        0.45
-      );
-    }
-
-    // ─── Phase 6–9: Cards build in sequence (0.48–0.96) ───
-    const CARD_STARTS = [0.48, 0.60, 0.72, 0.84];
-    allCards.forEach((card, i) => {
-      buildReasonCard(tl, card, CARD_STARTS[i]);
-    });
-
-    // ─── Phase 10: All card bottom lines weld seal (0.96–1.00) ───
-    allCards.forEach(card => {
-      const bottomLine = card.querySelector('.reason-bottom-line');
-      if (bottomLine) {
-        tl.fromTo(bottomLine,
-          { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-          { scaleX: 1, opacity: 1, duration: 0.04, ease: 'power2.inOut' },
-          0.96
+      // Phase 2: Scaffolding rises (0.03–0.05)
+      if (scaffoldRef.current) {
+        tl.fromTo(scaffoldRef.current,
+          { scaleY: 0, transformOrigin: 'bottom center', opacity: 0 },
+          { scaleY: 1, opacity: 1, duration: 0.02, ease: 'power2.out' },
+          0.03
         );
       }
+
+      // Phase 3: Letters bolt into place (0.05–0.40)
+      tl.fromTo(split.chars,
+        {
+          x: () => gsap.utils.random(-150, 150),
+          y: () => gsap.utils.random(-120, 120),
+          rotation: () => gsap.utils.random(-180, 180),
+          scale: 0.3,
+          opacity: 0,
+        },
+        {
+          x: 0, y: 0, rotation: 0, scale: 1, opacity: 1,
+          stagger: 0.02,
+          ease: 'back.out(2)',
+          duration: 0.35,
+        },
+        0.05
+      );
+
+      // Phase 4: Gold weld line draws (0.40–0.45)
+      tl.fromTo(goldLineRef.current,
+        { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
+        { scaleX: 1, opacity: 1, duration: 0.05, ease: 'power2.inOut' },
+        0.40
+      );
+
+      // Phase 5: Scaffolding fades out (0.45–0.48)
+      if (scaffoldRef.current) {
+        tl.to(scaffoldRef.current,
+          { opacity: 0, duration: 0.03, ease: 'power1.in' },
+          0.45
+        );
+      }
+
+      // Phase 6–9: Cards build in sequence (0.48–0.96)
+      const CARD_STARTS = [0.48, 0.60, 0.72, 0.84];
+      allCards.forEach((card, i) => {
+        buildReasonCard(tl, card, CARD_STARTS[i]);
+      });
+
+      // Phase 10: All card bottom lines weld seal (0.96–1.00)
+      allCards.forEach(card => {
+        const bottomLine = card.querySelector('.reason-bottom-line');
+        if (bottomLine) {
+          tl.fromTo(bottomLine,
+            { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
+            { scaleX: 1, opacity: 1, duration: 0.04, ease: 'power2.inOut' },
+            0.96
+          );
+        }
+      });
+
+      return () => { split.revert(); };
     });
 
-    // Cleanup: revert SplitText DOM changes on unmount
-    return () => { split.revert(); };
+    // ═══════════════════════════════════════════════
+    //  MOBILE — Auto-play on viewport entry
+    //  Header builds first, then each card triggers independently
+    // ═══════════════════════════════════════════════
+    mm.add(MEDIA_QUERIES.mobile, () => {
+      // Set initial hidden states
+      gsap.set([badgeRef.current, goldLineRef.current], { opacity: 0 });
+      if (scaffoldRef.current) gsap.set(scaffoldRef.current, { opacity: 0 });
+      const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
+      allCards.forEach(card => { gsap.set(card, { opacity: 0 }); });
+
+      // SplitText inside mobile context
+      const split = SplitText.create(titleRef.current!, { type: 'chars' });
+      gsap.set(split.chars, { opacity: 0 });
+
+      // ─── Header auto-play (~1.2s) ───
+      const headerTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 75%',
+          toggleActions: 'play none none none',
+          id: 'whyro-header-mobile',
+        },
+      });
+
+      // Badge slides in
+      headerTl.fromTo(badgeRef.current,
+        { x: -40, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+        0
+      );
+
+      // Scaffolding rises
+      if (scaffoldRef.current) {
+        headerTl.fromTo(scaffoldRef.current,
+          { scaleY: 0, transformOrigin: 'bottom center', opacity: 0 },
+          { scaleY: 1, opacity: 1, duration: 0.3, ease: 'power2.out' },
+          0.1
+        );
+      }
+
+      // Letters scatter-to-bolt
+      headerTl.fromTo(split.chars,
+        {
+          x: () => gsap.utils.random(-100, 100),
+          y: () => gsap.utils.random(-80, 80),
+          rotation: () => gsap.utils.random(-120, 120),
+          scale: 0.3,
+          opacity: 0,
+        },
+        {
+          x: 0, y: 0, rotation: 0, scale: 1, opacity: 1,
+          stagger: 0.03,
+          ease: 'back.out(2)',
+          duration: 0.5,
+        },
+        0.2
+      );
+
+      // Gold line draws
+      headerTl.fromTo(goldLineRef.current,
+        { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
+        { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' },
+        0.8
+      );
+
+      // Scaffolding fades out
+      if (scaffoldRef.current) {
+        headerTl.to(scaffoldRef.current,
+          { opacity: 0, duration: 0.3, ease: 'power1.in' },
+          0.9
+        );
+      }
+
+      // ─── Cards: each card gets its own ScrollTrigger ───
+      allCards.forEach((card, i) => {
+        const bolts = card.querySelectorAll('.reason-bolt');
+        const icon = card.querySelector('.reason-icon');
+        const title = card.querySelector('.reason-title');
+        const desc = card.querySelector('.reason-desc');
+        const bottomLine = card.querySelector('.reason-bottom-line');
+
+        const cardTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: card,
+            start: 'top 85%',
+            toggleActions: 'play none none none',
+            id: `whyro-card-${i}-mobile`,
+          },
+        });
+
+        // Card rises
+        cardTl.fromTo(card,
+          { y: 40, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' },
+          0
+        );
+
+        // Bolts screw in
+        if (bolts.length) {
+          cardTl.fromTo(bolts,
+            { scale: 0, rotation: 180, opacity: 0 },
+            { scale: 1, rotation: 0, opacity: 1, duration: 0.2, stagger: 0.03, ease: 'back.out(2)' },
+            0.2
+          );
+        }
+
+        // Icon bolts in
+        if (icon) {
+          cardTl.fromTo(icon,
+            { scale: 0, rotation: -90, opacity: 0 },
+            { scale: 1, rotation: 0, opacity: 1, duration: 0.3, ease: 'back.out(2)' },
+            0.3
+          );
+        }
+
+        // Title stamps
+        if (title) {
+          cardTl.fromTo(title,
+            { y: 10, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+            0.4
+          );
+        }
+
+        // Description fades up
+        if (desc) {
+          cardTl.fromTo(desc,
+            { y: 10, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+            0.5
+          );
+        }
+
+        // Bottom weld line
+        if (bottomLine) {
+          cardTl.fromTo(bottomLine,
+            { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
+            { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' },
+            0.6
+          );
+        }
+      });
+
+      return () => { split.revert(); };
+    });
 
   }, { scope: sectionRef });
 
   return (
-    <div ref={spacerRef} className="relative z-[20]" style={{ height: '280vh' }}>
+    <div ref={spacerRef} className="relative lg:z-[20] lg:[height:280vh]">
     <section
       ref={sectionRef}
-      className="sticky top-0 h-screen overflow-hidden bg-ro-black"
+      className="lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden bg-ro-black"
     >
       <BlueprintGrid intensity="medium" animate={true} />
 
       {/* Gradient overlays */}
       <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-transparent to-ro-black pointer-events-none z-[1]" />
 
-      <div className="relative z-10 flex flex-col h-screen px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 flex flex-col min-h-screen lg:h-screen px-4 sm:px-6 lg:px-8">
         {/* Header Area */}
         <div className="pt-20 pb-4 text-center flex-shrink-0">
           {/* Badge */}
@@ -200,7 +336,7 @@ export default function WhyRO() {
         </div>
 
         {/* Cards grid — 2×2 on mobile, 4-col on desktop */}
-        <div className="flex-1 flex items-center">
+        <div className="flex-1 flex items-center py-4 lg:py-0">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 w-full max-w-5xl mx-auto">
             {REASONS.map((reason, index) => (
               <div
@@ -260,7 +396,7 @@ export default function WhyRO() {
 }
 
 /**
- * Builds a single reason card within the scrub timeline.
+ * Builds a single reason card within the desktop scrub timeline.
  * Wall rises → bolts screw → icon bolts → title stamps → description pours.
  */
 function buildReasonCard(tl: gsap.core.Timeline, card: HTMLDivElement, start: number) {

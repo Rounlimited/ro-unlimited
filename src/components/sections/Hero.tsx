@@ -4,27 +4,21 @@ import { useRef } from 'react';
 import Link from 'next/link';
 import { COMPANY, TRUST_STATS } from '@/lib/constants';
 import { ArrowRight, Phone } from 'lucide-react';
-import { gsap, ScrollTrigger, useGSAP } from '@/components/animations/GSAPProvider';
+import { gsap, ScrollTrigger, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
 import CountUp from '@/components/animations/CountUp';
 
 /**
- * HERO — Pinned scrub-linked construction sequence.
- * BUILDS FROM THE GROUND UP — bottom elements construct first.
+ * HERO — Desktop: pinned scrub-linked construction sequence.
+ *        Mobile: auto-play on viewport entry (~1.4s build).
  *
- * The hero pins at top and builds as you scroll through ~150vh:
- *   0.00–0.10  Stats rise from below (foundation poured)
- *   0.10–0.22  CTA buttons bolt in (structural steel framing)
- *   0.22–0.34  Description pours in (walls rising)
- *   0.34–0.44  Gold weld line draws (structural connector)
- *   0.44–0.58  "FROM THE GROUND UP" rises from ground (first text, bottom)
- *   0.58–0.72  "EVERYTHING" scales up (middle structure)
- *   0.72–0.88  "WE BUILD" drops like top beam (bounce — placed last)
- *   0.88–0.95  Badge bolts on (final sign at top of building)
- *   0.95–1.00  Hold — construction complete
+ * Desktop (scrub) builds bottom-to-top as you scroll through 400vh:
+ *   Stats → CTAs → Description → Gold line → headings → badge
  *
- * Uses fromTo() for every tween — explicit start/end states.
- * useGSAP hook handles all cleanup automatically.
+ * Mobile (auto-play) builds top-to-bottom on viewport entry:
+ *   Badge → headings → gold line → description → CTAs → stats
+ *
+ * gsap.matchMedia() auto-reverts all animations when breakpoint changes.
  */
 export default function Hero() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -39,91 +33,172 @@ export default function Hero() {
   const spacerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    if (!sectionRef.current || !spacerRef.current) return;
+    if (!sectionRef.current) return;
 
-    // Set initial hidden states explicitly via gsap.set
-    // This prevents flash-of-content before ScrollTrigger initializes
-    gsap.set([badgeRef.current, line1Ref.current, line2Ref.current, line3Ref.current,
-      goldLineRef.current, descRef.current, statsRef.current], { opacity: 0 });
-    if (ctaRef.current?.children.length) {
-      gsap.set(ctaRef.current.children, { opacity: 0 });
-    }
+    const mm = gsap.matchMedia();
 
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: spacerRef.current,
-        start: 'top top',
-        end: 'bottom bottom',
-        scrub: 0.5,
-        id: 'hero-build',
-      },
+    // ═══════════════════════════════════════════════
+    //  DESKTOP — Scrub-linked construction sequence
+    //  Pinned hero builds as you scroll through spacer
+    // ═══════════════════════════════════════════════
+    mm.add(MEDIA_QUERIES.desktop, () => {
+      if (!spacerRef.current) return;
+
+      gsap.set([badgeRef.current, line1Ref.current, line2Ref.current, line3Ref.current,
+        goldLineRef.current, descRef.current, statsRef.current], { opacity: 0 });
+      if (ctaRef.current?.children.length) {
+        gsap.set(ctaRef.current.children, { opacity: 0 });
+      }
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: spacerRef.current,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.5,
+          id: 'hero-build',
+        },
+      });
+
+      // BUILD FROM THE GROUND UP — bottom first
+
+      // 0.00–0.06: Stats rise from below — FOUNDATION POURED
+      tl.fromTo(statsRef.current,
+        { clipPath: 'inset(100% 0% 0% 0%)', y: 40, opacity: 0 },
+        { clipPath: 'inset(0% 0% 0% 0%)', y: 0, opacity: 1, duration: 0.06, ease: 'power3.out' },
+        0
+      );
+
+      // 0.06–0.13: CTA buttons bolt in — STRUCTURAL STEEL FRAMING
+      if (ctaRef.current?.children.length) {
+        tl.fromTo(ctaRef.current.children,
+          { scale: 0, rotation: 180, opacity: 0 },
+          { scale: 1, rotation: 0, opacity: 1, duration: 0.07, stagger: 0.02, ease: 'back.out(2)' },
+          0.06
+        );
+      }
+
+      // 0.13–0.20: Description pours in — WALLS RISING
+      tl.fromTo(descRef.current,
+        { clipPath: 'inset(100% 0% 0% 0%)', y: 20, opacity: 0 },
+        { clipPath: 'inset(0% 0% 0% 0%)', y: 0, opacity: 1, duration: 0.07, ease: 'power2.out' },
+        0.13
+      );
+
+      // 0.20–0.26: Gold weld line draws — STRUCTURAL CONNECTOR
+      tl.fromTo(goldLineRef.current,
+        { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
+        { scaleX: 1, opacity: 1, duration: 0.06, ease: 'power2.inOut' },
+        0.20
+      );
+
+      // 0.26–0.36: "FROM THE GROUND UP" rises via clipPath
+      tl.fromTo(line3Ref.current,
+        { clipPath: 'inset(100% 0% 0% 0%)', y: 40, opacity: 0 },
+        { clipPath: 'inset(0% 0% 0% 0%)', y: 0, opacity: 1, duration: 0.10, ease: 'power3.out' },
+        0.26
+      );
+
+      // 0.36–0.46: "EVERYTHING" scales up from center
+      tl.fromTo(line2Ref.current,
+        { scale: 0.2, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.10, ease: 'back.out(1.5)' },
+        0.36
+      );
+
+      // 0.46–0.57: "WE BUILD" drops like top beam — PLACED LAST
+      tl.fromTo(line1Ref.current,
+        { y: -100, rotation: -3, opacity: 0 },
+        { y: 0, rotation: 0, opacity: 1, duration: 0.11, ease: 'bounce.out' },
+        0.46
+      );
+
+      // 0.57–0.65: Badge bolts on — FINAL SIGN AT TOP
+      tl.fromTo(badgeRef.current,
+        { scale: 0, rotation: 90, opacity: 0 },
+        { scale: 1, rotation: 0, opacity: 1, duration: 0.08, ease: 'back.out(2)' },
+        0.57
+      );
     });
 
     // ═══════════════════════════════════════════════
-    //  BUILD FROM THE GROUND UP — bottom first
-    //  Timeline ends at 0.65 → leaves 35% catch-up
-    //  room so scrub completes before pin releases.
-    //  scrub: 0.5 = faster response to scroll.
-    //  end: +=300% = plenty of scroll distance.
+    //  MOBILE — Auto-play on viewport entry
+    //  Top-to-bottom reading order, time-based (~1.4s)
     // ═══════════════════════════════════════════════
+    mm.add(MEDIA_QUERIES.mobile, () => {
+      gsap.set([badgeRef.current, line1Ref.current, line2Ref.current, line3Ref.current,
+        goldLineRef.current, descRef.current, statsRef.current], { opacity: 0 });
+      if (ctaRef.current?.children.length) {
+        gsap.set(ctaRef.current.children, { opacity: 0 });
+      }
 
-    // 0.00–0.06: Stats rise from below — FOUNDATION POURED
-    tl.fromTo(statsRef.current,
-      { clipPath: 'inset(100% 0% 0% 0%)', y: 40, opacity: 0 },
-      { clipPath: 'inset(0% 0% 0% 0%)', y: 0, opacity: 1, duration: 0.06, ease: 'power3.out' },
-      0
-    );
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 75%',
+          toggleActions: 'play none none none',
+          id: 'hero-mobile',
+        },
+      });
 
-    // 0.06–0.13: CTA buttons bolt in — STRUCTURAL STEEL FRAMING
-    if (ctaRef.current?.children.length) {
-      tl.fromTo(ctaRef.current.children,
-        { scale: 0, rotation: 180, opacity: 0 },
-        { scale: 1, rotation: 0, opacity: 1, duration: 0.07, stagger: 0.02, ease: 'back.out(2)' },
-        0.06
+      // Badge slides down
+      tl.fromTo(badgeRef.current,
+        { y: -20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+        0
       );
-    }
 
-    // 0.13–0.20: Description pours in — WALLS RISING
-    tl.fromTo(descRef.current,
-      { clipPath: 'inset(100% 0% 0% 0%)', y: 20, opacity: 0 },
-      { clipPath: 'inset(0% 0% 0% 0%)', y: 0, opacity: 1, duration: 0.07, ease: 'power2.out' },
-      0.13
-    );
+      // "WE BUILD" drops in
+      tl.fromTo(line1Ref.current,
+        { y: -30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' },
+        0.1
+      );
 
-    // 0.20–0.26: Gold weld line draws — STRUCTURAL CONNECTOR
-    tl.fromTo(goldLineRef.current,
-      { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-      { scaleX: 1, opacity: 1, duration: 0.06, ease: 'power2.inOut' },
-      0.20
-    );
+      // "EVERYTHING" scales up
+      tl.fromTo(line2Ref.current,
+        { scale: 0.8, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.4, ease: 'back.out(1.5)' },
+        0.25
+      );
 
-    // 0.26–0.36: "FROM THE GROUND UP" rises via clipPath
-    tl.fromTo(line3Ref.current,
-      { clipPath: 'inset(100% 0% 0% 0%)', y: 40, opacity: 0 },
-      { clipPath: 'inset(0% 0% 0% 0%)', y: 0, opacity: 1, duration: 0.10, ease: 'power3.out' },
-      0.26
-    );
+      // "FROM THE GROUND UP" rises
+      tl.fromTo(line3Ref.current,
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+        0.4
+      );
 
-    // 0.36–0.46: "EVERYTHING" scales up from center
-    tl.fromTo(line2Ref.current,
-      { scale: 0.2, opacity: 0 },
-      { scale: 1, opacity: 1, duration: 0.10, ease: 'back.out(1.5)' },
-      0.36
-    );
+      // Gold line draws
+      tl.fromTo(goldLineRef.current,
+        { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
+        { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' },
+        0.55
+      );
 
-    // 0.46–0.57: "WE BUILD" drops like top beam — PLACED LAST
-    tl.fromTo(line1Ref.current,
-      { y: -100, rotation: -3, opacity: 0 },
-      { y: 0, rotation: 0, opacity: 1, duration: 0.11, ease: 'bounce.out' },
-      0.46
-    );
+      // Description fades up
+      tl.fromTo(descRef.current,
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+        0.65
+      );
 
-    // 0.57–0.65: Badge bolts on — FINAL SIGN AT TOP
-    tl.fromTo(badgeRef.current,
-      { scale: 0, rotation: 90, opacity: 0 },
-      { scale: 1, rotation: 0, opacity: 1, duration: 0.08, ease: 'back.out(2)' },
-      0.57
-    );
+      // CTA buttons stagger in
+      if (ctaRef.current?.children.length) {
+        tl.fromTo(ctaRef.current.children,
+          { y: 20, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.3, stagger: 0.1, ease: 'power2.out' },
+          0.8
+        );
+      }
+
+      // Stats rise from below
+      tl.fromTo(statsRef.current,
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' },
+        1.0
+      );
+    });
 
   }, { scope: sectionRef });
 
@@ -135,8 +210,8 @@ export default function Hero() {
   };
 
   return (
-    <div ref={spacerRef} className="relative z-[40]" style={{ height: '400vh' }}>
-    <section ref={sectionRef} className="sticky top-0 h-screen flex items-center justify-start lg:justify-center overflow-hidden bg-ro-black pt-20">
+    <div ref={spacerRef} className="relative lg:z-[40] lg:[height:400vh]">
+    <section ref={sectionRef} className="min-h-screen lg:sticky lg:top-0 lg:h-screen flex items-center justify-start lg:justify-center overflow-hidden bg-ro-black pt-20">
       {/* Animated blueprint grid */}
       <BlueprintGrid intensity="low" animate={true} />
 

@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import Link from 'next/link';
 import { DIVISIONS } from '@/lib/constants';
 import { ArrowRight, Home, Building2, Mountain, HardHat } from 'lucide-react';
-import { gsap, ScrollTrigger, useGSAP } from '@/components/animations/GSAPProvider';
+import { gsap, ScrollTrigger, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,22 +16,13 @@ const ICONS: Record<string, any> = {
 };
 
 /**
- * DivisionCards — Pinned scrub-linked construction sequence.
+ * DivisionCards — Construction-themed division showcase.
  *
- * The page IS a construction site. Each of 4 division cards physically BUILDS
- * as the user scrolls: wall rises from ground, border welds clockwise, corner
- * bolts screw in, icon drops with metallic bounce, name stamps in, description
- * pours like concrete, tags weld on, gold line seals the bottom.
+ * Desktop: Pinned scrub-linked sequence. Cards stacked absolutely, one builds
+ * at a time via scroll. Wall rises, border welds, bolts screw, icon drops, etc.
  *
- * Mobile-first: designed for iPhone 16 Pro Max (430×932) thumb scrolling.
- * One card at a time, full viewport width, ~50vh scroll per card.
- *
- * Timeline across +=200% scroll:
- *   0.00–0.06  Section header construction
- *   0.06–0.28  Card 0 builds
- *   0.30–0.52  Card 1 builds
- *   0.54–0.76  Card 2 builds
- *   0.78–1.00  Card 3 builds
+ * Mobile: Cards flow vertically. Each card gets its own ScrollTrigger and
+ * auto-plays its build (~1s) when entering viewport.
  */
 export default function DivisionCards() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -41,105 +32,279 @@ export default function DivisionCards() {
   const spacerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    if (!sectionRef.current || !stageRef.current || !spacerRef.current) return;
+    if (!sectionRef.current || !stageRef.current) return;
 
-    // ─── Set initial hidden states ───
-    const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
-    allCards.forEach(card => {
-      gsap.set(card, { opacity: 0 });
-    });
-    if (headerRef.current) {
-      gsap.set(headerRef.current.children, { opacity: 0 });
-    }
+    const mm = gsap.matchMedia();
 
-    // ─── Setup SVG border rects with correct dimensions ───
-    allCards.forEach(card => {
-      const rect = card.querySelector('.card-border-rect') as SVGRectElement | null;
-      const svg = card.querySelector('.card-border-svg') as SVGSVGElement | null;
-      if (rect && svg) {
-        const { width, height } = card.getBoundingClientRect();
-        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-        rect.setAttribute('width', String(width - 2));
-        rect.setAttribute('height', String(height - 2));
-        const perimeter = 2 * (width - 2 + height - 2);
-        rect.style.strokeDasharray = String(perimeter);
-        rect.style.strokeDashoffset = String(perimeter);
+    // ═══════════════════════════════════════════════
+    //  DESKTOP — Scrub-linked card construction
+    // ═══════════════════════════════════════════════
+    mm.add(MEDIA_QUERIES.desktop, () => {
+      if (!spacerRef.current) return;
+
+      const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
+      allCards.forEach(card => { gsap.set(card, { opacity: 0 }); });
+      if (headerRef.current) {
+        gsap.set(headerRef.current.children, { opacity: 0 });
       }
+
+      // Setup SVG border rects with desktop dimensions
+      allCards.forEach(card => {
+        const rect = card.querySelector('.card-border-rect') as SVGRectElement | null;
+        const svg = card.querySelector('.card-border-svg') as SVGSVGElement | null;
+        if (rect && svg) {
+          const { width, height } = card.getBoundingClientRect();
+          svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+          rect.setAttribute('width', String(width - 2));
+          rect.setAttribute('height', String(height - 2));
+          const perimeter = 2 * (width - 2 + height - 2);
+          rect.style.strokeDasharray = String(perimeter);
+          rect.style.strokeDashoffset = String(perimeter);
+        }
+      });
+
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: spacerRef.current,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 1.5,
+          id: 'division-cards-build',
+        },
+      });
+
+      // Section Header Construction (0.00–0.06)
+      if (headerRef.current) {
+        const badge = headerRef.current.querySelector('.section-badge');
+        const heading = headerRef.current.querySelector('.section-heading');
+        const goldLine = headerRef.current.querySelector('.section-gold-line');
+
+        if (badge) {
+          tl.fromTo(badge,
+            { x: -60, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.02, ease: 'power2.out' },
+            0
+          );
+        }
+        if (heading) {
+          tl.fromTo(heading,
+            { scale: 0, rotation: 90, opacity: 0 },
+            { scale: 1, rotation: 0, opacity: 1, duration: 0.025, ease: 'back.out(2)' },
+            0.02
+          );
+        }
+        if (goldLine) {
+          tl.fromTo(goldLine,
+            { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
+            { scaleX: 1, opacity: 1, duration: 0.02, ease: 'power2.inOut' },
+            0.04
+          );
+        }
+      }
+
+      // Card builds
+      const CARD_STARTS = [0.06, 0.30, 0.54, 0.78];
+      const CARD_DURATION = 0.22;
+
+      allCards.forEach((card, i) => {
+        const start = CARD_STARTS[i];
+        buildCard(tl, card, start);
+
+        // Fade out completed card before next
+        if (i < allCards.length - 1) {
+          tl.fromTo(card,
+            { opacity: 1, y: 0 },
+            { opacity: 0, y: -30, duration: 0.02, ease: 'power2.in' },
+            start + CARD_DURATION
+          );
+        }
+      });
     });
 
-    // ─── Main scrub timeline ───
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: spacerRef.current,
-        start: 'top top',
-        end: 'bottom bottom',
-        scrub: 1.5,
-        id: 'division-cards-build',
-      },
-    });
+    // ═══════════════════════════════════════════════
+    //  MOBILE — Auto-play cards on viewport entry
+    // ═══════════════════════════════════════════════
+    mm.add(MEDIA_QUERIES.mobile, () => {
+      // Header auto-play
+      if (headerRef.current) {
+        gsap.set(headerRef.current.children, { opacity: 0 });
 
-    // ─── Phase 0: Section Header Construction (0.00–0.06) ───
-    if (headerRef.current) {
-      const badge = headerRef.current.querySelector('.section-badge');
-      const heading = headerRef.current.querySelector('.section-heading');
-      const goldLine = headerRef.current.querySelector('.section-gold-line');
+        const badge = headerRef.current.querySelector('.section-badge');
+        const heading = headerRef.current.querySelector('.section-heading');
+        const goldLine = headerRef.current.querySelector('.section-gold-line');
 
-      if (badge) {
-        tl.fromTo(badge,
-          { x: -60, opacity: 0 },
-          { x: 0, opacity: 1, duration: 0.02, ease: 'power2.out' },
+        const headerTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: headerRef.current,
+            start: 'top 80%',
+            toggleActions: 'play none none none',
+            id: 'divisions-header-mobile',
+          },
+        });
+
+        if (badge) {
+          headerTl.fromTo(badge,
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+            0
+          );
+        }
+        if (heading) {
+          headerTl.fromTo(heading,
+            { scale: 0.8, opacity: 0 },
+            { scale: 1, opacity: 1, duration: 0.4, ease: 'back.out(1.5)' },
+            0.1
+          );
+        }
+        if (goldLine) {
+          headerTl.fromTo(goldLine,
+            { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
+            { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' },
+            0.3
+          );
+        }
+      }
+
+      // Each card builds independently
+      const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
+      allCards.forEach((card, i) => {
+        gsap.set(card, { opacity: 0 });
+
+        // Setup SVG border rects with mobile dimensions
+        const rect = card.querySelector('.card-border-rect') as SVGRectElement | null;
+        const svg = card.querySelector('.card-border-svg') as SVGSVGElement | null;
+        if (rect && svg) {
+          const { width, height } = card.getBoundingClientRect();
+          svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+          rect.setAttribute('width', String(width - 2));
+          rect.setAttribute('height', String(height - 2));
+          const perimeter = 2 * (width - 2 + height - 2);
+          rect.style.strokeDasharray = String(perimeter);
+          rect.style.strokeDashoffset = String(perimeter);
+        }
+
+        const bolts = card.querySelectorAll('[class*="card-bolt"]');
+        const icon = card.querySelector('.division-icon');
+        const name = card.querySelector('.division-name');
+        const audience = card.querySelector('.division-audience');
+        const desc = card.querySelector('.division-desc');
+        const tags = card.querySelectorAll('.division-tag');
+        const arrow = card.querySelector('.division-arrow');
+        const bottomLine = card.querySelector('.division-bottom-line');
+
+        const cardTl = gsap.timeline({
+          scrollTrigger: {
+            trigger: card,
+            start: 'top 85%',
+            toggleActions: 'play none none none',
+            id: `division-card-${i}-mobile`,
+          },
+        });
+
+        // Card rises
+        cardTl.fromTo(card,
+          { y: 40, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.4, ease: 'power3.out' },
           0
         );
-      }
-      if (heading) {
-        tl.fromTo(heading,
-          { scale: 0, rotation: 90, opacity: 0 },
-          { scale: 1, rotation: 0, opacity: 1, duration: 0.025, ease: 'back.out(2)' },
-          0.02
-        );
-      }
-      if (goldLine) {
-        tl.fromTo(goldLine,
-          { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-          { scaleX: 1, opacity: 1, duration: 0.02, ease: 'power2.inOut' },
-          0.04
-        );
-      }
-    }
 
-    // ─── Card start positions ───
-    const CARD_STARTS = [0.06, 0.30, 0.54, 0.78];
-    const CARD_DURATION = 0.22;
+        // Border draws
+        if (rect) {
+          cardTl.fromTo(rect,
+            { strokeDashoffset: rect.style.strokeDasharray, opacity: 0 },
+            { strokeDashoffset: 0, opacity: 1, duration: 0.5, ease: 'power1.inOut' },
+            0.15
+          );
+        }
 
-    // ─── Build each card ───
-    allCards.forEach((card, i) => {
-      const start = CARD_STARTS[i];
-      buildCard(tl, card, start);
+        // Bolts screw in
+        if (bolts.length) {
+          cardTl.fromTo(bolts,
+            { scale: 0, rotation: 180, opacity: 0 },
+            { scale: 1, rotation: 0, opacity: 1, duration: 0.2, stagger: 0.04, ease: 'back.out(2)' },
+            0.3
+          );
+        }
 
-      // Transition: fade out completed card before next starts
-      if (i < allCards.length - 1) {
-        tl.fromTo(card,
-          { opacity: 1, y: 0 },
-          { opacity: 0, y: -30, duration: 0.02, ease: 'power2.in' },
-          start + CARD_DURATION
-        );
-      }
+        // Icon drops
+        if (icon) {
+          cardTl.fromTo(icon,
+            { y: -30, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.3, ease: 'bounce.out' },
+            0.4
+          );
+        }
+
+        // Name stamps
+        if (name) {
+          cardTl.fromTo(name,
+            { y: 10, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+            0.5
+          );
+        }
+
+        // Audience fades
+        if (audience) {
+          cardTl.fromTo(audience,
+            { y: 10, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.2, ease: 'power2.out' },
+            0.6
+          );
+        }
+
+        // Description pours
+        if (desc) {
+          cardTl.fromTo(desc,
+            { y: 15, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+            0.65
+          );
+        }
+
+        // Tags weld
+        if (tags.length) {
+          cardTl.fromTo(tags,
+            { scale: 0, opacity: 0 },
+            { scale: 1, opacity: 1, duration: 0.2, stagger: 0.05, ease: 'back.out(1.5)' },
+            0.8
+          );
+        }
+
+        // Arrow slides
+        if (arrow) {
+          cardTl.fromTo(arrow,
+            { x: -20, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.2, ease: 'power3.out' },
+            0.9
+          );
+        }
+
+        // Bottom weld line
+        if (bottomLine) {
+          cardTl.fromTo(bottomLine,
+            { scaleX: 0, opacity: 0 },
+            { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' },
+            1.0
+          );
+        }
+      });
     });
 
   }, { scope: sectionRef });
 
   return (
-    <div ref={spacerRef} className="relative z-[30]" style={{ height: '300vh' }}>
+    <div ref={spacerRef} className="relative lg:z-[30] lg:[height:300vh]">
     <section
       ref={sectionRef}
-      className="sticky top-0 h-screen overflow-hidden bg-ro-black"
+      className="lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden bg-ro-black"
     >
       <BlueprintGrid intensity="medium" animate={true} />
 
       {/* Gradient overlays */}
       <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-transparent to-ro-black pointer-events-none z-[1]" />
 
-      <div className="relative z-10 flex flex-col h-screen px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 flex flex-col lg:h-screen px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div ref={headerRef} className="pt-20 pb-6 text-center flex-shrink-0">
           <span className="section-badge text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-3 block">
@@ -153,15 +318,15 @@ export default function DivisionCards() {
           />
         </div>
 
-        {/* Card Stage — all cards stacked here */}
-        <div ref={stageRef} className="relative flex-1 max-w-2xl mx-auto w-full">
+        {/* Card Stage — stacked on desktop, flowing column on mobile */}
+        <div ref={stageRef} className="relative flex-1 max-w-2xl mx-auto w-full flex flex-col gap-6 lg:block">
           {DIVISIONS.map((division, index) => {
             const Icon = ICONS[division.icon] || Building2;
             return (
               <div
                 key={division.id}
                 ref={el => { cardRefs.current[index] = el; }}
-                className="absolute inset-0 flex items-center"
+                className="lg:absolute lg:inset-0 flex items-center"
               >
                 <Link
                   href={division.href}
@@ -247,12 +412,15 @@ export default function DivisionCards() {
           })}
         </div>
 
-        {/* Card counter indicator */}
-        <div className="flex-shrink-0 pb-8 flex justify-center gap-2">
+        {/* Card counter indicator — desktop only */}
+        <div className="flex-shrink-0 pb-8 hidden lg:flex justify-center gap-2">
           {DIVISIONS.map((_, i) => (
             <div key={i} className="w-8 h-[2px] bg-ro-gray-800" />
           ))}
         </div>
+
+        {/* Mobile bottom spacer */}
+        <div className="flex-shrink-0 pb-8 lg:hidden" />
       </div>
     </section>
     </div>
@@ -260,7 +428,7 @@ export default function DivisionCards() {
 }
 
 /**
- * Builds a single card within the scrub timeline.
+ * Builds a single card within the desktop scrub timeline.
  * Each element is physically "constructed" in sequence.
  */
 function buildCard(tl: gsap.core.Timeline, card: HTMLDivElement, start: number) {
