@@ -130,75 +130,82 @@ export default function Hero() {
     // ═══════════════════════════════════════════════
     mm.add(MEDIA_QUERIES.mobile, () => {
       // Hide everything initially
-      gsap.set([badgeRef.current, line2Ref.current, goldLineRef.current, descRef.current, statsRef.current], { opacity: 0 });
+      gsap.set([badgeRef.current, line2Ref.current, goldLineRef.current], { opacity: 0 });
       if (ctaRef.current?.children.length) {
         gsap.set(ctaRef.current.children, { opacity: 0 });
       }
 
-      // SplitText on heading lines only (not EVERYTHING — gradient breaks it).
-      // Phone + CTA use flex layout with icons — SplitText destroys flex alignment.
-      const split3 = SplitText.create(line3Ref.current!, { type: 'chars' });
-      const split1 = SplitText.create(line1Ref.current!, { type: 'chars' });
-      gsap.set([split3.chars, split1.chars], { opacity: 0, willChange: 'transform, opacity' });
+      // SplitText with mask — chars hidden behind clip containers,
+      // slide into view with pure y transform. No opacity needed.
+      // This is the 2025-2026 agency-standard text reveal technique.
+      const split3 = SplitText.create(line3Ref.current!, { type: 'chars', mask: 'chars' });
+      const split1 = SplitText.create(line1Ref.current!, { type: 'chars', mask: 'chars' });
+      gsap.set([split3.chars, split1.chars], { y: '110%', willChange: 'transform' });
 
-      const tl = gsap.timeline({ delay: 0.6 });
+      // Description: line-by-line mask reveal
+      const splitDesc = SplitText.create(descRef.current!, { type: 'lines', mask: 'lines' });
+      gsap.set(splitDesc.lines, { y: '100%' });
 
-      // 1. Phone number — rises from below (0s)
+      const tl = gsap.timeline({ delay: 0.5 });
+
+      // 1. Phone number — slides in from right (0s)
       if (ctaRef.current?.children[1]) {
         tl.fromTo(ctaRef.current.children[1],
-          { y: 30, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' },
+          { x: 60, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.45, ease: 'power3.out' },
           0
         );
       }
 
-      // 2. Gold CTA — rises from below, overlaps phone (0.2s)
+      // 2. Gold CTA — steel beam wipe from left (0.15s)
       if (ctaRef.current?.children[0]) {
         tl.fromTo(ctaRef.current.children[0],
-          { y: 30, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' },
-          0.2
+          { clipPath: 'inset(0 100% 0 0)', opacity: 0 },
+          { clipPath: 'inset(0 0% 0 0)', opacity: 1, duration: 0.5, ease: 'power3.inOut' },
+          0.15
         );
       }
 
-      // 3. Description + gold line — come in together, fast (0.5s)
-      tl.fromTo(descRef.current,
-        { y: 20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
+      // 3. Description — lines rise from behind masks (0.5s)
+      tl.fromTo(splitDesc.lines,
+        { y: '100%' },
+        { y: '0%', stagger: 0.08, duration: 0.5, ease: 'power3.out' },
         0.5
       );
+
+      // 4. Gold weld line draws across (0.65s)
       tl.fromTo(goldLineRef.current,
         { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-        { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' },
-        0.6
+        { scaleX: 1, opacity: 1, duration: 0.35, ease: 'power2.inOut' },
+        0.65
       );
 
-      // 4. "FROM THE GROUND UP" — letters rise from below (0.85s)
+      // 5. "FROM THE GROUND UP" — chars rise from below baselines (0.9s)
       tl.fromTo(split3.chars,
-        { y: () => gsap.utils.random(25, 60), opacity: 0 },
-        { y: 0, opacity: 1, stagger: 0.02, duration: 0.4, ease: 'power2.out' },
-        0.85
+        { y: '110%' },
+        { y: '0%', stagger: 0.02, duration: 0.45, ease: 'back.out(1.2)' },
+        0.9
       );
 
-      // 5. "EVERYTHING" — rises from below (1.25s)
+      // 6. "EVERYTHING" — scale punch from center (1.3s)
       tl.fromTo(line2Ref.current,
-        { y: 40, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' },
-        1.25
+        { scale: 0.3, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(2)' },
+        1.3
       );
 
-      // 6. "WE BUILD" — letters rise from below (1.45s)
+      // 7. "WE BUILD" — chars drop from above, center-out stagger (1.5s)
       tl.fromTo(split1.chars,
-        { y: () => gsap.utils.random(25, 60), opacity: 0 },
-        { y: 0, opacity: 1, stagger: 0.025, duration: 0.4, ease: 'power2.out' },
-        1.45
+        { y: '-110%' },
+        { y: '0%', stagger: { each: 0.025, from: 'center' }, duration: 0.45, ease: 'back.out(1.5)' },
+        1.5
       );
 
-      // 7. Badge — drops in from top (1.85s)
+      // 8. Badge — drops in from top (1.9s)
       tl.fromTo(badgeRef.current,
-        { y: -15, opacity: 0 },
+        { y: -20, opacity: 0 },
         { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
-        1.85
+        1.9
       );
 
       // Clean up GPU layers after build finishes
@@ -206,22 +213,28 @@ export default function Hero() {
         gsap.set([split3.chars, split1.chars], { willChange: 'auto' });
       });
 
-      // ─── Stats: below fold, animate when scrolled into view ───
-      gsap.fromTo(statsRef.current,
-        { y: 20, opacity: 0 },
-        {
-          y: 0, opacity: 1,
-          duration: 0.5, ease: 'power3.out',
-          scrollTrigger: {
-            trigger: statsRef.current,
-            start: 'top 85%',
-            toggleActions: 'play none none none',
-            id: 'hero-stats-mobile',
-          },
-        }
-      );
+      // ─── Stats: concrete pour from bottom, stagger from edges ───
+      if (statsRef.current?.children.length) {
+        const statEls = Array.from(statsRef.current.children) as HTMLElement[];
+        gsap.set(statEls, { scaleY: 0, transformOrigin: 'center bottom', opacity: 0 });
 
-      return () => { split1.revert(); split3.revert(); };
+        gsap.fromTo(statEls,
+          { scaleY: 0, opacity: 0, transformOrigin: 'center bottom' },
+          {
+            scaleY: 1, opacity: 1,
+            duration: 0.5, ease: 'power3.out',
+            stagger: { each: 0.1, from: 'edges' },
+            scrollTrigger: {
+              trigger: statsRef.current,
+              start: 'top 85%',
+              toggleActions: 'play none none none',
+              id: 'hero-stats-mobile',
+            },
+          }
+        );
+      }
+
+      return () => { split1.revert(); split3.revert(); splitDesc.revert(); };
     });
 
   }, { scope: sectionRef });
