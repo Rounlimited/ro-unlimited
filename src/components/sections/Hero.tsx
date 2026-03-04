@@ -147,8 +147,8 @@ export default function Hero() {
       // 1. Phone number rises in — first thing user sees
       if (ctaRef.current?.children[1]) {
         tl.fromTo(ctaRef.current.children[1],
-          { y: 20, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' },
+          { y: 40, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out' },
           0
         );
       }
@@ -156,24 +156,24 @@ export default function Hero() {
       // 2. Gold CTA button pops in
       if (ctaRef.current?.children[0]) {
         tl.fromTo(ctaRef.current.children[0],
-          { scale: 0.8, opacity: 0 },
-          { scale: 1, opacity: 1, duration: 0.4, ease: 'back.out(1.5)' },
-          0.3
+          { y: 40, scale: 0.85, opacity: 0 },
+          { y: 0, scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(1.3)' },
+          0.5
         );
       }
 
       // 3. Description fades up
       tl.fromTo(descRef.current,
-        { y: 15, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' },
-        0.6
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out' },
+        1.0
       );
 
       // 4. Gold weld line draws across
       tl.fromTo(goldLineRef.current,
         { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
-        { scaleX: 1, opacity: 1, duration: 0.4, ease: 'power2.inOut' },
-        0.9
+        { scaleX: 1, opacity: 1, duration: 0.5, ease: 'power2.inOut' },
+        1.5
       );
 
       // 5. "FROM THE GROUND UP" — letters assemble from below
@@ -191,14 +191,14 @@ export default function Hero() {
           ease: 'back.out(1.4)',
           duration: 0.7,
         },
-        1.1
+        2.0
       );
 
       // 6. "EVERYTHING" — rises from below (no SplitText, preserves gradient)
       tl.fromTo(line2Ref.current,
         { y: 60, scale: 0.5, opacity: 0 },
         { y: 0, scale: 1, opacity: 1, duration: 0.7, ease: 'back.out(1.3)' },
-        1.9
+        2.8
       );
 
       // 7. "WE BUILD" — letters rise from below like stacking blocks
@@ -216,14 +216,14 @@ export default function Hero() {
           ease: 'back.out(1.4)',
           duration: 0.7,
         },
-        2.5
+        3.4
       );
 
       // 8. Badge — final sign bolted on top
       tl.fromTo(badgeRef.current,
         { y: -15, opacity: 0 },
         { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' },
-        3.3
+        4.2
       );
 
       // ─── Stats: below fold, animate when scrolled into view ───
