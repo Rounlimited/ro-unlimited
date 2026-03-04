@@ -136,7 +136,7 @@ export default function Hero() {
 
   return (
     <div ref={spacerRef} className="relative z-[40]" style={{ height: '400vh' }}>
-    <section ref={sectionRef} className="sticky top-0 h-screen flex items-center justify-center overflow-hidden bg-ro-black pt-20">
+    <section ref={sectionRef} className="sticky top-0 h-screen flex items-center justify-start lg:justify-center overflow-hidden bg-ro-black pt-20">
       {/* Animated blueprint grid */}
       <BlueprintGrid intensity="low" animate={true} />
 
@@ -154,7 +154,7 @@ export default function Hero() {
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-ro-black/95 to-ro-black" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-4 lg:pt-8 lg:pb-8">
         <div className="text-center">
           {/* Badge — final sign bolted on top */}
           <div ref={badgeRef} className="inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/20 bg-ro-gold/5 mb-8">
