@@ -179,51 +179,51 @@ export default function Hero() {
       // 5. "FROM THE GROUND UP" — letters assemble from below
       tl.fromTo(split3.chars,
         {
-          x: () => gsap.utils.random(-60, 60),
-          y: () => gsap.utils.random(20, 80),
-          rotation: () => gsap.utils.random(-90, 90),
-          scale: 0.3,
-          opacity: 0,
-        },
-        {
-          x: 0, y: 0, rotation: 0, scale: 1, opacity: 1,
-          stagger: 0.02,
-          ease: 'back.out(1.7)',
-          duration: 0.5,
-        },
-        1.1
-      );
-
-      // 6. "EVERYTHING" — scale+fade (no SplitText, preserves gradient)
-      tl.fromTo(line2Ref.current,
-        { scale: 0.3, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(1.5)' },
-        1.7
-      );
-
-      // 7. "WE BUILD" — letters drop from above
-      tl.fromTo(split1.chars,
-        {
-          x: () => gsap.utils.random(-50, 50),
-          y: () => gsap.utils.random(-80, -20),
-          rotation: () => gsap.utils.random(-90, 90),
+          x: () => gsap.utils.random(-40, 40),
+          y: () => gsap.utils.random(30, 100),
+          rotation: () => gsap.utils.random(-45, 45),
           scale: 0.3,
           opacity: 0,
         },
         {
           x: 0, y: 0, rotation: 0, scale: 1, opacity: 1,
           stagger: 0.03,
-          ease: 'back.out(1.7)',
-          duration: 0.5,
+          ease: 'back.out(1.4)',
+          duration: 0.7,
         },
-        2.1
+        1.1
+      );
+
+      // 6. "EVERYTHING" — rises from below (no SplitText, preserves gradient)
+      tl.fromTo(line2Ref.current,
+        { y: 60, scale: 0.5, opacity: 0 },
+        { y: 0, scale: 1, opacity: 1, duration: 0.7, ease: 'back.out(1.3)' },
+        1.9
+      );
+
+      // 7. "WE BUILD" — letters rise from below like stacking blocks
+      tl.fromTo(split1.chars,
+        {
+          x: () => gsap.utils.random(-40, 40),
+          y: () => gsap.utils.random(30, 100),
+          rotation: () => gsap.utils.random(-45, 45),
+          scale: 0.3,
+          opacity: 0,
+        },
+        {
+          x: 0, y: 0, rotation: 0, scale: 1, opacity: 1,
+          stagger: 0.035,
+          ease: 'back.out(1.4)',
+          duration: 0.7,
+        },
+        2.5
       );
 
       // 8. Badge — final sign bolted on top
       tl.fromTo(badgeRef.current,
         { y: -15, opacity: 0 },
         { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' },
-        2.7
+        3.3
       );
 
       // ─── Stats: below fold, animate when scrolled into view ───
