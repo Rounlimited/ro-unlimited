@@ -29,3 +29,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+// PATCH - Update a single item status (used by checklist toggle)
+export async function PATCH(req: NextRequest) {
+  try {
+    const { itemId, status } = await req.json();
+    if (!itemId || !status) {
+      return NextResponse.json({ error: 'itemId and status required' }, { status: 400 });
+    }
+
+    await sanityWriteClient.createIfNotExists({
+      _id: DOC_ID,
+      _type: 'checklistData',
+      statuses: {},
+    });
+
+    await sanityWriteClient.patch(DOC_ID).set({ [`statuses.${itemId}`]: status }).commit();
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

@@ -30,7 +30,8 @@ const DATA: Category[] = [
   { id: 'domain', title: 'Get Us Connected', icon: Globe, desc: 'Domain & account access so we can put your site on the map.', items: [
     { id: 'domain_login', title: 'Domain Login for rounlimited.com', why: "We need this to connect your website to your actual web address. Right now people can only find the site through a temporary link. Once we have this, your site goes live at rounlimited.com.", priority: 'critical', difficulty: 'easy', actionType: 'text', actionLabel: 'Enter GoDaddy Login', impactScore: 10, easeScore: 8, status: 'not_started' },
     { id: 'google_biz', title: 'Google Business Profile', why: "When someone Googles \"RO Unlimited\" or \"contractor near me\" this is what shows up with the map and reviews. We need to connect it to your website.", priority: 'critical', difficulty: 'medium', actionType: 'instructions', actionLabel: 'How To Do This', impactScore: 9, easeScore: 5, status: 'not_started' },
-    { id: 'facebook', title: 'Facebook Page Access', why: "So we can link your website and Facebook page together. When someone visits your Facebook, they see a link to your professional website.", priority: 'important', difficulty: 'easy', actionType: 'instructions', actionLabel: 'How To Do This', impactScore: 5, easeScore: 7, status: 'not_started' },
+    { id: 'gbp_login', title: 'Google Business Profile Login', why: "If you already have a Google Business Profile, give us the login so we can manage your listing, update your hours, and respond to reviews.", priority: 'important', difficulty: 'easy', actionType: 'text', actionLabel: 'Enter Google Login', impactScore: 8, easeScore: 8, status: 'not_started' },
+        { id: 'facebook', title: 'Facebook Page Access', why: "So we can link your website and Facebook page together. When someone visits your Facebook, they see a link to your professional website.", priority: 'important', difficulty: 'easy', actionType: 'instructions', actionLabel: 'How To Do This', impactScore: 5, easeScore: 7, status: 'not_started' },
   ]},
   { id: 'photos', title: 'Show Your Work', icon: Camera, desc: "Project photos are the #1 thing that wins commercial contracts.", items: [
     { id: 'project_photos', title: 'Completed Project Photos', why: "This is the single most important thing on your website. When a commercial developer is deciding who to hire, they want to SEE what you've built.", priority: 'critical', difficulty: 'medium', actionType: 'link', actionLabel: 'Upload Project Photos', actionHref: '/admin/checklist/projects', impactScore: 10, easeScore: 5, status: 'not_started' },
@@ -78,6 +79,24 @@ export default function ChecklistPage() {
   const [textModal, setTextModal] = useState<{ itemId: string; title: string; description: string; fields: { id: string; label: string; placeholder: string; type?: 'text' | 'password' | 'email' }[] } | null>(null);
   const [instructionsModal, setInstructionsModal] = useState<{ itemId: string; title: string; description: string; steps: { text: string; link?: string; copyText?: string }[] } | null>(null);
 
+
+  // Load saved statuses from Sanity on mount
+  useEffect(() => {
+    fetch('/api/admin/checklist')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.statuses) {
+          setCats(prev => prev.map(c => ({
+            ...c,
+            items: c.items.map(i => ({
+              ...i,
+              status: (data.statuses[i.id]) || i.status,
+            })),
+          })));
+        }
+      })
+      .catch(() => {});
+  }, []);
   const actionable = cats.filter(c => c.id !== 'nexa').flatMap(c => c.items);
   const doneCount = actionable.filter(i => i.status === 'done').length;
   const percent = actionable.length > 0 ? (doneCount / actionable.length) * 100 : 0;
@@ -85,16 +104,35 @@ export default function ChecklistPage() {
   const nexaDone = nexaItems.filter(i => i.status === 'done').length;
 
   const toggle = (catId: string, itemId: string) => {
+    let newStatus = 'not_started';
     setCats(prev => prev.map(c => c.id !== catId ? c : {
-      ...c, items: c.items.map(i => i.id !== itemId || i.actionType === 'nexa' ? i : { ...i, status: (i.status === 'done' ? 'not_started' : 'done') as Status })
+      ...c, items: c.items.map(i => {
+        if (i.id !== itemId || i.actionType === 'nexa') return i;
+        newStatus = i.status === 'done' ? 'not_started' : 'done';
+        return { ...i, status: newStatus as Status };
+      })
     }));
+    // Persist to Sanity
+    fetch('/api/admin/checklist', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemId, status: newStatus }),
+    }).catch(() => {});
   };
 
   const sorted = (items: ChecklistItem[]) => [...items].sort((a, b) => sort === 'impact' ? b.impactScore - a.impactScore : b.easeScore - a.easeScore);
 
   // Modal configurations per item
   const textConfigs: Record<string, { title: string; description: string; fields: { id: string; label: string; placeholder: string; type?: 'text' | 'password' | 'email' }[] }> = {
-    domain_login: {
+    gbp_login: {
+      title: 'Google Business Profile Login',
+      description: "Your Google account credentials for the Business Profile. We use this to manage your listing, respond to reviews, and keep your business info up to date.",
+      fields: [
+        { id: 'email', label: 'Google Email', placeholder: 'your@gmail.com', type: 'email' },
+        { id: 'password', label: 'Password', placeholder: 'Your Google password', type: 'password' },
+      ],
+    },
+        domain_login: {
       title: 'GoDaddy Login',
       description: "We will use this to connect rounlimited.com to your website.",
       fields: [
@@ -147,10 +185,15 @@ export default function ChecklistPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ field: itemId, value: values }),
       });
-      // Mark as done
+      // Mark as done and persist
       setCats(prev => prev.map(c => ({
         ...c, items: c.items.map(i => i.id === itemId ? { ...i, status: 'done' as Status } : i)
       })));
+      fetch('/api/admin/checklist', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId, status: 'done' }),
+      }).catch(() => {});
     } catch (e) {
       console.error('Save failed:', e);
     }
