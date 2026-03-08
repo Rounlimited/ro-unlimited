@@ -140,22 +140,22 @@ export default function ChecklistPage() {
                       const isDone = item.status === 'done';
                       const isN = item.actionType === 'nexa';
                       return (
-                        <div key={item.id} className={`px-4 sm:px-6 py-4 flex gap-3 border-b border-white/[0.03] last:border-0 ${isDone ? 'opacity-40' : ''}`}>
-                          <button onClick={() => !isN && toggle(cat.id, item.id)} className={`mt-1 flex-shrink-0 w-5 h-5 rounded border transition-all flex items-center justify-center ${isDone ? 'bg-[#C9A84C] border-[#C9A84C]' : isN && item.status === 'in_progress' ? 'border-blue-400/30 bg-blue-400/10' : 'border-white/15 hover:border-white/30'}`}>
-                            {isDone && <Check size={12} className={isN ? 'text-white' : 'text-black'} />}
-                            {isN && item.status === 'in_progress' && <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />}
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className={`text-[15px] font-semibold ${isDone ? 'line-through text-white/40' : 'text-white'}`}>{item.title}</span>
-                              {!isN && <span className={`text-[9px] px-1.5 py-0.5 rounded border ${pBadge[item.priority].cls}`}>{pBadge[item.priority].label}</span>}
-                              {!isN && <span className="text-[10px] text-white/40">{dBadge[item.difficulty]}</span>}
-                              {isN && item.status === 'in_progress' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">In Progress</span>}
-                            </div>
-                            <p className="text-[13px] text-white/50 leading-relaxed mt-1.5">{item.why}</p>
-                          </div>
-                          {!isDone && !isN && (
-                            <div className="flex-shrink-0">
+                        <div key={item.id} className={`px-4 sm:px-6 py-4 border-b border-white/[0.03] last:border-0 ${isDone ? 'opacity-40' : ''}`}>
+                          <div className="flex gap-3">
+                            <button onClick={() => !isN && toggle(cat.id, item.id)} className={`mt-1 flex-shrink-0 w-5 h-5 rounded border transition-all flex items-center justify-center ${isDone ? 'bg-[#C9A84C] border-[#C9A84C]' : isN && item.status === 'in_progress' ? 'border-blue-400/30 bg-blue-400/10' : 'border-white/15 hover:border-white/30'}`}>
+                              {isDone && <Check size={12} className={isN ? 'text-white' : 'text-black'} />}
+                              {isN && item.status === 'in_progress' && <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />}
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className={`text-[15px] font-semibold ${isDone ? 'line-through text-white/40' : 'text-white'}`}>{item.title}</span>
+                                {!isN && <span className={`text-[9px] px-1.5 py-0.5 rounded border ${pBadge[item.priority].cls}`}>{pBadge[item.priority].label}</span>}
+                                {!isN && <span className="text-[10px] text-white/40">{dBadge[item.difficulty]}</span>}
+                                {isN && item.status === 'in_progress' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">In Progress</span>}
+                              </div>
+                              <p className="text-[13px] text-white/50 leading-relaxed mt-1">{item.why}</p>
+                              {!isDone && !isN && (
+                                <div className="mt-3">
                               {item.actionType === 'link' && item.actionHref && (
                                 <Link href={item.actionHref} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#C9A84C] bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 border border-[#C9A84C]/30 rounded-lg py-2 px-3.5 transition-all whitespace-nowrap">
                                   {item.actionLabel} <ExternalLink size={10} />
@@ -169,8 +169,10 @@ export default function ChecklistPage() {
                               {(item.actionType === 'text' || item.actionType === 'instructions') && (
                                 <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#C9A84C] bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 border border-[#C9A84C]/30 rounded-lg py-2 px-3.5 transition-all whitespace-nowrap">{item.actionLabel}</button>
                               )}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </div>
                       );
                     })}
@@ -194,4 +196,5 @@ export default function ChecklistPage() {
     </div>
   );
 }
+
 
