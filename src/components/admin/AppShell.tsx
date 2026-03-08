@@ -140,7 +140,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col overflow-hidden">
+    <div className="fixed top-0 left-0 right-0 bottom-0 bg-[#0a0a0a] flex flex-col overflow-hidden" style={{ height: "100dvh" }}>
       {/* Status bar spacer */}
       <div className="flex-shrink-0 h-[env(safe-area-inset-top)] bg-[#0a0a0a]" />
 
@@ -162,13 +162,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* Main content area — scrollable */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden">
-        {children}
+      {/* Main content area */}
+      <main className="flex-1 min-h-0 overflow-hidden">
+        <div className="h-full">
+          {children}
+        </div>
       </main>
 
       {/* Bottom tab bar */}
-      <nav className="flex-shrink-0 bg-[#0f0f0f] border-t border-white/5 px-2 pb-[env(safe-area-inset-bottom)]">
+      <nav className="flex-shrink-0 bg-[#0f0f0f] border-t border-white/5 px-2 pb-2" style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom, 8px))" }}>
         <div className="flex items-center justify-around py-2">
           {TABS.map(tab => {
             const isActive = tab.id === activeTab || (tab.id === 'menu' && drawerOpen);
@@ -263,7 +265,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Coming soon apps */}
-          <p className="text-[10px] text-white/20 uppercase tracking-wider mb-3 px-1">Coming Soon</p>
+          <p className="text-[10px] text-white/25 uppercase tracking-wider mb-3 px-1">Coming Soon</p>
           <div className="grid grid-cols-4 gap-y-5 gap-x-2">
             {filtered.filter(a => !a.active).map(app => {
               const Icon = app.icon;
@@ -271,18 +273,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <button
                   key={app.id}
                   onClick={() => handleAppIcon(app)}
-                  className="flex flex-col items-center gap-1.5 opacity-40"
+                  className="flex flex-col items-center gap-1.5 opacity-60"
                 >
                   <div
                     className="relative w-14 h-14 rounded-2xl flex items-center justify-center"
-                    style={{ background: app.bg }}
+                    style={{ background: 'rgba(255,255,255,0.04)' }}
                   >
-                    <Icon size={24} style={{ color: app.color }} />
-                    <div className="absolute inset-0 rounded-2xl flex items-center justify-center bg-black/40">
-                      <Lock size={10} className="text-white/30" />
+                    <Icon size={24} style={{ color: '#888' }} />
+                    <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-black/60 flex items-center justify-center translate-x-0.5 translate-y-0.5">
+                      <Lock size={7} className="text-white/40" />
                     </div>
                   </div>
-                  <span className="text-[10px] text-white/30 text-center leading-tight">{app.label}</span>
+                  <span className="text-[10px] text-white/40 text-center leading-tight">{app.label}</span>
                 </button>
               );
             })}

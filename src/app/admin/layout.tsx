@@ -11,18 +11,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     document.body.classList.add('admin-mode');
-    // Lock viewport for app feel
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-    document.body.style.height = '100%';
-    return () => {
-      document.body.classList.remove('admin-mode');
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.height = '';
-    };
+    return () => { document.body.classList.remove('admin-mode'); };
   }, []);
 
   if (isLogin) {
