@@ -6,6 +6,9 @@ import { gsap } from 'gsap';
 import AdminHeader from '@/components/admin/AdminHeader';
 import ProgressRing from '@/components/admin/ProgressRing';
 import UploadModal from '@/components/admin/UploadModal';
+import TextInputModal from '@/components/admin/TextInputModal';
+import InstructionsModal from '@/components/admin/InstructionsModal';
+import { Lock } from 'lucide-react';
 import { Globe, Camera, MessageSquare, Building2, Zap, ChevronDown, ChevronRight, Check, ExternalLink, Upload, Star } from 'lucide-react';
 
 type Priority = 'critical' | 'important' | 'nice';
@@ -72,6 +75,8 @@ export default function ChecklistPage() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ domain: true, photos: true, testimonials: true, company: true, nexa: false });
   const [sort, setSort] = useState<SortMode>('impact');
   const [modal, setModal] = useState<{ title: string; description: string; accept: string; type: 'video' | 'image'; itemId: string } | null>(null);
+  const [textModal, setTextModal] = useState<{ itemId: string; title: string; description: string; fields: { id: string; label: string; placeholder: string; type?: 'text' | 'password' | 'email' }[] } | null>(null);
+  const [instructionsModal, setInstructionsModal] = useState<{ itemId: string; title: string; description: string; steps: { text: string; link?: string; copyText?: string }[] } | null>(null);
 
   const actionable = cats.filter(c => c.id !== 'nexa').flatMap(c => c.items);
   const doneCount = actionable.filter(i => i.status === 'done').length;
@@ -86,6 +91,70 @@ export default function ChecklistPage() {
   };
 
   const sorted = (items: ChecklistItem[]) => [...items].sort((a, b) => sort === 'impact' ? b.impactScore - a.impactScore : b.easeScore - a.easeScore);
+
+  // Modal configurations per item
+  const textConfigs: Record<string, { title: string; description: string; fields: { id: string; label: string; placeholder: string; type?: 'text' | 'password' | 'email' }[] }> = {
+    domain_login: {
+      title: 'GoDaddy Login',
+      description: "We'll use this to connect rounlimited.com to your website.",
+      fields: [
+        { id: 'provider', label: 'Where did you buy the domain?', placeholder: 'GoDaddy, Google Domains, etc.', type: 'text' },
+        { id: 'email', label: 'Login Email or Username', placeholder: 'your@email.com', type: 'email' },
+        { id: 'password', label: 'Password', placeholder: 'Your login password', type: 'password' },
+      ],
+    },
+  };
+
+  const instructionConfigs: Record<string, { title: string; description: string; steps: { text: string; link?: string; copyText?: string }[] }> = {
+    google_biz: {
+      title: 'Google Business Profile',
+      description: 'Follow these steps to give us access.',
+      steps: [
+        { text: 'Open Google Business Profile Manager on your phone or computer.', link: 'https://business.google.com' },
+        { text: 'If you don't have one yet, tap "Add your business" and follow the steps to create one. Use "RO Unlimited Contractor & Developer" as the business name.' },
+        { text: 'Once you're in, tap the three dots menu (top right) and select "Business Profile settings".' },
+        { text: 'Tap "Managers" then "Add" and type in this email:', copyText: 'admin@nexavisiongroup.com' },
+        { text: 'Select "Manager" as the role and send the invite. That's it! We'll handle everything from there.' },
+      ],
+    },
+    facebook: {
+      title: 'Facebook Page Access',
+      description: 'Share your Facebook page so we can link it.',
+      steps: [
+        { text: 'Open your RO Unlimited Facebook page on your phone.' },
+        { text: 'Tap the three dots (...) at the top and select "Page Settings".' },
+        { text: 'Tap "Page Access" or "New Pages Experience" then "Add New".' },
+        { text: 'Search for and add this email as an Admin:', copyText: 'admin@nexavisiongroup.com' },
+        { text: 'Confirm the invite. We'll connect it to your website.' },
+      ],
+    },
+    google_reviews: {
+      title: 'Get Google Reviews',
+      description: 'Send this text to 3-5 past clients. It takes them 60 seconds.',
+      steps: [
+        { text: 'Copy the message below and text it to a few past clients who were happy with your work.' },
+        { text: 'Here's what to send them:', copyText: 'Hey! Quick favor — would you mind leaving us a quick Google review? It really helps us out. Just click this link and tap the stars: [We'll add your Google review link here once your Business Profile is set up]. Thanks!' },
+        { text: 'Even 3-5 reviews makes a huge difference for showing up in local searches.' },
+        { text: 'Once your Google Business Profile is connected (Step 1 above), we'll give you the exact link to include in that message.' },
+      ],
+    },
+  };
+
+  const saveTextData = async (itemId: string, values: Record<string, string>) => {
+    try {
+      await fetch('/api/admin/checklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field: itemId, value: values }),
+      });
+      // Mark as done
+      setCats(prev => prev.map(c => ({
+        ...c, items: c.items.map(i => i.id === itemId ? { ...i, status: 'done' as Status } : i)
+      })));
+    } catch (e) {
+      console.error('Save failed:', e);
+    }
+  };
 
   const progressRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
@@ -194,8 +263,15 @@ export default function ChecklistPage() {
                                   <Upload size={10} /> {item.actionLabel}
                                 </button>
                               )}
-                              {(item.actionType === 'text' || item.actionType === 'instructions') && (
-                                <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#C9A84C] bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 border border-[#C9A84C]/30 rounded-lg py-2 px-3.5 transition-all whitespace-nowrap">{item.actionLabel}</button>
+                              {item.actionType === 'text' && textConfigs[item.id] && (
+                                <button
+                                  onClick={() => setTextModal({ itemId: item.id, ...textConfigs[item.id] })}
+                                  className="flex items-center gap-1.5 text-xs font-semibold text-[#C9A84C] bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 border border-[#C9A84C]/30 rounded-lg py-2 px-3.5 transition-all whitespace-nowrap">{item.actionLabel}</button>
+                              )}
+                              {item.actionType === 'instructions' && instructionConfigs[item.id] && (
+                                <button
+                                  onClick={() => setInstructionsModal({ itemId: item.id, ...instructionConfigs[item.id] })}
+                                  className="flex items-center gap-1.5 text-xs font-semibold text-[#C9A84C] bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 border border-[#C9A84C]/30 rounded-lg py-2 px-3.5 transition-all whitespace-nowrap">{item.actionLabel}</button>
                               )}
                                 </div>
                               )}
@@ -221,9 +297,38 @@ export default function ChecklistPage() {
           onUploadComplete={() => { setCats(prev => prev.map(c => ({ ...c, items: c.items.map(i => i.id === modal.itemId ? { ...i, status: 'done' as Status } : i) }))); }}
         />
       )}
+
+      {textModal && (
+        <TextInputModal
+          isOpen
+          onClose={() => setTextModal(null)}
+          title={textModal.title}
+          description={textModal.description}
+          fields={textModal.fields}
+          icon={<Lock size={16} className="text-[#C9A84C]" />}
+          onSubmit={async (values) => { await saveTextData(textModal.itemId, values); }}
+          submitLabel="Send to NexaVision"
+        />
+      )}
+
+      {instructionsModal && (
+        <InstructionsModal
+          isOpen
+          onClose={() => setInstructionsModal(null)}
+          title={instructionsModal.title}
+          description={instructionsModal.description}
+          steps={instructionsModal.steps}
+          onComplete={() => {
+            setCats(prev => prev.map(c => ({
+              ...c, items: c.items.map(i => i.id === instructionsModal.itemId ? { ...i, status: 'done' as Status } : i)
+            })));
+          }}
+        />
+      )}
     </div>
   );
 }
+
 
 
 
