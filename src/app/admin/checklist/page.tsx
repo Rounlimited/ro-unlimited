@@ -133,7 +133,7 @@ export default function ChecklistPage() {
       description: 'Send this text to 3-5 past clients. It takes them 60 seconds.',
       steps: [
         { text: 'Copy the message below and text it to a few past clients who were happy with your work.' },
-        { text: 'Here's what to send them:', copyText: 'Hey! Quick favor — would you mind leaving us a quick Google review? It really helps us out. Just click this link and tap the stars: [We\u2019ll add your Google review link here once your Business Profile is set up]. Thanks!' },
+        { text: 'Here\u2019s what to send them:', copyText: 'Hey! Quick favor — would you mind leaving us a quick Google review? It really helps us out. Just click this link and tap the stars: [We\u2019ll add your Google review link here once your Business Profile is set up]. Thanks!' },
         { text: 'Even 3-5 reviews makes a huge difference for showing up in local searches.' },
         { text: 'Once your Google Business Profile is connected (Step 1 above), we\u2019ll give you the exact link to include in that message.' },
       ],
