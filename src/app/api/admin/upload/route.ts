@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sanityWriteClient } from '@/lib/sanity/client';
 
-// Allow large file uploads (up to 100MB)
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-// Increase max duration for video uploads
+// Next.js 14+ route segment config
+export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
