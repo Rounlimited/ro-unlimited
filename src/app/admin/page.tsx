@@ -42,47 +42,98 @@ export default function AdminDashboard() {
         );
       }
 
-      // Launch Checklist card �?" industrial attention-grab sequence
+      // Launch Checklist card — ELITE perpetual animation system
       if (checklistRef.current) {
         const card = checklistRef.current;
-        const tl = gsap.timeline({ delay: 1.2 });
+        const introTl = gsap.timeline({ delay: 1.2 });
 
-        // Scan line sweep across the card (like a laser scan)
-        tl.fromTo(card,
-          { backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.15) 0%, transparent 0%)' },
-          {
-            backgroundImage: 'linear-gradient(90deg, transparent 100%, rgba(201,168,76,0.15) 100%, transparent 100%)',
-            duration: 0.8, ease: 'power2.inOut',
-            onStart: () => { card.style.backgroundSize = '100% 100%'; },
-          }
-        );
-
-        // Border flash gold
-        tl.to(card, {
-          borderColor: 'rgba(201,168,76,0.5)',
-          boxShadow: '0 0 20px rgba(201,168,76,0.15), inset 0 0 20px rgba(201,168,76,0.05)',
-          duration: 0.3, ease: 'power2.in',
-        }, '-=0.3');
-
-        // Subtle scale pulse
-        tl.to(card, {
-          scale: 1.02, duration: 0.15, ease: 'power2.out',
-        }).to(card, {
-          scale: 1, duration: 0.3, ease: 'elastic.out(1, 0.5)',
+        // === PHASE 1: Initial dramatic entrance ===
+        // Border ignition flash
+        introTl.to(card, {
+          borderColor: 'rgba(201,168,76,0.7)',
+          boxShadow: '0 0 40px rgba(201,168,76,0.3), inset 0 0 40px rgba(201,168,76,0.08)',
+          duration: 0.3, ease: 'power3.in',
         });
-
-        // Settle to a gentle glow
-        tl.to(card, {
+        // Scale punch
+        introTl.to(card, { scale: 1.02, duration: 0.1, ease: 'power2.out' });
+        introTl.to(card, { scale: 1, duration: 0.5, ease: 'elastic.out(1.2, 0.3)' });
+        // Settle
+        introTl.to(card, {
           borderColor: 'rgba(201,168,76,0.25)',
-          boxShadow: '0 0 30px rgba(201,168,76,0.08), inset 0 1px 0 rgba(201,168,76,0.1)',
-          duration: 0.5, ease: 'power2.out',
+          boxShadow: '0 0 20px rgba(201,168,76,0.08)',
+          duration: 0.4,
         });
 
-        // Repeating subtle pulse to keep attention
-        tl.to(card, {
-          boxShadow: '0 0 40px rgba(201,168,76,0.12), inset 0 1px 0 rgba(201,168,76,0.15)',
-          duration: 1.5, ease: 'sine.inOut', repeat: -1, yoyo: true,
+        // === PHASE 2: Perpetual border glow runner ===
+        // Create a conic-gradient border that rotates continuously
+        introTl.call(() => {
+          // Inject a rotating border element
+          const wrapper = document.createElement('div');
+          wrapper.style.cssText = 'position:absolute;inset:-2px;border-radius:inherit;z-index:0;pointer-events:none;overflow:hidden;opacity:0;';
+          wrapper.innerHTML = `
+            <div style="position:absolute;inset:0;border-radius:inherit;padding:2px;background:conic-gradient(from 0deg, transparent 0%, transparent 60%, rgba(201,168,76,0.6) 75%, rgba(201,168,76,1) 80%, rgba(201,168,76,0.6) 85%, transparent 100%);-webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;" class="conic-spinner"></div>
+          `;
+          card.insertBefore(wrapper, card.firstChild);
+
+          // Fade in the wrapper
+          gsap.to(wrapper, { opacity: 1, duration: 0.5 });
+
+          // Spin the conic gradient continuously
+          const spinner = wrapper.querySelector('.conic-spinner') as HTMLElement;
+          if (spinner) {
+            gsap.to(spinner, {
+              rotation: 360,
+              duration: 4,
+              ease: 'none',
+              repeat: -1,
+              transformOrigin: 'center center',
+            });
+          }
+
+          // Make sure card children are above
+          Array.from(card.children).forEach((child: any) => {
+            if (child !== wrapper) {
+              child.style.position = 'relative';
+              child.style.zIndex = '2';
+            }
+          });
         });
+
+        // === PHASE 3: Continuous ambient glow breathing ===
+        gsap.to(card, {
+          boxShadow: '0 0 50px rgba(201,168,76,0.1), 0 0 100px rgba(201,168,76,0.03)',
+          duration: 2.5, ease: 'sine.inOut', repeat: -1, yoyo: true, delay: 3,
+        });
+
+        // === PHASE 4: Status text "Action needed" pulsing ===
+        const statusEl = card.querySelector('[data-checklist-status]');
+        if (statusEl) {
+          // Glow pulse on the text
+          gsap.to(statusEl, {
+            textShadow: '0 0 8px rgba(201,168,76,0.6), 0 0 16px rgba(201,168,76,0.3)',
+            duration: 1, ease: 'sine.inOut', repeat: -1, yoyo: true, delay: 2.5,
+          });
+          // Subtle scale bounce
+          gsap.to(statusEl, {
+            scale: 1.08, duration: 0.6, ease: 'sine.inOut',
+            repeat: -1, yoyo: true, delay: 2.5,
+          });
+        }
+
+        // === PHASE 5: Periodic attention re-grab every 8 seconds ===
+        gsap.timeline({ repeat: -1, delay: 8, repeatDelay: 8 })
+          .to(card, {
+            borderColor: 'rgba(201,168,76,0.5)',
+            boxShadow: '0 0 50px rgba(201,168,76,0.2)',
+            duration: 0.3, ease: 'power2.in',
+          })
+          .to(card, { scale: 1.008, duration: 0.1 })
+          .to(card, { scale: 1, duration: 0.3, ease: 'elastic.out(1, 0.5)' })
+          .to(card, {
+            borderColor: 'rgba(201,168,76,0.25)',
+            boxShadow: '0 0 20px rgba(201,168,76,0.08)',
+            duration: 0.5,
+          });
       }
     });
 
