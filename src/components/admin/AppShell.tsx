@@ -163,10 +163,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main content area */}
-      <main className="flex-1 min-h-0 overflow-hidden">
-        <div className="h-full">
-          {children}
-        </div>
+      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        {children}
       </main>
 
       {/* Bottom tab bar */}
