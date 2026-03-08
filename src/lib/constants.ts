@@ -1,4 +1,4 @@
-﻿export const COMPANY = {
+export const COMPANY = {
   name: 'RO Unlimited',
   fullName: 'RO Unlimited Contractor & Developer',
   phone: '(864) 304-0139',
@@ -14,16 +14,16 @@
 
 export const DIVISIONS = [
   {
-    id: 'residential', name: 'Residential Division', shortName: 'Residential', href: '/residential',
-    description: 'Large-scale custom homes, complex structural framing, and luxury interior renovations.',
-    services: ['Custom Home Framing','Ground-Up New Builds','Complex Structural Shells','Luxury Interior Renovations','Modern Industrial Design','Vaulted Ceilings & Complex Gables'],
-    icon: 'home', targetAudience: 'Homeowners, luxury buyers, real estate investors',
-  },
-  {
     id: 'commercial', name: 'Commercial Division', shortName: 'Commercial', href: '/commercial',
     description: 'Steel builds, retail storefronts, mixed-material construction, and full commercial development.',
     services: ['Commercial Building Development','Steel & Mixed-Material Construction','Modern Retail Storefronts','Problem Solving for Complex Sites','Development Consulting','Large-Scale Commercial Projects'],
     icon: 'building', targetAudience: 'Commercial developers, project managers, general contractors',
+  },
+  {
+    id: 'residential', name: 'Residential Division', shortName: 'Residential', href: '/residential',
+    description: 'Large-scale custom homes, complex structural framing, and luxury interior renovations.',
+    services: ['Custom Home Framing','Ground-Up New Builds','Complex Structural Shells','Luxury Interior Renovations','Modern Industrial Design','Vaulted Ceilings & Complex Gables'],
+    icon: 'home', targetAudience: 'Homeowners, luxury buyers, real estate investors',
   },
   {
     id: 'grading', name: 'Land Grading & Site Prep', shortName: 'Land Grading', href: '/grading',
@@ -33,8 +33,8 @@ export const DIVISIONS = [
   },
   {
     id: 'process', name: 'The Build Process', shortName: 'Our Process', href: '/process',
-    description: 'See how we take projects from raw land to finished product — every phase, every detail.',
-    services: ['Architectural Design & 3D Modeling','Project Planning & Consulting','Permitting & Compliance','Construction Management','Quality Assurance','Final Walkthrough & Delivery'],
+    description: 'See how we take projects from raw land to finished product \u2014 every phase, every detail.',
+    services: ['Architectural Design','Project Planning & Consulting','Permitting & Compliance','Construction Management','Quality Assurance','Final Walkthrough & Delivery'],
     icon: 'hardhat', targetAudience: 'All prospects evaluating capabilities',
   },
 ] as const;
