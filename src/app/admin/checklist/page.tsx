@@ -60,8 +60,8 @@ const DATA: Category[] = [
 ];
 
 const pBadge: Record<Priority, { label: string; cls: string }> = {
-  critical: { label: 'Critical', cls: 'bg-red-500/10 text-red-400 border-red-500/20' },
-  important: { label: 'Important', cls: 'bg-[#C9A84C]/10 text-[#C9A84C] border-[#C9A84C]/20' },
+  critical: { label: 'Critical', cls: 'bg-red-500/20 text-red-300 border-red-500/30 font-semibold' },
+  important: { label: 'Important', cls: 'bg-[#C9A84C]/20 text-[#C9A84C] border-[#C9A84C]/30 font-semibold' },
   nice: { label: 'Nice to Have', cls: 'bg-white/5 text-white/40 border-white/10' },
 };
 const dBadge: Record<Difficulty, string> = { easy: '\u2705 Easy', medium: '\ud83d\udcaa Some Effort', hard: '\ud83d\udee0\ufe0f Takes Work' };
@@ -96,7 +96,7 @@ export default function ChecklistPage() {
           <ProgressRing percent={percent} />
           <div className="flex-1">
             <h2 className="text-xl font-semibold mb-1">{percent === 100 ? 'Launch Ready!' : percent > 50 ? 'Getting There!' : "Let's Get Started"}</h2>
-            <p className="text-white/40 text-sm mb-3">{doneCount} of {actionable.length} items from you. NexaVision: {nexaDone}/{nexaItems.length} done.</p>
+            <p className="text-white/60 text-sm mb-3">{doneCount} of {actionable.length} items from you. NexaVision: {nexaDone}/{nexaItems.length} done.</p>
             <div className="flex gap-4 text-xs">
               <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400" /><span className="text-white/30">{actionable.filter(i => i.priority === 'critical' && i.status !== 'done').length} critical left</span></span>
               <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#C9A84C]" /><span className="text-white/30">{actionable.filter(i => i.priority === 'important' && i.status !== 'done').length} important left</span></span>
@@ -108,8 +108,8 @@ export default function ChecklistPage() {
         <div className="flex items-center justify-between mb-6">
           <p className="text-white/20 text-xs uppercase tracking-wider">Your checklist</p>
           <div className="flex gap-0.5 bg-[#111] border border-white/5 rounded-lg p-0.5">
-            <button onClick={() => setSort('impact')} className={`px-3 py-1.5 text-xs rounded transition-all ${sort === 'impact' ? 'bg-[#C9A84C]/20 text-[#C9A84C]' : 'text-white/30'}`}><Star size={10} className="inline mr-1" />Most Important</button>
-            <button onClick={() => setSort('ease')} className={`px-3 py-1.5 text-xs rounded transition-all ${sort === 'ease' ? 'bg-[#C9A84C]/20 text-[#C9A84C]' : 'text-white/30'}`}><Zap size={10} className="inline mr-1" />Easiest First</button>
+            <button onClick={() => setSort('impact')} className={`px-3 py-1.5 text-xs rounded transition-all ${sort === 'impact' ? 'bg-[#C9A84C]/25 text-[#C9A84C] font-semibold' : 'text-white/40'}`}><Star size={10} className="inline mr-1" />Most Important</button>
+            <button onClick={() => setSort('ease')} className={`px-3 py-1.5 text-xs rounded transition-all ${sort === 'ease' ? 'bg-[#C9A84C]/25 text-[#C9A84C] font-semibold' : 'text-white/40'}`}><Zap size={10} className="inline mr-1" />Easiest First</button>
           </div>
         </div>
 
@@ -127,10 +127,10 @@ export default function ChecklistPage() {
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isNexa ? 'bg-green-500/10' : 'bg-[#C9A84C]/10'}`}>
                       <Icon size={16} className={isNexa ? 'text-green-400' : 'text-[#C9A84C]'} />
                     </div>
-                    <div className="text-left"><h3 className="text-sm font-semibold">{cat.title}</h3><p className="text-[11px] text-white/25">{cat.desc}</p></div>
+                    <div className="text-left"><h3 className="text-base font-bold text-white">{cat.title}</h3><p className="text-xs text-white/40">{cat.desc}</p></div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] text-white/20 font-mono">{done}/{cat.items.length}</span>
+                    <span className="text-xs text-white/40 font-mono">{done}/{cat.items.length}</span>
                     {open ? <ChevronDown size={14} className="text-white/20" /> : <ChevronRight size={14} className="text-white/20" />}
                   </div>
                 </button>
@@ -140,34 +140,34 @@ export default function ChecklistPage() {
                       const isDone = item.status === 'done';
                       const isN = item.actionType === 'nexa';
                       return (
-                        <div key={item.id} className={`px-6 py-4 flex items-start gap-4 border-b border-white/[0.03] last:border-0 ${isDone ? 'opacity-50' : ''}`}>
-                          <button onClick={() => !isN && toggle(cat.id, item.id)} className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border transition-all flex items-center justify-center ${isDone ? 'bg-[#C9A84C] border-[#C9A84C]' : isN && item.status === 'in_progress' ? 'border-blue-400/30 bg-blue-400/10' : 'border-white/15 hover:border-white/30'}`}>
+                        <div key={item.id} className={`px-4 sm:px-6 py-4 flex gap-3 border-b border-white/[0.03] last:border-0 ${isDone ? 'opacity-40' : ''}`}>
+                          <button onClick={() => !isN && toggle(cat.id, item.id)} className={`mt-1 flex-shrink-0 w-5 h-5 rounded border transition-all flex items-center justify-center ${isDone ? 'bg-[#C9A84C] border-[#C9A84C]' : isN && item.status === 'in_progress' ? 'border-blue-400/30 bg-blue-400/10' : 'border-white/15 hover:border-white/30'}`}>
                             {isDone && <Check size={12} className={isN ? 'text-white' : 'text-black'} />}
                             {isN && item.status === 'in_progress' && <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />}
                           </button>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className={`text-sm font-medium ${isDone ? 'line-through text-white/40' : ''}`}>{item.title}</span>
+                              <span className={`text-[15px] font-semibold ${isDone ? 'line-through text-white/40' : 'text-white'}`}>{item.title}</span>
                               {!isN && <span className={`text-[9px] px-1.5 py-0.5 rounded border ${pBadge[item.priority].cls}`}>{pBadge[item.priority].label}</span>}
-                              {!isN && <span className="text-[9px] text-white/20">{dBadge[item.difficulty]}</span>}
+                              {!isN && <span className="text-[10px] text-white/40">{dBadge[item.difficulty]}</span>}
                               {isN && item.status === 'in_progress' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">In Progress</span>}
                             </div>
-                            <p className="text-xs text-white/25 leading-relaxed">{item.why}</p>
+                            <p className="text-[13px] text-white/50 leading-relaxed mt-1.5">{item.why}</p>
                           </div>
                           {!isDone && !isN && (
                             <div className="flex-shrink-0">
                               {item.actionType === 'link' && item.actionHref && (
-                                <Link href={item.actionHref} className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-[#C9A84C] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 border border-[#C9A84C]/20 rounded-lg transition-all whitespace-nowrap">
+                                <Link href={item.actionHref} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#C9A84C] bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 border border-[#C9A84C]/30 rounded-lg py-2 px-3.5 transition-all whitespace-nowrap">
                                   {item.actionLabel} <ExternalLink size={10} />
                                 </Link>
                               )}
                               {item.actionType === 'upload' && (
-                                <button onClick={() => setModal({ title: item.title, description: item.why.slice(0, 60), accept: item.uploadAccept || '', type: item.uploadType || 'image', itemId: item.id })} className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-[#C9A84C] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 border border-[#C9A84C]/20 rounded-lg transition-all whitespace-nowrap">
+                                <button onClick={() => setModal({ title: item.title, description: item.why.slice(0, 60), accept: item.uploadAccept || '', type: item.uploadType || 'image', itemId: item.id })} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#C9A84C] bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 border border-[#C9A84C]/30 rounded-lg py-2 px-3.5 transition-all whitespace-nowrap">
                                   <Upload size={10} /> {item.actionLabel}
                                 </button>
                               )}
                               {(item.actionType === 'text' || item.actionType === 'instructions') && (
-                                <button className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-[#C9A84C] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 border border-[#C9A84C]/20 rounded-lg transition-all whitespace-nowrap">{item.actionLabel}</button>
+                                <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#C9A84C] bg-[#C9A84C]/15 hover:bg-[#C9A84C]/25 border border-[#C9A84C]/30 rounded-lg py-2 px-3.5 transition-all whitespace-nowrap">{item.actionLabel}</button>
                               )}
                             </div>
                           )}
@@ -194,3 +194,4 @@ export default function ChecklistPage() {
     </div>
   );
 }
+
