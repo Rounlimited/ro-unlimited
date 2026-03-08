@@ -345,7 +345,27 @@ export default function ChecklistPage() {
 
       {modal && (
         <UploadModal isOpen onClose={() => setModal(null)} title={modal.title} description={modal.description} accept={modal.accept} type={modal.type}
-          onUploadComplete={() => { setCats(prev => prev.map(c => ({ ...c, items: c.items.map(i => i.id === modal.itemId ? { ...i, status: 'done' as Status } : i) }))); }}
+          onUploadComplete={(data) => {
+            // Update local state
+            setCats(prev => prev.map(c => ({ ...c, items: c.items.map(i => i.id === modal.itemId ? { ...i, status: 'done' as Status } : i) })));
+            // Persist status to Sanity
+            fetch('/api/admin/checklist', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ itemId: modal.itemId, status: 'done' }),
+            }).catch(() => {});
+            // Save file reference to Sanity so uploads aren't orphaned
+            if (data) {
+              fetch('/api/admin/checklist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  field: 'uploads_' + modal.itemId,
+                  value: { assetId: data.assetId, url: data.url, filename: data.filename, uploadedAt: new Date().toISOString() }
+                }),
+              }).catch(() => {});
+            }
+          }}
         />
       )}
 
@@ -373,6 +393,11 @@ export default function ChecklistPage() {
             setCats(prev => prev.map(c => ({
               ...c, items: c.items.map(i => i.id === instructionsModal.itemId ? { ...i, status: 'done' as Status } : i)
             })));
+            fetch('/api/admin/checklist', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ itemId: instructionsModal.itemId, status: 'done' }),
+            }).catch(() => {});
           }}
         />
       )}
