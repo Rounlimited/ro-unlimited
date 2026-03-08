@@ -5,5 +5,10 @@ const nextConfig = {
     domains: ['cdn.sanity.io'],
     unoptimized: false,
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '100mb',
+    },
+  },
 };
 module.exports = nextConfig;

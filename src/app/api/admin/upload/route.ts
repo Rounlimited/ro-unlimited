@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@sanity/client';
+import { sanityWriteClient } from '@/lib/sanity/client';
 
-const client = createClient({
-  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || 'ndwy9k1c',
-  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
-  apiVersion: '2024-01-01',
-  token: process.env.SANITY_API_EDIT_TOKEN,
-  useCdn: false,
-});
+// Allow large file uploads (up to 100MB)
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+// Increase max duration for video uploads
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,41 +21,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Convert File to Buffer for Sanity upload
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    console.log(`Uploading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB) as ${type}...`);
 
-    // Upload asset to Sanity
-    const asset = await client.assets.upload('file', buffer, {
-      filename: file.name,
-      contentType: file.type,
-    });
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-    // If this is a hero video, update the siteSettings document
-    if (type === 'heroVideo') {
-      await client.createOrReplace({
-        _id: 'siteSettings',
-        _type: 'siteSettings',
-        heroVideo: {
-          _type: 'file',
-          asset: {
-            _type: 'reference',
-            _ref: asset._id,
-          },
-        },
-      });
-    }
+    const asset = await sanityWriteClient.assets.upload(
+      type === 'video' ? 'file' : 'image',
+      buffer,
+      { filename: file.name, contentType: file.type }
+    );
+
+    console.log(`Upload complete: ${asset._id}`);
 
     return NextResponse.json({
-      url: asset.url,
       assetId: asset._id,
+      url: asset.url,
       originalFilename: asset.originalFilename,
+      mimeType: asset.mimeType,
+      size: asset.size,
     });
   } catch (error: any) {
     console.error('Upload error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Upload failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || 'Upload failed' }, { status: 500 });
   }
 }
