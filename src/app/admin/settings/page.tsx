@@ -3,67 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { createClient } from '@/lib/supabase/client';
-import { UserPlus, Trash2, Copy, Check, Shield, User, Loader2, X, Mail, Clock, ShieldCheck, Send, Link2, Share2 } from 'lucide-react';
-
-function ShareLoginLink() {
-  const [copied, setCopied] = useState(false);
-  const loginUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/admin/login`
-    : 'https://rounlimited.nexavisiongroup.com/admin/login';
-
-  const copyLink = () => {
-    navigator.clipboard.writeText(loginUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const shareViaText = () => {
-    const msg = `Sign in to the RO Unlimited admin portal:\n${loginUrl}`;
-    // Try native share first (works great on mobile)
-    if (navigator.share) {
-      navigator.share({ title: 'RO Unlimited Admin Login', text: msg, url: loginUrl }).catch(() => {});
-    } else {
-      // Fallback: open SMS with prefilled message
-      window.open(`sms:?body=${encodeURIComponent(msg)}`, '_blank');
-    }
-  };
-
-  return (
-    <section className="bg-[#111] border border-white/5 rounded-xl overflow-hidden mb-6">
-      <div className="px-6 py-4 border-b border-white/5 flex items-center gap-3">
-        <div className="w-9 h-9 bg-[#C9A84C]/10 rounded-lg flex items-center justify-center">
-          <Link2 size={16} className="text-[#C9A84C]" />
-        </div>
-        <div>
-          <h2 className="text-sm font-semibold">Share Login Link</h2>
-          <p className="text-[11px] text-white/25">Send this link so users can sign in</p>
-        </div>
-      </div>
-      <div className="px-6 py-4">
-        <div className="flex gap-2 mb-3">
-          <input
-            type="text"
-            value={loginUrl}
-            readOnly
-            className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white/50 font-mono truncate"
-          />
-          <button
-            onClick={copyLink}
-            className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white/60 hover:bg-white/10 transition-colors flex items-center gap-1.5 flex-shrink-0"
-          >
-            {copied ? <><Check size={12} className="text-green-400" /> Copied</> : <><Copy size={12} /> Copy</>}
-          </button>
-        </div>
-        <button
-          onClick={shareViaText}
-          className="w-full py-2.5 bg-[#C9A84C] text-black font-semibold text-xs rounded-lg hover:bg-[#d4b55a] transition-colors flex items-center justify-center gap-2"
-        >
-          <Share2 size={14} /> Send Login Link
-        </button>
-      </div>
-    </section>
-  );
-}
+import { UserPlus, Trash2, Copy, Check, Shield, User, Loader2, X, Clock, ShieldCheck, Link2, Share2 } from 'lucide-react';
 
 interface AdminUser {
   id: string;
@@ -78,7 +18,6 @@ export default function SettingsPage() {
   const [currentUser, setCurrentUser] = useState<{ email: string; role: string } | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('admin');
   const [inviting, setInviting] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
@@ -95,7 +34,6 @@ export default function SettingsPage() {
       if (user) {
         setCurrentUser({ email: user.email || '', role: user.user_metadata?.role || 'admin' });
       }
-      // Fetch users list
       try {
         const res = await fetch('/api/admin/invite');
         const data = await res.json();
@@ -106,37 +44,25 @@ export default function SettingsPage() {
     init();
   }, [supabase]);
 
-  const sendInvite = async () => {
-    if (!inviteEmail.trim()) return;
+  // Generate a token-based invite link (no email needed)
+  const generateInviteLink = async () => {
     setInviting(true);
     setInviteLink('');
     setMessage(null);
 
     try {
-      const res = await fetch('/api/admin/invite', {
+      const res = await fetch('/api/admin/invite-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+        body: JSON.stringify({ role: inviteRole }),
       });
       const data = await res.json();
-
       if (data.error) throw new Error(data.error);
 
-      if (data.inviteLink) {
-        setInviteLink(data.inviteLink);
-        setMessage({ type: 'success', text: `Invite created for ${inviteEmail}! Copy the link below and send it to them.` });
-      } else {
-        setMessage({ type: 'success', text: `Invite sent to ${inviteEmail}` });
-      }
-
-      // Refresh user list
-      const usersRes = await fetch('/api/admin/invite');
-      const usersData = await usersRes.json();
-      if (Array.isArray(usersData)) setUsers(usersData);
-
-      setInviteEmail('');
+      setInviteLink(data.inviteLink);
+      setMessage({ type: 'success', text: 'Invite link created! Send it to them and they will create their own account.' });
     } catch (e: any) {
-      setMessage({ type: 'error', text: e.message || 'Failed to send invite' });
+      setMessage({ type: 'error', text: e.message || 'Failed to create invite link' });
     } finally {
       setInviting(false);
     }
@@ -153,10 +79,19 @@ export default function SettingsPage() {
     }
   };
 
-  const copyLink = () => {
+  const copyInviteLink = () => {
     navigator.clipboard.writeText(inviteLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const shareInviteLink = () => {
+    const msg = `You have been invited to the RO Unlimited admin portal. Create your account here:\n${inviteLink}`;
+    if (navigator.share) {
+      navigator.share({ title: 'RO Unlimited Admin Invite', text: msg, url: inviteLink }).catch(() => {});
+    } else {
+      window.open(`sms:?body=${encodeURIComponent(msg)}`, '_blank');
+    }
   };
 
   const formatDate = (d: string | null) => {
@@ -185,26 +120,27 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Share Login Link */}
-        {isNexa && (
-          <ShareLoginLink />
-        )}
-
         {/* Invite Link Display */}
         {inviteLink && (
           <div className="mb-6 bg-[#C9A84C]/10 border border-[#C9A84C]/20 rounded-xl p-4">
             <p className="text-[#C9A84C] text-sm font-medium mb-2">Invite Link Ready</p>
-            <p className="text-white/40 text-xs mb-3">Copy this link and send it to the person. They will click it to set up their password and access the admin portal.</p>
-            <div className="flex gap-2">
-              <input type="text" value={inviteLink} readOnly className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white/60 font-mono" />
-              <button onClick={copyLink} className="px-4 py-2 bg-[#C9A84C] text-black text-xs font-semibold rounded-lg hover:bg-[#d4b55a] transition-colors flex items-center gap-1.5">
-                {copied ? <><Check size={12} /> Copied!</> : <><Copy size={12} /> Copy</>}
+            <p className="text-white/40 text-xs mb-3">Send this link. They will create their own email and password to access the admin portal.</p>
+            <div className="flex gap-2 mb-3">
+              <input type="text" value={inviteLink} readOnly className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white/60 font-mono truncate" />
+              <button onClick={copyInviteLink} className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white/60 hover:bg-white/10 transition-colors flex items-center gap-1.5 flex-shrink-0">
+                {copied ? <><Check size={12} className="text-green-400" /> Copied</> : <><Copy size={12} /> Copy</>}
               </button>
             </div>
+            <button
+              onClick={shareInviteLink}
+              className="w-full py-2.5 bg-[#C9A84C] text-black font-semibold text-xs rounded-lg hover:bg-[#d4b55a] transition-colors flex items-center justify-center gap-2"
+            >
+              <Share2 size={14} /> Send via Text
+            </button>
           </div>
         )}
 
-        {/* User Management — NexaVision only */}
+        {/* User Management */}
         {isNexa && (
           <section className="bg-[#111] border border-white/5 rounded-xl overflow-hidden mb-6">
             <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
@@ -218,23 +154,21 @@ export default function SettingsPage() {
                 </div>
               </div>
               <button onClick={() => setShowInvite(!showInvite)} className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-[#C9A84C] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 border border-[#C9A84C]/20 rounded-lg transition-all">
-                <UserPlus size={12} /> Invite
+                <UserPlus size={12} /> Invite New User
               </button>
             </div>
 
-            {/* Invite Form */}
+            {/* Invite Form — no email needed, just pick a role and generate link */}
             {showInvite && (
               <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
+                <p className="text-xs text-white/30 mb-3">Choose an access level and generate a link. Send it to anyone — they will create their own account.</p>
                 <div className="flex gap-3">
-                  <div className="flex-1">
-                    <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="email@example.com" className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/20 focus:border-[#C9A84C]/50 focus:outline-none" />
-                  </div>
                   <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} className="bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none">
-                    <option value="admin">Admin</option>
-                    <option value="super_admin">Developer</option>
+                    <option value="admin">Admin (Client)</option>
+                    <option value="super_admin">Developer (NexaVision)</option>
                   </select>
-                  <button onClick={sendInvite} disabled={inviting || !inviteEmail.trim()} className="px-4 py-2.5 bg-[#C9A84C] text-black text-xs font-semibold rounded-lg hover:bg-[#d4b55a] disabled:opacity-50 transition-all whitespace-nowrap">
-                    {inviting ? 'Sending...' : 'Send Invite'}
+                  <button onClick={generateInviteLink} disabled={inviting} className="flex-1 px-4 py-2.5 bg-[#C9A84C] text-black text-xs font-semibold rounded-lg hover:bg-[#d4b55a] disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                    {inviting ? <><Loader2 size={12} className="animate-spin" /> Generating...</> : <><Link2 size={12} /> Generate Invite Link</>}
                   </button>
                 </div>
               </div>
@@ -287,7 +221,6 @@ export default function SettingsPage() {
           </section>
         )}
 
-        {/* NexaVision Developer Badge */}
         {isNexa && (
           <div className="text-center py-4">
             <span className="text-[10px] text-purple-400/30 uppercase tracking-widest">NexaVision Developer Mode</span>
