@@ -1,4 +1,3 @@
-import SiteWrapper from '@/components/layout/SiteWrapper';
 'use client';
 import { useState } from 'react';
 import { COMPANY } from '@/lib/constants';
@@ -10,7 +9,6 @@ export default function ContactPage() {
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); alert('Thank you! We will be in touch shortly.'); };
 
   return (
-    <SiteWrapper>
     <SubPageAnimator>
       <section className="relative min-h-[50vh] flex items-center overflow-hidden">
         <div className="absolute inset-0 blueprint-overlay" />
@@ -85,5 +83,6 @@ export default function ContactPage() {
     </SubPageAnimator>
   );
 }
+
 
 

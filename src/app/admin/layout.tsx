@@ -1,10 +1,13 @@
-import '@/styles/globals.css';
+'use client';
 
-export const metadata = {
-  title: 'RO Unlimited | Admin Dashboard',
-  robots: { index: false, follow: false },
-};
+import { useEffect } from 'react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  useEffect(() => {
+    // Hide site chrome (navbar, footer, progress bar, loading sequence)
+    document.body.classList.add('admin-mode');
+    return () => document.body.classList.remove('admin-mode');
+  }, []);
+
+  return <>{children}</>;
 }

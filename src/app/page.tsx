@@ -1,4 +1,3 @@
-import SiteWrapper from '@/components/layout/SiteWrapper';
 import MobilePageFlip, { FlipSlide } from '@/components/animations/MobilePageFlip';
 import Hero from '@/components/sections/Hero';
 import DivisionCards from '@/components/sections/DivisionCards';
@@ -14,12 +13,11 @@ export default async function HomePage() {
   try {
     heroVideoUrl = await getHeroVideo();
   } catch (e) {
-    // Sanity not configured yet or no video uploaded ��� graceful fallback
+    // Sanity not configured yet or no video uploaded ��������� graceful fallback
     console.log('Hero video fetch skipped:', (e as Error).message);
   }
 
   return (
-    <SiteWrapper>
     <MobilePageFlip>
       <FlipSlide><Hero heroVideoUrl={heroVideoUrl} /></FlipSlide>
       <SectionTransition label="FLOOR 01" sparks className="hidden lg:block" />
@@ -29,7 +27,7 @@ export default async function HomePage() {
       <SectionTransition label="FLOOR 03" sparks className="hidden lg:block" />
       <FlipSlide><ConstructionCTA /></FlipSlide>
     </MobilePageFlip>
-    </SiteWrapper>
   );
 }
+
 

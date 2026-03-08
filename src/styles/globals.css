@@ -1,4 +1,4 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -13,7 +13,7 @@
     --font-body: 'Barlow', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
-  /* scroll-behavior: smooth removed — conflicts with GSAP ScrollTrigger pin calculations */
+  /* scroll-behavior: smooth removed - conflicts with GSAP ScrollTrigger pin calculations */
   html { scroll-behavior: auto; }
   body {
     @apply bg-ro-black text-ro-white font-body;
@@ -36,10 +36,10 @@
   .caution-stripe {
     background: repeating-linear-gradient(-45deg, #C9A84C, #C9A84C 10px, #1A1A1A 10px, #1A1A1A 20px);
   }
-  /* GSAP initial states handled by gsap.set() in useGSAP — no CSS classes needed */
+  /* GSAP initial states handled by gsap.set() in useGSAP - no CSS classes needed */
 }
 
-/* ─── Reduced motion: handled by GSAPProvider.tsx via matchMedia ───
+/* ��� Reduced motion: handled by GSAPProvider.tsx via matchMedia ���
  * GSAP animations are controlled entirely by JavaScript.
  * CSS !important rules on opacity/transform/transition-duration
  * conflict with GSAP's inline style updates. Reduced motion
@@ -49,4 +49,16 @@
   .text-shadow-gold { text-shadow: 0 0 20px rgba(201,168,76,0.3), 0 0 40px rgba(201,168,76,0.1); }
   .border-gold-glow { box-shadow: 0 0 15px rgba(201,168,76,0.15), inset 0 0 15px rgba(201,168,76,0.05); }
   .gradient-text-gold { @apply bg-clip-text text-transparent bg-gradient-to-r from-ro-gold-dark via-ro-gold to-ro-gold-light; }
+}
+
+
+/* Admin mode - hide site chrome */
+body.admin-mode nav,
+body.admin-mode footer,
+body.admin-mode .progress-bar,
+body.admin-mode .loading-sequence-overlay {
+  display: none !important;
+}
+body.admin-mode main {
+  min-height: 100vh;
 }
