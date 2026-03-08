@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { gsap } from 'gsap';
 import AdminHeader from '@/components/admin/AdminHeader';
 import ProgressRing from '@/components/admin/ProgressRing';
 import UploadModal from '@/components/admin/UploadModal';
@@ -86,13 +87,40 @@ export default function ChecklistPage() {
 
   const sorted = (items: ChecklistItem[]) => [...items].sort((a, b) => sort === 'impact' ? b.impactScore - a.impactScore : b.easeScore - a.easeScore);
 
+  const progressRef = useRef<HTMLDivElement>(null);
+  const categoriesRef = useRef<HTMLDivElement>(null);
+
+  // GSAP entrance animations
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Progress section slides in
+      if (progressRef.current) {
+        gsap.fromTo(progressRef.current,
+          { y: 30, opacity: 0, scale: 0.98 },
+          { y: 0, opacity: 1, scale: 1, duration: 0.7, ease: 'power3.out', delay: 0.1 }
+        );
+      }
+
+      // Category cards stagger in with a construction-style clip reveal
+      if (categoriesRef.current) {
+        const cards = categoriesRef.current.children;
+        gsap.fromTo(cards,
+          { y: 50, opacity: 0, clipPath: 'inset(10% 0% 10% 0%)' },
+          { y: 0, opacity: 1, clipPath: 'inset(0% 0% 0% 0%)', duration: 0.6, stagger: 0.12, ease: 'power3.out', delay: 0.3 }
+        );
+      }
+    });
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <AdminHeader title="Launch Checklist" subtitle="Get your site 100% ready for launch" backHref="/admin" />
       <div className="max-w-4xl mx-auto px-6 py-8">
 
         {/* Progress */}
-        <div className="flex items-center gap-8 mb-10 bg-[#111] border border-white/5 rounded-xl p-6">
+        <div ref={progressRef} className="flex items-center gap-8 mb-10 bg-[#111] border border-white/5 rounded-xl p-6">
           <ProgressRing percent={percent} />
           <div className="flex-1">
             <h2 className="text-xl font-semibold mb-1">{percent === 100 ? 'Launch Ready!' : percent > 50 ? 'Getting There!' : "Let's Get Started"}</h2>
@@ -114,7 +142,7 @@ export default function ChecklistPage() {
         </div>
 
         {/* Categories */}
-        <div className="space-y-4">
+        <div ref={categoriesRef} className="space-y-4">
           {cats.map(cat => {
             const open = expanded[cat.id] ?? false;
             const done = cat.items.filter(i => i.status === 'done').length;
@@ -196,5 +224,6 @@ export default function ChecklistPage() {
     </div>
   );
 }
+
 
 

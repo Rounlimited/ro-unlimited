@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Pencil, Mail, Camera, Settings, ExternalLink, Video, Image, FileText, ClipboardList } from 'lucide-react';
+import { gsap } from 'gsap';
 
 interface SiteSettings {
   heroVideoUrl?: string;
@@ -16,6 +17,76 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetch('/api/admin/settings').then(r => r.json()).then(setSettings).catch(() => {});
     fetch('/api/admin/projects').then(r => r.json()).then(d => setProjectCount(Array.isArray(d) ? d.length : 0)).catch(() => {});
+  }, []);
+
+  const checklistRef = useRef<HTMLAnchorElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
+
+  // GSAP entrance animations
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // Stats cards stagger in from below
+      if (statsRef.current) {
+        gsap.fromTo(statsRef.current.children,
+          { y: 30, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: 'power3.out', delay: 0.2 }
+        );
+      }
+
+      // Nav cards stagger in
+      if (cardsRef.current) {
+        gsap.fromTo(cardsRef.current.children,
+          { y: 40, opacity: 0, scale: 0.95 },
+          { y: 0, opacity: 1, scale: 1, duration: 0.6, stagger: 0.08, ease: 'power3.out', delay: 0.4 }
+        );
+      }
+
+      // Launch Checklist card — industrial attention-grab sequence
+      if (checklistRef.current) {
+        const card = checklistRef.current;
+        const tl = gsap.timeline({ delay: 1.2 });
+
+        // Scan line sweep across the card (like a laser scan)
+        tl.fromTo(card,
+          { backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(201,168,76,0.15) 0%, transparent 0%)' },
+          {
+            backgroundImage: 'linear-gradient(90deg, transparent 100%, rgba(201,168,76,0.15) 100%, transparent 100%)',
+            duration: 0.8, ease: 'power2.inOut',
+            onStart: () => { card.style.backgroundSize = '100% 100%'; },
+          }
+        );
+
+        // Border flash gold
+        tl.to(card, {
+          borderColor: 'rgba(201,168,76,0.5)',
+          boxShadow: '0 0 20px rgba(201,168,76,0.15), inset 0 0 20px rgba(201,168,76,0.05)',
+          duration: 0.3, ease: 'power2.in',
+        }, '-=0.3');
+
+        // Subtle scale pulse
+        tl.to(card, {
+          scale: 1.02, duration: 0.15, ease: 'power2.out',
+        }).to(card, {
+          scale: 1, duration: 0.3, ease: 'elastic.out(1, 0.5)',
+        });
+
+        // Settle to a gentle glow
+        tl.to(card, {
+          borderColor: 'rgba(201,168,76,0.25)',
+          boxShadow: '0 0 30px rgba(201,168,76,0.08), inset 0 1px 0 rgba(201,168,76,0.1)',
+          duration: 0.5, ease: 'power2.out',
+        });
+
+        // Repeating subtle pulse to keep attention
+        tl.to(card, {
+          boxShadow: '0 0 40px rgba(201,168,76,0.12), inset 0 1px 0 rgba(201,168,76,0.15)',
+          duration: 1.5, ease: 'sine.inOut', repeat: -1, yoyo: true,
+        });
+      }
+    });
+
+    return () => ctx.revert();
   }, []);
 
   const cards = [
@@ -92,7 +163,7 @@ export default function AdminDashboard() {
 
       <div className="max-w-6xl mx-auto px-6 py-10">
         {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-10">
+        <div ref={statsRef} className="grid grid-cols-3 gap-4 mb-10">
           <div className="bg-[#111] border border-white/5 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <Video size={14} className="text-[#C9A84C]" />
@@ -119,12 +190,17 @@ export default function AdminDashboard() {
         </div>
 
         {/* Navigation Cards */}
-        <div className="grid grid-cols-2 gap-4">
+        <div ref={cardsRef} className="grid grid-cols-2 gap-4">
           {cards.map((card) => (
             <Link
               key={card.title}
               href={card.href}
-              className="group bg-[#111] border border-white/5 hover:border-[#C9A84C]/20 rounded-lg p-6 transition-all hover:bg-[#111]/80"
+              ref={card.title === 'Launch Checklist' ? checklistRef : undefined}
+              className={`group bg-[#111] border rounded-lg p-6 transition-all hover:bg-[#111]/80 ${
+                card.title === 'Launch Checklist'
+                  ? 'border-[#C9A84C]/15 col-span-2 relative overflow-hidden'
+                  : 'border-white/5 hover:border-[#C9A84C]/20'
+              }`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="w-10 h-10 bg-white/5 group-hover:bg-[#C9A84C]/10 flex items-center justify-center rounded transition-colors">
@@ -132,7 +208,7 @@ export default function AdminDashboard() {
                 </div>
                 <span className={`text-[10px] font-mono ${card.statusColor}`}>{card.status}</span>
               </div>
-              <h2 className="text-base font-semibold mb-1 group-hover:text-[#C9A84C] transition-colors">{card.title}</h2>
+              <h2 className={`text-base font-semibold mb-1 transition-colors ${card.title === 'Launch Checklist' ? 'text-[#C9A84C] text-lg' : 'group-hover:text-[#C9A84C]'}`}>{card.title}</h2>
               <p className="text-xs text-white/30 leading-relaxed">{card.description}</p>
             </Link>
           ))}
@@ -141,4 +217,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
 
