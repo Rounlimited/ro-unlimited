@@ -8,23 +8,35 @@ import {
   AlertCircle, Pencil, Camera, Clock
 } from 'lucide-react';
 
-interface SiteSettings {
-  heroVideoUrl?: string;
-}
+interface SiteSettings { heroVideoUrl?: string; }
 
 export default function AdminDashboard() {
   const [settings, setSettings] = useState<SiteSettings>({});
   const [projectCount, setProjectCount] = useState(0);
 
-  const splashRef = useRef<HTMLDivElement>(null);
-  const splashRoRef = useRef<HTMLImageElement>(null);
-  const row1Ref = useRef<HTMLDivElement>(null);
-  const row2Ref = useRef<HTMLAnchorElement>(null);
-  const row3Ref = useRef<HTMLDivElement>(null);
-  const activityRef = useRef<HTMLDivElement>(null);
-  const card1Ref = useRef<HTMLDivElement>(null);
-  const card2Ref = useRef<HTMLDivElement>(null);
-  const card3Ref = useRef<HTMLDivElement>(null);
+  // Splash refs
+  const splashRef      = useRef<HTMLDivElement>(null);
+  const splashRoRef    = useRef<HTMLImageElement>(null);
+  const gridRef        = useRef<HTMLDivElement>(null);
+  const scanRef        = useRef<HTMLDivElement>(null);
+  const cornerTLRef    = useRef<HTMLDivElement>(null);
+  const cornerTRRef    = useRef<HTMLDivElement>(null);
+  const cornerBLRef    = useRef<HTMLDivElement>(null);
+  const cornerBRRef    = useRef<HTMLDivElement>(null);
+  const coordRef       = useRef<HTMLDivElement>(null);
+  const hLine1Ref      = useRef<HTMLDivElement>(null);
+  const hLine2Ref      = useRef<HTMLDivElement>(null);
+  const vLine1Ref      = useRef<HTMLDivElement>(null);
+  const vLine2Ref      = useRef<HTMLDivElement>(null);
+
+  // Dashboard refs
+  const row1Ref        = useRef<HTMLDivElement>(null);
+  const row2Ref        = useRef<HTMLAnchorElement>(null);
+  const row3Ref        = useRef<HTMLDivElement>(null);
+  const activityRef    = useRef<HTMLDivElement>(null);
+  const card1Ref       = useRef<HTMLDivElement>(null);
+  const card2Ref       = useRef<HTMLDivElement>(null);
+  const card3Ref       = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch('/api/admin/settings').then(r => r.json()).then(setSettings).catch(() => {});
@@ -33,104 +45,229 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Hide everything at start
+      // ── Initial hide state ──
       gsap.set([row1Ref.current, row2Ref.current, row3Ref.current], { opacity: 0, y: 20 });
       gsap.set(activityRef.current, { opacity: 0, y: 20 });
       gsap.set([card1Ref.current, card2Ref.current, card3Ref.current], { opacity: 0, x: 50 });
       gsap.set(splashRef.current, { opacity: 1 });
       gsap.set(splashRoRef.current, { opacity: 0, scale: 0.88 });
+      gsap.set(gridRef.current, { opacity: 0 });
+      gsap.set(scanRef.current, { opacity: 0, scaleX: 0, transformOrigin: 'left center' });
+      gsap.set([cornerTLRef.current, cornerTRRef.current, cornerBLRef.current, cornerBRRef.current], { opacity: 0, scale: 0.6 });
+      gsap.set(coordRef.current, { opacity: 0 });
+      gsap.set([hLine1Ref.current, hLine2Ref.current], { scaleX: 0, opacity: 0, transformOrigin: 'left center' });
+      gsap.set([vLine1Ref.current, vLine2Ref.current], { scaleY: 0, opacity: 0, transformOrigin: 'center top' });
 
-      // Hide AppShell header
       const headerEl = document.querySelector('[data-admin-header]');
       if (headerEl) gsap.set(headerEl, { opacity: 0, y: -30 });
 
       const tl = gsap.timeline();
 
-      // PHASE 1: RO fades in on black, breathes
+      // ── PHASE 1: RO materializes ──
       tl.to(splashRoRef.current, {
-        opacity: 0.85, scale: 1,
-        duration: 1.1, ease: 'power2.out',
-      })
-      .to(splashRoRef.current, {
-        scale: 1.05, opacity: 0.95,
-        duration: 1.3, ease: 'sine.inOut',
-        yoyo: true, repeat: 1,
+        opacity: 0.9, scale: 1,
+        duration: 1.0, ease: 'power2.out',
       })
 
-      // PHASE 2: splash dissolves out
+      // ── PHASE 2: Blueprint draws in while RO holds ──
+      // Grid fades in
+      .to(gridRef.current, { opacity: 1, duration: 0.5, ease: 'power1.out' }, '-=0.1')
+
+      // Horizontal laser lines draw across (staggered)
+      .to(hLine1Ref.current, { scaleX: 1, opacity: 1, duration: 0.6, ease: 'power2.inOut' }, '-=0.2')
+      .to(hLine2Ref.current, { scaleX: 1, opacity: 1, duration: 0.6, ease: 'power2.inOut' }, '-=0.4')
+
+      // Vertical laser lines drop down
+      .to(vLine1Ref.current, { scaleY: 1, opacity: 1, duration: 0.5, ease: 'power2.inOut' }, '-=0.4')
+      .to(vLine2Ref.current, { scaleY: 1, opacity: 1, duration: 0.5, ease: 'power2.inOut' }, '-=0.35')
+
+      // Corner crosshairs lock in
+      .to([cornerTLRef.current, cornerBRRef.current], {
+        opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(2)',
+      }, '-=0.2')
+      .to([cornerTRRef.current, cornerBLRef.current], {
+        opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(2)',
+      }, '-=0.15')
+
+      // Scan line sweeps down
+      .to(scanRef.current, {
+        opacity: 0.7, scaleX: 1, duration: 0.4, ease: 'power1.in',
+        onComplete: () => {
+          gsap.to(scanRef.current, { opacity: 0, duration: 0.3, delay: 0.05 });
+        }
+      }, '-=0.1')
+
+      // Coordinate text flickers in
+      .to(coordRef.current, {
+        opacity: 1, duration: 0.15, ease: 'none',
+        onComplete: () => {
+          // Typewriter flicker effect
+          let count = 0;
+          const flicker = setInterval(() => {
+            if (coordRef.current) {
+              coordRef.current.style.opacity = count % 2 === 0 ? '0' : '1';
+              count++;
+              if (count > 5) {
+                coordRef.current.style.opacity = '1';
+                clearInterval(flicker);
+              }
+            }
+          }, 80);
+        }
+      }, '-=0.2')
+
+      // RO breathes while blueprint is visible
+      .to(splashRoRef.current, {
+        scale: 1.04, opacity: 1,
+        duration: 1.1, ease: 'sine.inOut',
+        yoyo: true, repeat: 1,
+      }, '-=0.3')
+
+      // ── PHASE 3: Everything dissolves, dashboard assembles ──
       .to(splashRef.current, {
-        opacity: 0, duration: 0.7, ease: 'power2.inOut',
+        opacity: 0, duration: 0.75, ease: 'power2.inOut',
         onComplete: () => {
           if (splashRef.current) splashRef.current.style.pointerEvents = 'none';
         },
-      }, '+=0.1')
+      }, '+=0.15')
 
-      // Cards slide in from right one by one
-      .to(activityRef.current, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, '-=0.3')
-      .to(card1Ref.current, { opacity: 1, x: 0, duration: 0.45, ease: 'power3.out' }, '-=0.05')
-      .to(card2Ref.current, { opacity: 1, x: 0, duration: 0.45, ease: 'power3.out' }, '-=0.2')
-      .to(card3Ref.current, { opacity: 1, x: 0, duration: 0.45, ease: 'power3.out' }, '-=0.2')
-
-      // Quick actions
-      .to(row3Ref.current, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, '-=0.15')
-
-      // Checklist CTA
-      .to(row2Ref.current, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, '-=0.2')
-
-      // Stats row
-      .to(row1Ref.current, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, '-=0.2')
-
-      // Header logo drops in last
-      .to(headerEl, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, '-=0.1');
+      // Cards slide in from right
+      .to(activityRef.current, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, '-=0.35')
+      .to(card1Ref.current,    { opacity: 1, x: 0, duration: 0.45, ease: 'power3.out' }, '-=0.05')
+      .to(card2Ref.current,    { opacity: 1, x: 0, duration: 0.45, ease: 'power3.out' }, '-=0.22')
+      .to(card3Ref.current,    { opacity: 1, x: 0, duration: 0.45, ease: 'power3.out' }, '-=0.22')
+      .to(row3Ref.current,     { opacity: 1, y: 0, duration: 0.4,  ease: 'power3.out' }, '-=0.18')
+      .to(row2Ref.current,     { opacity: 1, y: 0, duration: 0.4,  ease: 'power3.out' }, '-=0.2')
+      .to(row1Ref.current,     { opacity: 1, y: 0, duration: 0.4,  ease: 'power3.out' }, '-=0.2')
+      .to(headerEl,            { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, '-=0.1');
     });
 
     return () => ctx.revert();
   }, []);
 
   const hasVideo = !!settings.heroVideoUrl;
+  const BLUE = '#00d4ff';
+  const GLOW = '0 0 6px #00d4ff, 0 0 18px #00aaee, 0 0 40px #0077cc';
 
   return (
     <>
-      {/* SPLASH — fullscreen black with big RO */}
+      {/* ════════════════════════════════════
+          SPLASH — black + RO + blueprint
+      ════════════════════════════════════ */}
       <div
         ref={splashRef}
-        className="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center"
+        className="fixed inset-0 bg-[#020b12] flex items-center justify-center"
         style={{ zIndex: 100 }}
       >
-        <img
-          ref={splashRoRef}
-          src="/ro-icon.svg"
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none select-none"
+        {/* Blueprint grid */}
+        <div
+          ref={gridRef}
+          className="absolute inset-0 pointer-events-none"
           style={{
-            width: '82vw',
-            maxWidth: '400px',
-            objectFit: 'fill',
-            transform: 'scaleY(1.35)',
-            transformOrigin: 'center center',
+            backgroundImage: `
+              linear-gradient(rgba(0,180,255,0.07) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0,180,255,0.07) 1px, transparent 1px)
+            `,
+            backgroundSize: '44px 44px',
           }}
         />
+
+        {/* Horizontal laser lines */}
+        <div ref={hLine1Ref} className="absolute left-0 right-0 pointer-events-none"
+          style={{ top: '34%', height: '1px', background: BLUE, boxShadow: GLOW }} />
+        <div ref={hLine2Ref} className="absolute left-0 right-0 pointer-events-none"
+          style={{ top: '66%', height: '1px', background: BLUE, boxShadow: GLOW }} />
+
+        {/* Vertical laser lines */}
+        <div ref={vLine1Ref} className="absolute top-0 bottom-0 pointer-events-none"
+          style={{ left: '22%', width: '1px', background: BLUE, boxShadow: GLOW }} />
+        <div ref={vLine2Ref} className="absolute top-0 bottom-0 pointer-events-none"
+          style={{ left: '78%', width: '1px', background: BLUE, boxShadow: GLOW }} />
+
+        {/* Scan line */}
+        <div ref={scanRef} className="absolute left-0 right-0 pointer-events-none"
+          style={{
+            top: '50%',
+            height: '2px',
+            background: `linear-gradient(90deg, transparent, ${BLUE}, ${BLUE}, transparent)`,
+            boxShadow: GLOW,
+          }} />
+
+        {/* Corner crosshairs */}
+        {/* Top-left */}
+        <div ref={cornerTLRef} className="absolute pointer-events-none" style={{ top: '18%', left: '10%' }}>
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <path d="M14 2 L2 2 L2 14" stroke={BLUE} strokeWidth="1.5" style={{ filter: `drop-shadow(${GLOW})` }} />
+            <circle cx="2" cy="2" r="2" fill={BLUE} style={{ filter: `drop-shadow(${GLOW})` }} />
+          </svg>
+        </div>
+        {/* Top-right */}
+        <div ref={cornerTRRef} className="absolute pointer-events-none" style={{ top: '18%', right: '10%' }}>
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <path d="M14 2 L26 2 L26 14" stroke={BLUE} strokeWidth="1.5" style={{ filter: `drop-shadow(${GLOW})` }} />
+            <circle cx="26" cy="2" r="2" fill={BLUE} style={{ filter: `drop-shadow(${GLOW})` }} />
+          </svg>
+        </div>
+        {/* Bottom-left */}
+        <div ref={cornerBLRef} className="absolute pointer-events-none" style={{ bottom: '18%', left: '10%' }}>
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <path d="M14 26 L2 26 L2 14" stroke={BLUE} strokeWidth="1.5" style={{ filter: `drop-shadow(${GLOW})` }} />
+            <circle cx="2" cy="26" r="2" fill={BLUE} style={{ filter: `drop-shadow(${GLOW})` }} />
+          </svg>
+        </div>
+        {/* Bottom-right */}
+        <div ref={cornerBRRef} className="absolute pointer-events-none" style={{ bottom: '18%', right: '10%' }}>
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <path d="M14 26 L26 26 L26 14" stroke={BLUE} strokeWidth="1.5" style={{ filter: `drop-shadow(${GLOW})` }} />
+            <circle cx="26" cy="26" r="2" fill={BLUE} style={{ filter: `drop-shadow(${GLOW})` }} />
+          </svg>
+        </div>
+
+        {/* RO mark */}
+        <div className="relative flex flex-col items-center gap-6">
+          <img
+            ref={splashRoRef}
+            src="/ro-icon.svg"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none select-none"
+            style={{
+              width: '72vw',
+              maxWidth: '340px',
+              objectFit: 'fill',
+              transform: 'scaleY(1.35)',
+              transformOrigin: 'center center',
+            }}
+          />
+
+          {/* Coordinate readout below RO */}
+          <div
+            ref={coordRef}
+            className="font-mono text-center pointer-events-none select-none"
+            style={{ color: BLUE, textShadow: `0 0 8px ${BLUE}, 0 0 20px #0077cc` }}
+          >
+            <div style={{ fontSize: '9px', letterSpacing: '0.2em', opacity: 0.7 }}>
+              SYS · ADMIN · PORTAL
+            </div>
+            <div style={{ fontSize: '8px', letterSpacing: '0.15em', opacity: 0.45, marginTop: '4px' }}>
+              34.8527° N · 82.3940° W · UPSTATE SC
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* DASHBOARD */}
+      {/* ════════════════════════════════════
+          DASHBOARD
+      ════════════════════════════════════ */}
       <div className="flex flex-col h-full px-3 py-3 gap-3 relative">
 
-        {/* Persistent dim RO watermark behind content */}
-        <img
-          src="/ro-icon.svg"
-          alt=""
-          aria-hidden="true"
+        {/* Dim RO watermark */}
+        <img src="/ro-icon.svg" alt="" aria-hidden="true"
           className="absolute pointer-events-none select-none"
           style={{
-            opacity: 0.05,
-            width: '80vw',
-            left: '10vw',
-            top: '50%',
+            opacity: 0.05, width: '80vw', left: '10vw', top: '50%',
             transform: 'translateY(-50%) scaleY(1.4)',
-            transformOrigin: 'center center',
-            objectFit: 'fill',
-            zIndex: 0,
+            transformOrigin: 'center center', objectFit: 'fill', zIndex: 0,
           }}
         />
 
@@ -159,7 +296,8 @@ export default function AdminDashboard() {
         </div>
 
         {/* Row 2: Checklist CTA */}
-        <Link ref={row2Ref} href="/admin/checklist" className="block bg-gradient-to-r from-[#C9A84C]/10 to-transparent border border-[#C9A84C]/20 rounded-xl px-3 py-2.5 group relative z-10">
+        <Link ref={row2Ref} href="/admin/checklist"
+          className="block bg-gradient-to-r from-[#C9A84C]/10 to-transparent border border-[#C9A84C]/20 rounded-xl px-3 py-2.5 group relative z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertCircle size={14} className="text-[#C9A84C] flex-shrink-0" />
@@ -174,30 +312,20 @@ export default function AdminDashboard() {
 
         {/* Row 3: Quick Actions */}
         <div ref={row3Ref} className="grid grid-cols-4 gap-2 relative z-10">
-          <Link href="/admin/site-editor" className="bg-[#141414] border border-white/5 rounded-xl p-2.5 flex flex-col items-center gap-1.5 group">
-            <div className="w-9 h-9 rounded-xl bg-[#C9A84C]/10 flex items-center justify-center">
-              <Pencil size={16} className="text-[#C9A84C]" />
-            </div>
-            <p className="text-[9px] text-white/40 text-center leading-tight">Editor</p>
-          </Link>
-          <Link href="/admin/projects" className="bg-[#141414] border border-white/5 rounded-xl p-2.5 flex flex-col items-center gap-1.5 group">
-            <div className="w-9 h-9 rounded-xl bg-[#C9A84C]/10 flex items-center justify-center">
-              <Camera size={16} className="text-[#C9A84C]" />
-            </div>
-            <p className="text-[9px] text-white/40 text-center leading-tight">Portfolio</p>
-          </Link>
-          <Link href="/admin/checklist" className="bg-[#141414] border border-white/5 rounded-xl p-2.5 flex flex-col items-center gap-1.5 group">
-            <div className="w-9 h-9 rounded-xl bg-[#C9A84C]/10 flex items-center justify-center">
-              <FileText size={16} className="text-[#C9A84C]" />
-            </div>
-            <p className="text-[9px] text-white/40 text-center leading-tight">Pages</p>
-          </Link>
-          <Link href="/admin/settings" className="bg-[#141414] border border-white/5 rounded-xl p-2.5 flex flex-col items-center gap-1.5 group">
-            <div className="w-9 h-9 rounded-xl bg-[#C9A84C]/10 flex items-center justify-center">
-              <Video size={16} className="text-[#C9A84C]" />
-            </div>
-            <p className="text-[9px] text-white/40 text-center leading-tight">Media</p>
-          </Link>
+          {[
+            { href: '/admin/site-editor', icon: Pencil, label: 'Editor' },
+            { href: '/admin/projects',    icon: Camera, label: 'Portfolio' },
+            { href: '/admin/checklist',   icon: FileText, label: 'Pages' },
+            { href: '/admin/settings',    icon: Video, label: 'Media' },
+          ].map(({ href, icon: Icon, label }) => (
+            <Link key={href} href={href}
+              className="bg-[#141414] border border-white/5 rounded-xl p-2.5 flex flex-col items-center gap-1.5 group">
+              <div className="w-9 h-9 rounded-xl bg-[#C9A84C]/10 flex items-center justify-center">
+                <Icon size={16} className="text-[#C9A84C]" />
+              </div>
+              <p className="text-[9px] text-white/40 text-center leading-tight">{label}</p>
+            </Link>
+          ))}
         </div>
 
         {/* Row 4: Activity */}
