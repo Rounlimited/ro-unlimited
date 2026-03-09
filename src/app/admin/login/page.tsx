@@ -36,12 +36,15 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-[#C9A84C] rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-black font-bold text-xl tracking-wider">RoU</span>
-          </div>
-          <h1 className="text-xl font-semibold text-white tracking-tight">Admin Portal</h1>
-          <p className="text-xs text-white/30 mt-1">RO Unlimited Site Manager</p>
+          <img
+            src="/ro-unlimited-logo.svg"
+            alt="RO Unlimited"
+            className="h-14 w-auto object-contain mx-auto mb-4"
+            style={{ maxWidth: '260px' }}
+          />
+          <p className="text-xs text-white/30">Admin Portal</p>
         </div>
+
 
         {/* Form */}
         <div className="bg-[#111] border border-white/5 rounded-xl p-6">

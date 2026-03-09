@@ -73,7 +73,15 @@ const dBadge: Record<Difficulty, string> = { easy: '\u2705 Easy', medium: '\ud83
 
 export default function ChecklistPage() {
   const [cats, setCats] = useState(DATA);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({ domain: true, photos: true, testimonials: true, company: true, nexa: false });
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('checklist-expanded');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return { domain: true, photos: true, testimonials: true, company: true, nexa: false };
+  });
   const [sort, setSort] = useState<SortMode>('impact');
   const [modal, setModal] = useState<{ title: string; description: string; accept: string; type: 'video' | 'image'; itemId: string } | null>(null);
   const [textModal, setTextModal] = useState<{ itemId: string; title: string; description: string; fields: { id: string; label: string; placeholder: string; type?: 'text' | 'password' | 'email' }[] } | null>(null);
@@ -104,12 +112,15 @@ export default function ChecklistPage() {
   const nexaDone = nexaItems.filter(i => i.status === 'done').length;
 
   const toggle = (catId: string, itemId: string) => {
-    let newStatus = 'not_started';
+    // Must derive newStatus from current state BEFORE setCats — setCats is async
+    // so the inner callback hasn't run yet when fetch fires, causing it to always
+    // send 'not_started' regardless of direction.
+    const currentItem = cats.find(c => c.id === catId)?.items.find(i => i.id === itemId);
+    const newStatus: Status = currentItem?.status === 'done' ? 'not_started' : 'done';
     setCats(prev => prev.map(c => c.id !== catId ? c : {
       ...c, items: c.items.map(i => {
         if (i.id !== itemId || i.actionType === 'nexa') return i;
-        newStatus = i.status === 'done' ? 'not_started' : 'done';
-        return { ...i, status: newStatus as Status };
+        return { ...i, status: newStatus };
       })
     }));
     // Persist to Sanity
@@ -270,7 +281,7 @@ export default function ChecklistPage() {
             const Icon = cat.icon;
             return (
               <div key={cat.id} className="bg-[#111] border border-white/5 rounded-xl overflow-hidden">
-                <button onClick={() => setExpanded(p => ({ ...p, [cat.id]: !open }))} className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
+                <button onClick={() => setExpanded(p => { const next = { ...p, [cat.id]: !open }; try { localStorage.setItem('checklist-expanded', JSON.stringify(next)); } catch {} return next; })} className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isNexa ? 'bg-green-500/10' : 'bg-[#C9A84C]/10'}`}>
                       <Icon size={16} className={isNexa ? 'text-green-400' : 'text-[#C9A84C]'} />

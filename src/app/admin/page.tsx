@@ -108,7 +108,7 @@ export default function AdminDashboard() {
       <div className="flex-1 min-h-0 flex flex-col">
         <p className="text-[9px] text-white/20 uppercase tracking-wider mb-2 px-0.5">Recent Activity</p>
         <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 scrollbar-hide">
-          <div className="bg-[#141414] border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5">
+          <div className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5 backdrop-blur-sm">
             <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
               <CheckCircle2 size={11} className="text-green-400" />
             </div>
@@ -118,7 +118,7 @@ export default function AdminDashboard() {
             </div>
             <span className="text-[8px] text-white/10 flex-shrink-0">Today</span>
           </div>
-          <div className="bg-[#141414] border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5">
+          <div className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5 backdrop-blur-sm">
             <div className="w-6 h-6 rounded-full bg-[#C9A84C]/10 flex items-center justify-center flex-shrink-0">
               <Clock size={11} className="text-[#C9A84C]" />
             </div>
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
             </div>
             <span className="text-[8px] text-white/10 flex-shrink-0">Today</span>
           </div>
-          <div className="bg-[#141414] border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5">
+          <div className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5 backdrop-blur-sm">
             <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
               <FileText size={11} className="text-blue-400" />
             </div>

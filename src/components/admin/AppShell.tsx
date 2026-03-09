@@ -427,17 +427,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="fixed top-0 left-0 right-0 bottom-0 bg-[#0a0a0a] flex flex-col overflow-hidden" style={{ height: '100dvh' }}>
-      <div className="flex-shrink-0 h-[env(safe-area-inset-top)] bg-[#0a0a0a]" />
+      {/* Watermark */}
+      <img
+        src="/ro-icon.svg"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 m-auto pointer-events-none select-none"
+        style={{ opacity: 0.04, zIndex: 0, width: '80vw', height: '70vh', objectFit: 'fill' }}
+      />
+      <div className="flex-shrink-0 h-[env(safe-area-inset-top)] bg-[#0a0a0a] relative z-10" />
 
-      <header className="flex-shrink-0 px-4 py-3 flex items-center justify-between bg-[#0f0f0f] border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-[#C9A84C] rounded-lg flex items-center justify-center">
-            <span className="text-black font-bold text-[10px] tracking-wider">RoU</span>
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold text-white leading-none">RO Unlimited</h1>
-            <p className="text-[9px] text-white/25 uppercase tracking-wider">Admin Portal</p>
-          </div>
+      <header className="flex-shrink-0 px-4 py-2.5 flex items-center justify-between bg-[#0f0f0f] border-b border-white/5 relative z-10">
+        <div className="flex items-center gap-2">
+          <img
+            src="/ro-unlimited-logo.svg"
+            alt="RO Unlimited"
+            className="w-48 h-auto object-contain"
+          />
+          <span className="text-[9px] text-white/20 uppercase tracking-wider border-l border-white/10 pl-2">Admin</span>
         </div>
         <div className="flex items-center gap-2">
           <button className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
@@ -446,7 +453,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative z-10">
         {children}
       </main>
 
@@ -472,6 +479,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* App Drawer */}
       <div ref={drawerRef} className="fixed left-0 right-0 bottom-0 z-50 bg-[#141414] rounded-t-3xl border-t border-white/10 shadow-2xl" style={{ transform: 'translateY(100%)', maxHeight: '85vh' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        {/* RO watermark locked to drawer, icons scroll over it */}
+        <img src="/ro-icon.svg" alt="" aria-hidden="true" className="absolute pointer-events-none select-none" style={{ opacity: 0.12, width: '90%', left: '5%', top: '50%', transform: 'translateY(-50%) scaleY(1.4)', transformOrigin: 'center center', objectFit: 'fill', zIndex: 1 }} />
         <div ref={handleRef} className="flex justify-center pt-3 pb-2 cursor-grab">
           <div className="w-10 h-1 rounded-full bg-white/20" />
         </div>
@@ -486,9 +495,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <div className="overflow-y-auto px-4 pb-8" style={{ maxHeight: 'calc(85vh - 100px)' }}>
+        <div className="overflow-y-auto px-4 pb-8 relative" style={{ maxHeight: 'calc(85vh - 100px)', zIndex: 2 }}>
           <p className="text-[10px] text-white/30 uppercase tracking-wider mb-3 px-1">Available</p>
-          <div className="grid grid-cols-4 gap-y-5 gap-x-2 mb-6">
+          <div className="relative">
+          <div className="grid grid-cols-4 gap-y-5 gap-x-2 mb-6 relative">
             {filtered.filter(a => a.active).map(app => {
               const Icon = app.icon;
               return (
@@ -503,6 +513,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   className="flex flex-col items-center gap-1.5 group"
                 >
                   <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-active:scale-90" style={{ background: app.bg }}>
+                    <img src="/ro-icon.svg" alt="" aria-hidden="true" className="absolute pointer-events-none select-none" style={{ opacity: 0.08 }} />
                     <Icon size={24} style={{ color: app.color }} />
                     {app.badge && (
                       <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-[#C9A84C] text-black text-[7px] font-bold rounded-full">{app.badge}</span>
@@ -515,13 +526,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <p className="text-[10px] text-white/25 uppercase tracking-wider mb-3 px-1">Coming Soon</p>
-          <div className="grid grid-cols-4 gap-y-5 gap-x-2">
+          <div className="grid grid-cols-4 gap-y-5 gap-x-2 relative" style={{ zIndex: 1 }}>
             {filtered.filter(a => !a.active).map(app => {
               const Icon = app.icon;
               return (
-                <button key={app.id} onClick={() => handleAppIcon(app)} className="flex flex-col items-center gap-1.5 opacity-60">
-                  <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                    <Icon size={24} style={{ color: '#888' }} />
+                <button key={app.id} onClick={() => handleAppIcon(app)} className="flex flex-col items-center gap-1.5 opacity-80">
+                  <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.06)' }}>                    <Icon size={24} style={{ color: '#888' }} />
                     <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-black/60 flex items-center justify-center translate-x-0.5 translate-y-0.5">
                       <Lock size={7} className="text-white/40" />
                     </div>
@@ -531,6 +541,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               );
             })}
           </div>
+          </div>{/* end relative wrapper */}
         </div>
       </div>
 
