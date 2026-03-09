@@ -12,20 +12,22 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const supabase = createClient();
 
-  const isPublicAdminRoute = pathname === '/admin/login' || pathname?.startsWith('/admin/join');
+  const isPublicAdminRoute =
+    pathname === '/admin/login' ||
+    pathname?.startsWith('/admin/join') ||
+    pathname?.startsWith('/admin/access');
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
 
-      // No session — only redirect if not already on a public admin route (login or join)
+      // No session — only redirect if not on a public admin route
       if (!session && !isPublicAdminRoute) {
         router.push('/admin/login');
         return;
       }
 
-      // Already signed in — redirect away from login, but NOT from join
-      // (join page handles its own post-signup redirect to /admin)
+      // Already signed in — redirect away from login only (not join/access, they handle their own redirects)
       if (session && pathname === '/admin/login') {
         router.push('/admin');
         return;

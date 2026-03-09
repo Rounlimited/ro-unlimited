@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { createClient } from '@/lib/supabase/client';
-import { UserPlus, Trash2, Copy, Check, Shield, User, Loader2, X, Clock, ShieldCheck, Link2, Share2 } from 'lucide-react';
+import { UserPlus, Trash2, Copy, Check, Shield, User, Loader2, X, Clock, ShieldCheck, Link2, Share2, Zap } from 'lucide-react';
 
 interface AdminUser {
   id: string;
@@ -15,7 +15,7 @@ interface AdminUser {
 }
 
 export default function SettingsPage() {
-  const [currentUser, setCurrentUser] = useState<{ email: string; role: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ email: string; role: string; email_str: string } | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteRole, setInviteRole] = useState('admin');
@@ -25,6 +25,12 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showInvite, setShowInvite] = useState(false);
 
+  // Access link state
+  const [generatingAccess, setGeneratingAccess] = useState(false);
+  const [accessLink, setAccessLink] = useState('');
+  const [accessLinkExpiry, setAccessLinkExpiry] = useState('');
+  const [copiedAccess, setCopiedAccess] = useState(false);
+
   const supabase = createClient();
   const isNexa = currentUser?.role === 'super_admin';
 
@@ -32,7 +38,11 @@ export default function SettingsPage() {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        setCurrentUser({ email: user.email || '', role: user.user_metadata?.role || 'admin' });
+        setCurrentUser({
+          email: user.email || '',
+          role: user.user_metadata?.role || 'admin',
+          email_str: user.email || '',
+        });
       }
       try {
         const res = await fetch('/api/admin/invite');
@@ -44,12 +54,11 @@ export default function SettingsPage() {
     init();
   }, [supabase]);
 
-  // Generate a token-based invite link (no email needed)
+  // Generate invite link (for adding new users)
   const generateInviteLink = async () => {
     setInviting(true);
     setInviteLink('');
     setMessage(null);
-
     try {
       const res = await fetch('/api/admin/invite-token', {
         method: 'POST',
@@ -58,13 +67,53 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-
       setInviteLink(data.inviteLink);
-      setMessage({ type: 'success', text: 'Invite link created! Send it to them and they will create their own account.' });
+      setMessage({ type: 'success', text: 'Invite link created! Send it and they will create their own account.' });
     } catch (e: any) {
       setMessage({ type: 'error', text: e.message || 'Failed to create invite link' });
     } finally {
       setInviting(false);
+    }
+  };
+
+  // Generate a 24-hour access link for yourself (logs in immediately on click)
+  const generateAccessLink = async () => {
+    if (!currentUser?.email_str) return;
+    setGeneratingAccess(true);
+    setAccessLink('');
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/access-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: currentUser.email_str }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setAccessLink(data.accessLink);
+      setAccessLinkExpiry(new Date(data.expiresAt).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+      }));
+      setMessage({ type: 'success', text: 'Access link ready — single use, expires in 24 hours.' });
+    } catch (e: any) {
+      setMessage({ type: 'error', text: e.message || 'Failed to generate access link' });
+    } finally {
+      setGeneratingAccess(false);
+    }
+  };
+
+  const copyAccessLink = () => {
+    navigator.clipboard.writeText(accessLink);
+    setCopiedAccess(true);
+    setTimeout(() => setCopiedAccess(false), 2000);
+  };
+
+  const shareAccessLink = () => {
+    const msg = `RO Unlimited admin access link (expires in 24 hours — single use):\n${accessLink}`;
+    if (navigator.share) {
+      navigator.share({ title: 'RO Unlimited Admin Access', text: msg, url: accessLink }).catch(() => {});
+    } else {
+      window.open(`sms:?body=${encodeURIComponent(msg)}`, '_blank');
     }
   };
 
@@ -120,7 +169,62 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Invite Link Display */}
+        {/* ── DEVELOPER ONLY: 24-hr Access Link ───────────────────────────── */}
+        {isNexa && (
+          <section className="bg-[#0d0d14] border border-purple-500/15 rounded-xl overflow-hidden mb-6">
+            <div className="px-6 py-4 border-b border-purple-500/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                  <Zap size={16} className="text-purple-400" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold">Quick Access Link</h2>
+                  <p className="text-[11px] text-white/25">One-click sign-in for your account · expires in 24 hours · single use</p>
+                </div>
+              </div>
+              <button
+                onClick={generateAccessLink}
+                disabled={generatingAccess}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-lg transition-all disabled:opacity-50"
+              >
+                {generatingAccess
+                  ? <><Loader2 size={11} className="animate-spin" /> Generating...</>
+                  : <><Zap size={11} /> Generate Link</>
+                }
+              </button>
+            </div>
+
+            {accessLink && (
+              <div className="px-6 py-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-[10px] text-white/30 font-mono">READY · EXPIRES {accessLinkExpiry.toUpperCase()}</span>
+                </div>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text" value={accessLink} readOnly
+                    className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white/50 font-mono truncate"
+                  />
+                  <button
+                    onClick={copyAccessLink}
+                    className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white/60 hover:bg-white/10 transition-colors flex items-center gap-1.5 flex-shrink-0"
+                  >
+                    {copiedAccess ? <><Check size={12} className="text-green-400" /> Copied</> : <><Copy size={12} /> Copy</>}
+                  </button>
+                </div>
+                <button
+                  onClick={shareAccessLink}
+                  className="w-full py-2.5 bg-purple-500/15 text-purple-300 font-semibold text-xs rounded-lg hover:bg-purple-500/25 border border-purple-500/20 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Share2 size={13} /> Send via Text
+                </button>
+                <p className="text-[10px] text-white/15 text-center mt-2">Whoever opens this link is signed in as you. Single use only.</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ── Invite Link Display (for new user invites) ───────────────────── */}
         {inviteLink && (
           <div className="mb-6 bg-[#C9A84C]/10 border border-[#C9A84C]/20 rounded-xl p-4">
             <p className="text-[#C9A84C] text-sm font-medium mb-2">Invite Link Ready</p>
@@ -131,16 +235,13 @@ export default function SettingsPage() {
                 {copied ? <><Check size={12} className="text-green-400" /> Copied</> : <><Copy size={12} /> Copy</>}
               </button>
             </div>
-            <button
-              onClick={shareInviteLink}
-              className="w-full py-2.5 bg-[#C9A84C] text-black font-semibold text-xs rounded-lg hover:bg-[#d4b55a] transition-colors flex items-center justify-center gap-2"
-            >
+            <button onClick={shareInviteLink} className="w-full py-2.5 bg-[#C9A84C] text-black font-semibold text-xs rounded-lg hover:bg-[#d4b55a] transition-colors flex items-center justify-center gap-2">
               <Share2 size={14} /> Send via Text
             </button>
           </div>
         )}
 
-        {/* User Management */}
+        {/* ── User Management ──────────────────────────────────────────────── */}
         {isNexa && (
           <section className="bg-[#111] border border-white/5 rounded-xl overflow-hidden mb-6">
             <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
@@ -158,7 +259,6 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            {/* Invite Form — no email needed, just pick a role and generate link */}
             {showInvite && (
               <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
                 <p className="text-xs text-white/30 mb-3">Choose an access level and generate a link. Send it to anyone — they will create their own account.</p>
@@ -174,7 +274,6 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Users List */}
             <div className="divide-y divide-white/[0.03]">
               {users.map(user => (
                 <div key={user.id} className="px-6 py-3 flex items-center justify-between">
@@ -205,7 +304,7 @@ export default function SettingsPage() {
           </section>
         )}
 
-        {/* Non-NexaVision users see a simpler view */}
+        {/* Non-NexaVision view */}
         {!isNexa && (
           <section className="bg-[#111] border border-white/5 rounded-xl p-6 mb-6">
             <div className="flex items-center gap-3 mb-4">
