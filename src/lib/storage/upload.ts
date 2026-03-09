@@ -7,7 +7,7 @@
  * FUTURE SWAP → Backblaze B2:
  *   1. Create B2 bucket "rou-project-files"
  *   2. Set CORS on bucket for: https://[PRODUCTION_DOMAIN]
- *      (currently: https://rounlimited.nexavisiongroup.com)
+ *      (currently: https://rounlimited.com)
  *      (after domain transfer: https://[CLIENT_DOMAIN])
  *   3. Add env vars: B2_KEY_ID, B2_APP_KEY, B2_BUCKET_ID, B2_BUCKET_NAME
  *   4. Add Cloudflare subdomain: files.[CLIENT_DOMAIN] → B2 bucket
@@ -18,7 +18,7 @@
  *
  * DOMAIN TRANSFER CHECKLIST (when client gets their domain):
  *   - Update NEXT_PUBLIC_SITE_URL in Vercel env vars
- *   - Update Sanity CORS origins in sanity.io/manage (project sk56d2pf)
+ *   - Update Sanity CORS origins in sanity.io/manage (project 3at2yyx0)
  *   - Update Supabase allowed URLs in supabase dashboard
  *   - Update B2 bucket CORS (when B2 is set up)
  *   - Update Cloudflare DNS to point new domain at Vercel

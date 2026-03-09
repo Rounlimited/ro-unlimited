@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       email,
       options: {
         data: { role: role || 'admin' },
-        redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL ? 'https://rounlimited.nexavisiongroup.com' : 'http://localhost:3000'}/admin`,
+        redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL ? 'https://rounlimited.com' : 'http://localhost:3000'}/admin`,
       },
     });
 

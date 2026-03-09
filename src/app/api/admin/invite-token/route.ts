@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.nexavisiongroup.com';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
     const inviteLink = `${baseUrl}/admin/join/${token}`;
 
     return NextResponse.json({ success: true, inviteLink, token, expiresAt });

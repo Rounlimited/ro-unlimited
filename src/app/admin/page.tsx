@@ -358,7 +358,7 @@ export default function AdminDashboard() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] text-white/60 leading-tight">Website deployed</p>
-                <p className="text-[9px] text-white/15">rounlimited.nexavisiongroup.com</p>
+                <p className="text-[9px] text-white/15">rounlimited.com</p>
               </div>
               <span className="text-[8px] text-white/10 flex-shrink-0">Today</span>
             </div>
