@@ -83,27 +83,48 @@ export default function DivisionCards() {
         trigger: spacerRef.current,
         start: 'top top',
         end: 'bottom bottom',
-        scrub: 1,
+        scrub: 2,
+        snap: {
+          snapTo: 'labels',
+          delay: 0.3,
+          duration: { min: 0.3, max: 0.9 },
+          ease: 'power2.inOut',
+        },
       },
     });
 
-    // Collapse card bodies with stagger — matching CodePen exactly
-    tl.to(bodies, {
-      height: 0,
-      paddingBottom: 0,
-      opacity: 0,
-      stagger: 0.5,
+    // Each card gets its own labeled snap point so scroll parks here,
+    // giving the user time to read before the next card collapses.
+    // Cards fold one at a time with no overlap.
+    const collapseUnit = 1 / allCards.length;
+
+    allCards.forEach((_, i) => {
+      const body = bodies[i];
+      const card = allCards[i];
+      if (!body || !card) return;
+
+      tl.addLabel(`card-${i}`);
+
+      tl.to(body, {
+        height: 0,
+        paddingBottom: 0,
+        opacity: 0,
+        duration: collapseUnit,
+        ease: 'power2.inOut',
+      });
+
+      tl.to(card, {
+        marginBottom: 4,
+        duration: collapseUnit,
+        ease: 'power2.inOut',
+      }, '<');
     });
 
-    // Tighten margins simultaneously
-    tl.to(allCards, {
-      marginBottom: 4,
-      stagger: 0.5,
-    }, '<');
+
   }, { scope: sectionRef });
 
   return (
-    <div ref={spacerRef} className="relative z-[30] [height:200vh] lg:[height:300vh]">
+    <div ref={spacerRef} className="relative z-[30] [height:220vh] lg:[height:400vh]">
       <section
         ref={sectionRef}
         className="sticky top-0 h-screen overflow-hidden bg-ro-black"
