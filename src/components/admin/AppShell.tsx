@@ -235,8 +235,8 @@ const APP_ICONS: AppIcon[] = [
 const TABS = [
   { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
   { id: 'jobs', label: 'Jobs', icon: HardHat },
-  { id: 'messages', label: 'Messages', icon: MessageCircle },
   { id: 'menu', label: 'Menu', icon: GripHorizontal },
+  { id: 'messages', label: 'Messages', icon: MessageCircle },
 ];
 
 // Feature Info Modal Component
@@ -454,6 +454,43 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {TABS.map(tab => {
             const isActive = tab.id === activeTab || (tab.id === 'menu' && drawerOpen);
             const Icon = tab.icon;
+            if (tab.id === 'menu') {
+              return (
+                <button key={tab.id} onClick={() => handleTab(tab.id)} className="flex flex-col items-center gap-1 relative -mt-5">
+                  {/* Outer glow ring — pulses subtly */}
+                  <span className="absolute inset-0 rounded-full" style={{
+                    background: 'radial-gradient(circle, rgba(201,168,76,0.35) 0%, transparent 70%)',
+                    animation: 'menuPulse 2.4s ease-in-out infinite',
+                    borderRadius: '9999px',
+                    top: '-6px', left: '-6px', right: '-6px', bottom: '-6px',
+                    pointerEvents: 'none',
+                  }} />
+                  <div style={{
+                    width: 52, height: 52,
+                    borderRadius: '9999px',
+                    background: drawerOpen ? '#b8942e' : 'linear-gradient(145deg, #d4b55a, #C9A84C, #a8883a)',
+                    boxShadow: drawerOpen
+                      ? '0 0 0 2px rgba(201,168,76,0.6), 0 4px 20px rgba(201,168,76,0.5)'
+                      : '0 0 0 1.5px rgba(201,168,76,0.4), 0 4px 24px rgba(201,168,76,0.4), 0 1px 4px rgba(0,0,0,0.6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
+                  }}>
+                    <Icon size={22} color="#0a0a0a" strokeWidth={2.2} style={{
+                      transform: drawerOpen ? 'rotate(45deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.3s ease',
+                    }} />
+                  </div>
+                  <span className="text-[9px] font-semibold" style={{ color: '#C9A84C' }}>Menu</span>
+                  <style>{`
+                    @keyframes menuPulse {
+                      0%, 100% { opacity: 0.5; transform: scale(1); }
+                      50% { opacity: 1; transform: scale(1.18); }
+                    }
+                  `}</style>
+                </button>
+              );
+            }
             return (
               <button key={tab.id} onClick={() => handleTab(tab.id)} className="flex flex-col items-center gap-0.5 px-4 py-1 transition-all">
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isActive ? 'bg-[#C9A84C]/15' : ''}`}>
