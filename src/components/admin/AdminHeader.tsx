@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ExternalLink, LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -8,11 +7,11 @@ import { createClient } from '@/lib/supabase/client';
 interface AdminHeaderProps {
   title: string;
   subtitle?: string;
-  backHref?: string;
+  backHref?: string;  // kept for API compat — ignored, always uses router.back()
   showLogout?: boolean;
 }
 
-export default function AdminHeader({ title, subtitle, backHref, showLogout = true }: AdminHeaderProps) {
+export default function AdminHeader({ title, subtitle, showLogout = true }: AdminHeaderProps) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -25,15 +24,12 @@ export default function AdminHeader({ title, subtitle, backHref, showLogout = tr
     <header className="border-b border-white/5 bg-[#0f0f0f] sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          {backHref ? (
-            <Link href={backHref} className="text-white/30 hover:text-white transition-colors">
-              <ArrowLeft size={18} />
-            </Link>
-          ) : (
-            <div className="w-10 h-10 bg-[#C9A84C] flex items-center justify-center rounded">
-              <span className="text-black font-bold text-sm tracking-wider">RoU</span>
-            </div>
-          )}
+          <button
+            onClick={() => router.back()}
+            className="text-white/30 hover:text-white transition-colors"
+          >
+            <ArrowLeft size={18} />
+          </button>
           <div>
             <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
             {subtitle && <p className="text-[11px] text-white/30 tracking-wide uppercase">{subtitle}</p>}

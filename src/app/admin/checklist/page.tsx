@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { gsap } from 'gsap';
 import AdminHeader from '@/components/admin/AdminHeader';
@@ -72,6 +73,7 @@ const pBadge: Record<Priority, { label: string; cls: string }> = {
 const dBadge: Record<Difficulty, string> = { easy: '\u2705 Easy', medium: '\ud83d\udcaa Some Effort', hard: '\ud83d\udee0\ufe0f Takes Work' };
 
 export default function ChecklistPage() {
+  const router = useRouter();
   const [cats, setCats] = useState(DATA);
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
     if (typeof window !== 'undefined') {
@@ -240,7 +242,7 @@ export default function ChecklistPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <div className="px-4 pt-4 pb-2 flex items-center gap-3">
-        <button onClick={() => window.history.back()} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/30">
+        <button onClick={() => router.back()} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/30">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
         <div>
