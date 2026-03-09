@@ -1,114 +1,477 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import {
-  Save, Loader2, Check, X, Plus, Trash2, Upload, Download,
-  Globe, GlobeLock, Camera, FileText, Users, Info, Eye,
-  MapPin, Calendar, DollarSign, Ruler, Phone, Mail, StickyNote,
-  ChevronDown, ExternalLink,
+  Loader2, Save, Check, X, Camera, FileText, Home,
+  Building2, Mountain, MapPin, Calendar, DollarSign,
+  Ruler, ChevronRight, Send, Globe, AlertCircle,
+  Users, Wrench, Lock, CheckCircle2, Image, Sparkles
 } from 'lucide-react';
-import { uploadToStorage, formatFileSize, getAcceptTypes, type FileCategory } from '@/lib/storage/upload';
-
-// ── Types ─────────────────────────────────────────────────────────────────
-
-interface Vendor {
-  _key: string;
-  name: string;
-  trade: string;
-  contact: string;
-  phone: string;
-  email: string;
-  notes: string;
-  cost: string;
-}
-
-interface ProjectFile {
-  _key: string;
-  assetId: string;
-  url: string;
-  filename: string;
-  mimeType: string;
-  size: number;
-  category: FileCategory;
-  uploadedAt: string;
-  provider: 'sanity' | 'b2';
-}
-
-interface SiteData {
-  publicTitle: string;
-  publicDescription: string;
-  heroAssetId: string;
-  heroUrl: string;
-  selectedMedia: string[];
-  displayOrder: string[];
-}
 
 interface Project {
   _id: string;
   title: string;
   division: string;
-  status: string;
-  address: string;
-  city: string;
-  state: string;
-  startDate: string;
-  completionDate: string;
-  scopeDescription: string;
-  estimatedValue: string;
-  sqft: string;
-  notes: string;
-  vendors: Vendor[];
-  files: ProjectFile[];
-  publishedToSite: boolean;
-  siteData: SiteData;
+  status: 'active' | 'complete' | 'archived';
+  reviewStatus?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  startDate?: string;
+  completionDate?: string;
+  estimatedValue?: number;
+  sqft?: number;
+  scopeDescription?: string;
+  notes?: string;
+  vendors?: any[];
+  files?: any[];
+  publishedToSite?: boolean;
+  siteData?: {
+    publicTitle?: string;
+    publicDescription?: string;
+    heroUrl?: string;
+    selectedMedia?: string[];
+    displayOrder?: string[];
+  };
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────
+const DIVISION_CONFIG: Record<string, { label: string; icon: any; color: string; neon: string; neonSoft: string }> = {
+  residential: { label: 'Residential', icon: Home,      color: '#4488FF', neon: 'rgba(68,136,255,0.7)',  neonSoft: 'rgba(68,136,255,0.12)' },
+  commercial:  { label: 'Commercial',  icon: Building2, color: '#C9A84C', neon: 'rgba(255,208,96,0.7)',  neonSoft: 'rgba(201,168,76,0.12)' },
+  grading:     { label: 'Land Grading',icon: Mountain,  color: '#34D399', neon: 'rgba(52,211,153,0.7)', neonSoft: 'rgba(52,211,153,0.12)' },
+};
 
 const TABS = [
-  { id: 'details',   label: 'Details',       icon: Info      },
-  { id: 'vendors',   label: 'Team & Vendors', icon: Users     },
-  { id: 'media',     label: 'Media',          icon: Camera    },
-  { id: 'documents', label: 'Documents',      icon: FileText  },
-  { id: 'publish',   label: 'Publish to Site',icon: Globe     },
-] as const;
-
-type TabId = typeof TABS[number]['id'];
-
-const DOC_CATEGORIES: { id: FileCategory; label: string }[] = [
-  { id: 'permit',   label: 'Permit'    },
-  { id: 'contract', label: 'Contract'  },
-  { id: 'receipt',  label: 'Receipt'   },
-  { id: 'drawing',  label: 'Drawing'   },
-  { id: 'document', label: 'Document'  },
-  { id: 'other',    label: 'Other'     },
+  { id: 'details',  label: 'Details',  icon: FileText },
+  { id: 'vendors',  label: 'Vendors',  icon: Users    },
+  { id: 'media',    label: 'Media',    icon: Camera   },
+  { id: 'docs',     label: 'Docs',     icon: Wrench   },
+  { id: 'send',     label: 'Send',     icon: Send     },
 ];
 
-const TRADES = [
-  'General', 'Framing', 'Electrical', 'Plumbing', 'HVAC', 'Roofing',
-  'Concrete', 'Masonry', 'Drywall', 'Flooring', 'Painting', 'Landscaping',
-  'Excavation', 'Grading', 'Lumber Supplier', 'Hardware Supplier',
-  'Appliance Supplier', 'Tile/Stone', 'Cabinets', 'Windows/Doors', 'Insulation', 'Other',
-];
+// ── Field input ──────────────────────────────────────────────
+function Field({
+  label, value, onChange, placeholder, type = 'text', prefix, multiline
+}: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; type?: string; prefix?: string; multiline?: boolean;
+}) {
+  const base: React.CSSProperties = {
+    width: '100%', background: 'rgba(0,0,0,0.45)',
+    border: '1px solid rgba(42,74,138,0.3)', borderRadius: 12,
+    padding: prefix ? '14px 16px 14px 28px' : '14px 16px',
+    fontSize: 14, color: '#fff', outline: 'none',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+    colorScheme: 'dark',
+  };
+  return (
+    <div>
+      <label style={{ display:'block', fontSize:10, color:'rgba(255,255,255,0.28)', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:8 }}>
+        {label}
+      </label>
+      <div style={{ position:'relative' }}>
+        {prefix && <span style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', color:'rgba(255,255,255,0.3)', fontSize:14 }}>{prefix}</span>}
+        {multiline
+          ? <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={4}
+              style={{ ...base, resize:'none' }}
+              onFocus={e => { e.target.style.borderColor='rgba(68,136,255,0.5)'; e.target.style.boxShadow='0 0 0 3px rgba(68,136,255,0.07)'; }}
+              onBlur={e => { e.target.style.borderColor='rgba(42,74,138,0.3)'; e.target.style.boxShadow='none'; }}
+            />
+          : <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+              style={base}
+              onFocus={e => { e.target.style.borderColor='rgba(68,136,255,0.5)'; e.target.style.boxShadow='0 0 0 3px rgba(68,136,255,0.07)'; }}
+              onBlur={e => { e.target.style.borderColor='rgba(42,74,138,0.3)'; e.target.style.boxShadow='none'; }}
+            />
+        }
+      </div>
+    </div>
+  );
+}
 
-// ── Component ─────────────────────────────────────────────────────────────
+// ── Details Tab ──────────────────────────────────────────────
+function DetailsTab({ project, onSave }: { project: Project; onSave: (patch: Partial<Project>) => Promise<void> }) {
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [title, setTitle] = useState(project.title || '');
+  const [division, setDivision] = useState(project.division || 'residential');
+  const [status, setStatus] = useState(project.status || 'active');
+  const [address, setAddress] = useState(project.address || '');
+  const [city, setCity] = useState(project.city || '');
+  const [state, setState] = useState(project.state || 'SC');
+  const [startDate, setStartDate] = useState(project.startDate?.slice(0,10) || '');
+  const [completionDate, setCompletionDate] = useState(project.completionDate?.slice(0,10) || '');
+  const [estimatedValue, setEstimatedValue] = useState(project.estimatedValue?.toString() || '');
+  const [sqft, setSqft] = useState(project.sqft?.toString() || '');
+  const [scopeDescription, setScopeDescription] = useState(project.scopeDescription || '');
+  const [notes, setNotes] = useState(project.notes || '');
 
-export default function ProjectFilePage() {
+  const save = async () => {
+    setSaving(true);
+    await onSave({ title, division, status, address, city, state,
+      startDate: startDate || undefined, completionDate: completionDate || undefined,
+      estimatedValue: estimatedValue ? parseFloat(estimatedValue) : undefined,
+      sqft: sqft ? parseInt(sqft) : undefined,
+      scopeDescription, notes });
+    setSaving(false); setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const div = DIVISION_CONFIG[division] || DIVISION_CONFIG.residential;
+  const DIVS = Object.entries(DIVISION_CONFIG);
+
+  return (
+    <div className="space-y-5 pb-24">
+      {/* Division selector */}
+      <div>
+        <label style={{ display:'block', fontSize:10, color:'rgba(255,255,255,0.28)', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:10 }}>Division</label>
+        <div className="grid grid-cols-3 gap-2">
+          {DIVS.map(([id, d]) => {
+            const Icon = d.icon; const sel = division === id;
+            return (
+              <button key={id} onClick={() => setDivision(id)} className="rounded-xl py-3 flex flex-col items-center gap-1.5 transition-all active:scale-95"
+                style={{
+                  background: sel ? d.neonSoft : 'rgba(255,255,255,0.03)',
+                  border: sel ? `1px solid ${d.neon}` : '1px solid rgba(255,255,255,0.06)',
+                  boxShadow: sel ? `0 0 14px ${d.neonSoft}` : 'none',
+                }}>
+                <Icon size={16} style={{ color: sel ? d.color : 'rgba(255,255,255,0.25)' }} />
+                <span style={{ fontSize:10, fontWeight:600, color: sel ? d.color : 'rgba(255,255,255,0.3)' }}>{d.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Status */}
+      <div>
+        <label style={{ display:'block', fontSize:10, color:'rgba(255,255,255,0.28)', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:10 }}>Job Status</label>
+        <div className="grid grid-cols-3 gap-2">
+          {(['active','complete','archived'] as const).map(s => {
+            const sel = status === s;
+            const colors: Record<string,{bg:string;border:string;text:string;glow:string}> = {
+              active:   {bg:'rgba(52,211,153,0.12)', border:'rgba(52,211,153,0.5)', text:'#34D399', glow:'rgba(52,211,153,0.2)'},
+              complete: {bg:'rgba(68,136,255,0.12)', border:'rgba(68,136,255,0.5)', text:'#4488FF', glow:'rgba(68,136,255,0.2)'},
+              archived: {bg:'rgba(255,255,255,0.05)', border:'rgba(255,255,255,0.12)', text:'rgba(255,255,255,0.3)', glow:'none'},
+            };
+            const c = colors[s];
+            return (
+              <button key={s} onClick={() => setStatus(s)} className="py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95 capitalize"
+                style={{
+                  background: sel ? c.bg : 'rgba(255,255,255,0.03)',
+                  border: sel ? `1px solid ${c.border}` : '1px solid rgba(255,255,255,0.06)',
+                  color: sel ? c.text : 'rgba(255,255,255,0.25)',
+                  boxShadow: sel ? `0 0 10px ${c.glow}` : 'none',
+                }}>
+                {s}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <Field label="Project Name" value={title} onChange={setTitle} placeholder="Project title" />
+      <div className="grid grid-cols-1 gap-4">
+        <Field label="Street Address" value={address} onChange={setAddress} placeholder="Optional" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="City" value={city} onChange={setCity} />
+        <Field label="State" value={state} onChange={setState} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Start Date" value={startDate} onChange={setStartDate} type="date" />
+        <Field label="Completion" value={completionDate} onChange={setCompletionDate} type="date" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Est. Value" value={estimatedValue} onChange={setEstimatedValue} prefix="$" placeholder="0" />
+        <Field label="Sqft" value={sqft} onChange={setSqft} placeholder="0" />
+      </div>
+      <Field label="Scope of Work" value={scopeDescription} onChange={setScopeDescription} multiline placeholder="Describe the scope..." />
+      <Field label="Internal Notes" value={notes} onChange={setNotes} multiline placeholder="Notes for your team..." />
+
+      {/* Save button */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 px-4 py-4" style={{
+        background: 'linear-gradient(to top, #050810 60%, transparent)',
+        paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
+      }}>
+        <button onClick={save} disabled={saving}
+          className="w-full py-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+          style={{
+            background: 'linear-gradient(135deg, #d4b55a, #C9A84C, #a8883a)',
+            color: '#000',
+            boxShadow: '0 0 0 1px rgba(201,168,76,0.4), 0 6px 24px rgba(201,168,76,0.3)',
+          }}>
+          {saving ? <><Loader2 size={15} className="animate-spin" />Saving...</>
+          : saved  ? <><Check size={15} />Saved</>
+          : <><Save size={15} />Save Changes</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Media Tab ──────────────────────────────────────────────
+function MediaTab({ project }: { project: Project }) {
+  return (
+    <div className="pb-24">
+      <div className="rounded-2xl p-8 text-center" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
+        <Camera size={32} className="mx-auto mb-3" style={{ color:'rgba(68,136,255,0.3)' }} />
+        <p className="text-sm mb-1" style={{ color:'rgba(255,255,255,0.4)' }}>Media uploads</p>
+        <p className="text-xs" style={{ color:'rgba(255,255,255,0.2)' }}>Photo & video management coming next sprint</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Vendors Tab ──────────────────────────────────────────────
+function VendorsTab({ project }: { project: Project }) {
+  return (
+    <div className="pb-24">
+      <div className="rounded-2xl p-8 text-center" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
+        <Users size={32} className="mx-auto mb-3" style={{ color:'rgba(68,136,255,0.3)' }} />
+        <p className="text-sm mb-1" style={{ color:'rgba(255,255,255,0.4)' }}>Vendor & sub tracking</p>
+        <p className="text-xs" style={{ color:'rgba(255,255,255,0.2)' }}>Manage vendors and subs per project</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Docs Tab ──────────────────────────────────────────────
+function DocsTab({ project }: { project: Project }) {
+  return (
+    <div className="pb-24">
+      <div className="rounded-2xl p-8 text-center" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
+        <Wrench size={32} className="mx-auto mb-3" style={{ color:'rgba(68,136,255,0.3)' }} />
+        <p className="text-sm mb-1" style={{ color:'rgba(255,255,255,0.4)' }}>Document vault</p>
+        <p className="text-xs" style={{ color:'rgba(255,255,255,0.2)' }}>Plans, permits, contracts per project</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Send to NexaVision Tab ──────────────────────────────────
+function SendTab({ project, onSend }: { project: Project; onSend: () => Promise<void> }) {
+  const [sendStep, setSendStep] = useState<'intro'|'details'|'confirm'|'sent'>('intro');
+  const [publicTitle, setPublicTitle] = useState(project.siteData?.publicTitle || project.title || '');
+  const [publicDesc, setPublicDesc] = useState(project.siteData?.publicDescription || '');
+  const [sending, setSending] = useState(false);
+  const reviewStatus = project.reviewStatus;
+
+  if (reviewStatus === 'pending') {
+    return (
+      <div className="pb-24 flex flex-col items-center justify-center pt-12 px-4">
+        <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5 animate-review-pulse"
+          style={{ background:'rgba(255,208,96,0.12)', border:'2px solid rgba(255,208,96,0.4)' }}>
+          <Send size={32} style={{ color:'#FFD060' }} />
+        </div>
+        <h3 className="text-lg font-bold text-white mb-2">In NexaVision's Hands</h3>
+        <p className="text-sm text-center mb-6" style={{ color:'rgba(255,255,255,0.4)', maxWidth:280 }}>
+          We're working on it. You'll get a message when your project is live on the site — usually within 24 hours.
+        </p>
+        <div className="w-full rounded-2xl p-4" style={{ background:'#0F1F3D', border:'1px solid rgba(255,208,96,0.2)' }}>
+          <p className="text-[11px] text-center" style={{ color:'rgba(255,208,96,0.6)' }}>
+            ⏳ Submitted for publishing · Awaiting NexaVision
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (reviewStatus === 'approved' || project.publishedToSite) {
+    return (
+      <div className="pb-24 flex flex-col items-center justify-center pt-12 px-4">
+        <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5 animate-live-pulse"
+          style={{ background:'rgba(52,211,153,0.12)', border:'2px solid rgba(52,211,153,0.4)' }}>
+          <Globe size={32} style={{ color:'#34D399' }} />
+        </div>
+        <h3 className="text-lg font-bold text-white mb-2">Live on the Site ✓</h3>
+        <p className="text-sm text-center mb-6" style={{ color:'rgba(255,255,255,0.4)', maxWidth:280 }}>
+          NexaVision published this project. It's working for you right now.
+        </p>
+        <div className="w-full rounded-2xl p-4" style={{ background:'rgba(52,211,153,0.08)', border:'1px solid rgba(52,211,153,0.25)' }}>
+          <p className="text-[11px] text-center" style={{ color:'rgba(52,211,153,0.7)' }}>
+            ✓ Published by NexaVision
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Step: intro
+  if (sendStep === 'intro') {
+    return (
+      <div className="pb-24 px-1 pt-2">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.3)', boxShadow:'0 0 24px rgba(201,168,76,0.15)' }}>
+            <Send size={26} style={{ color:'#C9A84C' }} />
+          </div>
+          <h3 className="text-base font-bold text-white mb-1">Ready to go live?</h3>
+          <p className="text-xs" style={{ color:'rgba(255,255,255,0.35)', maxWidth:260, margin:'0 auto' }}>
+            Hand this project off to NexaVision and we'll get it looking its best on your site.
+          </p>
+        </div>
+
+        {/* Checklist */}
+        <div className="rounded-2xl overflow-hidden mb-5" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
+          <p className="text-[10px] uppercase tracking-widest px-4 pt-3 pb-2" style={{ color:'rgba(255,255,255,0.25)' }}>What NexaVision handles</p>
+          {[
+            'Layout and formatting for your site',
+            'Photo selection and optimization',
+            'Copy review and polish',
+            'Publishing and QA check',
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-3 px-4 py-2.5 border-t" style={{ borderColor:'rgba(42,74,138,0.2)' }}>
+              <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background:'rgba(201,168,76,0.12)', border:'1px solid rgba(201,168,76,0.3)' }}>
+                <Check size={10} style={{ color:'#C9A84C' }} strokeWidth={3} />
+              </div>
+              <span className="text-sm" style={{ color:'rgba(255,255,255,0.6)' }}>{item}</span>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={() => setSendStep('details')}
+          className="w-full py-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+          style={{
+            background:'rgba(68,136,255,0.15)',
+            border:'1px solid rgba(68,136,255,0.45)',
+            color:'#4488FF',
+            boxShadow:'0 0 20px rgba(68,136,255,0.1)',
+          }}>
+          Let's Do It <ChevronRight size={15} />
+        </button>
+      </div>
+    );
+  }
+
+  // Step: public details
+  if (sendStep === 'details') {
+    const charCount = publicDesc.length;
+    return (
+      <div className="pb-24 px-1 pt-2 space-y-4">
+        <div>
+          <h3 className="text-sm font-bold text-white mb-1">Public Details</h3>
+          <p className="text-xs" style={{ color:'rgba(255,255,255,0.3)' }}>How this project appears on your site. NexaVision will polish these before publishing.</p>
+        </div>
+
+        <div>
+          <label style={{ display:'block', fontSize:10, color:'rgba(255,255,255,0.28)', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:8 }}>Public Title</label>
+          <input value={publicTitle} onChange={e => setPublicTitle(e.target.value)}
+            className="w-full rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none"
+            style={{ background:'rgba(0,0,0,0.45)', border:'1px solid rgba(42,74,138,0.3)', colorScheme:'dark' }}
+            onFocus={e => e.target.style.borderColor='rgba(68,136,255,0.5)'}
+            onBlur={e => e.target.style.borderColor='rgba(42,74,138,0.3)'}
+          />
+        </div>
+
+        <div>
+          <div className="flex justify-between mb-2">
+            <label style={{ fontSize:10, color:'rgba(255,255,255,0.28)', letterSpacing:'0.1em', textTransform:'uppercase' }}>Description</label>
+            <span style={{ fontSize:10, color: charCount > 280 ? 'rgba(239,68,68,0.7)' : 'rgba(255,255,255,0.2)' }}>{charCount}/280</span>
+          </div>
+          <textarea value={publicDesc} onChange={e => setPublicDesc(e.target.value)} rows={4}
+            placeholder="A brief description for visitors to your site..."
+            className="w-full rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none resize-none"
+            style={{ background:'rgba(0,0,0,0.45)', border:'1px solid rgba(42,74,138,0.3)', colorScheme:'dark' }}
+            onFocus={e => e.target.style.borderColor='rgba(68,136,255,0.5)'}
+            onBlur={e => e.target.style.borderColor='rgba(42,74,138,0.3)'}
+          />
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          <button onClick={() => setSendStep('intro')} className="flex-1 py-3.5 rounded-xl text-sm font-medium transition-all"
+            style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.4)' }}>
+            Back
+          </button>
+          <button onClick={() => setSendStep('confirm')} className="flex-[2] py-3.5 rounded-xl text-sm font-bold transition-all active:scale-[0.98]"
+            style={{ background:'rgba(68,136,255,0.15)', border:'1px solid rgba(68,136,255,0.45)', color:'#4488FF', boxShadow:'0 0 16px rgba(68,136,255,0.1)' }}>
+            Review & Send <ChevronRight size={13} className="inline" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Step: confirm
+  if (sendStep === 'confirm') {
+    const handleSend = async () => {
+      setSending(true);
+      await onSend();
+      setSending(false);
+      setSendStep('sent');
+    };
+    return (
+      <div className="pb-24 px-1 pt-2 space-y-4">
+        <div className="rounded-2xl overflow-hidden" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
+          <div className="px-4 py-3 border-b" style={{ borderColor:'rgba(42,74,138,0.2)' }}>
+            <p className="text-[10px] uppercase tracking-widest" style={{ color:'rgba(255,255,255,0.25)' }}>Sending to NexaVision</p>
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            <div>
+              <p className="text-[10px] mb-0.5" style={{ color:'rgba(255,255,255,0.25)' }}>Project</p>
+              <p className="text-sm font-semibold text-white">{publicTitle || project.title}</p>
+            </div>
+            {publicDesc && (
+              <div>
+                <p className="text-[10px] mb-0.5" style={{ color:'rgba(255,255,255,0.25)' }}>Description</p>
+                <p className="text-xs" style={{ color:'rgba(255,255,255,0.5)' }}>{publicDesc}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <p className="text-xs text-center" style={{ color:'rgba(255,255,255,0.3)' }}>
+          NexaVision will take it from here. You'll hear back within 24 hours.
+        </p>
+
+        <div className="flex gap-2">
+          <button onClick={() => setSendStep('details')} className="flex-1 py-3.5 rounded-xl text-sm font-medium"
+            style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.4)' }}>
+            Edit
+          </button>
+          <button onClick={handleSend} disabled={sending}
+            className="flex-[2] py-3.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+            style={{
+              background:'linear-gradient(135deg, #d4b55a, #C9A84C, #a8883a)',
+              color:'#000',
+              boxShadow:'0 0 0 1px rgba(201,168,76,0.4), 0 8px 32px rgba(201,168,76,0.35)',
+              animation:'neonGoldPulse 2.2s ease-in-out infinite',
+            }}>
+            {sending
+              ? <><Loader2 size={15} className="animate-spin" />Sending...</>
+              : <><Send size={15} />Send to NexaVision to Publish</>}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Step: sent
+  return (
+    <div className="pb-24 flex flex-col items-center justify-center pt-12 px-4">
+      <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5"
+        style={{ background:'rgba(52,211,153,0.12)', border:'2px solid rgba(52,211,153,0.4)', boxShadow:'0 0 32px rgba(52,211,153,0.2)' }}>
+        <CheckCircle2 size={36} style={{ color:'#34D399' }} />
+      </div>
+      <h3 className="text-lg font-bold text-white mb-2">Sent!</h3>
+      <p className="text-sm text-center" style={{ color:'rgba(255,255,255,0.4)', maxWidth:260 }}>
+        NexaVision has your project. We'll be in touch within 24 hours when it's live.
+      </p>
+    </div>
+  );
+}
+
+// ── Main Page ──────────────────────────────────────────────
+export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('details');
 
-  const [project, setProject]   = useState<Project | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [saving, setSaving]     = useState(false);
-  const [tab, setTab]           = useState<TabId>('details');
-  const [message, setMessage]   = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadCategoryRef = useRef<FileCategory>('photo');
-
-  // Fetch project
   useEffect(() => {
     if (!id) return;
     fetch(`/api/admin/projects?id=${id}`)
@@ -117,670 +480,105 @@ export default function ProjectFilePage() {
       .catch(() => setLoading(false));
   }, [id]);
 
-  const showMsg = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage(null), 3500);
+  const handleSave = async (patch: Partial<Project>) => {
+    const res = await fetch('/api/admin/projects', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...patch }),
+    });
+    const data = await res.json();
+    if (!data.error) setProject(prev => prev ? { ...prev, ...patch } : prev);
   };
 
-  // Save any field(s) to Sanity
-  const save = useCallback(async (updates: Partial<Project>) => {
-    if (!project) return;
-    setSaving(true);
-    try {
-      const res = await fetch('/api/admin/projects', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: project._id, ...updates }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setProject(prev => prev ? { ...prev, ...updates } : prev);
-      showMsg('success', 'Saved');
-    } catch (e: any) {
-      showMsg('error', e.message || 'Save failed');
-    } finally { setSaving(false); }
-  }, [project]);
-
-  // Upload file
-  const handleFileUpload = async (file: File, category: FileCategory) => {
-    if (!project) return;
-    setUploading(true);
-    try {
-      const result = await uploadToStorage(file, category);
-      const newFile: ProjectFile = {
-        _key: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        assetId: result.assetId,
-        url: result.url,
-        filename: result.filename,
-        mimeType: result.mimeType,
-        size: result.size,
-        category,
-        uploadedAt: new Date().toISOString(),
-        provider: result.provider,
-      };
-      const updatedFiles = [...(project.files || []), newFile];
-      await save({ files: updatedFiles });
-    } catch (e: any) {
-      showMsg('error', e.message || 'Upload failed');
-    } finally { setUploading(false); }
-  };
-
-  const deleteFile = async (key: string) => {
-    if (!project || !confirm('Remove this file from the project?')) return;
-    const updatedFiles = project.files.filter(f => f._key !== key);
-    await save({ files: updatedFiles });
+  const handleSend = async () => {
+    await handleSave({ reviewStatus: 'pending' } as any);
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <Loader2 className="animate-spin text-[#C9A84C]" size={24} />
+    <div className="min-h-screen flex items-center justify-center" style={{ background:'#050810' }}>
+      <Loader2 className="animate-spin" size={24} style={{ color:'#C9A84C' }} />
     </div>
   );
 
   if (!project) return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-      <p className="text-white/30">Project not found</p>
+    <div className="min-h-screen flex items-center justify-center" style={{ background:'#050810' }}>
+      <p style={{ color:'rgba(255,255,255,0.3)' }}>Project not found</p>
     </div>
   );
 
-  const mediaFiles = project.files?.filter(f => f.category === 'photo' || f.category === 'video') || [];
-  const docFiles   = project.files?.filter(f => !['photo','video'].includes(f.category)) || [];
+  const div = DIVISION_CONFIG[project.division] || DIVISION_CONFIG.residential;
+  const DivIcon = div.icon;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <AdminHeader
-        title={project.title}
-        subtitle={`${project.division.charAt(0).toUpperCase() + project.division.slice(1)} · ${[project.city, project.state].filter(Boolean).join(', ') || 'No location set'}`}
-        backHref="/admin/projects"
-      />
+    <div className="min-h-screen" style={{ background:'#050810' }}>
+      {/* Neon grid */}
+      <div className="fixed inset-0 pointer-events-none" style={{
+        backgroundImage:`linear-gradient(rgba(42,74,138,0.05) 1px, transparent 1px),linear-gradient(90deg, rgba(42,74,138,0.05) 1px, transparent 1px)`,
+        backgroundSize:'48px 48px', zIndex:0,
+      }} />
 
-      {/* Sticky message */}
-      {message && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-lg border text-xs flex items-center gap-2 shadow-xl ${
-          message.type === 'success' ? 'bg-[#0a1a0a] border-green-500/30 text-green-400' : 'bg-[#1a0a0a] border-red-500/30 text-red-400'
-        }`}>
-          {message.type === 'success' ? <Check size={12} /> : <X size={12} />}
-          {message.text}
-        </div>
-      )}
+      {/* Header */}
+      <div className="relative z-20">
+        <AdminHeader title={project.title} subtitle={`${div.label} · ${[project.city, project.state].filter(Boolean).join(', ')}`} backHref="/admin/projects" />
+      </div>
 
-      {/* Published banner */}
-      {project.publishedToSite && (
-        <div className="bg-emerald-500/5 border-b border-emerald-500/10 px-6 py-2 flex items-center justify-center gap-2">
-          <Globe size={11} className="text-emerald-400" />
-          <span className="text-[11px] text-emerald-400">Published to site</span>
-          {project.siteData?.publicTitle && (
-            <span className="text-[11px] text-emerald-400/40">— "{project.siteData.publicTitle}"</span>
-          )}
+      {/* Division badge strip */}
+      <div className="relative z-10 px-4 pb-1 pt-1 flex items-center gap-2">
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+          style={{ background: div.neonSoft, border:`1px solid ${div.neon}`, color: div.color, boxShadow:`0 0 12px ${div.neonSoft}` }}>
+          <DivIcon size={11} /> {div.label}
         </div>
-      )}
+        {project.estimatedValue && (
+          <span className="text-xs" style={{ color:'rgba(255,255,255,0.25)' }}>
+            ${project.estimatedValue.toLocaleString()}
+          </span>
+        )}
+        {project.sqft && (
+          <span className="text-xs" style={{ color:'rgba(255,255,255,0.25)' }}>
+            {project.sqft.toLocaleString()} sqft
+          </span>
+        )}
+      </div>
 
       {/* Tab bar */}
-      <div className="border-b border-white/5 bg-[#0a0a0a] sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 flex gap-0">
-          {TABS.map(({ id: tabId, label, icon: Icon }) => (
-            <button
-              key={tabId}
-              onClick={() => setTab(tabId)}
-              className={`flex items-center gap-1.5 px-4 py-3.5 text-xs font-medium border-b-2 transition-all ${
-                tab === tabId
-                  ? 'border-[#C9A84C] text-[#C9A84C]'
-                  : 'border-transparent text-white/25 hover:text-white/50'
-              }`}
-            >
-              <Icon size={12} />
-              {label}
-              {tabId === 'media'     && mediaFiles.length > 0 && <span className="ml-1 text-[9px] bg-white/10 px-1 rounded">{mediaFiles.length}</span>}
-              {tabId === 'documents' && docFiles.length > 0   && <span className="ml-1 text-[9px] bg-white/10 px-1 rounded">{docFiles.length}</span>}
-              {tabId === 'vendors'   && (project.vendors?.length || 0) > 0 && <span className="ml-1 text-[9px] bg-white/10 px-1 rounded">{project.vendors.length}</span>}
-            </button>
-          ))}
-
-          {/* Save indicator */}
-          {saving && (
-            <div className="ml-auto flex items-center gap-1.5 py-3.5 pr-2 text-[11px] text-white/30">
-              <Loader2 size={11} className="animate-spin" /> Saving...
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-6 py-8">
-
-        {/* ── DETAILS TAB ─────────────────────────────────────────────── */}
-        {tab === 'details' && (
-          <DetailsTab project={project} onSave={save} />
-        )}
-
-        {/* ── VENDORS TAB ─────────────────────────────────────────────── */}
-        {tab === 'vendors' && (
-          <VendorsTab project={project} onSave={save} />
-        )}
-
-        {/* ── MEDIA TAB ───────────────────────────────────────────────── */}
-        {tab === 'media' && (
-          <div>
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="text-sm font-semibold">Photos & Videos</h2>
-                <p className="text-[11px] text-white/25 mt-0.5">{mediaFiles.length} files · stored in project master file</p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { uploadCategoryRef.current = 'photo'; fileInputRef.current?.click(); }}
-                  disabled={uploading}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 text-xs text-white/60 rounded-lg hover:bg-white/10 transition-all"
-                >
-                  <Camera size={12} /> Add Photo
-                </button>
-                <button
-                  onClick={() => { uploadCategoryRef.current = 'video'; fileInputRef.current?.click(); }}
-                  disabled={uploading}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 text-xs text-white/60 rounded-lg hover:bg-white/10 transition-all"
-                >
-                  <Upload size={12} /> Add Video
-                </button>
-              </div>
-            </div>
-
-            {uploading && (
-              <div className="mb-4 p-3 bg-[#C9A84C]/5 border border-[#C9A84C]/15 rounded-lg flex items-center gap-2 text-xs text-[#C9A84C]/60">
-                <Loader2 size={12} className="animate-spin" /> Uploading...
-              </div>
-            )}
-
-            {mediaFiles.length === 0 ? (
-              <div className="text-center py-16 bg-[#111] border border-dashed border-white/10 rounded-xl">
-                <Camera size={32} className="mx-auto mb-2 text-white/10" />
-                <p className="text-white/25 text-sm">No photos or videos yet</p>
-                <p className="text-white/15 text-xs mt-1">Upload job site photos, progress shots, completed work</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-3">
-                {mediaFiles.map(file => (
-                  <div key={file._key} className="relative group aspect-[4/3] bg-black rounded-lg overflow-hidden border border-white/5">
-                    {file.mimeType?.startsWith('video/') ? (
-                      <video src={file.url} className="w-full h-full object-cover" />
-                    ) : (
-                      <img src={file.url} alt={file.filename} className="w-full h-full object-cover" />
-                    )}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <a href={file.url} target="_blank" rel="noopener noreferrer"
-                        className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
-                        <ExternalLink size={14} />
-                      </a>
-                      <button onClick={() => deleteFile(file._key)}
-                        className="p-2 bg-red-500/20 rounded-lg hover:bg-red-500/40 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-                      <p className="text-[10px] text-white/50 truncate">{file.filename}</p>
-                      <p className="text-[9px] text-white/25">{formatFileSize(file.size)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── DOCUMENTS TAB ───────────────────────────────────────────── */}
-        {tab === 'documents' && (
-          <DocumentsTab
-            project={project}
-            docFiles={docFiles}
-            uploading={uploading}
-            onUpload={(cat) => { uploadCategoryRef.current = cat; fileInputRef.current?.click(); }}
-            onDelete={deleteFile}
-          />
-        )}
-
-        {/* ── PUBLISH TAB ─────────────────────────────────────────────── */}
-        {tab === 'publish' && (
-          <PublishTab project={project} mediaFiles={mediaFiles} onSave={save} />
-        )}
-      </div>
-
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        className="hidden"
-        accept={getAcceptTypes(uploadCategoryRef.current)}
-        onChange={e => {
-          const file = e.target.files?.[0];
-          if (file) handleFileUpload(file, uploadCategoryRef.current);
-          e.target.value = '';
-        }}
-      />
-    </div>
-  );
-}
-
-// ── DETAILS TAB ────────────────────────────────────────────────────────────
-
-function DetailsTab({ project, onSave }: { project: Project; onSave: (u: Partial<Project>) => Promise<void> }) {
-  const [form, setForm] = useState({
-    title: project.title, division: project.division, status: project.status,
-    address: project.address || '', city: project.city || '', state: project.state || 'SC',
-    startDate: project.startDate || '', completionDate: project.completionDate || '',
-    scopeDescription: project.scopeDescription || '',
-    estimatedValue: project.estimatedValue || '', sqft: project.sqft || '', notes: project.notes || '',
-  });
-
-  const field = (key: keyof typeof form) => ({
-    value: form[key],
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-      setForm(f => ({ ...f, [key]: e.target.value })),
-  });
-
-  const inputCls = "w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/20 focus:border-[#C9A84C]/40 focus:outline-none";
-  const labelCls = "block text-[10px] text-white/30 uppercase tracking-wider mb-1";
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-[#111] border border-white/5 rounded-xl p-5">
-        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-4">Project Info</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
-            <label className={labelCls}>Project Name</label>
-            <input {...field('title')} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Division</label>
-            <select {...field('division')} className={inputCls}>
-              <option value="residential">Residential</option>
-              <option value="commercial">Commercial</option>
-              <option value="grading">Land Grading</option>
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>Status</label>
-            <select {...field('status')} className={inputCls}>
-              <option value="active">Active</option>
-              <option value="complete">Complete</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>Start Date</label>
-            <input type="date" {...field('startDate')} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Completion Date</label>
-            <input type="date" {...field('completionDate')} className={inputCls} />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-[#111] border border-white/5 rounded-xl p-5">
-        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-4">Location</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-3">
-            <label className={labelCls}>Street Address</label>
-            <input {...field('address')} placeholder="123 Main St" className={inputCls} />
-          </div>
-          <div className="col-span-2">
-            <label className={labelCls}>City</label>
-            <input {...field('city')} placeholder="Greenville" className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>State</label>
-            <input {...field('state')} placeholder="SC" className={inputCls} />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-[#111] border border-white/5 rounded-xl p-5">
-        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-4">Scope & Details</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelCls}><DollarSign size={9} className="inline mr-1" />Est. Value / Contract</label>
-            <input {...field('estimatedValue')} placeholder="e.g. $285,000" className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}><Ruler size={9} className="inline mr-1" />Square Footage</label>
-            <input {...field('sqft')} placeholder="e.g. 2,400 sqft" className={inputCls} />
-          </div>
-          <div className="col-span-2">
-            <label className={labelCls}>Scope Description</label>
-            <textarea {...field('scopeDescription')} rows={3} placeholder="Brief description of the project scope, type of work, key deliverables..."
-              className={`${inputCls} resize-none`} />
-          </div>
-          <div className="col-span-2">
-            <label className={labelCls}><StickyNote size={9} className="inline mr-1" />Internal Notes</label>
-            <textarea {...field('notes')} rows={3} placeholder="Internal notes — not visible on site. Record anything relevant: inspector name, HOA contact, special conditions, etc."
-              className={`${inputCls} resize-none`} />
-          </div>
-        </div>
-      </div>
-
-      <button
-        onClick={() => onSave(form)}
-        className="flex items-center gap-2 px-5 py-2.5 bg-[#C9A84C] text-black text-xs font-bold rounded-lg hover:bg-[#d4b55a] transition-colors"
-      >
-        <Save size={13} /> Save Details
-      </button>
-    </div>
-  );
-}
-
-// ── VENDORS TAB ────────────────────────────────────────────────────────────
-
-function VendorsTab({ project, onSave }: { project: Project; onSave: (u: Partial<Project>) => Promise<void> }) {
-  const [vendors, setVendors] = useState<Vendor[]>(project.vendors || []);
-  const [adding, setAdding]   = useState(false);
-  const [newV, setNewV]       = useState({ name: '', trade: 'General', contact: '', phone: '', email: '', notes: '', cost: '' });
-
-  const addVendor = async () => {
-    if (!newV.name.trim()) return;
-    const updated = [...vendors, { ...newV, _key: `${Date.now()}` }];
-    setVendors(updated);
-    await onSave({ vendors: updated });
-    setNewV({ name: '', trade: 'General', contact: '', phone: '', email: '', notes: '', cost: '' });
-    setAdding(false);
-  };
-
-  const removeVendor = async (key: string) => {
-    if (!confirm('Remove this vendor from the project?')) return;
-    const updated = vendors.filter(v => v._key !== key);
-    setVendors(updated);
-    await onSave({ vendors: updated });
-  };
-
-  const inputCls = "w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:border-[#C9A84C]/40 focus:outline-none";
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h2 className="text-sm font-semibold">Team & Vendors</h2>
-          <p className="text-[11px] text-white/25 mt-0.5">Subs, suppliers, and contacts associated with this project</p>
-        </div>
-        <button onClick={() => setAdding(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-[#C9A84C]/15 border border-[#C9A84C]/20 text-[#C9A84C] text-xs rounded-lg hover:bg-[#C9A84C]/25 transition-all">
-          <Plus size={12} /> Add Vendor
-        </button>
-      </div>
-
-      {adding && (
-        <div className="mb-5 bg-[#111] border border-[#C9A84C]/15 rounded-xl p-4">
-          <h3 className="text-xs font-semibold text-[#C9A84C]/70 mb-3">New Vendor / Contact</h3>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div><label className="block text-[9px] text-white/30 uppercase tracking-wider mb-1">Company / Name *</label>
-              <input value={newV.name} onChange={e => setNewV(v => ({ ...v, name: e.target.value }))} placeholder="ABC Electrical" className={inputCls} /></div>
-            <div><label className="block text-[9px] text-white/30 uppercase tracking-wider mb-1">Trade / Type</label>
-              <select value={newV.trade} onChange={e => setNewV(v => ({ ...v, trade: e.target.value }))} className={inputCls}>
-                {TRADES.map(t => <option key={t}>{t}</option>)}
-              </select></div>
-            <div><label className="block text-[9px] text-white/30 uppercase tracking-wider mb-1">Contact Name</label>
-              <input value={newV.contact} onChange={e => setNewV(v => ({ ...v, contact: e.target.value }))} placeholder="John Smith" className={inputCls} /></div>
-            <div><label className="block text-[9px] text-white/30 uppercase tracking-wider mb-1">Phone</label>
-              <input value={newV.phone} onChange={e => setNewV(v => ({ ...v, phone: e.target.value }))} placeholder="(864) 555-1234" className={inputCls} /></div>
-            <div><label className="block text-[9px] text-white/30 uppercase tracking-wider mb-1">Email</label>
-              <input value={newV.email} onChange={e => setNewV(v => ({ ...v, email: e.target.value }))} placeholder="john@example.com" className={inputCls} /></div>
-            <div><label className="block text-[9px] text-white/30 uppercase tracking-wider mb-1">Cost / Invoice Total</label>
-              <input value={newV.cost} onChange={e => setNewV(v => ({ ...v, cost: e.target.value }))} placeholder="e.g. $12,400" className={inputCls} /></div>
-            <div className="col-span-2"><label className="block text-[9px] text-white/30 uppercase tracking-wider mb-1">Notes</label>
-              <input value={newV.notes} onChange={e => setNewV(v => ({ ...v, notes: e.target.value }))} placeholder="Any relevant notes, warranty info, issues, etc." className={inputCls} /></div>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={addVendor} disabled={!newV.name.trim()} className="px-4 py-2 bg-[#C9A84C] text-black text-xs font-bold rounded-lg disabled:opacity-40">Add Vendor</button>
-            <button onClick={() => setAdding(false)} className="px-4 py-2 text-xs text-white/30 border border-white/10 rounded-lg">Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {vendors.length === 0 ? (
-        <div className="text-center py-14 bg-[#111] border border-dashed border-white/10 rounded-xl">
-          <Users size={32} className="mx-auto mb-2 text-white/10" />
-          <p className="text-white/25 text-sm">No vendors added yet</p>
-          <p className="text-white/15 text-xs mt-1">Track every sub, supplier, and contact for this job</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {vendors.map(v => (
-            <div key={v._key} className="bg-[#111] border border-white/5 rounded-xl px-5 py-4 flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-semibold">{v.name}</span>
-                  <span className="text-[10px] text-white/25 bg-white/5 px-2 py-0.5 rounded">{v.trade}</span>
-                  {v.cost && <span className="text-[10px] text-[#C9A84C]/60">{v.cost}</span>}
-                </div>
-                <div className="flex flex-wrap gap-3 text-[11px] text-white/30">
-                  {v.contact && <span><Users size={9} className="inline mr-1" />{v.contact}</span>}
-                  {v.phone   && <span><Phone size={9} className="inline mr-1" />{v.phone}</span>}
-                  {v.email   && <span><Mail size={9} className="inline mr-1" />{v.email}</span>}
-                </div>
-                {v.notes && <p className="text-[11px] text-white/20 mt-1 italic">{v.notes}</p>}
-              </div>
-              <button onClick={() => removeVendor(v._key)} className="text-white/10 hover:text-red-400 transition-colors flex-shrink-0">
-                <Trash2 size={14} />
+      <div className="relative z-20 px-4 pt-2 pb-0">
+        <div className="flex gap-1 rounded-2xl p-1" style={{ background:'rgba(15,31,61,0.8)', border:'1px solid rgba(42,74,138,0.3)' }}>
+          {TABS.map(t => {
+            const TIcon = t.icon;
+            const active = tab === t.id;
+            const isSend = t.id === 'send';
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[9px] font-semibold transition-all"
+                style={{
+                  background: active
+                    ? isSend ? 'rgba(201,168,76,0.15)' : 'rgba(68,136,255,0.15)'
+                    : 'transparent',
+                  border: active
+                    ? isSend ? '1px solid rgba(201,168,76,0.4)' : '1px solid rgba(68,136,255,0.3)'
+                    : '1px solid transparent',
+                  color: active
+                    ? isSend ? '#C9A84C' : '#4488FF'
+                    : 'rgba(255,255,255,0.25)',
+                  boxShadow: active
+                    ? isSend ? '0 0 10px rgba(201,168,76,0.12)' : '0 0 10px rgba(68,136,255,0.1)'
+                    : 'none',
+                }}>
+                <TIcon size={14} />
+                {t.label}
               </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── DOCUMENTS TAB ─────────────────────────────────────────────────────────
-
-function DocumentsTab({ project, docFiles, uploading, onUpload, onDelete }: {
-  project: Project;
-  docFiles: ProjectFile[];
-  uploading: boolean;
-  onUpload: (cat: FileCategory) => void;
-  onDelete: (key: string) => void;
-}) {
-  const [uploadCat, setUploadCat] = useState<FileCategory>('receipt');
-
-  const catColor: Record<string, string> = {
-    permit:   'text-blue-400 bg-blue-500/10 border-blue-500/20',
-    contract: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
-    receipt:  'text-amber-400 bg-amber-500/10 border-amber-500/20',
-    drawing:  'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
-    document: 'text-white/40 bg-white/5 border-white/10',
-    other:    'text-white/20 bg-white/5 border-white/10',
-  };
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h2 className="text-sm font-semibold">Documents, Permits & Receipts</h2>
-          <p className="text-[11px] text-white/25 mt-0.5">{docFiles.length} files · permanent project record</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <select value={uploadCat} onChange={e => setUploadCat(e.target.value as FileCategory)}
-            className="bg-black/50 border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white/60 focus:outline-none">
-            {DOC_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-          </select>
-          <button onClick={() => onUpload(uploadCat)} disabled={uploading}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 text-xs text-white/60 rounded-lg hover:bg-white/10 transition-all disabled:opacity-50">
-            {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-            Upload {DOC_CATEGORIES.find(c => c.id === uploadCat)?.label}
-          </button>
+            );
+          })}
         </div>
       </div>
 
-      {docFiles.length === 0 ? (
-        <div className="text-center py-14 bg-[#111] border border-dashed border-white/10 rounded-xl">
-          <FileText size={32} className="mx-auto mb-2 text-white/10" />
-          <p className="text-white/25 text-sm">No documents yet</p>
-          <p className="text-white/15 text-xs mt-1">Upload permits, contracts, receipts, drawings — all stored permanently in this project file</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {docFiles.map(file => (
-            <div key={file._key} className="bg-[#111] border border-white/5 rounded-xl px-5 py-3.5 flex items-center gap-4">
-              <FileText size={16} className="text-white/20 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-white/80 truncate">{file.filename}</span>
-                  <span className={`flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded border ${catColor[file.category] || catColor.other}`}>
-                    {file.category}
-                  </span>
-                </div>
-                <div className="flex gap-3 text-[10px] text-white/20 mt-0.5">
-                  <span>{formatFileSize(file.size)}</span>
-                  <span>{new Date(file.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <a href={file.url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-white/5 border border-white/10 text-[11px] text-white/50 rounded-lg hover:bg-white/10 transition-colors">
-                  <Download size={11} /> View
-                </a>
-                <button onClick={() => onDelete(file._key)} className="p-1.5 text-white/10 hover:text-red-400 transition-colors">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── PUBLISH TAB ────────────────────────────────────────────────────────────
-
-function PublishTab({ project, mediaFiles, onSave }: {
-  project: Project;
-  mediaFiles: ProjectFile[];
-  onSave: (u: Partial<Project>) => Promise<void>;
-}) {
-  const [published, setPublished]   = useState(project.publishedToSite);
-  const [siteData, setSiteData]     = useState<SiteData>(project.siteData || {
-    publicTitle: project.title, publicDescription: '', heroAssetId: '', heroUrl: '',
-    selectedMedia: [], displayOrder: [],
-  });
-
-  const togglePublish = async () => {
-    const next = !published;
-    setPublished(next);
-    await onSave({ publishedToSite: next, siteData });
-  };
-
-  const saveSiteData = async () => {
-    await onSave({ publishedToSite: published, siteData });
-  };
-
-  const toggleMediaSelection = (key: string) => {
-    setSiteData(s => ({
-      ...s,
-      selectedMedia: s.selectedMedia.includes(key)
-        ? s.selectedMedia.filter(k => k !== key)
-        : [...s.selectedMedia, key],
-    }));
-  };
-
-  const inputCls = "w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/20 focus:border-[#C9A84C]/40 focus:outline-none";
-
-  return (
-    <div className="space-y-5">
-      {/* Publish toggle */}
-      <div className={`rounded-xl border p-5 ${published ? 'bg-emerald-500/5 border-emerald-500/15' : 'bg-[#111] border-white/5'}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {published ? <Globe size={18} className="text-emerald-400" /> : <GlobeLock size={18} className="text-white/20" />}
-            <div>
-              <h2 className="text-sm font-semibold">{published ? 'Published to Website' : 'Not Published'}</h2>
-              <p className="text-[11px] text-white/25 mt-0.5">
-                {published ? 'This project appears in the public portfolio' : 'Only visible in the admin — not on the public site'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={togglePublish}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-              published
-                ? 'bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20'
-                : 'bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/25'
-            }`}
-          >
-            {published ? 'Unpublish' : 'Publish to Site'}
-          </button>
-        </div>
-      </div>
-
-      {/* Site content editor */}
-      <div className="bg-[#111] border border-white/5 rounded-xl p-5 space-y-4">
-        <h3 className="text-xs font-semibold text-white/40 uppercase tracking-widest">Public Portfolio Content</h3>
-        <p className="text-[11px] text-white/20">This is what visitors see on the site. Internal notes and vendor info never appear here.</p>
-
-        <div>
-          <label className="block text-[10px] text-white/30 uppercase tracking-wider mb-1">Public Title</label>
-          <input value={siteData.publicTitle}
-            onChange={e => setSiteData(s => ({ ...s, publicTitle: e.target.value }))}
-            placeholder="Project title shown on website"
-            className={inputCls} />
-        </div>
-
-        <div>
-          <label className="block text-[10px] text-white/30 uppercase tracking-wider mb-1">Public Description</label>
-          <textarea value={siteData.publicDescription}
-            onChange={e => setSiteData(s => ({ ...s, publicDescription: e.target.value }))}
-            rows={4}
-            placeholder="Describe this project for potential clients — what was built, key features, scope..."
-            className={`${inputCls} resize-none`} />
-        </div>
-
-        {/* Hero image picker */}
-        {mediaFiles.length > 0 && (
-          <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-wider mb-2">Hero Image (shown first)</label>
-            <div className="grid grid-cols-4 gap-2">
-              {mediaFiles.map(f => (
-                <button
-                  key={f._key}
-                  onClick={() => setSiteData(s => ({ ...s, heroAssetId: f.assetId, heroUrl: f.url }))}
-                  className={`aspect-[4/3] rounded-lg overflow-hidden border-2 transition-all ${
-                    siteData.heroAssetId === f.assetId ? 'border-[#C9A84C]' : 'border-white/5 hover:border-white/15'
-                  }`}
-                >
-                  <img src={f.url} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Select which photos appear on site */}
-        {mediaFiles.length > 0 && (
-          <div>
-            <label className="block text-[10px] text-white/30 uppercase tracking-wider mb-1">
-              Select Photos for Portfolio <span className="text-white/20 normal-case ml-1">({siteData.selectedMedia.length} selected)</span>
-            </label>
-            <p className="text-[10px] text-white/15 mb-2">Only selected photos appear on the public project page</p>
-            <div className="grid grid-cols-4 gap-2">
-              {mediaFiles.map(f => (
-                <button
-                  key={f._key}
-                  onClick={() => toggleMediaSelection(f._key)}
-                  className={`relative aspect-[4/3] rounded-lg overflow-hidden border-2 transition-all ${
-                    siteData.selectedMedia.includes(f._key) ? 'border-emerald-500/60' : 'border-white/5 opacity-50'
-                  }`}
-                >
-                  <img src={f.url} alt="" className="w-full h-full object-cover" />
-                  {siteData.selectedMedia.includes(f._key) && (
-                    <div className="absolute top-1 right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-                      <Check size={10} />
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <button onClick={saveSiteData}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#C9A84C] text-black text-xs font-bold rounded-lg hover:bg-[#d4b55a] transition-colors">
-          <Save size={13} /> Save Portfolio Content
-        </button>
+      {/* Tab content */}
+      <div className="relative z-10 px-4 pt-4 max-w-lg mx-auto">
+        {tab === 'details' && <DetailsTab project={project} onSave={handleSave} />}
+        {tab === 'vendors' && <VendorsTab project={project} />}
+        {tab === 'media'   && <MediaTab project={project} />}
+        {tab === 'docs'    && <DocsTab project={project} />}
+        {tab === 'send'    && <SendTab project={project} onSend={handleSend} />}
       </div>
     </div>
   );
