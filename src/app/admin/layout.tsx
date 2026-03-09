@@ -7,7 +7,7 @@ import AppShell from '@/components/admin/AppShell';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLogin = pathname === '/admin/login';
+  const isLogin = pathname === '/admin/login' || pathname?.startsWith('/admin/join');
 
   useEffect(() => {
     document.body.classList.add('admin-mode');
