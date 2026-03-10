@@ -51,15 +51,15 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-ro-black/95 backdrop-blur-sm border-b border-ro-gold/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
 
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
+          {/* Logo — flush left */}
+          <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
             <img
               src="/ro-unlimited-logo.svg"
               alt="RO Unlimited"
-              className="h-10 w-auto object-contain"
+              className="h-9 w-auto object-contain"
               style={{ maxWidth: '200px' }}
             />
           </Link>
@@ -69,7 +69,7 @@ export default function Navbar() {
               const isActive = pathname === link.href;
               return (
                 <Link key={link.href} href={link.href}
-                  className={`relative px-4 py-2 text-sm tracking-wider uppercase font-body transition-colors duration-300 ${isActive ? 'text-ro-gold' : 'text-ro-gray-400 hover:text-ro-white'}`}>
+                  className={`relative px-3 py-2 text-xs tracking-wider uppercase font-body transition-colors duration-300 ${isActive ? 'text-ro-gold' : 'text-ro-gray-400 hover:text-ro-white'}`}>
                   {link.label}
                   {isActive && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-[2px] bg-ro-gold" />}
                 </Link>
