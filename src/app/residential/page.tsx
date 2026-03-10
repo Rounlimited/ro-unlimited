@@ -203,7 +203,14 @@ export default function ResidentialPage() {
         {videoUrl ? (
           <>
             <video key={videoUrl} src={videoUrl} autoPlay loop muted playsInline
-              className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0, transform: `scale(${videoScale})`, transformOrigin: 'center center' }} />
+              className="absolute inset-0 w-full h-full"
+              style={{
+                zIndex: 0,
+                objectFit: videoScale < 1 ? 'contain' : 'cover',
+                transform: videoScale < 1 ? `scale(${1 + (videoScale - 0.5) * 1.5})` : `scale(${videoScale})`,
+                transformOrigin: 'center center',
+                background: '#000',
+              }} />
             <div className="absolute inset-0 bg-gradient-to-b from-[#1a150d]/80 via-ro-black/50 to-ro-black" style={{ zIndex: 1 }} />
             <div className="absolute inset-0 bg-gradient-to-r from-[#1a150d]/60 via-transparent to-transparent" style={{ zIndex: 1 }} />
             <div className="absolute inset-0 blueprint-overlay-warm opacity-15" style={{ zIndex: 1 }} />
