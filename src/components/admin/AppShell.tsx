@@ -9,7 +9,7 @@ import {
   Users, FileText, Clock, Wrench, Package, TrendingUp,
   Settings, LifeBuoy, Lock, Search, X, ChevronDown,
   Briefcase, Shield, UserPlus, Truck, FileCheck, Target,
-  Megaphone, CreditCard, PieChart, Building2, Bell, Sparkles, Zap
+  Megaphone, CreditCard, PieChart, Building2, Bell, Sparkles, Zap, LogOut
 } from 'lucide-react';
 
 interface AppIcon {
