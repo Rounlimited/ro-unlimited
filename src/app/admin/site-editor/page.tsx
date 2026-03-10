@@ -7,6 +7,7 @@ import Link from 'next/link';
 interface SiteSettings {
   heroVideoUrl?: string;
   commercialVideoUrl?: string;
+  residentialVideoUrl?: string;
 }
 
 interface UploadState {
@@ -15,7 +16,7 @@ interface UploadState {
   dragOver: boolean;
 }
 
-type Target = 'heroVideo' | 'commercialVideo';
+type Target = 'heroVideo' | 'commercialVideo' | 'residentialVideo';
 const fresh = (): UploadState => ({ uploading: false, progress: 0, dragOver: false });
 
 // Upload directly from browser → Sanity CDN using project subdomain (CORS allowed)
@@ -75,10 +76,12 @@ export default function SiteEditor() {
   const [settings, setSettings] = useState<SiteSettings>({});
   const [heroState, setHeroState] = useState<UploadState>(fresh());
   const [commState, setCommState] = useState<UploadState>(fresh());
+  const [resState, setResState] = useState<UploadState>(fresh());
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const heroInputRef = useRef<HTMLInputElement>(null);
   const commInputRef = useRef<HTMLInputElement>(null);
+  const resInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { fetchSettings(); }, []);
 
@@ -92,7 +95,7 @@ export default function SiteEditor() {
   };
 
   const handleUpload = async (file: File, target: Target) => {
-    const setState = target === 'heroVideo' ? setHeroState : setCommState;
+    const setState = target === 'heroVideo' ? setHeroState : target === 'commercialVideo' ? setCommState : setResState;
     if (!file.type.startsWith('video/')) {
       setMessage({ type: 'error', text: 'Please upload a video file (MP4, WebM, MOV)' });
       return;
@@ -104,9 +107,12 @@ export default function SiteEditor() {
       if (target === 'heroVideo') {
         setSettings(p => ({ ...p, heroVideoUrl: url }));
         setMessage({ type: 'success', text: 'Homepage hero video uploaded! Live within 60 seconds.' });
-      } else {
+      } else if (target === 'commercialVideo') {
         setSettings(p => ({ ...p, commercialVideoUrl: url }));
         setMessage({ type: 'success', text: 'Commercial page video uploaded! Live within 60 seconds.' });
+      } else {
+        setSettings(p => ({ ...p, residentialVideoUrl: url }));
+        setMessage({ type: 'success', text: 'Residential page video uploaded! Live within 60 seconds.' });
       }
     } catch (e: any) {
       setMessage({ type: 'error', text: e.message || 'Upload failed. Please try again.' });
@@ -117,10 +123,10 @@ export default function SiteEditor() {
   };
 
   const handleDelete = async (target: Target) => {
-    const label = target === 'heroVideo' ? 'homepage hero video' : 'Commercial page video';
+    const label = target === 'heroVideo' ? 'homepage hero video' : target === 'commercialVideo' ? 'Commercial page video' : 'Residential page video';
     if (!confirm(`Remove the ${label}?`)) return;
     try {
-      const body = target === 'heroVideo' ? { heroVideo: null } : { commercialVideo: null };
+      const body = target === 'heroVideo' ? { heroVideo: null } : target === 'commercialVideo' ? { commercialVideo: null } : { residentialVideo: null };
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,7 +134,8 @@ export default function SiteEditor() {
       });
       if (res.ok) {
         if (target === 'heroVideo') setSettings(p => ({ ...p, heroVideoUrl: undefined }));
-        else setSettings(p => ({ ...p, commercialVideoUrl: undefined }));
+        else if (target === 'commercialVideo') setSettings(p => ({ ...p, commercialVideoUrl: undefined }));
+        else setSettings(p => ({ ...p, residentialVideoUrl: undefined }));
         setMessage({ type: 'success', text: 'Video removed.' });
       }
     } catch { setMessage({ type: 'error', text: 'Failed to remove video.' }); }
@@ -147,7 +154,7 @@ export default function SiteEditor() {
     currentUrl?: string; state: UploadState;
     inputRef: React.RefObject<HTMLInputElement>; accent: string;
   }) => {
-    const setState = target === 'heroVideo' ? setHeroState : setCommState;
+    const setState = target === 'heroVideo' ? setHeroState : target === 'commercialVideo' ? setCommState : setResState;
     return (
       <section className="bg-[#111111] border border-white/5 rounded-lg overflow-hidden">
         <div className="p-6 border-b border-white/5">
@@ -249,6 +256,13 @@ export default function SiteEditor() {
           description="Full-bleed background video for the Commercial page hero"
           previewHref="/commercial" currentUrl={settings.commercialVideoUrl}
           state={commState} inputRef={commInputRef} accent="#60a5fa" />
+      </div>
+
+      <div className="mt-6">
+        <VideoSection target="residentialVideo" title="Residential Division Hero Video"
+          description="Full-bleed background video for the Residential page hero"
+          previewHref="/residential" currentUrl={settings.residentialVideoUrl}
+          state={resState} inputRef={resInputRef} accent="#d4a84c" />
       </div>
 
       <section className="mt-6 bg-[#111111] border border-white/5 rounded-lg p-6 opacity-40">
