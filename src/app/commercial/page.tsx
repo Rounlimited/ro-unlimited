@@ -4,16 +4,52 @@ import Link from 'next/link';
 import { DIVISIONS, COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone, Building2 } from 'lucide-react';
 import SubPageAnimator from '@/components/animations/SubPageAnimator';
+import { useEffect, useState } from 'react';
 
 const division = DIVISIONS.find(d => d.id === 'commercial')!;
 
 export default function CommercialPage() {
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/admin/settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.commercialVideoUrl) setVideoUrl(data.commercialVideoUrl);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <SubPageAnimator>
-      <section className="relative min-h-[70vh] flex items-center overflow-hidden">
-        <div className="absolute inset-0 blueprint-overlay" />
-        <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-ro-black/95 to-ro-black" />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16">
+      {/* ── HERO ── */}
+      <section className="relative min-h-[80vh] flex items-center overflow-hidden">
+        {/* Video background */}
+        {videoUrl ? (
+          <>
+            <video
+              key={videoUrl}
+              src={videoUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ zIndex: 0 }}
+            />
+            {/* Dark cinematic overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-ro-black/70 via-ro-black/50 to-ro-black" style={{ zIndex: 1 }} />
+            <div className="absolute inset-0 bg-gradient-to-r from-ro-black/60 to-transparent" style={{ zIndex: 1 }} />
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0 blueprint-overlay" />
+            <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-ro-black/95 to-ro-black" />
+          </>
+        )}
+
+        {/* Content */}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-16" style={{ zIndex: 2 }}>
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/20 bg-ro-gold/5 mb-6">
               <Building2 size={14} className="text-ro-gold" />
@@ -25,12 +61,18 @@ export default function CommercialPage() {
             <div className="w-24 gold-line mb-6" />
             <p className="text-ro-gray-400 text-lg sm:text-xl leading-relaxed mb-8 max-w-xl">{division.description}</p>
             <div className="flex flex-wrap gap-4">
-              <Link href="/contact" className="flex items-center gap-2 px-6 py-3 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-colors">Discuss Your Project <ArrowRight size={14} /></Link>
-              <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="flex items-center gap-2 px-6 py-3 border border-ro-gold/30 text-ro-gold font-heading text-sm tracking-wider uppercase hover:bg-ro-gold/5 transition-colors"><Phone size={14} /> {COMPANY.phone}</a>
+              <Link href="/contact" className="flex items-center gap-2 px-6 py-3 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-colors">
+                Discuss Your Project <ArrowRight size={14} />
+              </Link>
+              <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="flex items-center gap-2 px-6 py-3 border border-ro-gold/30 text-ro-gold font-heading text-sm tracking-wider uppercase hover:bg-ro-gold/5 transition-colors">
+                <Phone size={14} /> {COMPANY.phone}
+              </a>
             </div>
           </div>
         </div>
       </section>
+
+      {/* ── SERVICES ── */}
       <section className="py-24 relative">
         <div className="absolute inset-0 blueprint-overlay opacity-30" />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -50,6 +92,8 @@ export default function CommercialPage() {
           </div>
         </div>
       </section>
+
+      {/* ── FOOTER LINKS ── */}
       <section className="py-16 border-t border-ro-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-ro-gray-500 mb-6">Need site preparation? We grade the land before we build on it.</p>
@@ -62,6 +106,3 @@ export default function CommercialPage() {
     </SubPageAnimator>
   );
 }
-
-
-

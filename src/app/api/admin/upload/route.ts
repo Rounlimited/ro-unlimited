@@ -14,10 +14,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    console.log(`Uploading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)...`);
+    console.log(`Uploading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB) type=${type}...`);
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const isVideo = type === 'heroVideo' || type === 'video' || file.type.startsWith('video/');
+    const isVideo = file.type.startsWith('video/') || type.includes('Video') || type === 'video';
 
     const asset = await sanityWriteClient.assets.upload(
       isVideo ? 'file' : 'image',
@@ -25,15 +25,22 @@ export async function POST(req: NextRequest) {
       { filename: file.name, contentType: file.type }
     );
 
-    // If this is a hero video upload, also link it to siteSettings
-    if (type === 'heroVideo') {
-      await sanityWriteClient.createIfNotExists({
-        _id: 'siteSettings',
-        _type: 'siteSettings',
-      });
+    // Ensure siteSettings doc exists
+    await sanityWriteClient.createIfNotExists({
+      _id: 'siteSettings',
+      _type: 'siteSettings',
+    });
 
+    // Wire the asset to the correct field in siteSettings
+    const fieldMap: Record<string, string> = {
+      heroVideo: 'heroVideo',
+      commercialVideo: 'commercialVideo',
+    };
+
+    const sanityField = fieldMap[type];
+    if (sanityField) {
       await sanityWriteClient.patch('siteSettings').set({
-        heroVideo: {
+        [sanityField]: {
           _type: 'file',
           asset: { _type: 'reference', _ref: asset._id },
         },

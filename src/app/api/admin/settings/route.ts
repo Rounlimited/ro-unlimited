@@ -7,6 +7,8 @@ export async function GET() {
       `*[_type == "siteSettings" && _id == "siteSettings"][0]{
         "heroVideoUrl": heroVideo.asset->url,
         "heroVideoId": heroVideo.asset._ref,
+        "commercialVideoUrl": commercialVideo.asset->url,
+        "commercialVideoId": commercialVideo.asset._ref,
         heroOverlayOpacity,
         heroHeadline,
         heroSubheadline,
@@ -24,27 +26,26 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // If heroVideo is explicitly null, remove it
     if (body.heroVideo === null) {
       await sanityWriteClient.patch('siteSettings').unset(['heroVideo']).commit();
       return NextResponse.json({ success: true });
     }
 
-    // Ensure doc exists first
+    if (body.commercialVideo === null) {
+      await sanityWriteClient.patch('siteSettings').unset(['commercialVideo']).commit();
+      return NextResponse.json({ success: true });
+    }
+
     await sanityWriteClient.createIfNotExists({
       _id: 'siteSettings',
       _type: 'siteSettings',
     });
 
-    // Merge updates
     await sanityWriteClient.patch('siteSettings').set(body).commit();
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Settings update error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Update failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || 'Update failed' }, { status: 500 });
   }
 }
 
