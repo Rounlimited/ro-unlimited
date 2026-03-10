@@ -516,7 +516,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               );
             })}
           </div>
-        </nav>
+        </div>
+      </nav>
 
       {/* Backdrop */}
       <div ref={backdropRef} className="fixed inset-0 bg-black/60 z-40 opacity-0 pointer-events-none" onClick={closeDrawer} />
