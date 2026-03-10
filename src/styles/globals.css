@@ -212,39 +212,42 @@ body.admin-mode .loading-sequence-overlay {
 body.admin-mode { overflow: hidden !important; }
 body.admin-mode > div > div > div > main.min-h-screen { min-height: auto !important; }
 
-
 /* ═══════════════════════════════════════
-   JOIN CTA BADGE — footer animated shimmer
+   JOIN CTA BADGE — ghost style, glow pulse
 ═══════════════════════════════════════ */
 .join-cta-badge {
-  background: #D4772C;
+  background: transparent;
+  border: 1px solid #D4772C;
+  color: #D4772C;
   position: relative;
   overflow: hidden;
+  text-shadow: 0 0 8px rgba(212, 119, 44, 0.5);
 }
 
-/* Shimmer sweep layer */
+/* Shimmer sweep — rides over the transparent bg */
 .join-cta-badge::before {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(
     105deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.35) 50%,
-    transparent 70%
+    transparent 25%,
+    rgba(212, 119, 44, 0.15) 50%,
+    transparent 75%
   );
-  transform: translateX(-100%);
-  animation: joinShimmer 2.2s ease-in-out infinite;
+  transform: translateX(-110%);
+  animation: joinShimmer 2.4s ease-in-out infinite;
 }
 
-/* Hover: lift border to white-ish */
 .join-cta-badge:hover {
-  background: #e8893a;
-  color: #000;
+  background: rgba(212, 119, 44, 0.08);
+  border-color: #e8893a;
+  color: #e8893a;
+  text-shadow: 0 0 12px rgba(232, 137, 58, 0.7);
 }
 
 @keyframes joinShimmer {
-  0%   { transform: translateX(-100%); }
-  40%  { transform: translateX(100%); }
-  100% { transform: translateX(100%); }
+  0%   { transform: translateX(-110%); }
+  45%  { transform: translateX(110%); }
+  100% { transform: translateX(110%); }
 }

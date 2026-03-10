@@ -6,26 +6,6 @@ import { COMPANY, DIVISIONS } from '@/lib/constants';
 import { Phone, Mail, MapPin, Facebook, ArrowUp } from 'lucide-react';
 import { gsap, useGSAP } from '@/components/animations/GSAPProvider';
 
-/**
- * Footer — Foundation Pour Construction Sequence.
- *
- * NOT pinned — scroll-triggered, plays once when footer enters viewport.
- * The footer is the ground floor. Caution tape rolls out first, then
- * walls rise from below to form each column. Logo bolts into its frame.
- * Gold welds seal connections.
- *
- * Sequence (time-based, plays at 80% viewport entry):
- *   0.00s  Caution stripe rolls out from left
- *   0.15s  RO logo box bolts in
- *   0.25s  Column 1 wall rises
- *   0.40s  Column 2 wall rises
- *   0.55s  Column 3 wall rises
- *   0.70s  Column 4 wall rises
- *   0.85s  Gold accent headings weld
- *   0.95s  Bottom bar slides up
- *   1.10s  "Get a Quote" bolts in
- *   1.30s  Join CTA pulses to life
- */
 export default function Footer() {
   const footerRef = useRef<HTMLElement>(null);
   const cautionRef = useRef<HTMLDivElement>(null);
@@ -43,15 +23,12 @@ export default function Footer() {
   useGSAP(() => {
     if (!footerRef.current) return;
 
-    // Set initial hidden states
     const columns = [col1Ref.current, col2Ref.current, col3Ref.current, col4Ref.current].filter(Boolean);
     gsap.set([cautionRef.current, logoRef.current, bottomBarRef.current, quoteRef.current, ...columns], { opacity: 0 });
 
-    // Gold heading elements (queried within scope)
     const goldHeadings = footerRef.current.querySelectorAll('.footer-gold-heading');
     gsap.set(goldHeadings, { opacity: 0 });
 
-    // ─── Play-once timeline ───
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: footerRef.current,
@@ -61,21 +38,15 @@ export default function Footer() {
       },
     });
 
-    // 0.00s: Caution stripe rolls out from left
     tl.fromTo(cautionRef.current,
       { scaleX: 0, transformOrigin: 'left center', opacity: 0 },
-      { scaleX: 1, opacity: 1, duration: 0.5, ease: 'power2.inOut' },
-      0
+      { scaleX: 1, opacity: 1, duration: 0.5, ease: 'power2.inOut' }, 0
     );
-
-    // 0.15s: RO logo box bolts in
     tl.fromTo(logoRef.current,
       { scale: 0, rotation: 180, opacity: 0 },
-      { scale: 1, rotation: 0, opacity: 1, duration: 0.6, ease: 'back.out(2)' },
-      0.15
+      { scale: 1, rotation: 0, opacity: 1, duration: 0.6, ease: 'back.out(2)' }, 0.15
     );
 
-    // 0.25s–0.70s: Columns wall rise with stagger
     const colDelays = [0.25, 0.40, 0.55, 0.70];
     columns.forEach((col, i) => {
       tl.fromTo(col,
@@ -85,47 +56,41 @@ export default function Footer() {
       );
     });
 
-    // 0.85s: Gold accent headings weld
     if (goldHeadings.length) {
       tl.fromTo(goldHeadings,
         { scaleX: 0, transformOrigin: 'left center', opacity: 0 },
-        { scaleX: 1, opacity: 1, duration: 0.4, stagger: 0.08, ease: 'power1.in' },
-        0.85
+        { scaleX: 1, opacity: 1, duration: 0.4, stagger: 0.08, ease: 'power1.in' }, 0.85
       );
     }
 
-    // 0.95s: Bottom bar slides up
     tl.fromTo(bottomBarRef.current,
       { y: 20, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' },
-      0.95
+      { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }, 0.95
     );
-
-    // 1.10s: "Get a Quote" bolts in
     tl.fromTo(quoteRef.current,
       { scale: 0, rotation: 90, opacity: 0 },
-      { scale: 1, rotation: 0, opacity: 1, duration: 0.5, ease: 'back.out(1.5)' },
-      1.10
+      { scale: 1, rotation: 0, opacity: 1, duration: 0.5, ease: 'back.out(1.5)' }, 1.10
     );
 
-    // 1.30s: Join CTA flashes in then loops
+    // Join CTA: flash in
     tl.fromTo(joinRef.current,
       { opacity: 0, scale: 0.9 },
-      { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(2)' },
-      1.30
+      { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(2)' }, 1.30
     );
 
-    // After build completes, start looping pulse on the join badge
+    // After build: looping ghost glow — border + text-shadow pulse, no solid fill
     tl.call(() => {
       if (!joinRef.current) return;
-      // Outer glow pulse
+
+      // Border glow breathe
       gsap.to(joinRef.current, {
-        boxShadow: '0 0 18px 4px rgba(212,119,44,0.7), 0 0 6px 1px rgba(212,119,44,0.9)',
+        boxShadow: '0 0 14px 2px rgba(212,119,44,0.55), 0 0 4px 1px rgba(212,119,44,0.35)',
         repeat: -1,
         yoyo: true,
         duration: 1.1,
         ease: 'sine.inOut',
       });
+
       // Subtle scale breathe
       gsap.to(joinRef.current, {
         scale: 1.04,
@@ -134,21 +99,17 @@ export default function Footer() {
         duration: 1.1,
         ease: 'sine.inOut',
       });
-      // Shimmer sweep: animate background-position on the ::before pseudo — 
-      // we do it via a data attribute + CSS animation class instead
-      joinRef.current.classList.add('join-cta-shimmer');
     }, [], 1.75);
 
   }, { scope: footerRef });
 
-
   return (
     <footer ref={footerRef} className="relative bg-ro-black border-t border-ro-gold/10">
-      {/* Caution stripe — rolls out from left */}
       <div ref={cautionRef} className="h-1 caution-stripe opacity-30" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+
           {/* Column 1: Brand */}
           <div ref={col1Ref}>
             <div ref={logoRef} className="flex items-center gap-3 mb-6">
@@ -197,17 +158,17 @@ export default function Footer() {
             <h3 className="footer-gold-heading text-ro-gold font-heading text-sm tracking-[0.2em] uppercase mb-6">Start Your Project</h3>
             <p className="text-ro-gray-500 text-sm mb-6">{COMPANY.cta}</p>
 
-            {/* Join CTA — bright animated badge */}
+            {/* Join CTA — ghost badge, no fill */}
             <div className="mb-5">
               <p className="text-ro-gray-600 text-xs mb-2">Trade professional?</p>
               <a
                 ref={joinRef}
                 href="/join"
-                className="join-cta-badge inline-flex items-center gap-2 px-3 py-1.5 text-xs font-heading tracking-wider uppercase text-ro-black bg-[#D4772C] border border-[#D4772C] overflow-hidden relative"
+                className="join-cta-badge inline-flex items-center gap-2 px-3 py-1.5 text-xs font-heading tracking-wider uppercase"
                 style={{ opacity: 0 }}
               >
                 <span className="relative z-10">Join the RO Network</span>
-                <span className="relative z-10 text-ro-black/70">→</span>
+                <span className="relative z-10 opacity-70">→</span>
               </a>
             </div>
 
