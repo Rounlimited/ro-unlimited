@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -35,10 +35,10 @@ const DATA: Category[] = [
         { id: 'facebook', title: 'Facebook Page Access', why: "So we can link your website and Facebook page together. When someone visits your Facebook, they see a link to your professional website.", priority: 'important', difficulty: 'easy', actionType: 'instructions', actionLabel: 'How To Do This', impactScore: 5, easeScore: 7, status: 'not_started' },
   ]},
   { id: 'photos', title: 'Show Your Work', icon: Camera, desc: "Project photos are the #1 thing that wins commercial contracts.", items: [
-    { id: 'project_photos', title: 'Completed Project Photos', why: "This is the single most important thing on your website. When a commercial developer is deciding who to hire, they want to SEE what you've built.", priority: 'critical', difficulty: 'medium', actionType: 'link', actionLabel: 'Upload Project Photos', actionHref: '/admin/checklist/projects', impactScore: 10, easeScore: 5, status: 'not_started' },
-    { id: 'before_after', title: 'Before & After Shots', why: "Nothing sells construction work like seeing the transformation. Empty lot to finished building. Gutted interior to luxury finish.", priority: 'critical', difficulty: 'medium', actionType: 'link', actionLabel: 'Add Before & After', actionHref: '/admin/checklist/projects', impactScore: 9, easeScore: 5, status: 'not_started' },
-    { id: 'jobsite', title: 'Job Site & Equipment Photos', why: "Shows you have real crews and real equipment. Commercial clients want to know you can handle big jobs.", priority: 'important', difficulty: 'easy', actionType: 'upload', actionLabel: 'Upload Photos', uploadAccept: 'image/*', uploadType: 'image', impactScore: 6, easeScore: 8, status: 'not_started' },
-    { id: 'drone', title: 'Drone or Aerial Footage', why: "Aerial views of job sites look incredible and instantly set you apart from every other contractor.", priority: 'nice', difficulty: 'hard', actionType: 'upload', actionLabel: 'Upload Video', uploadAccept: 'video/*', uploadType: 'video', impactScore: 7, easeScore: 3, status: 'not_started' },
+    { id: 'project_photos', title: 'Completed Project Photos', why: "This is the single most important thing on your website. When a commercial developer is deciding who to hire, they want to SEE what you've built.", priority: 'critical', difficulty: 'medium', actionType: 'link', actionLabel: 'Add Projects & Photos', actionHref: '/admin/projects', impactScore: 10, easeScore: 5, status: 'not_started' },
+    { id: 'before_after', title: 'Before & After Shots', why: "Nothing sells construction work like seeing the transformation. Empty lot to finished building. Gutted interior to luxury finish.", priority: 'critical', difficulty: 'medium', actionType: 'link', actionLabel: 'Add Before & After', actionHref: '/admin/projects/new', impactScore: 9, easeScore: 5, status: 'not_started' },
+    { id: 'jobsite', title: 'Job Site & Equipment Photos', why: "Shows you have real crews and real equipment. Commercial clients want to know you can handle big jobs.", priority: 'important', difficulty: 'easy', actionType: 'link', actionLabel: 'Add to Portfolio', actionHref: '/admin/projects/new', impactScore: 6, easeScore: 8, status: 'not_started' },
+    { id: 'drone', title: 'Drone or Aerial Footage', why: "Aerial views of job sites look incredible and instantly set you apart from every other contractor.", priority: 'nice', difficulty: 'hard', actionType: 'link', actionLabel: 'Add to Portfolio', actionHref: '/admin/projects/new', impactScore: 7, easeScore: 3, status: 'not_started' },
   ]},
   { id: 'testimonials', title: 'Let Your Clients Sell For You', icon: MessageSquare, desc: '92% of people read reviews before hiring a contractor.', items: [
     { id: 'written_test', title: 'Client Testimonials (3-5)', why: "A few short quotes from happy clients make a massive difference. Even something simple like \"RO built our building on time and on budget\" works.", priority: 'critical', difficulty: 'easy', actionType: 'link', actionLabel: 'Add Testimonials', actionHref: '/admin/checklist/testimonials', impactScore: 9, easeScore: 7, status: 'not_started' },
@@ -114,7 +114,7 @@ export default function ChecklistPage() {
   const nexaDone = nexaItems.filter(i => i.status === 'done').length;
 
   const toggle = (catId: string, itemId: string) => {
-    // Must derive newStatus from current state BEFORE setCats — setCats is async
+    // Must derive newStatus from current state BEFORE setCats â€” setCats is async
     // so the inner callback hasn't run yet when fetch fires, causing it to always
     // send 'not_started' regardless of direction.
     const currentItem = cats.find(c => c.id === catId)?.items.find(i => i.id === itemId);

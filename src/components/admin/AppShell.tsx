@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -374,14 +374,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const openDrawer = useCallback(() => {
     setDrawerOpen(true);
-    gsap.to(drawerRef.current, { y: 0, duration: 0.4, ease: 'power3.out' });
-    gsap.to(backdropRef.current, { opacity: 1, duration: 0.3, pointerEvents: 'auto' });
-  }, []);
+    if (backdropRef.current) backdropRef.current.style.backdropFilter = 'none';
+    gsap.to(drawerRef.current, { y: 0, duration: 0.35, ease: 'power3.out', force3D: true, onComplete: () => {
+      if (backdropRef.current) backdropRef.current.style.backdropFilter = 'blur(6px)';
+    }});
+    gsap.to(backdropRef.current, { opacity: 1, duration: 0.25, pointerEvents: 'auto' });
+  }, []);;
 
   const closeDrawer = useCallback(() => {
-    gsap.to(drawerRef.current, { y: '100%', duration: 0.3, ease: 'power3.in', onComplete: () => setDrawerOpen(false) });
+    if (backdropRef.current) backdropRef.current.style.backdropFilter = 'none';
+    gsap.to(drawerRef.current, { y: '100%', duration: 0.28, ease: 'power3.in', force3D: true, onComplete: () => setDrawerOpen(false) });
     gsap.to(backdropRef.current, { opacity: 0, duration: 0.2, pointerEvents: 'none' });
-  }, []);
+  }, []);;
 
   const handleTab = (tabId: string) => {
     if (tabId === 'menu') {
@@ -450,61 +454,72 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </main>
 
       <nav className="flex-shrink-0 bg-[#0f0f0f] border-t border-white/5 px-2 pb-2" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom, 8px))' }}>
-        <div className="flex items-center justify-around py-2">
-          {TABS.map(tab => {
-            const isActive = tab.id === activeTab || (tab.id === 'menu' && drawerOpen);
-            const Icon = tab.icon;
-            if (tab.id === 'menu') {
+        <div className="flex items-center py-2">
+          {/* Left side tabs */}
+          <div className="flex flex-1 items-center justify-around">
+            {TABS.filter(t => t.id !== 'menu').slice(0, 2).map(tab => {
+              const isActive = tab.id === activeTab;
+              const Icon = tab.icon;
               return (
-                <button key={tab.id} onClick={() => handleTab(tab.id)} className="flex flex-col items-center gap-0.5 px-4 py-1 relative">
-                  {/* Outer glow ring — pulses subtly */}
-                  <span className="absolute inset-0 rounded-full" style={{
-                    background: 'radial-gradient(circle, rgba(201,168,76,0.35) 0%, transparent 70%)',
-                    animation: 'menuPulse 2.4s ease-in-out infinite',
-                    borderRadius: '9999px',
-                    top: '-6px', left: '-6px', right: '-6px', bottom: '-6px',
-                    pointerEvents: 'none',
-                  }} />
-                  <div style={{
-                    width: 52, height: 52,
-                    borderRadius: '9999px',
-                    background: drawerOpen ? '#b8942e' : 'linear-gradient(145deg, #d4b55a, #C9A84C, #a8883a)',
-                    boxShadow: drawerOpen
-                      ? '0 0 0 2px rgba(201,168,76,0.6), 0 4px 20px rgba(201,168,76,0.5)'
-                      : '0 0 0 1.5px rgba(201,168,76,0.4), 0 4px 24px rgba(201,168,76,0.4), 0 1px 4px rgba(0,0,0,0.6)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s ease',
-                    position: 'relative',
-                  }}>
-                    <Icon size={22} color="#0a0a0a" strokeWidth={2.2} style={{
-                      transform: drawerOpen ? 'rotate(45deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.3s ease',
-                    }} />
+                <button key={tab.id} onClick={() => handleTab(tab.id)} className="flex flex-col items-center gap-0.5 px-4 py-1 transition-all">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isActive ? 'bg-[#C9A84C]/15' : ''}`}>
+                    <Icon size={20} className={`transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/25'}`} />
                   </div>
-                  <span className="text-[9px] font-semibold" style={{ color: '#C9A84C' }}>Menu</span>
-                  <style>{`
-                    @keyframes menuPulse {
-                      0%, 100% { opacity: 0.5; transform: scale(1); }
-                      50% { opacity: 1; transform: scale(1.18); }
-                    }
-                  `}</style>
+                  <span className={`text-[9px] font-medium transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/20'}`}>{tab.label}</span>
                 </button>
               );
-            }
-            return (
-              <button key={tab.id} onClick={() => handleTab(tab.id)} className="flex flex-col items-center gap-0.5 px-4 py-1 transition-all">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isActive ? 'bg-[#C9A84C]/15' : ''}`}>
-                  <Icon size={20} className={`transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/25'}`} />
-                </div>
-                <span className={`text-[9px] font-medium transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/20'}`}>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+            })}
+          </div>
+          {/* Center - menu button dead center */}
+          <div className="flex-shrink-0 flex items-center justify-center px-2">
+            <button onClick={() => handleTab('menu')} className="flex flex-col items-center gap-0.5 py-1 relative">
+              <span className="absolute rounded-full pointer-events-none" style={{
+                background: 'radial-gradient(circle, rgba(201,168,76,0.35) 0%, transparent 70%)',
+                animation: 'menuPulse 2.4s ease-in-out infinite',
+                top: '-6px', left: '-6px', right: '-6px', bottom: '-6px',
+              }} />
+              <div style={{
+                width: 52, height: 52, borderRadius: '9999px',
+                background: drawerOpen ? '#b8942e' : 'linear-gradient(145deg, #d4b55a, #C9A84C, #a8883a)',
+                boxShadow: drawerOpen
+                  ? '0 0 0 2px rgba(201,168,76,0.6), 0 4px 20px rgba(201,168,76,0.5)'
+                  : '0 0 0 1.5px rgba(201,168,76,0.4), 0 4px 24px rgba(201,168,76,0.4), 0 1px 4px rgba(0,0,0,0.6)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.2s ease', position: 'relative',
+              }}>
+                <GripHorizontal size={22} color="#0a0a0a" strokeWidth={2.2} style={{
+                  transform: drawerOpen ? 'rotate(45deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.3s ease',
+                }} />
+              </div>
+              <span className="text-[9px] font-semibold" style={{ color: '#C9A84C' }}>Menu</span>
+              <style>{`
+                @keyframes menuPulse {
+                  0%, 100% { opacity: 0.5; transform: scale(1); }
+                  50% { opacity: 1; transform: scale(1.18); }
+                }
+              `}</style>
+            </button>
+          </div>
+          {/* Right side tabs */}
+          <div className="flex flex-1 items-center justify-around">
+            {TABS.filter(t => t.id !== 'menu').slice(2).map(tab => {
+              const isActive = tab.id === activeTab;
+              const Icon = tab.icon;
+              return (
+                <button key={tab.id} onClick={() => handleTab(tab.id)} className="flex flex-col items-center gap-0.5 px-4 py-1 transition-all">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isActive ? 'bg-[#C9A84C]/15' : ''}`}>
+                    <Icon size={20} className={`transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/25'}`} />
+                  </div>
+                  <span className={`text-[9px] font-medium transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/20'}`}>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
 
       {/* Backdrop */}
-      <div ref={backdropRef} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 opacity-0 pointer-events-none" onClick={closeDrawer} />
+      <div ref={backdropRef} className="fixed inset-0 bg-black/60 z-40 opacity-0 pointer-events-none" onClick={closeDrawer} />
 
       {/* App Drawer */}
       <div ref={drawerRef} className="fixed left-0 right-0 bottom-0 z-50 bg-[#141414] rounded-t-3xl border-t border-white/10 shadow-2xl" style={{ transform: 'translateY(100%)', maxHeight: '85vh' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
