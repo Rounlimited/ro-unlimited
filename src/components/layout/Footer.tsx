@@ -79,6 +79,8 @@ export default function Footer() {
 
     tl.call(() => {
       if (!joinRef.current) return;
+      // Scale from left so it never clips the left edge
+      gsap.set(joinRef.current, { transformOrigin: 'left center' });
       gsap.to(joinRef.current, {
         boxShadow: '0 0 14px 2px rgba(212,119,44,0.55), 0 0 4px 1px rgba(212,119,44,0.35)',
         repeat: -1,
@@ -152,14 +154,14 @@ export default function Footer() {
             <h3 className="footer-gold-heading text-ro-gold font-heading text-sm tracking-[0.2em] uppercase mb-6">Start Your Project</h3>
             <p className="text-ro-gray-500 text-sm mb-6">{COMPANY.cta}</p>
 
-            {/* Join CTA — ghost badge, smaller */}
+            {/* Join CTA — ghost badge, scales from left edge */}
             <div className="mb-5">
               <p className="text-ro-gray-600 text-xs mb-2">Trade professional?</p>
               <a
                 ref={joinRef}
                 href="/join"
                 className="join-cta-badge inline-flex items-center gap-1.5 px-2 py-[3px] text-[10px] font-heading tracking-wider uppercase"
-                style={{ opacity: 0 }}
+                style={{ opacity: 0, transformOrigin: 'left center' }}
               >
                 <span className="relative z-10">Join the RO Network</span>
                 <span className="relative z-10 opacity-70">→</span>
