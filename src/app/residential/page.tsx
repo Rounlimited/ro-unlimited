@@ -5,7 +5,6 @@ import { DIVISIONS, COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone, Home, ChevronDown, CheckCircle2, Heart, Hammer, Ruler, Sparkles } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { gsap, ScrollTrigger } from '@/components/animations/GSAPProvider';
-import { usePrefersReducedMotion } from '@/components/animations/GSAPProvider';
 import CountUp from '@/components/animations/CountUp';
 import ServiceDrawer from '@/components/ServiceDrawer';
 import { RESIDENTIAL_SERVICE_DETAILS, RESIDENTIAL_PROCESS, CRAFT_PILLARS } from '@/lib/residential-data';
@@ -46,7 +45,6 @@ const CROSS_DIVISIONS = [
 export default function ResidentialPage() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const reducedMotion = usePrefersReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
   const scopeRef = useRef<HTMLElement>(null);
@@ -190,7 +188,7 @@ export default function ResidentialPage() {
 
     }, containerRef);
     return () => ctx.revert();
-  }, [mounted, reducedMotion]);
+  }, [mounted]);
 
   if (!mounted) return <div className="min-h-screen bg-ro-black" />;
 

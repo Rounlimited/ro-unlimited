@@ -5,7 +5,6 @@ import { DIVISIONS, COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone, Building2, Shield, Layers, MapPin, Clock, CheckCircle2, ChevronRight, ChevronDown, Award, UserCheck, Handshake, Eye, Hammer } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { gsap, ScrollTrigger } from '@/components/animations/GSAPProvider';
-import { usePrefersReducedMotion } from '@/components/animations/GSAPProvider';
 import CountUp from '@/components/animations/CountUp';
 import ServiceDrawer from '@/components/ServiceDrawer';
 import { COMMERCIAL_SERVICE_DETAILS, PROCESS_DETAILS, VETTING_PILLARS } from '@/lib/commercial-data';
@@ -46,7 +45,6 @@ const VETTING_ICONS = [UserCheck, Award, Handshake, Eye, Hammer];
 export default function CommercialPage() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const reducedMotion = usePrefersReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
   const scopeRef = useRef<HTMLElement>(null);
@@ -208,7 +206,7 @@ export default function CommercialPage() {
 
     }, containerRef);
     return () => ctx.revert();
-  }, [mounted, reducedMotion]);
+  }, [mounted]);
 
   if (!mounted) return <div className="min-h-screen bg-ro-black" />;
 
