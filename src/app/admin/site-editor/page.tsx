@@ -2,12 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Upload, Video, Type, Check, Loader2, Trash2, Eye, RefreshCw, ArrowLeft } from 'lucide-react';
+import VideoFraming from '@/components/admin/VideoFraming';
 import Link from 'next/link';
 
 interface SiteSettings {
   heroVideoUrl?: string;
   commercialVideoUrl?: string;
   residentialVideoUrl?: string;
+  heroVideoScale?: number;
+  commercialVideoScale?: number;
+  residentialVideoScale?: number;
 }
 
 interface UploadState {
@@ -141,6 +145,18 @@ export default function SiteEditor() {
     } catch { setMessage({ type: 'error', text: 'Failed to remove video.' }); }
   };
 
+  const saveVideoScale = async (field: string, scale: number) => {
+    try {
+      await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field, value: scale }),
+      });
+      setSettings(p => ({ ...p, [field]: scale }));
+      setMessage({ type: 'success', text: 'Video zoom saved! Live within 60 seconds.' });
+    } catch { setMessage({ type: 'error', text: 'Failed to save zoom.' }); }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="animate-spin text-[#C9A84C]" size={24} />
@@ -250,12 +266,20 @@ export default function SiteEditor() {
         description="Background video for the main homepage hero section"
         previewHref="/" currentUrl={settings.heroVideoUrl}
         state={heroState} inputRef={heroInputRef} accent="#C9A84C" />
+      {settings.heroVideoUrl && (
+        <VideoFraming videoUrl={settings.heroVideoUrl} initialScale={settings.heroVideoScale || 1}
+          onScaleChange={s => saveVideoScale('heroVideoScale', s)} label="Homepage" />
+      )}
 
       <div className="mt-6">
         <VideoSection target="commercialVideo" title="Commercial Division Hero Video"
           description="Full-bleed background video for the Commercial page hero"
           previewHref="/commercial" currentUrl={settings.commercialVideoUrl}
           state={commState} inputRef={commInputRef} accent="#60a5fa" />
+        {settings.commercialVideoUrl && (
+          <VideoFraming videoUrl={settings.commercialVideoUrl} initialScale={settings.commercialVideoScale || 1}
+            onScaleChange={s => saveVideoScale('commercialVideoScale', s)} label="Commercial" />
+        )}
       </div>
 
       <div className="mt-6">
@@ -263,6 +287,10 @@ export default function SiteEditor() {
           description="Full-bleed background video for the Residential page hero"
           previewHref="/residential" currentUrl={settings.residentialVideoUrl}
           state={resState} inputRef={resInputRef} accent="#d4a84c" />
+        {settings.residentialVideoUrl && (
+          <VideoFraming videoUrl={settings.residentialVideoUrl} initialScale={settings.residentialVideoScale || 1}
+            onScaleChange={s => saveVideoScale('residentialVideoScale', s)} label="Residential" />
+        )}
       </div>
 
       <section className="mt-6 bg-[#111111] border border-white/5 rounded-lg p-6 opacity-40">

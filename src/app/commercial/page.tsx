@@ -70,10 +70,15 @@ export default function CommercialPage() {
 
   useEffect(() => { setMounted(true); }, []);
 
+  const [videoScale, setVideoScale] = useState(1);
+
   useEffect(() => {
     fetch('/api/admin/settings')
       .then(r => r.json())
-      .then(data => { if (data?.commercialVideoUrl) setVideoUrl(data.commercialVideoUrl); })
+      .then(data => {
+        if (data?.commercialVideoUrl) setVideoUrl(data.commercialVideoUrl);
+        if (data?.commercialVideoScale) setVideoScale(data.commercialVideoScale);
+      })
       .catch(() => {});
   }, []);
 
@@ -217,7 +222,7 @@ export default function CommercialPage() {
         {videoUrl ? (
           <>
             <video key={videoUrl} src={videoUrl} autoPlay loop muted playsInline
-              className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
+              className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0, transform: `scale(${videoScale})`, transformOrigin: 'center center' }} />
             <div className="absolute inset-0 bg-gradient-to-b from-ro-black/80 via-ro-black/50 to-ro-black" style={{ zIndex: 1 }} />
             <div className="absolute inset-0 bg-gradient-to-r from-ro-black/70 via-transparent to-transparent" style={{ zIndex: 1 }} />
             <div className="absolute inset-0 blueprint-overlay opacity-20" style={{ zIndex: 1 }} />
