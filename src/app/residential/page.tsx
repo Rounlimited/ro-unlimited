@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { DIVISIONS, COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone, Home, ChevronDown, CheckCircle2, Heart, Hammer, Ruler, Sparkles } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { gsap, ScrollTrigger } from '@/components/animations/GSAPProvider';
 import CountUp from '@/components/animations/CountUp';
 import ServiceDrawer from '@/components/ServiceDrawer';
@@ -56,6 +56,19 @@ export default function ResidentialPage() {
   const crossRef = useRef<HTMLElement>(null);
   const ctaRef = useRef<HTMLElement>(null);
 
+  // Hero entrance — video-first, same pattern as homepage
+  const heroTlRef      = useRef<gsap.core.Timeline | null>(null);
+  const heroTlReadyRef = useRef(false);
+  const videoFiredRef  = useRef(false);
+
+  const handleVideoReady = useCallback(() => {
+    if (heroTlReadyRef.current && heroTlRef.current) {
+      heroTlRef.current.play();
+    } else {
+      videoFiredRef.current = true;
+    }
+  }, []);
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<ServiceDetail | null>(null);
   const [expandedStep, setExpandedStep] = useState<string | null>(null);
@@ -84,21 +97,29 @@ export default function ResidentialPage() {
     if (!mounted || !containerRef.current) return;
     const ctx = gsap.context(() => {
 
-      // Hero — gentle float-in
+      // Hero — video plays first, then elements build bottom-up (warm, softer than commercial)
       if (heroRef.current) {
-        const tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
         const badge = heroRef.current.querySelector('.hero-badge');
-        const h1 = heroRef.current.querySelector('h1');
-        const line = heroRef.current.querySelector('.hero-gold-line');
-        const desc = heroRef.current.querySelector('.hero-desc');
-        const btns = heroRef.current.querySelector('.hero-btns');
+        const h1    = heroRef.current.querySelector('h1');
+        const line  = heroRef.current.querySelector('.hero-gold-line');
+        const desc  = heroRef.current.querySelector('.hero-desc');
+        const btns  = heroRef.current.querySelector('.hero-btns');
         const stats = heroRef.current.querySelector('.hero-stats');
-        if (badge) tl.fromTo(badge, { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8 }, 0.3);
-        if (h1) tl.fromTo(h1, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 1.2 }, 0.4);
-        if (line) tl.fromTo(line, { scaleX: 0 }, { scaleX: 1, duration: 1, transformOrigin: 'left' }, 0.9);
-        if (desc) tl.fromTo(desc, { y: 25, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9 }, 1.1);
-        if (btns) tl.fromTo(btns, { y: 25, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8 }, 1.4);
-        if (stats) tl.fromTo(stats, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 1 }, 1.6);
+
+        gsap.set([badge, h1, line, desc, btns, stats], { opacity: 0 });
+
+        const tl = gsap.timeline({ paused: true, defaults: { ease: 'power2.out' } });
+        heroTlRef.current = tl;
+
+        if (badge) tl.fromTo(badge, { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7 }, 0);
+        if (h1)    tl.fromTo(h1,    { y: 50, opacity: 0 },  { y: 0, opacity: 1, duration: 1.1 }, 0.15);
+        if (line)  tl.fromTo(line,  { scaleX: 0, opacity: 0, transformOrigin: 'left center' }, { scaleX: 1, opacity: 1, duration: 0.9, ease: 'power2.inOut' }, 0.6);
+        if (desc)  tl.fromTo(desc,  { y: 25, opacity: 0 },  { y: 0, opacity: 1, duration: 0.9 }, 0.8);
+        if (btns)  tl.fromTo(btns,  { y: 25, opacity: 0 },  { y: 0, opacity: 1, duration: 0.8 }, 1.05);
+        if (stats) tl.fromTo(stats, { y: 30, opacity: 0 },  { y: 0, opacity: 1, duration: 1.0 }, 1.3);
+
+        heroTlReadyRef.current = true;
+        if (videoFiredRef.current) tl.play();
       }
 
       // Scope — gentle fade-up (not harsh L/R like commercial)
@@ -190,6 +211,15 @@ export default function ResidentialPage() {
     return () => ctx.revert();
   }, [mounted]);
 
+  // No-video fallback: fire hero entrance via ro:site-ready when no video available
+  useEffect(() => {
+    if (videoUrl) return;
+    const fire = () => handleVideoReady();
+    if ((window as any).__roSiteReady) { fire(); return; }
+    window.addEventListener('ro:site-ready', fire, { once: true });
+    return () => window.removeEventListener('ro:site-ready', fire);
+  }, [videoUrl, handleVideoReady]);
+
   if (!mounted) return <div className="min-h-screen bg-ro-black" />;
 
   return (
@@ -200,7 +230,20 @@ export default function ResidentialPage() {
       <section ref={heroRef} className="relative min-h-[100vh] flex flex-col justify-center overflow-hidden">
         {videoUrl ? (
           <>
-            <video key={videoUrl} src={videoUrl} autoPlay loop muted playsInline
+            <video key={videoUrl} src={videoUrl} muted loop playsInline preload="auto"
+              ref={(el) => {
+                if (!el) return;
+                const startPlayback = () => {
+                  el.play().catch(() => {});
+                  setTimeout(() => handleVideoReady(), 2000);
+                };
+                const onReady = () => {
+                  if (el.readyState >= 3) { startPlayback(); }
+                  else { el.addEventListener('canplay', startPlayback, { once: true }); }
+                };
+                if ((window as any).__roSiteReady) { onReady(); }
+                else { window.addEventListener('ro:site-ready', onReady, { once: true }); }
+              }}
               className="absolute inset-0 w-full h-full"
               style={{
                 zIndex: 0,
