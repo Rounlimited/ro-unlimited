@@ -206,9 +206,10 @@ export default function ResidentialPage() {
         ) : (
           <>
             <div className="absolute inset-0 blueprint-overlay-warm" />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#1a150d] via-ro-black/95 to-ro-black" />
-            {/* Warm ambient glow when no video */}
-            <div className="absolute top-1/3 left-1/4 w-[600px] h-[600px] warm-glow pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#241c10] via-[#1f170c]/95 to-ro-black" />
+            {/* Multiple warm ambient glows when no video */}
+            <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] warm-glow-golden pointer-events-none" />
+            <div className="absolute top-1/2 right-1/4 w-[500px] h-[500px] warm-glow-strong pointer-events-none opacity-70" />
           </>
         )}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-8">
@@ -255,9 +256,10 @@ export default function ResidentialPage() {
 
       {/* ═══ SECTION 2 — WHAT WE BUILD (clickable → drawer) ═══ */}
       <section ref={scopeRef} className="py-32 sm:py-40 relative overflow-hidden">
-        <div className="absolute inset-0 blueprint-overlay-warm opacity-15" />
-        <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-[#1a150d]/30 to-ro-black" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] warm-glow pointer-events-none opacity-50" />
+        <div className="absolute inset-0 warm-gradient-section" />
+        <div className="absolute inset-0 blueprint-overlay-warm opacity-12" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] warm-glow-strong pointer-events-none" />
+        <div className="absolute top-1/4 right-0 w-[400px] h-[400px] warm-glow pointer-events-none" />
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="section-head mb-20">
             <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">What We Build</span>
@@ -293,17 +295,19 @@ export default function ResidentialPage() {
         </div>
       </section>
 
-      {/* ═══ SECTION 3 — THE VISION (emotional storytelling core) ═══ */}
-      <section ref={visionRef} className="py-32 sm:py-44 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-[#1f170c] to-ro-black" />
-        {/* Large warm ambient glow — the "fireplace" effect */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[700px] warm-glow pointer-events-none" />
+      {/* ═══ SECTION 3 — THE VISION (emotional storytelling core — golden hour) ═══ */}
+      <section ref={visionRef} className="py-36 sm:py-48 relative overflow-hidden">
+        <div className="absolute inset-0 warm-gradient-deep" />
+        {/* Multiple golden-hour glow layers — like sunlight through windows */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[800px] warm-glow-golden pointer-events-none" />
+        <div className="absolute top-1/3 left-1/3 w-[600px] h-[600px] warm-glow-strong pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] warm-glow pointer-events-none opacity-80" />
         <div className="absolute inset-0 warm-vignette pointer-events-none" />
 
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="vision-para text-center mb-16">
             <span className="text-ro-gold/60 text-xs font-mono tracking-[0.4em] uppercase block mb-8">More Than Construction</span>
-            <p className="text-ro-gray-200 font-heading text-2xl sm:text-3xl lg:text-4xl tracking-tight uppercase leading-[1.15]">
+            <p className="text-ro-white font-heading text-2xl sm:text-3xl lg:text-4xl tracking-tight uppercase leading-[1.15]">
               Building a home isn&apos;t just construction.
             </p>
           </div>
@@ -312,12 +316,12 @@ export default function ResidentialPage() {
             <p className="text-ro-gray-300 text-base sm:text-lg leading-[2] text-center">
               It&apos;s the kitchen where your family gathers on Sunday mornings.
               The porch where you watch your kids play in the yard.
-              The master suite that&apos;s finally, truly <em className="text-ro-gold/80 not-italic">yours</em>.
+              The master suite that&apos;s finally, truly <em className="text-ro-gold not-italic">yours</em>.
             </p>
           </div>
 
           <div className="vision-para mb-14">
-            <p className="text-ro-gray-400 text-base sm:text-lg leading-[2] text-center">
+            <p className="text-ro-gray-300 text-base sm:text-lg leading-[2] text-center">
               We&apos;ve been building these moments for 25 years — two generations of
               understanding that a home is where life happens, and it deserves to be
               built by hands that care about getting it right.
@@ -325,8 +329,8 @@ export default function ResidentialPage() {
           </div>
 
           {/* Gold pull quote — the signature line */}
-          <div className="vision-quote my-16 py-8 border-y border-ro-gold/15 text-center">
-            <p className="text-ro-gold font-heading text-xl sm:text-2xl lg:text-3xl tracking-tight uppercase leading-[1.2]">
+          <div className="vision-quote my-16 py-10 border-y border-ro-gold/20 text-center">
+            <p className="text-ro-gold font-heading text-xl sm:text-2xl lg:text-3xl tracking-tight uppercase leading-[1.2] text-shadow-gold">
               &ldquo;A house is structure.<br />A home is intention.&rdquo;
             </p>
           </div>
@@ -344,8 +348,9 @@ export default function ResidentialPage() {
 
       {/* ═══ SECTION 4 — THE CRAFT (craftsmanship showcase) ═══ */}
       <section ref={craftRef} className="py-32 sm:py-40 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-[#1a150d]/20 to-ro-black" />
+        <div className="absolute inset-0 warm-gradient-section" />
         <div className="absolute inset-0 blueprint-overlay-warm opacity-10" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] warm-glow-strong pointer-events-none" />
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
             <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">Craftsmanship</span>
@@ -437,8 +442,9 @@ export default function ResidentialPage() {
 
       {/* ═══ SECTION 6 — THE RO DIFFERENCE (residential version) ═══ */}
       <section ref={diffRef} className="py-32 sm:py-40 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#1a150d]/20 via-ro-black to-[#1a150d]/20" />
+        <div className="absolute inset-0 warm-gradient-section" />
         <div className="absolute inset-0 blueprint-overlay-warm opacity-8" />
+        <div className="absolute bottom-1/3 left-1/3 w-[700px] h-[500px] warm-glow pointer-events-none" />
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="section-head mb-20 text-center">
             <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">Why Families Choose RO</span>
@@ -468,8 +474,9 @@ export default function ResidentialPage() {
 
       {/* ═══ SECTION 7 — TRUST ═══ */}
       <section ref={trustRef} className="py-28 sm:py-36 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-[#1f170c]/30 to-ro-black" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] warm-glow pointer-events-none opacity-60" />
+        <div className="absolute inset-0 warm-gradient-deep" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] warm-glow-golden pointer-events-none" />
+        <div className="absolute top-1/3 right-1/3 w-[400px] h-[400px] warm-glow-strong pointer-events-none" />
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="trust-content">
             <div className="text-ro-gold/10 font-heading text-[120px] sm:text-[160px] leading-none select-none mb-[-40px] sm:mb-[-60px]">&ldquo;</div>
@@ -514,10 +521,11 @@ export default function ResidentialPage() {
 
       {/* ═══ SECTION 9 — THE CLOSE (warm CTA) ═══ */}
       <section ref={ctaRef} className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-[#1f170c]/40 to-ro-black" />
-        <div className="absolute inset-0 blueprint-overlay-warm opacity-8" />
-        {/* Warm radial glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] warm-glow pointer-events-none" />
+        <div className="absolute inset-0 warm-gradient-deep" />
+        <div className="absolute inset-0 blueprint-overlay-warm opacity-6" />
+        {/* Layered warm radial glows */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] warm-glow-golden pointer-events-none" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] warm-glow-strong pointer-events-none" />
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="cta-inner">
             <div className="w-24 h-[2px] bg-gradient-to-r from-transparent via-ro-gold/40 to-transparent mx-auto mb-12" />

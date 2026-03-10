@@ -96,8 +96,20 @@
   .warm-glow {
     background: radial-gradient(ellipse at center, rgba(201,168,76,0.06) 0%, transparent 70%);
   }
+  .warm-glow-strong {
+    background: radial-gradient(ellipse at center, rgba(201,168,76,0.10) 0%, rgba(201,168,76,0.04) 40%, transparent 70%);
+  }
+  .warm-glow-golden {
+    background: radial-gradient(ellipse at center, rgba(212,185,101,0.12) 0%, rgba(201,168,76,0.06) 30%, rgba(168,138,61,0.02) 55%, transparent 75%);
+  }
   .warm-vignette {
     background: radial-gradient(ellipse at center, rgba(42,33,15,0.4) 0%, rgba(26,26,26,0) 70%);
+  }
+  .warm-gradient-section {
+    background: linear-gradient(180deg, #1a1a1a 0%, #1f170c 15%, #241c10 50%, #1f170c 85%, #1a1a1a 100%);
+  }
+  .warm-gradient-deep {
+    background: linear-gradient(180deg, #1a1a1a 0%, #231a0e 20%, #2a1f12 50%, #231a0e 80%, #1a1a1a 100%);
   }
   .border-gold-glow { box-shadow: 0 0 15px rgba(201,168,76,0.15), inset 0 0 15px rgba(201,168,76,0.05); }
   .gradient-text-gold { @apply bg-clip-text text-transparent bg-gradient-to-r from-ro-gold-dark via-ro-gold to-ro-gold-light; }
