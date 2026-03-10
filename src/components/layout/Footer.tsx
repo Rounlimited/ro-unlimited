@@ -72,17 +72,13 @@ export default function Footer() {
       { scale: 1, rotation: 0, opacity: 1, duration: 0.5, ease: 'back.out(1.5)' }, 1.10
     );
 
-    // Join CTA: flash in
     tl.fromTo(joinRef.current,
       { opacity: 0, scale: 0.9 },
       { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(2)' }, 1.30
     );
 
-    // After build: looping ghost glow — border + text-shadow pulse, no solid fill
     tl.call(() => {
       if (!joinRef.current) return;
-
-      // Border glow breathe
       gsap.to(joinRef.current, {
         boxShadow: '0 0 14px 2px rgba(212,119,44,0.55), 0 0 4px 1px rgba(212,119,44,0.35)',
         repeat: -1,
@@ -90,8 +86,6 @@ export default function Footer() {
         duration: 1.1,
         ease: 'sine.inOut',
       });
-
-      // Subtle scale breathe
       gsap.to(joinRef.current, {
         scale: 1.04,
         repeat: -1,
@@ -158,13 +152,13 @@ export default function Footer() {
             <h3 className="footer-gold-heading text-ro-gold font-heading text-sm tracking-[0.2em] uppercase mb-6">Start Your Project</h3>
             <p className="text-ro-gray-500 text-sm mb-6">{COMPANY.cta}</p>
 
-            {/* Join CTA — ghost badge, no fill */}
+            {/* Join CTA — ghost badge, smaller */}
             <div className="mb-5">
               <p className="text-ro-gray-600 text-xs mb-2">Trade professional?</p>
               <a
                 ref={joinRef}
                 href="/join"
-                className="join-cta-badge inline-flex items-center gap-2 px-3 py-1.5 text-xs font-heading tracking-wider uppercase"
+                className="join-cta-badge inline-flex items-center gap-1.5 px-2 py-[3px] text-[10px] font-heading tracking-wider uppercase"
                 style={{ opacity: 0 }}
               >
                 <span className="relative z-10">Join the RO Network</span>
