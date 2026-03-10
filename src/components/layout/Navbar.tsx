@@ -9,7 +9,7 @@ import { gsap } from '@/components/animations/GSAPProvider';
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-  const joinNavRef = useRef<HTMLAnchorElement>(null);
+  const joinNavRef = useRef<HTMLDivElement>(null);
   const glowTweens = useRef<gsap.core.Tween[]>([]);
 
   // Start pulse when menu opens, kill when it closes
@@ -71,6 +71,12 @@ export default function Navbar() {
               className="relative px-6 py-2.5 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-colors duration-300">
               Get a Quote
             </Link>
+            {/* Join the RO Network — two-line desktop badge */}
+            <Link href="/join"
+              className="group flex flex-col items-center justify-center px-4 py-1.5 border border-ro-gold/30 hover:border-ro-gold/60 hover:bg-ro-gold/5 transition-all duration-300 text-center leading-tight">
+              <span className="text-ro-gold font-heading text-[10px] tracking-[0.2em] uppercase">Join the</span>
+              <span className="text-ro-gold font-heading text-[10px] tracking-[0.2em] uppercase">RO Network</span>
+            </Link>
           </div>
 
           <button onClick={() => setIsOpen(!isOpen)} className="lg:hidden text-ro-gold p-2" aria-label="Toggle menu">
@@ -95,16 +101,16 @@ export default function Navbar() {
           {/* Join the RO Network — ghost badge, matches footer style */}
           <div className="px-4 pt-3">
             <p className="text-ro-gray-600 text-[10px] mb-1.5 uppercase tracking-wider">Trade professional?</p>
-            <a
-              ref={joinNavRef}
-              href="/join"
-              onClick={() => setIsOpen(false)}
-              className="join-cta-badge inline-flex items-center gap-1.5 px-2 py-[3px] text-[10px] font-heading tracking-wider uppercase"
-              style={{ transformOrigin: 'left center' }}
-            >
-              <span className="relative z-10">Join the RO Network</span>
-              <span className="relative z-10 opacity-70">→</span>
-            </a>
+            <div ref={joinNavRef} style={{ transformOrigin: 'left center', display: 'inline-block' }}>
+              <Link
+                href="/join"
+                onClick={() => setIsOpen(false)}
+                className="join-cta-badge inline-flex items-center gap-1.5 px-2 py-[3px] text-[10px] font-heading tracking-wider uppercase"
+              >
+                <span className="relative z-10">Join the RO Network</span>
+                <span className="relative z-10 opacity-70">→</span>
+              </Link>
+            </div>
           </div>
 
           <div className="pt-4 border-t border-ro-gray-800 mt-4">

@@ -3,7 +3,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { gsap } from '@/components/animations/GSAPProvider';
-import { usePrefersReducedMotion } from '@/components/animations/GSAPProvider';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 
@@ -24,7 +23,6 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
   const splashRef = useRef<HTMLDivElement>(null);
   const roRef = useRef<HTMLImageElement>(null);
   const [done, setDone] = useState(false);
-  const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     // Admin has its own splash — skip entirely
@@ -74,7 +72,7 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
     });
 
     return () => ctx.revert();
-  }, [isAdmin, reducedMotion]);
+  }, [isAdmin]);
 
   // Admin: pass through with no chrome at all
   if (isAdmin) {
