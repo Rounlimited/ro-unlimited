@@ -30,7 +30,7 @@ export default function ProcessPage() {
               How We<br /><span className="gradient-text-gold">Build It</span>
             </h1>
             <div className="w-24 gold-line mb-6" />
-            <p className="text-ro-gray-400 text-lg sm:text-xl leading-relaxed max-w-xl">From raw land to finished product - see every phase of how RO Unlimited delivers projects on time and built to last.</p>
+            <p className="text-ro-gray-400 text-lg sm:text-xl leading-relaxed max-w-xl">This isn&apos;t just a process — it&apos;s a promise. Every phase completed with honor, integrity, and pride. From raw land to finished product.</p>
           </div>
         </div>
       </section>

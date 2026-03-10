@@ -127,7 +127,7 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-ro-gray-500 text-sm leading-relaxed mb-6">
-              {COMPANY.experience} years of complete commercial and residential construction. Problem solving, designing, developing — ground up.
+              {COMPANY.experience} years of complete commercial and residential construction across Georgia, South Carolina, and North Carolina. We show up. We build right. We stand behind it.
             </p>
             <a href={COMPANY.facebook} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-ro-gray-500 hover:text-ro-gold transition-colors text-sm">
               <Facebook size={16} /><span>Follow us</span>

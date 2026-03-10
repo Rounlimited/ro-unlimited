@@ -52,7 +52,7 @@ export default function ResidentialPage() {
       </section>
       <section className="py-16 border-t border-ro-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-ro-gray-500 mb-6">Need land grading before your build? We handle that too.</p>
+          <p className="text-ro-gray-500 mb-6">Families trust RO because we build homes the way we&apos;d build our own. Need land grading before your build? We handle that too.</p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/grading" className="px-4 py-2 text-sm border border-ro-gray-700 text-ro-gray-400 hover:text-ro-gold hover:border-ro-gold/30 transition-colors uppercase tracking-wider font-heading">Land Grading &rarr;</Link>
             <Link href="/commercial" className="px-4 py-2 text-sm border border-ro-gray-700 text-ro-gray-400 hover:text-ro-gold hover:border-ro-gold/30 transition-colors uppercase tracking-wider font-heading">Commercial &rarr;</Link>

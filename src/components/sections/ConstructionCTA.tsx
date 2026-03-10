@@ -22,7 +22,7 @@ export default function ConstructionCTA() {
         style={{ boxShadow: '0 0 8px rgba(201,168,76,0.4)' }}
       />
       <p className="text-ro-gray-400 text-base sm:text-lg max-w-xl mx-auto mb-8">
-        Commercial or residential — from raw land to finished product. {COMPANY.experience} years of solving the problems other contractors won&apos;t touch.
+        Commercial or residential — from raw land to finished product. {COMPANY.experience} years of showing up where it counts and building it right.
       </p>
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
         <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300">

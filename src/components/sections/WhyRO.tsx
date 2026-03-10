@@ -6,10 +6,10 @@ import { gsap, ScrollTrigger, SplitText, useGSAP, MEDIA_QUERIES } from '@/compon
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
 
 const REASONS = [
-  { icon: Shield, title: '25+ Years Proven', description: 'Over two decades of solving complex construction challenges across commercial and residential projects.' },
-  { icon: Wrench, title: 'Total Capability', description: 'Land grading to luxury finishes — one company handles every phase so nothing falls through the cracks.' },
-  { icon: Clock, title: 'Still Standing', description: "Customers call us 20 years later because the work lasts. That's the kind of builder you want." },
-  { icon: Award, title: 'Problem Solvers', description: "We take on the complex jobs other contractors won't touch. Difficult sites, tight timelines, high standards." },
+  { icon: Shield, title: '25+ Years Showing Up', description: 'Two generations of earning trust across three states. Not because of marketing — because the work speaks for itself.' },
+  { icon: Wrench, title: 'One Company. Ground Up.', description: 'Land grading, foundation, structural, finishes — we don\'t hand your project off to someone else.' },
+  { icon: Clock, title: 'Built to Last', description: "Clients call us 20 years later because the work held up. That's the kind of builder you want." },
+  { icon: Award, title: 'We Take the Hard Jobs', description: "Difficult sites, tight timelines, complex specs — we've built through all of it and came out the other side." },
 ];
 
 /**

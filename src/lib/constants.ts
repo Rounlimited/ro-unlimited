@@ -3,9 +3,9 @@ export const COMPANY = {
   fullName: 'RO Unlimited Construction & Development',
   phone: '(864) 304-0139',
   email: 'Rounlimitedco@gmail.com',
-  tagline: 'One Company. Total Capability. Ground Up.',
-  heroStatement: 'From Land Grading to Luxury Finishes — We Build Everything from the Ground Up.',
-  cta: 'Send us your project — let us make it a reality.',
+  tagline: 'Show Up. Build Right. Stand Behind It.',
+  heroStatement: '25 Years of Showing Up and Building It Right.',
+  cta: 'Send us your project. We\'ll show you what we can do.',
   experience: '25+',
   serviceArea: 'Georgia, South Carolina & North Carolina',
   areaCode: '864',
@@ -46,6 +46,7 @@ export const NAV_LINKS = [
   { label: 'Commercial', href: '/commercial' },
   { label: 'Land Grading', href: '/grading' },
   { label: 'Our Process', href: '/process' },
+  { label: 'Our Story', href: '/our-story' },
   { label: 'Contact', href: '/contact' },
 ] as const;
 

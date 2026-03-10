@@ -292,7 +292,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
             <div ref={badgeRef} className="inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/20 bg-ro-gold/5 mb-8">
               <span className="w-2 h-2 bg-ro-gold rounded-full" />
               <span className="text-ro-gold text-xs font-mono tracking-wider uppercase">
-                {COMPANY.experience} Years Building Excellence
+                {COMPANY.experience} Years. Every Day Earned.
               </span>
             </div>
 
@@ -316,7 +316,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
 
             {/* Description */}
             <p ref={descRef} className="max-w-2xl mx-auto text-ro-gray-400 text-lg sm:text-xl font-body leading-relaxed mb-12">
-              Complete commercial and residential construction. Land grading to luxury finishes. One company — total capability.
+              Commercial. Residential. Land grading to luxury finishes. One company that shows up, builds right, and stands behind every job.
             </p>
 
             {/* CTAs */}

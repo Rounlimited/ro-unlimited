@@ -20,6 +20,7 @@ export default function ContactPage() {
           </h1>
           <div className="mx-auto w-24 gold-line mb-6" />
           <p className="text-ro-gray-400 text-lg max-w-xl mx-auto">{COMPANY.cta}</p>
+          <p className="text-ro-gray-600 text-sm mt-3 max-w-md mx-auto">Reputation built on actions. <a href="/our-story" className="text-ro-gold/60 hover:text-ro-gold transition-colors">Learn who we are &rarr;</a></p>
         </div>
       </section>
       <section className="py-24">
