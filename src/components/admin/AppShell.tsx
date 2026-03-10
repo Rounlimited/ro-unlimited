@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -379,13 +379,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       if (backdropRef.current) backdropRef.current.style.backdropFilter = 'blur(6px)';
     }});
     gsap.to(backdropRef.current, { opacity: 1, duration: 0.25, pointerEvents: 'auto' });
-  }, []);;
+  }, []);
 
   const closeDrawer = useCallback(() => {
     if (backdropRef.current) backdropRef.current.style.backdropFilter = 'none';
     gsap.to(drawerRef.current, { y: '100%', duration: 0.28, ease: 'power3.in', force3D: true, onComplete: () => setDrawerOpen(false) });
     gsap.to(backdropRef.current, { opacity: 0, duration: 0.2, pointerEvents: 'none' });
-  }, []);;
+  }, []);
 
   const handleTab = (tabId: string) => {
     if (tabId === 'menu') {

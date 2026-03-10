@@ -15,3 +15,6 @@ src_backup_pre_rebuild/
 
 
 .env.local
+
+# Claude worktrees
+.claude/
