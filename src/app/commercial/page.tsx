@@ -247,7 +247,7 @@ export default function CommercialPage() {
       <ServiceDrawer service={selectedService} isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       {/* ═══ SECTION 1 — HERO ═══ */}
-      <section ref={heroRef} className="relative min-h-[100vh] flex flex-col justify-center overflow-hidden">
+      <section ref={heroRef} className="relative min-h-[100vh] flex flex-col overflow-hidden">
         {videoUrl ? (
           <>
             <video key={videoUrl} src={videoUrl} muted loop playsInline preload="auto"
@@ -272,9 +272,11 @@ export default function CommercialPage() {
                 transformOrigin: 'center center',
                 background: '#000',
               }} />
-            <div className="absolute inset-0 bg-gradient-to-b from-ro-black/80 via-ro-black/50 to-ro-black" style={{ zIndex: 1 }} />
-            <div className="absolute inset-0 bg-gradient-to-r from-ro-black/70 via-transparent to-transparent" style={{ zIndex: 1 }} />
-            <div className="absolute inset-0 blueprint-overlay opacity-20" style={{ zIndex: 1 }} />
+            {/* Left-heavy gradient — fades left col, leaves right video clean */}
+            <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.96) 0%, rgba(10,10,10,0.88) 28%, rgba(10,10,10,0.55) 48%, rgba(10,10,10,0.0) 70%)' }} />
+            {/* Top/bottom edge vignette */}
+            <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.7) 0%, transparent 18%, transparent 72%, rgba(10,10,10,0.9) 100%)' }} />
+            <div className="absolute inset-0 blueprint-overlay opacity-10" style={{ zIndex: 1 }} />
           </>
         ) : (
           <>
@@ -282,38 +284,50 @@ export default function CommercialPage() {
             <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-ro-black/95 to-ro-black" />
           </>
         )}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-8">
-          <div className="max-w-3xl lg:max-w-5xl">
-            <div className="hero-badge inline-flex items-center gap-2 px-5 py-2 border border-ro-gold/30 bg-ro-gold/5 backdrop-blur-sm mb-8">
-              <Building2 size={14} className="text-ro-gold" />
-              <span className="text-ro-gold text-xs font-mono tracking-[0.25em] uppercase">Commercial Division</span>
-            </div>
-            <h1 className="text-ro-white font-heading text-5xl sm:text-6xl md:text-7xl lg:text-7xl xl:text-8xl tracking-tight uppercase leading-[0.85] mb-8">
-              Commercial<br /><span className="gradient-text-gold">Grade.</span><br />
-              <span className="text-ro-white/90">Unlimited</span><br /><span className="gradient-text-gold">Scale.</span>
-            </h1>
-            <div className="hero-gold-line w-32 h-[2px] bg-gradient-to-r from-ro-gold via-ro-gold-light to-transparent mb-8" />
-            <p className="hero-desc text-ro-gray-300 text-lg sm:text-xl lg:text-2xl leading-relaxed mb-10 max-w-xl lg:max-w-2xl">
-              Steel builds, retail storefronts, mixed-material construction, and full commercial development. One company — ground up.
-            </p>
-            <div className="hero-btns flex flex-wrap gap-4">
-              <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-[0.15em] uppercase hover:bg-ro-gold-light transition-all duration-300">
-                Discuss Your Project <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="flex items-center gap-3 px-8 py-4 border border-ro-gold/40 text-ro-gold font-heading text-sm tracking-[0.15em] uppercase hover:bg-ro-gold/5 hover:border-ro-gold/60 transition-all duration-300 backdrop-blur-sm">
-                <Phone size={14} /> {COMPANY.phone}
-              </a>
-            </div>
+
+        {/* ── Vertical gold rule — desktop only ── */}
+        <div className="hidden lg:block absolute top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-ro-gold/25 to-transparent" style={{ left: 'min(460px, 36vw)', zIndex: 3 }} />
+
+        {/* ── Left column text ── */}
+        <div className="relative z-10 flex flex-col justify-center flex-1 px-6 sm:px-10 lg:pl-16 lg:pr-0 pt-28 pb-6" style={{ maxWidth: 'min(480px, 100%)' }}>
+          <div className="hero-badge inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/30 bg-ro-gold/5 backdrop-blur-sm mb-7 self-start">
+            <Building2 size={12} className="text-ro-gold flex-shrink-0" />
+            <span className="text-ro-gold text-[10px] font-mono tracking-[0.3em] uppercase">Commercial Division</span>
+          </div>
+
+          <h1 className="text-ro-white font-heading uppercase leading-[0.88] tracking-tight mb-6"
+            style={{ fontSize: 'clamp(2.8rem, 5.5vw, 5rem)' }}>
+            Commercial<br />
+            <span className="gradient-text-gold">Grade.</span><br />
+            <span className="text-ro-white/90">Unlimited</span><br />
+            <span className="gradient-text-gold">Scale.</span>
+          </h1>
+
+          <div className="hero-gold-line w-10 h-[2px] bg-gradient-to-r from-ro-gold to-transparent mb-6" />
+
+          <p className="hero-desc text-ro-gray-400 text-sm sm:text-base leading-relaxed mb-8 max-w-xs">
+            Steel builds, retail storefronts, mixed-material construction, and full commercial development. One company — ground up.
+          </p>
+
+          <div className="hero-btns flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3">
+            <Link href="/contact" className="group inline-flex items-center gap-2 px-6 py-3 bg-ro-gold text-ro-black font-heading text-xs tracking-[0.15em] uppercase hover:bg-ro-gold-light transition-all duration-300 whitespace-nowrap">
+              Discuss Your Project <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="inline-flex items-center gap-2 px-6 py-3 border border-ro-gold/40 text-ro-gold font-heading text-xs tracking-[0.15em] uppercase hover:bg-ro-gold/5 hover:border-ro-gold/60 transition-all duration-300 backdrop-blur-sm whitespace-nowrap">
+              <Phone size={12} /> {COMPANY.phone}
+            </a>
           </div>
         </div>
-        {/* Hero stat bar */}
+
+        {/* ── Stat bar — full width, pinned to bottom ── */}
         <div className="hero-stats relative z-10 mt-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-ro-gold/10">
+          <div className="w-full">
+            <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-ro-gold/10 border-t border-ro-gold/10"
+              style={{ background: 'rgba(5,5,5,0.85)', backdropFilter: 'blur(12px)' }}>
               {PROOF_STATS.map((stat, i) => (
-                <div key={i} className="bg-ro-black/80 backdrop-blur-sm px-6 py-5 text-center">
-                  <div className="font-heading text-2xl sm:text-3xl text-ro-gold tracking-tight">{stat.value}{stat.suffix}</div>
-                  <div className="text-ro-gray-500 text-xs font-mono tracking-wider uppercase mt-1">{stat.label}</div>
+                <div key={i} className="px-6 py-4 text-center">
+                  <div className="font-heading text-xl sm:text-2xl text-ro-gold tracking-tight">{stat.value}{stat.suffix}</div>
+                  <div className="text-ro-gray-600 text-[10px] font-mono tracking-wider uppercase mt-0.5">{stat.label}</div>
                 </div>
               ))}
             </div>
