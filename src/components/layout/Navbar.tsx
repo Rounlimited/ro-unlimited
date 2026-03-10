@@ -65,6 +65,11 @@ export default function Navbar() {
               </Link>
             );
           })}
+          {/* Join the RO Network — standout link */}
+          <Link href="/join" onClick={() => setIsOpen(false)}
+            className="block mx-4 mt-4 px-4 py-3 text-center text-sm tracking-wider uppercase font-heading border border-ro-gold/30 bg-ro-gold/5 text-ro-gold hover:bg-ro-gold/10 transition-all duration-300">
+            Join the RO Network
+          </Link>
           <div className="pt-4 border-t border-ro-gray-800 mt-4">
             <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="flex items-center gap-2 text-ro-gold px-4 py-2">
               <Phone size={16} /><span className="font-mono">{COMPANY.phone}</span>
