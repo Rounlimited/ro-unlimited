@@ -16,41 +16,44 @@ interface UploadState {
 }
 
 type Target = 'heroVideo' | 'commercialVideo';
-
 const fresh = (): UploadState => ({ uploading: false, progress: 0, dragOver: false });
 
-// Upload directly from browser → Sanity CDN (bypasses Vercel 4.5MB body limit entirely)
-async function uploadDirectToSanity(
+// Send raw binary to our own API route — no CORS issues, no multipart overhead
+// The API route has bodyParser disabled so it streams straight to Sanity
+async function uploadVideo(
   file: File,
+  type: Target,
   onProgress: (pct: number) => void
 ): Promise<{ assetId: string; url: string }> {
-  const cfgRes = await fetch('/api/admin/upload-config');
-  if (!cfgRes.ok) throw new Error('Could not get upload config');
-  const { projectId, dataset, apiVersion, token } = await cfgRes.json();
-
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    const uploadUrl = `https://api.sanity.io/v${apiVersion}/assets/files/${dataset}?filename=${encodeURIComponent(file.name)}`;
+    const url = `/api/admin/upload?type=${type}&filename=${encodeURIComponent(file.name)}`;
 
     xhr.upload.addEventListener('progress', e => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 90));
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 95));
     });
 
     xhr.addEventListener('load', () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        const data = JSON.parse(xhr.responseText);
-        resolve({ assetId: data.document._id, url: data.document.url });
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (data.error) reject(new Error(data.error));
+          else resolve({ assetId: data.assetId, url: data.url });
+        } catch {
+          reject(new Error('Invalid response from server'));
+        }
       } else {
-        reject(new Error(`Sanity upload failed (${xhr.status}): ${xhr.responseText.slice(0, 200)}`));
+        let msg = `Upload failed (${xhr.status})`;
+        try { msg = JSON.parse(xhr.responseText).error || msg; } catch {}
+        reject(new Error(msg));
       }
     });
 
-    xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
+    xhr.addEventListener('error', () => reject(new Error('Network error — check your connection')));
     xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
 
-    xhr.open('POST', uploadUrl);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.open('POST', url);
+    xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
     xhr.send(file);
   });
 }
@@ -87,21 +90,9 @@ export default function SiteEditor() {
     setMessage(null);
 
     try {
-      // Direct browser → Sanity upload (no Vercel size limit)
-      const { assetId, url } = await uploadDirectToSanity(file, pct =>
+      const { url } = await uploadVideo(file, target, pct =>
         setState(s => ({ ...s, progress: pct }))
       );
-
-      setState(s => ({ ...s, progress: 95 }));
-
-      // Save asset reference to siteSettings via our API
-      const field = target; // 'heroVideo' or 'commercialVideo'
-      await fetch('/api/admin/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field, assetRef: assetId }),
-      });
-
       setState(s => ({ ...s, progress: 100 }));
 
       if (target === 'heroVideo') {
@@ -111,7 +102,6 @@ export default function SiteEditor() {
         setSettings(p => ({ ...p, commercialVideoUrl: url }));
         setMessage({ type: 'success', text: 'Commercial page video uploaded! Live within 60 seconds.' });
       }
-
     } catch (e: any) {
       setMessage({ type: 'error', text: e.message || 'Upload failed. Please try again.' });
     } finally {
@@ -145,8 +135,7 @@ export default function SiteEditor() {
   );
 
   const VideoSection = ({
-    target, title, description, previewHref, currentUrl, state,
-    inputRef, accent,
+    target, title, description, previewHref, currentUrl, state, inputRef, accent,
   }: {
     target: Target; title: string; description: string; previewHref: string;
     currentUrl?: string; state: UploadState;
@@ -200,7 +189,7 @@ export default function SiteEditor() {
             {state.uploading ? (
               <div>
                 <Loader2 className="mx-auto mb-3 animate-spin text-[#C9A84C]" size={32} />
-                <div className="text-sm text-white/60 mb-3">Uploading directly to CDN...</div>
+                <div className="text-sm text-white/60 mb-3">Uploading...</div>
                 <div className="w-48 mx-auto h-2 bg-white/5 rounded-full overflow-hidden">
                   <div className="h-full bg-[#C9A84C] rounded-full transition-all duration-200" style={{ width: state.progress + '%' }} />
                 </div>
@@ -210,8 +199,8 @@ export default function SiteEditor() {
               <div>
                 <Upload className="mx-auto mb-3 text-white/20" size={32} />
                 <div className="text-sm text-white/60 mb-1">{currentUrl ? 'Replace video' : 'Upload video'}</div>
-                <div className="text-xs text-white/30">Drag & drop or click to browse · MP4, MOV, WebM · Any size</div>
-                <div className="text-[10px] text-white/20 mt-3">Recommended: 1920×1080 or higher, loops cleanly</div>
+                <div className="text-xs text-white/30">Drag & drop or click · MP4, MOV, WebM</div>
+                <div className="text-[10px] text-white/20 mt-3">Recommended: 1920×1080 or higher</div>
               </div>
             )}
           </div>
@@ -270,7 +259,7 @@ export default function SiteEditor() {
             <p className="text-white/40 text-xs">Edit headlines, descriptions, and page copy</p>
           </div>
         </div>
-        <div className="text-white/20 text-sm">Coming soon — edit all site text directly from this dashboard.</div>
+        <div className="text-white/20 text-sm">Coming soon — edit all site text from this dashboard.</div>
       </section>
     </div>
   );
