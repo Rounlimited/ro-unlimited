@@ -9,6 +9,8 @@ export async function GET() {
         "heroVideoId": heroVideo.asset._ref,
         "commercialVideoUrl": commercialVideo.asset->url,
         "commercialVideoId": commercialVideo.asset._ref,
+        "residentialVideoUrl": residentialVideo.asset->url,
+        "residentialVideoId": residentialVideo.asset._ref,
         heroOverlayOpacity,
         heroHeadline,
         heroSubheadline,
@@ -33,6 +35,11 @@ export async function POST(req: NextRequest) {
 
     if (body.commercialVideo === null) {
       await sanityWriteClient.patch('siteSettings').unset(['commercialVideo']).commit();
+      return NextResponse.json({ success: true });
+    }
+
+    if (body.residentialVideo === null) {
+      await sanityWriteClient.patch('siteSettings').unset(['residentialVideo']).commit();
       return NextResponse.json({ success: true });
     }
 

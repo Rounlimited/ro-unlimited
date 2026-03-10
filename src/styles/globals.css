@@ -85,6 +85,20 @@
 
 @layer utilities {
   .text-shadow-gold { text-shadow: 0 0 20px rgba(201,168,76,0.3), 0 0 40px rgba(201,168,76,0.1); }
+  /* ── Warm residential palette ── */
+  .bg-warm-black { background-color: #1f170c; }
+  .bg-warm-dark { background-color: #1a150d; }
+  .blueprint-overlay-warm {
+    background-image: linear-gradient(rgba(201,168,76,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,168,76,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .warm-glow {
+    background: radial-gradient(ellipse at center, rgba(201,168,76,0.06) 0%, transparent 70%);
+  }
+  .warm-vignette {
+    background: radial-gradient(ellipse at center, rgba(42,33,15,0.4) 0%, rgba(26,26,26,0) 70%);
+  }
   .border-gold-glow { box-shadow: 0 0 15px rgba(201,168,76,0.15), inset 0 0 15px rgba(201,168,76,0.05); }
   .gradient-text-gold { @apply bg-clip-text text-transparent bg-gradient-to-r from-ro-gold-dark via-ro-gold to-ro-gold-light; }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
