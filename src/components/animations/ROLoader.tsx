@@ -36,7 +36,7 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
     // Only show splash on the FIRST visit this session.
     // Back button, internal navigation, and page switches skip it.
     const alreadyPlayed = (window as any).__roSplashPlayed || false;
-    if (alreadyPlayed || reducedMotion) {
+    if (alreadyPlayed) {
       setDone(true);
       (window as any).__roSplashPlayed = true;
       (window as any).__roSiteReady = true;
