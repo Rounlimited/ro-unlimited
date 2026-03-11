@@ -591,7 +591,7 @@ export default function AdminInbox() {
                               <span style={{ fontSize: 11, color: MUTED }}>{formatDate(msg.created_at)}</span>
                             </div>
                             <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
-                              To: {isOutbound ? msg.to_email : "noreply@rounlimited.com"}
+                              To: {isOutbound ? msg.to_email : "build@rounlimited.com"}
                             </div>
                           </div>
                         </div>
@@ -705,7 +705,7 @@ export default function AdminInbox() {
               <EditorContent editor={composeEditor} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 18px", borderTop: `1px solid ${BORDER}`, flexShrink: 0 }}>
-              <span style={{ fontSize: 11, color: "#3a4a5a" }}>From: noreply@rounlimited.com</span>
+              <span style={{ fontSize: 11, color: "#3a4a5a" }}>From: build@rounlimited.com</span>
               <button onClick={sendCompose} disabled={composeSending}
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 24px !important", borderRadius: 8, border: "none", background: composeSending ? "#1B2A4A" : `linear-gradient(135deg, ${NAVY}, #0f1e38)`, color: composeSending ? MUTED : ORANGE, fontSize: 13, fontWeight: 700, cursor: composeSending ? "default" : "pointer" }}>
                 <IconSend /> {composeSending ? "Sending..." : "Send"}

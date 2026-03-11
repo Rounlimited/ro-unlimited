@@ -7,23 +7,23 @@ import { randomUUID } from 'crypto';
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
-  const supabase = createAdminClient();
-  const body = await req.json();
-  const { to_email, to_name, subject, body: emailBody, body_html: richHtml, lead_id, draft_id, cc_emails, bcc_emails } = body;
-
-  if (!to_email || !subject || (!emailBody && !richHtml)) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-  }
-
-  const thread_id = randomUUID();
-  const customerName = to_name || to_email.split('@')[0];
-  const html = buildEmailHtml(customerName, richHtml || emailBody.replace(/\n/g, '<br>'), subject);
-
-  let resendMessageId: string | undefined;
   try {
+    const supabase = createAdminClient();
+    const body = await req.json();
+    const { to_email, to_name, subject, body: emailBody, body_html: richHtml, lead_id, draft_id, cc_emails, bcc_emails } = body;
+
+    if (!to_email || !subject || (!emailBody && !richHtml)) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const thread_id = randomUUID();
+    const customerName = to_name || to_email.split('@')[0];
+    const html = buildEmailHtml(customerName, richHtml || (emailBody || '').replace(/\n/g, '<br>'), subject);
+
+    let resendMessageId: string | undefined;
     const r = getResend();
     const params: Parameters<typeof r.emails.send>[0] = {
-      from: 'RO Unlimited <noreply@rounlimited.com>',
+      from: 'RO Unlimited <build@rounlimited.com>',
       to: [to_email],
       subject,
       html,
@@ -32,31 +32,35 @@ export async function POST(req: NextRequest) {
     if (bcc_emails?.length) params.bcc = bcc_emails;
 
     const { data, error } = await r.emails.send(params);
-    if (error) { console.error('Resend error:', error); return NextResponse.json({ error: 'Failed to send' }, { status: 500 }); }
+    if (error) {
+      console.error('Resend error:', JSON.stringify(error));
+      return NextResponse.json({ error: 'Failed to send', detail: error }, { status: 500 });
+    }
     resendMessageId = data?.id;
-  } catch (err) {
-    console.error('Resend exception:', err);
-    return NextResponse.json({ error: 'Email service error' }, { status: 500 });
+
+    if (draft_id) {
+      await supabase.from('email_messages').delete().eq('id', draft_id).eq('is_draft', true);
+    }
+
+    const logged = await logEmail({
+      thread_id,
+      lead_id: lead_id || null,
+      direction: 'outbound',
+      from_email: 'build@rounlimited.com',
+      to_email,
+      subject,
+      body_html: html,
+      body_text: emailBody || stripHtml(richHtml || ''),
+      resend_message_id: resendMessageId,
+      folder: 'sent',
+      cc_emails: cc_emails || [],
+      bcc_emails: bcc_emails || [],
+    });
+
+    return NextResponse.json({ success: true, thread_id, message_id: logged?.id, resend_id: resendMessageId });
+  } catch (err: unknown) {
+    console.error('Compose route error:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: 'Server error', detail: msg }, { status: 500 });
   }
-
-  if (draft_id) {
-    await supabase.from('email_messages').delete().eq('id', draft_id).eq('is_draft', true);
-  }
-
-  const logged = await logEmail({
-    thread_id,
-    lead_id: lead_id || null,
-    direction: 'outbound',
-    from_email: 'noreply@rounlimited.com',
-    to_email,
-    subject,
-    body_html: html,
-    body_text: emailBody || stripHtml(richHtml || ''),
-    resend_message_id: resendMessageId,
-    folder: 'sent',
-    cc_emails: cc_emails || [],
-    bcc_emails: bcc_emails || [],
-  });
-
-  return NextResponse.json({ success: true, thread_id, message_id: logged?.id, resend_id: resendMessageId });
 }
