@@ -14,6 +14,13 @@
     "@sanity/image-url": "^2.0.3",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.98.0",
+    "@tiptap/extension-color": "^3.20.1",
+    "@tiptap/extension-link": "^3.20.1",
+    "@tiptap/extension-placeholder": "^3.20.1",
+    "@tiptap/extension-text-style": "^3.20.1",
+    "@tiptap/extension-underline": "^3.20.1",
+    "@tiptap/react": "^3.20.1",
+    "@tiptap/starter-kit": "^3.20.1",
     "framer-motion": "^11.0.0",
     "gsap": "^3.14.0",
     "lucide-react": "^0.400.0",
@@ -21,16 +28,20 @@
     "next-sanity": "^12.1.1",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
+    "resend": "^6.9.3",
     "sanity": "^5.13.0",
-    "styled-components": "^6.3.11"
+    "styled-components": "^6.3.11",
+    "svix": "^1.87.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/pg": "^8.18.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.0",
+    "pg": "^8.20.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.4.0"
+    "typescript": "5.9.3"
   }
 }

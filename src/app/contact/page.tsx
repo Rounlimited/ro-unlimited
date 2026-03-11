@@ -1,12 +1,43 @@
 'use client';
 import { useState } from 'react';
 import { COMPANY } from '@/lib/constants';
-import { Phone, Mail, MapPin, Send, Facebook } from 'lucide-react';
+import { Phone, Mail, MapPin, Send, Facebook, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import SubPageAnimator from '@/components/animations/SubPageAnimator';
+
+type FormStatus = 'idle' | 'submitting' | 'success' | 'error';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', projectType: '', message: '' });
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); alert('Thank you! We will be in touch shortly.'); };
+  const [status, setStatus] = useState<FormStatus>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('submitting');
+    setErrorMsg('');
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Something went wrong.');
+        setStatus('error');
+        return;
+      }
+
+      setStatus('success');
+      setFormData({ name: '', email: '', phone: '', projectType: '', message: '' });
+    } catch {
+      setErrorMsg('Network error. Please call us directly at (864) 304-0139.');
+      setStatus('error');
+    }
+  };
 
   return (
     <SubPageAnimator>
@@ -23,9 +54,12 @@ export default function ContactPage() {
           <p className="text-ro-gray-600 text-sm mt-3 max-w-md mx-auto">Reputation built on actions. <a href="/our-story" className="text-ro-gold/60 hover:text-ro-gold transition-colors">Learn who we are &rarr;</a></p>
         </div>
       </section>
+
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
+
+            {/* Contact Info */}
             <div className="lg:col-span-2 space-y-8">
               <div>
                 <h3 className="text-ro-gold font-heading text-sm tracking-[0.2em] uppercase mb-6">Direct Contact</h3>
@@ -49,33 +83,75 @@ export default function ContactPage() {
                 </div>
               </div>
             </div>
+
+            {/* Contact Form */}
             <div className="lg:col-span-3">
               <div className="relative border border-ro-gray-800 bg-ro-gray-900/30 p-8 sm:p-10">
                 <div className="absolute top-3 left-3 w-2 h-2 border-t border-l border-ro-gold/20" />
                 <div className="absolute top-3 right-3 w-2 h-2 border-t border-r border-ro-gold/20" />
                 <div className="absolute bottom-3 left-3 w-2 h-2 border-b border-l border-ro-gold/20" />
                 <div className="absolute bottom-3 right-3 w-2 h-2 border-b border-r border-ro-gold/20" />
-                <h3 className="text-ro-white font-heading text-xl tracking-wider uppercase mb-8">Send Us Your Project</h3>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div><label className="block text-ro-gray-500 text-xs uppercase tracking-wider mb-2">Name *</label>
-                      <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-ro-black border border-ro-gray-700 px-4 py-3 text-ro-white text-sm focus:border-ro-gold/50 focus:outline-none transition-colors" placeholder="Your name" /></div>
-                    <div><label className="block text-ro-gray-500 text-xs uppercase tracking-wider mb-2">Phone *</label>
-                      <input type="tel" required value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full bg-ro-black border border-ro-gray-700 px-4 py-3 text-ro-white text-sm focus:border-ro-gold/50 focus:outline-none transition-colors" placeholder="(864) 000-0000" /></div>
+
+                {status === 'success' ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <CheckCircle size={48} className="text-ro-gold mb-4" />
+                    <h3 className="text-ro-white font-heading text-2xl uppercase tracking-wider mb-3">Message Sent</h3>
+                    <p className="text-ro-gray-400 max-w-sm">We&apos;ve received your project inquiry and will be in touch shortly. Expect a call from (864) 304-0139.</p>
+                    <button onClick={() => setStatus('idle')} className="mt-8 text-ro-gold/60 hover:text-ro-gold text-sm uppercase tracking-wider transition-colors">
+                      Submit Another →
+                    </button>
                   </div>
-                  <div><label className="block text-ro-gray-500 text-xs uppercase tracking-wider mb-2">Email</label>
-                    <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full bg-ro-black border border-ro-gray-700 px-4 py-3 text-ro-white text-sm focus:border-ro-gold/50 focus:outline-none transition-colors" placeholder="your@email.com" /></div>
-                  <div><label className="block text-ro-gray-500 text-xs uppercase tracking-wider mb-2">Project Type</label>
-                    <select value={formData.projectType} onChange={(e) => setFormData({...formData, projectType: e.target.value})} className="w-full bg-ro-black border border-ro-gray-700 px-4 py-3 text-ro-white text-sm focus:border-ro-gold/50 focus:outline-none transition-colors">
-                      <option value="">Select a project type</option><option value="residential">Residential / Custom Home</option><option value="commercial">Commercial Build</option>
-                      <option value="grading">Land Grading / Site Prep</option><option value="renovation">Renovation / Remodel</option><option value="other">Other</option>
-                    </select></div>
-                  <div><label className="block text-ro-gray-500 text-xs uppercase tracking-wider mb-2">Project Details</label>
-                    <textarea rows={5} value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})} className="w-full bg-ro-black border border-ro-gray-700 px-4 py-3 text-ro-white text-sm focus:border-ro-gold/50 focus:outline-none transition-colors resize-none" placeholder="Tell us about your project..." /></div>
-                  <button type="submit" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300 w-full justify-center">
-                    <Send size={16} />Submit Project
-                  </button>
-                </form>
+                ) : (
+                  <>
+                    <h3 className="text-ro-white font-heading text-xl tracking-wider uppercase mb-8">Send Us Your Project</h3>
+
+                    {status === 'error' && (
+                      <div className="flex items-start gap-3 mb-6 p-4 bg-red-900/20 border border-red-800/50 text-red-400 text-sm">
+                        <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                        <span>{errorMsg}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-ro-gray-500 text-xs uppercase tracking-wider mb-2">Name *</label>
+                          <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-ro-black border border-ro-gray-700 px-4 py-3 text-ro-white text-sm focus:border-ro-gold/50 focus:outline-none transition-colors" placeholder="Your name" />
+                        </div>
+                        <div>
+                          <label className="block text-ro-gray-500 text-xs uppercase tracking-wider mb-2">Phone *</label>
+                          <input type="tel" required value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full bg-ro-black border border-ro-gray-700 px-4 py-3 text-ro-white text-sm focus:border-ro-gold/50 focus:outline-none transition-colors" placeholder="(864) 000-0000" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-ro-gray-500 text-xs uppercase tracking-wider mb-2">Email</label>
+                        <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full bg-ro-black border border-ro-gray-700 px-4 py-3 text-ro-white text-sm focus:border-ro-gold/50 focus:outline-none transition-colors" placeholder="your@email.com" />
+                      </div>
+                      <div>
+                        <label className="block text-ro-gray-500 text-xs uppercase tracking-wider mb-2">Project Type</label>
+                        <select value={formData.projectType} onChange={(e) => setFormData({...formData, projectType: e.target.value})} className="w-full bg-ro-black border border-ro-gray-700 px-4 py-3 text-ro-white text-sm focus:border-ro-gold/50 focus:outline-none transition-colors">
+                          <option value="">Select a project type</option>
+                          <option value="residential">Residential / Custom Home</option>
+                          <option value="commercial">Commercial Build</option>
+                          <option value="grading">Land Grading / Site Prep</option>
+                          <option value="renovation">Renovation / Remodel</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-ro-gray-500 text-xs uppercase tracking-wider mb-2">Project Details</label>
+                        <textarea rows={5} value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})} className="w-full bg-ro-black border border-ro-gray-700 px-4 py-3 text-ro-white text-sm focus:border-ro-gold/50 focus:outline-none transition-colors resize-none" placeholder="Tell us about your project..." />
+                      </div>
+                      <button type="submit" disabled={status === 'submitting'} className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300 w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed">
+                        {status === 'submitting' ? (
+                          <><Loader2 size={16} className="animate-spin" />Sending...</>
+                        ) : (
+                          <><Send size={16} />Submit Project</>
+                        )}
+                      </button>
+                    </form>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -84,6 +160,3 @@ export default function ContactPage() {
     </SubPageAnimator>
   );
 }
-
-
-

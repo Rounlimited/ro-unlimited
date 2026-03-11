@@ -1,5 +1,5 @@
 import AdminInbox from '@/components/admin/AdminInbox';
 
-export default function LeadsPage() {
+export default function InboxPage() {
   return <AdminInbox />;
 }

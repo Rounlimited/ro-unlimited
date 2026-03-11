@@ -209,7 +209,7 @@ const APP_ICONS: AppIcon[] = [
   { id: 'editor', label: 'Site Editor', icon: Pencil, href: '/admin/site-editor', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'portfolio', label: 'Portfolio', icon: Camera, href: '/admin/projects', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'settings', label: 'Settings', icon: Settings, href: '/admin/settings', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
-  { id: 'leads', label: 'Leads', icon: Target, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
+  { id: 'leads', label: 'Inbox', icon: MessageCircle, href: '/admin/inbox', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'estimates', label: 'Estimates', icon: FileText, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'proposals', label: 'Proposals', icon: Briefcase, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'pipeline', label: 'Pipeline', icon: TrendingUp, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
@@ -395,6 +395,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (drawerOpen) closeDrawer();
     setActiveTab(tabId);
     if (tabId === 'dashboard') router.push('/admin');
+    else if (tabId === 'messages') router.push('/admin/inbox');
   };
 
   const handleAppIcon = (app: AppIcon) => {
