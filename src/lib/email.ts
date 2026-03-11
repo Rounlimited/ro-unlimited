@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 
 export type EmailFolder = 'inbox' | 'sent' | 'drafts' | 'trash' | 'spam';
 
@@ -48,7 +48,10 @@ export interface EmailContact {
   updated_at: string;
 }
 
-// ── Log an email to Supabase ──────────────────────────────────
+export const FROM_EMAIL = 'build@rounlimited.com';
+export const FROM_NAME = 'RO Unlimited';
+
+// Log an email to Supabase
 export async function logEmail(params: {
   thread_id?: string;
   lead_id?: string | null;
@@ -66,8 +69,7 @@ export async function logEmail(params: {
   bcc_emails?: string[];
   read?: boolean;
 }): Promise<EmailMessage | null> {
-  const { createClient } = await import('@/lib/supabase/server');
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const folder = params.folder || (params.is_draft ? 'drafts' : params.direction === 'outbound' ? 'sent' : 'inbox');
   const { data, error } = await supabase
     .from('email_messages')
@@ -94,7 +96,7 @@ export async function logEmail(params: {
   return data as EmailMessage;
 }
 
-// ── Branded HTML email template ───────────────────────────────
+// Branded HTML email template
 export function buildEmailHtml(toName: string, bodyHtml: string, subject: string): string {
   return `<!DOCTYPE html>
 <html>
@@ -126,11 +128,10 @@ export function buildEmailHtml(toName: string, bodyHtml: string, subject: string
         <tr>
           <td style="background:#fafafa;padding:20px 32px;border-radius:0 0 12px 12px;border-top:1px solid #eee;">
             <p style="margin:0 0 4px;color:#888;font-size:12px;">
-              📞 <a href="tel:8643040139" style="color:#D4772C;text-decoration:none;">(864) 304-0139</a>
-              &nbsp;·&nbsp;
-              ✉️ <a href="mailto:Rounlimitedco@gmail.com" style="color:#D4772C;text-decoration:none;">Rounlimitedco@gmail.com</a>
+              (864) 304-0139 &nbsp;·&nbsp;
+              <a href="mailto:build@rounlimited.com" style="color:#D4772C;text-decoration:none;">build@rounlimited.com</a>
             </p>
-            <p style="margin:0;color:#aaa;font-size:11px;">Serving Upstate South Carolina · 864 Area</p>
+            <p style="margin:0;color:#aaa;font-size:11px;">Serving Upstate South Carolina · Georgia · North Carolina</p>
           </td>
         </tr>
       </table>
