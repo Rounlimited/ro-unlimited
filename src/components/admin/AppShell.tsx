@@ -481,9 +481,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </button>
       )}
 
-      <nav ref={navRef} className="flex-shrink-0 bg-[#0f0f0f] border-t border-white/5 px-2 pb-2"
+      <nav ref={navRef} className="bg-[#0f0f0f] border-t border-white/5 px-2 pb-2"
         style={{
           paddingBottom: "max(8px, env(safe-area-inset-bottom, 8px))",
+          position: tabBarVisible ? 'relative' : 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 40,
           transform: tabBarVisible ? "translateY(0)" : "translateY(110%)",
           transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1)",
           flexShrink: 0,

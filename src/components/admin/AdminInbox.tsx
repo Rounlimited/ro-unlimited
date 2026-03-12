@@ -364,7 +364,7 @@ export default function AdminInbox() {
   const MUTED = "#6a7a8a";
 
   return (
-    <div style={{ display: "flex", height: "100%", minHeight: 0, background: BG, fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
+    <div style={{ display: "flex", flex: 1, height: "100%", minHeight: 0, background: BG, fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
       <style>{`
         @keyframes rouSpin { to { transform: rotate(360deg); } }
         @keyframes rouFadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -498,8 +498,7 @@ export default function AdminInbox() {
               {someSelected && <span style={{ fontSize: 11, color: MUTED }}>{selectedIds.size} selected</span>}
             </div>
 
-            {/* Thread rows */}
-            <div style={{ flex: 1, overflowY: "auto" }}>
+            <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
               {loading ? (
                 <div style={{ padding: 40, textAlign: "center", color: MUTED, fontSize: 13 }}>Loading...</div>
               ) : filteredThreads.length === 0 ? (
