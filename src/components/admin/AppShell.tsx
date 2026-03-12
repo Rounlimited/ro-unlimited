@@ -365,9 +365,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const backdropRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
-  const [tabBarVisible, setTabBarVisible] = useState(true);
+  const [tabBarVisible, setTabBarVisible] = useState(false);
+  const tabBarTimer = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Auto-hide tab bar after 4 seconds of being visible
+  useEffect(() => {
+    if (tabBarVisible) {
+      if (tabBarTimer.current) clearTimeout(tabBarTimer.current);
+      tabBarTimer.current = setTimeout(() => setTabBarVisible(false), 4000);
+    }
+    return () => { if (tabBarTimer.current) clearTimeout(tabBarTimer.current); };
+  }, [tabBarVisible]);
 
   useEffect(() => {
     if (pathname === '/admin' || pathname === '/admin/') setActiveTab('dashboard');
@@ -453,15 +463,29 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <main className="flex-1 min-h-0 overflow-hidden relative z-10 flex flex-col"
-        onTouchStart={(e) => { (window as any)._swipeStartY = e.touches[0].clientY; }}
-        onTouchEnd={(e) => {
-          const startY = (window as any)._swipeStartY || 0;
-          const dy = startY - e.changedTouches[0].clientY;
-          if (dy > 50 && !tabBarVisible) setTabBarVisible(true);
-          if (dy < -50 && tabBarVisible && pathname && pathname.startsWith("/admin/inbox")) setTabBarVisible(false);
+        onScroll={(e) => {
+          const el = e.target as HTMLElement;
+          const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+          if (atBottom && !tabBarVisible) setTabBarVisible(true);
+          else if (!atBottom && tabBarVisible) setTabBarVisible(false);
         }}>
         {children}
       </main>
+
+      {/* Pull-up handle — always visible when tab bar is hidden */}
+      {!tabBarVisible && !drawerOpen && (
+        <button
+          onClick={() => setTabBarVisible(true)}
+          aria-label="Show navigation"
+          style={{
+            position: 'fixed', bottom: 'max(4px, env(safe-area-inset-bottom, 4px))', left: '50%', transform: 'translateX(-50%)',
+            zIndex: 45, background: 'rgba(201,168,76,0.25)', border: '1px solid rgba(201,168,76,0.3)',
+            borderRadius: 12, padding: '5px 28px', cursor: 'pointer', backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)', transition: 'opacity 0.2s',
+          }}>
+          <div style={{ width: 32, height: 3, borderRadius: 2, background: 'rgba(201,168,76,0.7)' }} />
+        </button>
+      )}
 
       <nav ref={navRef} className="flex-shrink-0 bg-[#0f0f0f] border-t border-white/5 px-2 pb-2"
         style={{

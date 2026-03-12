@@ -147,7 +147,7 @@ export function buildEmailHtml(toName: string, bodyHtml: string, subject: string
                 <td style="padding:24px 32px 20px;">
                   <img
                     src="https://rounlimited.com/ro-unlimited-logo-transparent.png"
-                    alt="RO Unlimited Contractor &amp; Developer"
+                    alt="RO Unlimited — Contractor &amp; Developer"
                     width="190"
                     style="display:block;border:0;width:190px;max-width:190px;height:auto;"
                   />
@@ -199,8 +199,8 @@ export function buildEmailHtml(toName: string, bodyHtml: string, subject: string
                 <td style="width:3px;background-color:#C9A84C;border-radius:2px;">&nbsp;</td>
                 <td style="padding-left:12px;">
                   <p style="margin:0 0 2px;color:#ffffff;font-size:14px;font-weight:700;">RO Unlimited</p>
-                  <p style="margin:0 0 1px;color:#999999;font-size:12px;">Construction &amp; Development</p>
-                  <p style="margin:0;color:#666666;font-size:11px;">Upstate SC &nbsp;·&nbsp; Georgia &nbsp;·&nbsp; North Carolina</p>
+                  <p style="margin:0 0 1px;color:#999999;font-size:12px;">Contractor &amp; Developer</p>
+                  <p style="margin:0;color:#666666;font-size:11px;">SC &nbsp;·&nbsp; GA &nbsp;·&nbsp; NC</p>
                 </td>
               </tr>
             </table>
@@ -221,7 +221,7 @@ export function buildEmailHtml(toName: string, bodyHtml: string, subject: string
                     <span style="color:#2a3a5a;font-size:13px;">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                     <a href="https://rounlimited.com" style="color:#C9A84C;text-decoration:none;font-size:13px;font-weight:600;">rounlimited.com</a>
                   </p>
-                  <p style="margin:0;color:rgba(255,255,255,0.3);font-size:11px;">RO Unlimited Construction &amp; Development &nbsp;·&nbsp; 864 Area &nbsp;·&nbsp; Upstate SC</p>
+                  <p style="margin:0;color:rgba(255,255,255,0.3);font-size:11px;">RO Unlimited Contractor &amp; Developer &nbsp;·&nbsp; SC &nbsp;·&nbsp; GA &nbsp;·&nbsp; NC</p>
                 </td>
               </tr>
             </table>

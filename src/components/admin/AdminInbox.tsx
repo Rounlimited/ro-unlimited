@@ -673,8 +673,15 @@ export default function AdminInbox() {
 
       {/* COMPOSE MODAL */}
       {composeOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "flex-end", justifyContent: "flex-end", padding: "0 24px 24px 0" }}>
-          <div style={{ width: 560, maxWidth: "calc(100vw - 32px)", background: "#0a0f18", border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: "0 20px 60px rgba(0,0,0,0.8)", display: "flex", flexDirection: "column", maxHeight: "80vh" }}>
+        <div className="compose-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <style>{`
+            .compose-card { width: 560px; max-width: 100vw; max-height: 80vh; border-radius: 16px; }
+            @media (max-width: 639px) {
+              .compose-card { width: 100vw !important; height: 100dvh !important; max-height: 100dvh !important; border-radius: 0 !important; }
+              .compose-backdrop { align-items: stretch !important; }
+            }
+          `}</style>
+          <div className="compose-card" style={{ background: "#0a0f18", border: `1px solid ${BORDER}`, boxShadow: "0 20px 60px rgba(0,0,0,0.8)", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>New Message</span>
               <div style={{ display: "flex", gap: 8 }}>
