@@ -151,6 +151,7 @@ export default function AdminInbox() {
   const [toSuggestions, setToSuggestions] = useState<EmailContact[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -384,6 +385,13 @@ export default function AdminInbox() {
         .tiptap-rou .ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: #3a4a5a; pointer-events: none; float: left; height: 0; }
         .rou-inbox button, .rou-inbox input, .rou-inbox select, .rou-inbox textarea { font-family: 'DM Sans', sans-serif; }
         .rou-inbox button { min-height: unset !important; padding: 0 !important; }
+        .rou-sidebar-overlay { display: none; }
+        @media (max-width: 768px) {
+          .rou-sidebar { position: fixed !important; left: 0; top: 0; height: 100vh; z-index: 200; transform: translateX(-100%); transition: transform 0.25s ease; }
+          .rou-sidebar.open { transform: translateX(0); }
+          .rou-sidebar-overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 199; }
+          .rou-hamburger { display: flex !important; }
+        }
         .rou-inbox input, .rou-inbox select, .rou-inbox textarea { font-size: 14px !important; min-height: unset !important; padding: 0 !important; }
       `}</style>
 
@@ -395,8 +403,13 @@ export default function AdminInbox() {
       )}
 
       {/* SIDEBAR */}
-      <div style={{ width: 220, flexShrink: 0, background: "#070d14", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0 }}>
-        <div style={{ padding: "16px 12px 8px" }}>
+      {sidebarOpen && <div className="rou-sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+      <div className={`rou-sidebar${sidebarOpen ? " open" : ""}`} style={{ width: 220, flexShrink: 0, background: "#070d14", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0 }}>
+        <div style={{ padding: "16px 12px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <button className="rou-hamburger" onClick={() => setSidebarOpen(false)}
+            style={{ display: "none", alignSelf: "flex-end", alignItems: "center", justifyContent: "center", width: 32, height: 32, border: "none", background: "transparent", color: "#6a7a8a", cursor: "pointer", borderRadius: 8 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
           <button onClick={() => setComposeOpen(true)}
             style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 20px !important", borderRadius: 12, border: `1px solid ${BORDER}`, background: `linear-gradient(135deg, ${NAVY}, #0f1e38)`, color: ORANGE, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
             <IconCompose /> Compose
@@ -440,6 +453,10 @@ export default function AdminInbox() {
           <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             {/* Search */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
+              <button className="rou-hamburger" onClick={() => setSidebarOpen(true)}
+                style={{ display: "none", alignItems: "center", justifyContent: "center", width: 36, height: 36, border: "none", background: "transparent", color: "#6a7a8a", cursor: "pointer", flexShrink: 0, borderRadius: 8 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              </button>
               <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, background: BG2, border: `1px solid ${BORDER}`, borderRadius: 24, padding: "8px 16px" }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input type="text" placeholder={`Search in ${activeFolder}`} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
