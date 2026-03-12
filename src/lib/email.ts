@@ -213,15 +213,20 @@ export function buildEmailHtml(toName: string, bodyHtml: string, subject: string
           <td style="background-color:#0F1F3D;padding:20px 32px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td>
-                  <p style="margin:0 0 8px;font-size:0;line-height:0;">
-                    <a href="tel:8643040139" style="color:#C9A84C;text-decoration:none;font-size:13px;font-weight:600;">(864) 304-0139</a>
-                    <span style="color:#2a3a5a;font-size:13px;">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
-                    <a href="mailto:build@rounlimited.com" style="color:#C9A84C;text-decoration:none;font-size:13px;font-weight:600;">build@rounlimited.com</a>
-                    <span style="color:#2a3a5a;font-size:13px;">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
-                    <a href="https://rounlimited.com" style="color:#C9A84C;text-decoration:none;font-size:13px;font-weight:600;">rounlimited.com</a>
-                  </p>
-                  <p style="margin:0;color:rgba(255,255,255,0.3);font-size:11px;">RO Unlimited Contractor &amp; Developer &nbsp;·&nbsp; SC &nbsp;·&nbsp; GA &nbsp;·&nbsp; NC</p>
+                <td align="center" style="padding-bottom:10px;">
+                  <a href="tel:8643040139" style="color:#C9A84C;text-decoration:none;font-size:13px;font-weight:600;">(864) 304-0139</a>
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="padding-bottom:10px;">
+                  <a href="mailto:build@rounlimited.com" style="color:#C9A84C;text-decoration:none;font-size:13px;font-weight:600;">build@rounlimited.com</a>
+                  <span style="color:#2a3a5a;font-size:13px;">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+                  <a href="https://rounlimited.com" style="color:#C9A84C;text-decoration:none;font-size:13px;font-weight:600;">rounlimited.com</a>
+                </td>
+              </tr>
+              <tr>
+                <td align="center">
+                  <p style="margin:0;color:rgba(255,255,255,0.3);font-size:11px;">RO Unlimited Contractor &amp; Developer &nbsp;&middot;&nbsp; SC &nbsp;&middot;&nbsp; GA &nbsp;&middot;&nbsp; NC</p>
                 </td>
               </tr>
             </table>
