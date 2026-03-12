@@ -364,7 +364,7 @@ export default function AdminInbox() {
   const MUTED = "#6a7a8a";
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: BG, fontFamily: "'DM Sans', sans-serif", margin: "-16px" }}>
+    <div style={{ display: "flex", height: "100%", minHeight: 0, background: BG, fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
       <style>{`
         @keyframes rouSpin { to { transform: rotate(360deg); } }
         @keyframes rouFadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -404,7 +404,7 @@ export default function AdminInbox() {
 
       {/* SIDEBAR */}
       {sidebarOpen && <div className="rou-sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
-      <div className={`rou-sidebar${sidebarOpen ? " open" : ""}`} style={{ width: 220, flexShrink: 0, background: "#070d14", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0 }}>
+      <div className={`rou-sidebar${sidebarOpen ? " open" : ""}`} style={{ width: 220, flexShrink: 0, background: "#070d14", borderRight: `1px solid ${BORDER}`, display: "flex", flexDirection: "column", height: "100%", position: "relative", top: 0 }}>
         <div style={{ padding: "16px 12px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
           <button className="rou-hamburger" onClick={() => setSidebarOpen(false)}
             style={{ display: "none", alignSelf: "flex-end", alignItems: "center", justifyContent: "center", width: 32, height: 32, border: "none", background: "transparent", color: "#6a7a8a", cursor: "pointer", borderRadius: 8 }}>

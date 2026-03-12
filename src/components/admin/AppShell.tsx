@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -450,11 +450,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative z-10">
+      <main className="flex-1 min-h-0 overflow-hidden relative z-10 flex flex-col"
+        onTouchStart={(e) => { (window as any)._swipeStartY = e.touches[0].clientY; }}
+        onTouchEnd={(e) => {
+          const startY = (window as any)._swipeStartY || 0;
+          const dy = startY - e.changedTouches[0].clientY;
+          if (dy > 50 && !tabBarVisible) setTabBarVisible(true);
+          if (dy < -50 && tabBarVisible && pathname && pathname.startsWith("/admin/inbox")) setTabBarVisible(false);
+        }}>
         {children}
       </main>
 
-      <nav className="flex-shrink-0 bg-[#0f0f0f] border-t border-white/5 px-2 pb-2" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom, 8px))' }}>
+      <nav ref={navRef} className="flex-shrink-0 bg-[#0f0f0f] border-t border-white/5 px-2 pb-2"
+        style={{
+          paddingBottom: "max(8px, env(safe-area-inset-bottom, 8px))",
+          transform: tabBarVisible ? "translateY(0)" : "translateY(110%)",
+          transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1)",
+          flexShrink: 0,
+        }}>
         <div className="flex items-center py-2">
           {/* Left side tabs */}
           <div className="flex flex-1 items-center justify-around">
@@ -598,3 +611,4 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
