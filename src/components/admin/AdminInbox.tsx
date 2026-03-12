@@ -446,11 +446,11 @@ export default function AdminInbox() {
       </div>
 
       {/* MAIN */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
 
         {/* THREAD LIST */}
         {!selectedThread && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
             {/* Search */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
               <button className="rou-hamburger" onClick={() => setSidebarOpen(true)}

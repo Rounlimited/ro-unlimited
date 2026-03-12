@@ -462,13 +462,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 overflow-hidden relative z-10 flex flex-col"
-        onScroll={(e) => {
-          const el = e.target as HTMLElement;
-          const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
-          if (atBottom && !tabBarVisible) setTabBarVisible(true);
-          else if (!atBottom && tabBarVisible) setTabBarVisible(false);
-        }}>
+      <main className="flex-1 min-h-0 overflow-hidden relative z-10 flex flex-col">
         {children}
       </main>
 
