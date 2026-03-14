@@ -39,13 +39,21 @@ interface EmailContact {
   company: string | null; category: string; notes: string | null; starred: boolean;
 }
 
-interface PendingAttachment {
-  filename: string; content_type: string; size_bytes: number; s3_key: string; s3_url: string;
-}
-
 interface FolderCounts {
   inbox: number; sent: number; starred: number; drafts: number; trash: number; spam: number;
 }
+
+// --- Multi-Account Config (mirrors server-side) ---
+interface EmailAccount {
+  email: string; display_name: string; color: string; initials: string;
+}
+const EMAIL_ACCOUNTS: EmailAccount[] = [
+  { email: "build@rounlimited.com", display_name: "RO Unlimited", color: "#D4772C", initials: "RO" },
+  { email: "jr@rounlimited.com", display_name: "JR — RO Unlimited", color: "#1B2A4A", initials: "JR" },
+  { email: "info@rounlimited.com", display_name: "RO Unlimited Info", color: "#2a6a4a", initials: "IN" },
+];
+const DEFAULT_FROM = "build@rounlimited.com";
+function getAccount(email: string) { return EMAIL_ACCOUNTS.find(a => a.email === email) || EMAIL_ACCOUNTS[0]; }
 
 // --- Helpers ---
 function timeAgo(d: string) {
@@ -83,15 +91,13 @@ const IconCompose = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="
 const IconTrash = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>;
 const IconSend = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>;
 const IconReply = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>;
+const IconForward = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>;
 const IconStar = ({ filled }: { filled: boolean }) => <svg width="18" height="18" viewBox="0 0 24 24" fill={filled ? "#D4772C" : "none"} stroke={filled ? "#D4772C" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
 const IconX = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
 const IconContacts = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
 const IconAttach = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>;
 const IconDraft = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>;
-
-const folderIcons: Record<string, string> = {
-  inbox: "inbox", starred: "star", sent: "sent", drafts: "drafts", spam: "spam", trash: "trash",
-};
+const IconChevron = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
 
 // --- Tiptap Toolbar ---
 function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
@@ -103,16 +109,16 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
     </button>
   );
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 2, padding: "6px 8px", borderBottom: "1px solid #2a1f15", background: "rgba(15,10,5,0.5)" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 2, padding: "6px 8px", borderBottom: "1px solid #1e2d45", background: "rgba(10,15,24,0.5)" }}>
       {btn(editor.isActive("bold"), () => editor.chain().focus().toggleBold().run(), "B")}
       {btn(editor.isActive("italic"), () => editor.chain().focus().toggleItalic().run(), "I")}
       {btn(editor.isActive("underline"), () => editor.chain().focus().toggleUnderline().run(), "U")}
       {btn(editor.isActive("strike"), () => editor.chain().focus().toggleStrike().run(), "S")}
-      <span style={{ width: 1, background: "#2a1f15", margin: "0 4px" }} />
+      <span style={{ width: 1, background: "#1e2d45", margin: "0 4px" }} />
       {btn(editor.isActive("bulletList"), () => editor.chain().focus().toggleBulletList().run(), "List")}
       {btn(editor.isActive("orderedList"), () => editor.chain().focus().toggleOrderedList().run(), "1. List")}
       {btn(editor.isActive("blockquote"), () => editor.chain().focus().toggleBlockquote().run(), "Quote")}
-      <span style={{ width: 1, background: "#2a1f15", margin: "0 4px" }} />
+      <span style={{ width: 1, background: "#1e2d45", margin: "0 4px" }} />
       {btn(editor.isActive("link"), () => {
         if (editor.isActive("link")) { editor.chain().focus().unsetLink().run(); return; }
         const url = window.prompt("Enter URL:");
@@ -122,8 +128,39 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   );
 }
 
+// --- From Account Selector ---
+function FromSelector({ value, onChange }: { value: string; onChange: (email: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const account = getAccount(value);
+  return (
+    <div style={{ position: "relative" }}>
+      <button onClick={() => setOpen(!open)} type="button"
+        style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", borderRadius: 8, border: "1px solid #1e2d45", background: "rgba(13,20,32,0.8)", color: "#d0dae8", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>
+        <span style={{ width: 8, height: 8, borderRadius: "50%", background: account.color, flexShrink: 0 }} />
+        {account.email}
+        <IconChevron />
+      </button>
+      {open && (
+        <div style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#0d1420", border: "1px solid #1e2d45", borderRadius: 10, zIndex: 200, minWidth: 260, boxShadow: "0 8px 30px rgba(0,0,0,0.6)", overflow: "hidden" }}>
+          {EMAIL_ACCOUNTS.map(a => (
+            <button key={a.email} onClick={() => { onChange(a.email); setOpen(false); }} type="button"
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 16px", border: "none", background: a.email === value ? "rgba(212,119,44,0.08)" : "transparent", color: a.email === value ? "#D4772C" : "#d0dae8", fontSize: 12, cursor: "pointer", textAlign: "left", borderBottom: "1px solid #1e2d4533" }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: a.color, flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>
+                <span style={{ fontWeight: 600 }}>{a.display_name}</span>
+                <span style={{ color: "#6a7a8a", marginLeft: 6 }}>{a.email}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // --- Main Component ---
 export default function AdminInbox() {
+  const [activeAccount, setActiveAccount] = useState<string | null>(null); // null = all accounts
   const [activeFolder, setActiveFolder] = useState<EmailFolder>("inbox");
   const [threads, setThreads] = useState<EmailThread[]>([]);
   const [folderCounts, setFolderCounts] = useState<FolderCounts>({ inbox: 0, sent: 0, starred: 0, drafts: 0, trash: 0, spam: 0 });
@@ -135,13 +172,17 @@ export default function AdminInbox() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [collapsedMsgs, setCollapsedMsgs] = useState<Set<string>>(new Set());
-  const [composeOpen, setComposeOpen] = useState(false);
+  // Compose state (used for both new compose AND reply/forward)
+  const [composeMode, setComposeMode] = useState<"closed" | "new" | "reply" | "forward">("closed");
   const [composeTo, setComposeTo] = useState("");
   const [composeSubject, setComposeSubject] = useState("");
   const [composeSending, setComposeSending] = useState(false);
   const [composeDraftId, setComposeDraftId] = useState<string | null>(null);
   const [showCc, setShowCc] = useState(false);
   const [composeCc, setComposeCc] = useState("");
+  const [composeFrom, setComposeFrom] = useState(DEFAULT_FROM);
+  const [composeQuotedHtml, setComposeQuotedHtml] = useState("");
+  // Contacts state
   const [contactsOpen, setContactsOpen] = useState(false);
   const [contacts, setContacts] = useState<EmailContact[]>([]);
   const [contactSearch, setContactSearch] = useState("");
@@ -150,8 +191,9 @@ export default function AdminInbox() {
   const [contactSaving, setContactSaving] = useState(false);
   const [toSuggestions, setToSuggestions] = useState<EmailContact[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [sending, setSending] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Reply thread context (so we can reference the thread while in full-screen reply)
+  const [replyThreadId, setReplyThreadId] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -162,13 +204,6 @@ export default function AdminInbox() {
     editorProps: { attributes: { style: "min-height:120px;outline:none;color:#e8ddd0;font-size:14px;line-height:1.6;padding:12px 14px;" } },
   });
 
-  const replyEditor = useEditor({
-    immediatelyRender: false,
-    extensions: [StarterKit, Underline, Link.configure({ openOnClick: false }), Placeholder.configure({ placeholder: "Type your reply..." }), TextStyle, Color],
-    content: "",
-    editorProps: { attributes: { style: "min-height:60px;outline:none;color:#e8ddd0;font-size:14px;line-height:1.6;padding:10px 14px;" } },
-  });
-
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToast({ message: msg, type });
     setTimeout(() => setToast(null), 3000);
@@ -176,13 +211,22 @@ export default function AdminInbox() {
 
   const closeThread = useCallback(() => {
     setSelectedThread(null); setMessages([]); setCollapsedMsgs(new Set());
-    replyEditor?.commands.clearContent();
-  }, [replyEditor]);
+  }, []);
+
+  const closeCompose = useCallback(() => {
+    setComposeMode("closed"); setComposeTo(""); setComposeSubject("");
+    composeEditor?.commands.clearContent(); setComposeDraftId(null);
+    setShowCc(false); setComposeCc(""); setComposeFrom(DEFAULT_FROM);
+    setComposeQuotedHtml(""); setReplyThreadId(null);
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+  }, [composeEditor]);
 
   const fetchThreads = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true); else setRefreshing(true);
     try {
-      const res = await fetch(`/api/email/threads?folder=${activeFolder}`);
+      const params = new URLSearchParams({ folder: activeFolder });
+      if (activeAccount) params.set("account", activeAccount);
+      const res = await fetch(`/api/email/threads?${params}`);
       if (res.ok) {
         const data = await res.json();
         setThreads(data.threads || []);
@@ -190,24 +234,23 @@ export default function AdminInbox() {
       }
     } catch (e) { console.error("fetch threads:", e); }
     setLoading(false); setRefreshing(false);
-  }, [activeFolder]);
+  }, [activeFolder, activeAccount]);
 
   const fetchMessages = useCallback(async (threadId: string) => {
     const res = await fetch("/api/email/threads", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ thread_id: threadId }),
+      body: JSON.stringify({ thread_id: threadId, account: activeAccount || undefined }),
     });
     if (res.ok) {
       const data = await res.json();
       const msgs: EmailMessage[] = data.messages || [];
       setMessages(msgs);
       setSelectedThread(threadId);
-      replyEditor?.commands.clearContent();
       if (msgs.length > 1) setCollapsedMsgs(new Set(msgs.slice(0, -1).map(m => m.id)));
       else setCollapsedMsgs(new Set());
       setThreads(prev => prev.map(t => t.thread_id === threadId ? { ...t, unread_count: 0 } : t));
     }
-  }, [replyEditor]);
+  }, [activeAccount]);
 
   const fetchContacts = useCallback(async (q?: string) => {
     const params = new URLSearchParams();
@@ -219,7 +262,7 @@ export default function AdminInbox() {
   const threadAction = async (threadIds: string[], action: string, value?: string) => {
     await fetch("/api/email/threads", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ thread_ids: threadIds, action, value }),
+      body: JSON.stringify({ thread_ids: threadIds, action, value, account: activeAccount || undefined }),
     });
   };
 
@@ -239,34 +282,57 @@ export default function AdminInbox() {
   const permanentDelete = async (threadIds: string[]) => {
     await fetch("/api/email/threads", {
       method: "DELETE", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ thread_ids: threadIds }),
+      body: JSON.stringify({ thread_ids: threadIds, account: activeAccount || undefined }),
     });
     if (selectedThread && threadIds.includes(selectedThread)) closeThread();
     setSelectedIds(new Set()); showToast("Permanently deleted"); fetchThreads(true);
   };
 
+  // Unified send — works for new compose, reply, and forward
   const sendCompose = async () => {
     if (!composeTo.trim() || !composeSubject.trim()) return;
     const html = composeEditor?.getHTML() || "";
     if (!html || html === "<p></p>") return;
     setComposeSending(true);
-    const res = await fetch("/api/email/compose", {
+
+    const isReply = composeMode === "reply" && replyThreadId;
+    const endpoint = isReply ? "/api/email/reply" : "/api/email/compose";
+
+    const payload: Record<string, unknown> = {
+      to_email: composeTo.trim(),
+      subject: composeSubject.trim(),
+      from_email: composeFrom,
+    };
+    if (isReply) {
+      payload.thread_id = replyThreadId;
+      payload.reply_html = html;
+      payload.reply_body = composeEditor?.getText() || "";
+      const thread = threads.find(t => t.thread_id === replyThreadId);
+      payload.to_name = thread?.customer_name;
+      payload.lead_id = thread?.lead_id;
+    } else {
+      payload.body_html = html;
+      payload.draft_id = composeDraftId;
+      if (showCc && composeCc.trim()) payload.cc_emails = composeCc.split(",").map(e => e.trim()).filter(Boolean);
+    }
+
+    const res = await fetch(endpoint, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to_email: composeTo.trim(), subject: composeSubject.trim(), body_html: html, draft_id: composeDraftId, cc_emails: showCc && composeCc.trim() ? composeCc.split(",").map(e => e.trim()).filter(Boolean) : undefined }),
+      body: JSON.stringify(payload),
     });
-    if (res.ok) { showToast("Email sent!"); closeCompose(); fetchThreads(true); }
-    else { showToast("Failed to send email", "error"); }
+    if (res.ok) {
+      showToast(isReply ? "Reply sent!" : "Email sent!");
+      closeCompose();
+      if (isReply && replyThreadId) fetchMessages(replyThreadId);
+      fetchThreads(true);
+    } else {
+      showToast("Failed to send", "error");
+    }
     setComposeSending(false);
   };
 
-  const closeCompose = () => {
-    setComposeOpen(false); setComposeTo(""); setComposeSubject("");
-    composeEditor?.commands.clearContent(); setComposeDraftId(null); setShowCc(false); setComposeCc("");
-    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
-  };
-
   const saveDraft = useCallback(async () => {
-    if (!composeOpen) return;
+    if (composeMode === "closed") return;
     const html = composeEditor?.getHTML() || "";
     const res = await fetch("/api/email/drafts", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -276,21 +342,49 @@ export default function AdminInbox() {
       const data = await res.json();
       if (data.draft?.id && !composeDraftId) setComposeDraftId(data.draft.id);
     }
-  }, [composeOpen, composeTo, composeSubject, composeDraftId, composeEditor]);
+  }, [composeMode, composeTo, composeSubject, composeDraftId, composeEditor]);
 
-  const sendReply = async () => {
-    const html = replyEditor?.getHTML() || "";
-    if (!html || html === "<p></p>" || !selectedThread) return;
+  // Open reply — full screen compose pre-filled
+  const openReply = () => {
+    if (!selectedThread) return;
     const thread = threads.find(t => t.thread_id === selectedThread);
     if (!thread) return;
-    setSending(true);
-    const res = await fetch("/api/email/reply", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ thread_id: selectedThread, to_email: thread.to_email, to_name: thread.customer_name, subject: thread.subject, reply_html: html, reply_body: replyEditor?.getText() || "", lead_id: thread.lead_id }),
-    });
-    if (res.ok) { showToast("Reply sent!"); replyEditor?.commands.clearContent(); fetchMessages(selectedThread); fetchThreads(true); }
-    else { showToast("Failed to send reply", "error"); }
-    setSending(false);
+    const lastMsg = messages[messages.length - 1];
+    const replyTo = lastMsg?.direction === "inbound" ? lastMsg.from_email : thread.to_email;
+    setReplyThreadId(selectedThread);
+    setComposeTo(replyTo);
+    setComposeSubject(thread.subject.startsWith("Re:") ? thread.subject : `Re: ${thread.subject}`);
+    setComposeFrom(activeAccount || DEFAULT_FROM);
+    // Build quoted text
+    if (lastMsg) {
+      const quotedBody = lastMsg.body_html || lastMsg.body_text?.replace(/\n/g, "<br>") || "";
+      const quotedDate = formatDate(lastMsg.created_at);
+      const quotedFrom = lastMsg.from_email;
+      setComposeQuotedHtml(`<br><br><div style="border-left:2px solid #D4772C;padding-left:12px;margin-top:16px;color:#6a7a8a;font-size:13px;"><p>On ${quotedDate}, ${quotedFrom} wrote:</p>${quotedBody}</div>`);
+    }
+    composeEditor?.commands.clearContent();
+    setComposeMode("reply");
+  };
+
+  // Open forward — full screen compose, empty To
+  const openForward = () => {
+    if (!selectedThread) return;
+    const thread = threads.find(t => t.thread_id === selectedThread);
+    if (!thread) return;
+    const lastMsg = messages[messages.length - 1];
+    setReplyThreadId(null); // forward creates new thread
+    setComposeTo("");
+    setComposeSubject(thread.subject.startsWith("Fwd:") ? thread.subject : `Fwd: ${thread.subject}`);
+    setComposeFrom(activeAccount || DEFAULT_FROM);
+    if (lastMsg) {
+      const fwdBody = lastMsg.body_html || lastMsg.body_text?.replace(/\n/g, "<br>") || "";
+      const fwdDate = formatDate(lastMsg.created_at);
+      const fwdFrom = lastMsg.from_email;
+      const fwdTo = lastMsg.to_email;
+      setComposeQuotedHtml(`<br><br><div style="border-left:2px solid #6a7a8a;padding-left:12px;margin-top:16px;color:#6a7a8a;font-size:13px;"><p>---------- Forwarded message ----------<br>From: ${fwdFrom}<br>Date: ${fwdDate}<br>Subject: ${thread.subject}<br>To: ${fwdTo}</p>${fwdBody}</div>`);
+    }
+    composeEditor?.commands.clearContent();
+    setComposeMode("forward");
   };
 
   const openDraft = (thread: EmailThread) => {
@@ -300,7 +394,7 @@ export default function AdminInbox() {
         if (draft) {
           setComposeTo(draft.to_email || ""); setComposeSubject(draft.subject || "");
           composeEditor?.commands.setContent(draft.body_html || draft.body_text || "");
-          setComposeDraftId(draft.id); setComposeOpen(true);
+          setComposeDraftId(draft.id); setComposeMode("new");
         }
       });
   };
@@ -349,10 +443,10 @@ export default function AdminInbox() {
   useEffect(() => { fetchThreads(); setSelectedIds(new Set()); }, [fetchThreads]);
   useEffect(() => { if (contactsOpen) fetchContacts(); }, [contactsOpen, fetchContacts]);
   useEffect(() => {
-    if (!composeOpen) return;
+    if (composeMode === "closed") return;
     draftTimerRef.current = setInterval(() => saveDraft(), 30000);
     return () => { if (draftTimerRef.current) clearInterval(draftTimerRef.current); };
-  }, [composeOpen, saveDraft]);
+  }, [composeMode, saveDraft]);
 
   // Brand colors
   const NAVY = "#1B2A4A";
@@ -362,6 +456,9 @@ export default function AdminInbox() {
   const BORDER = "#1e2d45";
   const TEXT = "#d0dae8";
   const MUTED = "#6a7a8a";
+
+  // Is compose/reply/forward fullscreen open?
+  const composeOpen = composeMode !== "closed";
 
   return (
     <div style={{ display: "flex", flex: 1, height: "100%", minHeight: 0, background: BG, fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
@@ -376,6 +473,13 @@ export default function AdminInbox() {
         .rou-msg-card { border-bottom: 1px solid ${BORDER}; }
         .rou-msg-card:last-of-type { border-bottom: none; }
         .rou-msg-collapsed { cursor: pointer; }
+        .rou-msg-body { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+        .rou-msg-body img { max-width: 100% !important; height: auto !important; }
+        .rou-msg-body table { max-width: 100% !important; width: 100% !important; table-layout: fixed !important; }
+        .rou-msg-body table[width] { width: 100% !important; }
+        .rou-msg-body td, .rou-msg-body th { word-break: break-word !important; overflow-wrap: break-word !important; max-width: 100% !important; }
+        .rou-msg-body td img { max-width: 100% !important; height: auto !important; width: auto !important; }
+        .rou-msg-body * { max-width: 100% !important; box-sizing: border-box !important; }
         .tiptap-rou .ProseMirror { min-height: 80px; }
         .tiptap-rou .ProseMirror p { margin: 0 0 4px; }
         .tiptap-rou .ProseMirror ul, .tiptap-rou .ProseMirror ol { padding-left: 20px; margin: 4px 0; }
@@ -410,7 +514,23 @@ export default function AdminInbox() {
             style={{ display: "none", alignSelf: "flex-end", alignItems: "center", justifyContent: "center", width: 32, height: 32, border: "none", background: "transparent", color: "#6a7a8a", cursor: "pointer", borderRadius: 8 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
-          <button onClick={() => setComposeOpen(true)}
+          {/* Account Switcher */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 4 }}>
+            <button onClick={() => { setActiveAccount(null); setSelectedThread(null); setSelectedIds(new Set()); }}
+              style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px !important", borderRadius: 10, border: activeAccount === null ? `1px solid ${ORANGE}44` : `1px solid transparent`, background: activeAccount === null ? `rgba(212,119,44,0.08)` : "transparent", color: activeAccount === null ? ORANGE : MUTED, fontSize: 12, fontWeight: activeAccount === null ? 700 : 400, cursor: "pointer", textAlign: "left" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#888", flexShrink: 0 }} />
+              All Accounts
+            </button>
+            {EMAIL_ACCOUNTS.map(a => (
+              <button key={a.email} onClick={() => { setActiveAccount(a.email); setSelectedThread(null); setSelectedIds(new Set()); }}
+                style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px !important", borderRadius: 10, border: activeAccount === a.email ? `1px solid ${a.color}44` : `1px solid transparent`, background: activeAccount === a.email ? `${a.color}14` : "transparent", color: activeAccount === a.email ? a.color : MUTED, fontSize: 12, fontWeight: activeAccount === a.email ? 700 : 400, cursor: "pointer", textAlign: "left", overflow: "hidden" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: a.color, flexShrink: 0 }} />
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.email.split("@")[0]}</span>
+              </button>
+            ))}
+          </div>
+          <div style={{ height: 1, background: BORDER, margin: "0 4px" }} />
+          <button onClick={() => { setComposeFrom(activeAccount || DEFAULT_FROM); setComposeMode("new"); }}
             style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 20px !important", borderRadius: 12, border: `1px solid ${BORDER}`, background: `linear-gradient(135deg, ${NAVY}, #0f1e38)`, color: ORANGE, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
             <IconCompose /> Compose
           </button>
@@ -448,8 +568,8 @@ export default function AdminInbox() {
       {/* MAIN */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
 
-        {/* THREAD LIST */}
-        {!selectedThread && (
+        {/* THREAD LIST — hidden when compose is open or thread is selected */}
+        {!selectedThread && !composeOpen && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
             {/* Search */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
@@ -514,6 +634,8 @@ export default function AdminInbox() {
                 const isUnread = thread.unread_count > 0;
                 const isDraft = activeFolder === "drafts";
                 const senderName = thread.customer_name || thread.to_email.split("@")[0];
+                // Account color dot — match thread's from/to against known accounts
+                const threadAccount = getAccount(thread.latest_direction === "outbound" ? thread.from_email : thread.to_email);
                 return (
                   <div key={thread.thread_id} className="rou-thread-row"
                     onClick={() => someSelected ? toggleSelect(thread.thread_id, { stopPropagation: () => {} } as React.MouseEvent) : isDraft ? openDraft(thread) : fetchMessages(thread.thread_id)}
@@ -526,8 +648,10 @@ export default function AdminInbox() {
                     <div onClick={e => toggleStar(thread.thread_id, thread.starred, e)} style={{ width: 32, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <IconStar filled={thread.starred} />
                     </div>
-                    <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, marginRight: 10, background: isUnread ? `linear-gradient(135deg, ${NAVY}, ${ORANGE}33)` : "#111e30", border: isUnread ? `1px solid ${ORANGE}44` : `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: isUnread ? ORANGE : MUTED }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0, marginRight: 10, background: isUnread ? `linear-gradient(135deg, ${NAVY}, ${ORANGE}33)` : "#111e30", border: isUnread ? `1px solid ${ORANGE}44` : `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: isUnread ? ORANGE : MUTED, position: "relative" }}>
                       {isDraft ? <IconDraft /> : getInitials(thread.customer_name, thread.to_email)}
+                      {/* Account color dot */}
+                      <span style={{ position: "absolute", bottom: -1, right: -1, width: 10, height: 10, borderRadius: "50%", background: threadAccount.color, border: `2px solid ${BG}` }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -551,8 +675,8 @@ export default function AdminInbox() {
           </div>
         )}
 
-        {/* THREAD DETAIL */}
-        {selectedThread && selectedThreadData && (
+        {/* THREAD DETAIL — no inline reply box, reply/forward buttons in header */}
+        {selectedThread && selectedThreadData && !composeOpen && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
             {/* Thread header */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
@@ -563,6 +687,16 @@ export default function AdminInbox() {
                 <div style={{ fontSize: 15, fontWeight: 700, color: TEXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selectedThreadData.subject}</div>
                 <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{messages.length} message{messages.length !== 1 ? "s" : ""}</div>
               </div>
+              {/* Reply button */}
+              <button onClick={openReply} title="Reply"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: "50%", border: `1px solid ${BORDER}`, background: `rgba(27,42,74,0.3)`, cursor: "pointer", color: ORANGE }}>
+                <IconReply />
+              </button>
+              {/* Forward button */}
+              <button onClick={openForward} title="Forward"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: "50%", border: `1px solid ${BORDER}`, background: `rgba(27,42,74,0.3)`, cursor: "pointer", color: MUTED }}>
+                <IconForward />
+              </button>
               <button onClick={() => toggleStar(selectedThread, selectedThreadData.starred)} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "6px" }}>
                 <IconStar filled={selectedThreadData.starred} />
               </button>
@@ -571,7 +705,7 @@ export default function AdminInbox() {
               </button>
             </div>
 
-            {/* Messages */}
+            {/* Messages — full height, no reply box at bottom */}
             <div ref={messagesContainerRef} style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
               {messages.map((msg, i) => {
                 const isCollapsed = collapsedMsgs.has(msg.id);
@@ -607,15 +741,23 @@ export default function AdminInbox() {
                               <span style={{ fontSize: 11, color: MUTED }}>{formatDate(msg.created_at)}</span>
                             </div>
                             <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
-                              To: {isOutbound ? msg.to_email : "build@rounlimited.com"}
+                              To: {msg.to_email}
                             </div>
                           </div>
                         </div>
                         {/* Body */}
-                        <div style={{ padding: "0 16px 16px" }}>
+                        <div style={{ padding: "0 16px 16px", overflow: "hidden", maxWidth: "100%" }}>
                           {msg.body_html ? (
-                            <div style={{ fontSize: 14, lineHeight: 1.65, color: TEXT }}
-                              dangerouslySetInnerHTML={{ __html: msg.body_html.replace(/<html[^>]*>|<\/html>|<head[^>]*>[\s\S]*?<\/head>|<body[^>]*>|<\/body>/gi, "").replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "") }}
+                            <div className="rou-msg-body" style={{ fontSize: 14, lineHeight: 1.65, color: TEXT, overflow: "hidden", maxWidth: "100%", wordBreak: "break-word" }}
+                              dangerouslySetInnerHTML={{ __html: msg.body_html
+                                .replace(/<html[^>]*>|<\/html>|<head[^>]*>[\s\S]*?<\/head>|<body[^>]*>|<\/body>/gi, "")
+                                .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+                                .replace(/\s+width\s*=\s*["']\d+["']/gi, ' width="100%"')
+                                .replace(/\s+height\s*=\s*["']\d+["']/gi, "")
+                                .replace(/width\s*:\s*\d{3,}px/gi, "width:100%")
+                                .replace(/max-width\s*:\s*\d{3,}px/gi, "max-width:100%")
+                                .replace(/min-width\s*:\s*\d{3,}px/gi, "min-width:0")
+                              }}
                             />
                           ) : msg.body_text ? (
                             <pre style={{ fontSize: 13, lineHeight: 1.7, color: TEXT, whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "inherit", margin: 0 }}>{msg.body_text}</pre>
@@ -640,103 +782,109 @@ export default function AdminInbox() {
                   </div>
                 );
               })}
-            </div>
 
-            {/* Reply box */}
-            <div style={{ borderTop: `1px solid ${BORDER}`, padding: "12px", flexShrink: 0, background: "#070d14" }}>
-              <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-                <div style={{ padding: "8px 14px 4px", borderBottom: `1px solid ${BORDER}33`, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 11, color: MUTED }}>To:</span>
-                  <span style={{ fontSize: 12, color: TEXT }}>{selectedThreadData.to_email}</span>
-                </div>
-                <EditorToolbar editor={replyEditor} />
-                <div className="tiptap-rou">
-                  <EditorContent editor={replyEditor} />
-                </div>
-                <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 12px", borderTop: `1px solid ${BORDER}33`, gap: 8 }}>
-                  <button onClick={() => replyEditor?.commands.clearContent()}
-                    style={{ padding: "8px 16px !important", borderRadius: 8, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, fontSize: 13, cursor: "pointer" }}>
-                    Clear
-                  </button>
-                  <button onClick={sendReply} disabled={sending}
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 20px !important", borderRadius: 8, border: "none", background: sending ? "#1B2A4A" : `linear-gradient(135deg, ${NAVY}, #0f1e38)`, color: sending ? MUTED : ORANGE, fontSize: 13, fontWeight: 700, cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1 }}>
-                    <IconSend /> {sending ? "Sending..." : "Send Reply"}
-                  </button>
-                </div>
+              {/* Bottom reply/forward prompt */}
+              <div style={{ display: "flex", gap: 8, padding: "16px 4px 24px", justifyContent: "center" }}>
+                <button onClick={openReply}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 24px !important", borderRadius: 10, border: `1px solid ${BORDER}`, background: `linear-gradient(135deg, ${NAVY}, #0f1e38)`, color: ORANGE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  <IconReply /> Reply
+                </button>
+                <button onClick={openForward}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 24px !important", borderRadius: 10, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  <IconForward /> Forward
+                </button>
               </div>
             </div>
           </div>
         )}
 
-      </div>{/* end main */}
-
-      {/* COMPOSE MODAL */}
-      {composeOpen && (
-        <div className="compose-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <style>{`
-            .compose-card { width: 560px; max-width: 100vw; max-height: 80vh; border-radius: 16px; }
-            @media (max-width: 639px) {
-              .compose-card { width: 100vw !important; height: 100dvh !important; max-height: 100dvh !important; border-radius: 0 !important; }
-              .compose-backdrop { align-items: stretch !important; }
-            }
-          `}</style>
-          <div className="compose-card" style={{ background: "#0a0f18", border: `1px solid ${BORDER}`, boxShadow: "0 20px 60px rgba(0,0,0,0.8)", display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>New Message</span>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={saveDraft} style={{ padding: "6px 12px !important", borderRadius: 6, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, fontSize: 12, cursor: "pointer" }}>Save Draft</button>
-                <button onClick={closeCompose} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", border: "none", background: `rgba(212,119,44,0.1)`, color: ORANGE, cursor: "pointer" }}><IconX /></button>
+        {/* FULL-SCREEN COMPOSE / REPLY / FORWARD */}
+        {composeOpen && (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: BG }}>
+            {/* Top bar — Send button always visible above keyboard */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderBottom: `1px solid ${BORDER}`, flexShrink: 0, background: "#070d14" }}>
+              <button onClick={closeCompose} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", color: MUTED }}>
+                <IconBack />
+              </button>
+              <div style={{ flex: 1, fontSize: 14, fontWeight: 700, color: TEXT }}>
+                {composeMode === "reply" ? "Reply" : composeMode === "forward" ? "Forward" : "New Message"}
               </div>
-            </div>
-            <div style={{ padding: "8px 18px", borderBottom: `1px solid ${BORDER}33`, display: "flex", alignItems: "center", gap: 8, flexShrink: 0, position: "relative" }}>
-              <span style={{ fontSize: 12, color: MUTED, width: 32, flexShrink: 0 }}>To</span>
-              <input value={composeTo} onChange={e => { setComposeTo(e.target.value); searchContacts(e.target.value); }}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                placeholder="recipient@email.com" style={{ flex: 1, background: "transparent", border: "none", color: TEXT, outline: "none", fontSize: 13, padding: "6px 0 !important" }} />
-              <button onClick={() => setShowCc(!showCc)} style={{ fontSize: 11, color: MUTED, background: "transparent", border: "none", cursor: "pointer", padding: "4px 8px !important" }}>Cc</button>
-              {showSuggestions && toSuggestions.length > 0 && (
-                <div style={{ position: "absolute", top: "100%", left: 40, right: 0, background: "#0d1420", border: `1px solid ${BORDER}`, borderRadius: 8, zIndex: 100, maxHeight: 180, overflowY: "auto" }}>
-                  {toSuggestions.map(c => (
-                    <div key={c.id} onClick={() => { setComposeTo(c.email); setShowSuggestions(false); }}
-                      style={{ padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${BORDER}33` }}
-                      onMouseEnter={e => (e.currentTarget.style.background = `rgba(212,119,44,0.08)`)}
-                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                      <div style={{ width: 28, height: 28, borderRadius: "50%", background: NAVY, border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: ORANGE }}>{getInitials(c.name, c.email)}</div>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>{c.name}</div>
-                        <div style={{ fontSize: 11, color: MUTED }}>{c.email}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              {composeMode === "new" && (
+                <button onClick={saveDraft} style={{ padding: "6px 12px !important", borderRadius: 6, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, fontSize: 12, cursor: "pointer" }}>Draft</button>
               )}
-            </div>
-            {showCc && (
-              <div style={{ padding: "8px 18px", borderBottom: `1px solid ${BORDER}33`, display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                <span style={{ fontSize: 12, color: MUTED, width: 32, flexShrink: 0 }}>Cc</span>
-                <input value={composeCc} onChange={e => setComposeCc(e.target.value)} placeholder="cc@email.com"
-                  style={{ flex: 1, background: "transparent", border: "none", color: TEXT, outline: "none", fontSize: 13, padding: "6px 0 !important" }} />
-              </div>
-            )}
-            <div style={{ padding: "8px 18px", borderBottom: `1px solid ${BORDER}33`, display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-              <span style={{ fontSize: 12, color: MUTED, width: 32, flexShrink: 0 }}>Sub</span>
-              <input value={composeSubject} onChange={e => setComposeSubject(e.target.value)} placeholder="Subject"
-                style={{ flex: 1, background: "transparent", border: "none", color: TEXT, outline: "none", fontSize: 13, padding: "6px 0 !important" }} />
-            </div>
-            <EditorToolbar editor={composeEditor} />
-            <div className="tiptap-rou" style={{ flex: 1, overflowY: "auto" }}>
-              <EditorContent editor={composeEditor} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 18px", borderTop: `1px solid ${BORDER}`, flexShrink: 0 }}>
-              <span style={{ fontSize: 11, color: "#3a4a5a" }}>From: build@rounlimited.com</span>
               <button onClick={sendCompose} disabled={composeSending}
-                style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 24px !important", borderRadius: 8, border: "none", background: composeSending ? "#1B2A4A" : `linear-gradient(135deg, ${NAVY}, #0f1e38)`, color: composeSending ? MUTED : ORANGE, fontSize: 13, fontWeight: 700, cursor: composeSending ? "default" : "pointer" }}>
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 20px !important", borderRadius: 8, border: "none", background: composeSending ? "#1B2A4A" : `linear-gradient(135deg, ${NAVY}, #0f1e38)`, color: composeSending ? MUTED : ORANGE, fontSize: 13, fontWeight: 700, cursor: composeSending ? "default" : "pointer" }}>
                 <IconSend /> {composeSending ? "Sending..." : "Send"}
               </button>
             </div>
+
+            {/* Scrollable compose body */}
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+              {/* From selector */}
+              <div style={{ padding: "10px 18px 6px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                <span style={{ fontSize: 12, color: MUTED, width: 40, flexShrink: 0 }}>From</span>
+                <FromSelector value={composeFrom} onChange={setComposeFrom} />
+              </div>
+              {/* To field */}
+              <div style={{ padding: "6px 18px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0, position: "relative" }}>
+                <span style={{ fontSize: 12, color: MUTED, width: 40, flexShrink: 0 }}>To</span>
+                <input value={composeTo} onChange={e => { setComposeTo(e.target.value); searchContacts(e.target.value); }}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  placeholder="recipient@email.com" style={{ flex: 1, background: "transparent", border: "none", color: TEXT, outline: "none", fontSize: 13, padding: "6px 0 !important", borderBottom: `1px solid ${BORDER}33` }} />
+                {composeMode === "new" && (
+                  <button onClick={() => setShowCc(!showCc)} style={{ fontSize: 11, color: MUTED, background: "transparent", border: "none", cursor: "pointer", padding: "4px 8px !important" }}>Cc</button>
+                )}
+                {showSuggestions && toSuggestions.length > 0 && (
+                  <div style={{ position: "absolute", top: "100%", left: 58, right: 0, background: "#0d1420", border: `1px solid ${BORDER}`, borderRadius: 8, zIndex: 100, maxHeight: 180, overflowY: "auto" }}>
+                    {toSuggestions.map(c => (
+                      <div key={c.id} onClick={() => { setComposeTo(c.email); setShowSuggestions(false); }}
+                        style={{ padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${BORDER}33` }}
+                        onMouseEnter={e => (e.currentTarget.style.background = `rgba(212,119,44,0.08)`)}
+                        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: NAVY, border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: ORANGE }}>{getInitials(c.name, c.email)}</div>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>{c.name}</div>
+                          <div style={{ fontSize: 11, color: MUTED }}>{c.email}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Cc field */}
+              {showCc && composeMode === "new" && (
+                <div style={{ padding: "6px 18px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <span style={{ fontSize: 12, color: MUTED, width: 40, flexShrink: 0 }}>Cc</span>
+                  <input value={composeCc} onChange={e => setComposeCc(e.target.value)} placeholder="cc@email.com"
+                    style={{ flex: 1, background: "transparent", border: "none", color: TEXT, outline: "none", fontSize: 13, padding: "6px 0 !important", borderBottom: `1px solid ${BORDER}33` }} />
+                </div>
+              )}
+              {/* Subject */}
+              <div style={{ padding: "6px 18px 10px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                <span style={{ fontSize: 12, color: MUTED, width: 40, flexShrink: 0 }}>Sub</span>
+                <input value={composeSubject} onChange={e => setComposeSubject(e.target.value)} placeholder="Subject"
+                  style={{ flex: 1, background: "transparent", border: "none", color: TEXT, outline: "none", fontSize: 13, padding: "6px 0 !important", borderBottom: `1px solid ${BORDER}33` }} />
+              </div>
+              {/* Separator */}
+              <div style={{ height: 1, background: BORDER, margin: "0 18px", flexShrink: 0 }} />
+              {/* Editor toolbar */}
+              <EditorToolbar editor={composeEditor} />
+              {/* Editor body */}
+              <div className="tiptap-rou" style={{ flex: 1, minHeight: 200 }}>
+                <EditorContent editor={composeEditor} />
+              </div>
+              {/* Quoted thread (for reply/forward) */}
+              {composeQuotedHtml && (
+                <div style={{ padding: "0 18px 20px", flexShrink: 0 }}>
+                  <div style={{ fontSize: 13, lineHeight: 1.6, color: MUTED }}
+                    dangerouslySetInnerHTML={{ __html: composeQuotedHtml }} />
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+      </div>{/* end main */}
 
       {/* CONTACTS PANEL */}
       {contactsOpen && (
@@ -767,7 +915,7 @@ export default function AdminInbox() {
                     <div style={{ fontSize: 11, color: MUTED }}>{c.email}{c.company ? ` - ${c.company}` : ""}</div>
                   </div>
                   <div style={{ display: "flex", gap: 4 }}>
-                    <button onClick={() => { setComposeTo(c.email); setContactsOpen(false); setComposeOpen(true); }}
+                    <button onClick={() => { setComposeTo(c.email); setContactsOpen(false); setComposeMode("new"); }}
                       style={{ padding: "6px 10px !important", borderRadius: 6, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, fontSize: 11, cursor: "pointer" }}>Email</button>
                     <button onClick={() => { setContactModal(c); setContactForm({ name: c.name, email: c.email, phone: c.phone || "", company: c.company || "", category: c.category, notes: c.notes || "" }); }}
                       style={{ padding: "6px 10px !important", borderRadius: 6, border: `1px solid ${BORDER}`, background: "transparent", color: MUTED, fontSize: 11, cursor: "pointer" }}>Edit</button>

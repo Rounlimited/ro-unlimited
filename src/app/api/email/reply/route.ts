@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
-import { logEmail, buildEmailHtml, stripHtml } from '@/lib/email';
+import { logEmail, buildEmailHtml, stripHtml, getFromHeader, DEFAULT_FROM_EMAIL } from '@/lib/email';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
@@ -9,16 +9,17 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createAdminClient();
     const body = await req.json();
-    const { thread_id, to_email, to_name, subject, reply_body, reply_html, lead_id } = body;
+    const { thread_id, to_email, to_name, subject, reply_body, reply_html, lead_id, from_email } = body;
 
     if (!thread_id || !to_email || (!reply_body && !reply_html)) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const senderEmail = from_email || DEFAULT_FROM_EMAIL;
     const customerName = to_name || to_email.split('@')[0];
     const replySubject = subject?.startsWith('Re:') ? subject : `Re: ${subject || 'Your inquiry'}`;
     const plainText = reply_body || stripHtml(reply_html || '');
-    const html = buildEmailHtml(customerName, reply_html || (reply_body || '').replace(/\n/g, '<br>'), subject || 'Your inquiry');
+    const html = buildEmailHtml(customerName, reply_html || (reply_body || '').replace(/\n/g, '<br>'), subject || 'Your inquiry', senderEmail);
 
     // Get In-Reply-To for email threading
     let inReplyToHeader: string | undefined;
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     const r = getResend();
     const params: Parameters<typeof r.emails.send>[0] = {
-      from: 'RO Unlimited <build@rounlimited.com>',
+      from: getFromHeader(senderEmail),
       to: [to_email],
       subject: replySubject,
       html,
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
       thread_id,
       lead_id: lead_id || null,
       direction: 'outbound',
-      from_email: 'build@rounlimited.com',
+      from_email: senderEmail,
       to_email,
       subject: replySubject,
       body_html: html,

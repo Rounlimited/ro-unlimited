@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
-import { logEmail, buildEmailHtml, stripHtml } from '@/lib/email';
+import { logEmail, buildEmailHtml, stripHtml, getFromHeader, DEFAULT_FROM_EMAIL } from '@/lib/email';
 import { randomUUID } from 'crypto';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
@@ -10,20 +10,21 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createAdminClient();
     const body = await req.json();
-    const { to_email, to_name, subject, body: emailBody, body_html: richHtml, lead_id, draft_id, cc_emails, bcc_emails } = body;
+    const { to_email, to_name, subject, body: emailBody, body_html: richHtml, lead_id, draft_id, cc_emails, bcc_emails, from_email } = body;
 
     if (!to_email || !subject || (!emailBody && !richHtml)) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const senderEmail = from_email || DEFAULT_FROM_EMAIL;
     const thread_id = randomUUID();
     const customerName = to_name || to_email.split('@')[0];
-    const html = buildEmailHtml(customerName, richHtml || (emailBody || '').replace(/\n/g, '<br>'), subject);
+    const html = buildEmailHtml(customerName, richHtml || (emailBody || '').replace(/\n/g, '<br>'), subject, senderEmail);
 
     let resendMessageId: string | undefined;
     const r = getResend();
     const params: Parameters<typeof r.emails.send>[0] = {
-      from: 'RO Unlimited <build@rounlimited.com>',
+      from: getFromHeader(senderEmail),
       to: [to_email],
       subject,
       html,
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
       thread_id,
       lead_id: lead_id || null,
       direction: 'outbound',
-      from_email: 'build@rounlimited.com',
+      from_email: senderEmail,
       to_email,
       subject,
       body_html: html,

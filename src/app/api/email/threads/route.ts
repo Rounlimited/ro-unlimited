@@ -5,14 +5,16 @@ export async function GET(req: NextRequest) {
   const supabase = createAdminClient();
   const { searchParams } = new URL(req.url);
   const folder = searchParams.get('folder') || 'inbox';
+  const account = searchParams.get('account') || null; // null = all accounts
 
-  const { threads, folderCounts } = await buildThreadQuery(supabase, folder);
+  const { threads, folderCounts } = await buildThreadQuery(supabase, folder, account);
   return NextResponse.json({ threads, folderCounts });
 }
 
 async function buildThreadQuery(
   supabase: ReturnType<typeof createAdminClient>,
-  folder: string
+  folder: string,
+  account: string | null
 ) {
   let query = supabase
     .from('email_messages')
@@ -33,26 +35,50 @@ async function buildThreadQuery(
     query = query.eq('is_draft', false).not('folder', 'in', '("trash","spam")');
   }
 
-  const { data: messages, error } = await query;
+  // Account filtering: if an account is specified, only show messages
+  // where from_email OR to_email matches the account
+  // Supabase doesn't support native OR on two columns easily in one query,
+  // so we fetch and filter in JS (messages are already limited by folder)
+  const { data: rawMessages, error } = await query;
   if (error) {
     console.error('Thread query error:', error.message);
     return { threads: [], folderCounts: {} };
   }
 
+  // Apply account filter in JS — folder-aware:
+  // Inbox: only messages where to_email matches (inbound TO this account)
+  // Sent: only messages where from_email matches (sent FROM this account)
+  // Others (starred, trash, drafts, spam): either direction
+  const messages = account
+    ? (rawMessages || []).filter(msg => {
+        if (folder === 'inbox') return msg.to_email === account;
+        if (folder === 'sent') return msg.from_email === account;
+        return msg.from_email === account || msg.to_email === account;
+      })
+    : (rawMessages || []);
+
+  // Folder counts — also filtered per-account when account is set
   const { data: allMessages } = await supabase
     .from('email_messages')
-    .select('folder, is_draft, starred, read, direction');
+    .select('folder, is_draft, starred, read, direction, from_email, to_email');
+
+  const countMessages = account
+    ? (allMessages || []).filter(msg => {
+        // For counts, match inbox-style (to_email) for inbound, sent-style (from_email) for outbound
+        if (msg.direction === 'inbound') return msg.to_email === account;
+        if (msg.direction === 'outbound') return msg.from_email === account;
+        return msg.from_email === account || msg.to_email === account;
+      })
+    : (allMessages || []);
 
   const folderCounts: Record<string, number> = { inbox: 0, sent: 0, starred: 0, drafts: 0, trash: 0, spam: 0 };
-  if (allMessages) {
-    for (const msg of allMessages) {
-      if (msg.is_draft && msg.folder !== 'trash') folderCounts.drafts++;
-      if (msg.starred && msg.folder !== 'trash') folderCounts.starred++;
-      if (msg.folder === 'trash') folderCounts.trash++;
-      if (msg.folder === 'spam') folderCounts.spam++;
-      if (!msg.read && msg.folder === 'inbox' && !msg.is_draft) folderCounts.inbox++;
-      if (msg.direction === 'outbound' && !msg.is_draft && msg.folder !== 'trash') folderCounts.sent++;
-    }
+  for (const msg of countMessages) {
+    if (msg.is_draft && msg.folder !== 'trash') folderCounts.drafts++;
+    if (msg.starred && msg.folder !== 'trash') folderCounts.starred++;
+    if (msg.folder === 'trash') folderCounts.trash++;
+    if (msg.folder === 'spam') folderCounts.spam++;
+    if (!msg.read && msg.folder === 'inbox' && !msg.is_draft) folderCounts.inbox++;
+    if (msg.direction === 'outbound' && !msg.is_draft && msg.folder !== 'trash') folderCounts.sent++;
   }
 
   type ThreadEntry = {
@@ -104,29 +130,48 @@ async function buildThreadQuery(
 export async function POST(req: NextRequest) {
   const supabase = createAdminClient();
   const body = await req.json();
-  const { thread_id } = body;
+  const { thread_id, account } = body;
   if (!thread_id) return NextResponse.json({ error: 'Missing thread_id' }, { status: 400 });
 
-  await supabase.from('email_messages').update({ read: true }).eq('thread_id', thread_id);
+  if (account) {
+    // Account-scoped: only mark this account's messages as read
+    const { data: msgs } = await supabase
+      .from('email_messages')
+      .select('id, from_email, to_email')
+      .eq('thread_id', thread_id);
+    const accountMsgIds = (msgs || [])
+      .filter(m => m.from_email === account || m.to_email === account)
+      .map(m => m.id);
+    if (accountMsgIds.length > 0) {
+      await supabase.from('email_messages').update({ read: true }).in('id', accountMsgIds);
+    }
+  } else {
+    await supabase.from('email_messages').update({ read: true }).eq('thread_id', thread_id);
+  }
 
-  const { data: messages, error } = await supabase
+  const { data: allThreadMessages, error } = await supabase
     .from('email_messages').select('*').eq('thread_id', thread_id).order('created_at', { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const messageIds = (messages || []).map(m => m.id);
+  // Filter to only this account's messages when account is specified
+  const messages = account
+    ? (allThreadMessages || []).filter(m => m.from_email === account || m.to_email === account)
+    : (allThreadMessages || []);
+
+  const messageIds = messages.map(m => m.id);
   const { data: attachments } = await supabase.from('email_attachments').select('*').in('message_id', messageIds);
   const attMap = new Map<string, typeof attachments>();
   for (const att of attachments || []) {
     if (!attMap.has(att.message_id)) attMap.set(att.message_id, []);
     attMap.get(att.message_id)!.push(att);
   }
-  const messagesWithAtts = (messages || []).map(m => ({ ...m, attachments: attMap.get(m.id) || [] }));
+  const messagesWithAtts = messages.map(m => ({ ...m, attachments: attMap.get(m.id) || [] }));
   return NextResponse.json({ messages: messagesWithAtts });
 }
 
 export async function PATCH(req: NextRequest) {
   const supabase = createAdminClient();
-  const { thread_ids, action, value } = await req.json();
+  const { thread_ids, action, value, account } = await req.json();
   if (!thread_ids?.length || !action) return NextResponse.json({ error: 'Missing params' }, { status: 400 });
 
   const updateMap: Record<string, Record<string, unknown>> = {
@@ -135,16 +180,50 @@ export async function PATCH(req: NextRequest) {
     spam: { folder: 'spam' }, mark_read: { read: true }, mark_unread: { read: false },
   };
   const update = action === 'move' && value ? { folder: value } : (updateMap[action] || {});
-  const { error } = await supabase.from('email_messages').update(update).in('thread_id', thread_ids);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (account) {
+    // Account-scoped: only update messages belonging to this account
+    // First get message IDs that match the account within these threads
+    const { data: msgs } = await supabase
+      .from('email_messages')
+      .select('id, from_email, to_email')
+      .in('thread_id', thread_ids);
+    const accountMsgIds = (msgs || [])
+      .filter(m => m.from_email === account || m.to_email === account)
+      .map(m => m.id);
+    if (accountMsgIds.length > 0) {
+      const { error } = await supabase.from('email_messages').update(update).in('id', accountMsgIds);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  } else {
+    // No account filter — update all messages in thread (legacy / "All Accounts" mode)
+    const { error } = await supabase.from('email_messages').update(update).in('thread_id', thread_ids);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json({ updated: thread_ids.length });
 }
 
 export async function DELETE(req: NextRequest) {
   const supabase = createAdminClient();
-  const { thread_ids } = await req.json();
+  const { thread_ids, account } = await req.json();
   if (!thread_ids?.length) return NextResponse.json({ error: 'No thread_ids' }, { status: 400 });
-  const { error } = await supabase.from('email_messages').delete().in('thread_id', thread_ids);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (account) {
+    // Account-scoped: only delete messages belonging to this account
+    const { data: msgs } = await supabase
+      .from('email_messages')
+      .select('id, from_email, to_email')
+      .in('thread_id', thread_ids);
+    const accountMsgIds = (msgs || [])
+      .filter(m => m.from_email === account || m.to_email === account)
+      .map(m => m.id);
+    if (accountMsgIds.length > 0) {
+      const { error } = await supabase.from('email_messages').delete().in('id', accountMsgIds);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  } else {
+    const { error } = await supabase.from('email_messages').delete().in('thread_id', thread_ids);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json({ deleted: thread_ids.length });
 }
