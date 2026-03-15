@@ -18,7 +18,7 @@ export default function SettingsPage() {
   const [currentUser, setCurrentUser] = useState<{ email: string; role: string; email_str: string } | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inviteRole, setInviteRole] = useState('admin');
+  const [inviteRole, setInviteRole] = useState('employee');
   const [inviting, setInviting] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
@@ -262,12 +262,11 @@ export default function SettingsPage() {
             <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
               <p className="text-xs text-white/30 mb-3">Generate an invite link and send it to anyone. They will create their own email and password to access the admin portal.</p>
               <div className="flex gap-3">
-                {isNexa ? (
-                  <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} className="bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none">
-                    <option value="admin">Admin (Client)</option>
-                    <option value="super_admin">Developer (NexaVision)</option>
-                  </select>
-                ) : null}
+                <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} className="bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none">
+                  <option value="employee">Employee (Restricted)</option>
+                  <option value="admin">Admin (Full Access)</option>
+                  {isNexa && <option value="super_admin">Developer (NexaVision)</option>}
+                </select>
                 <button onClick={generateInviteLink} disabled={inviting} className="flex-1 px-4 py-2.5 bg-[#C9A84C] text-black text-xs font-semibold rounded-lg hover:bg-[#d4b55a] disabled:opacity-50 transition-all flex items-center justify-center gap-2">
                   {inviting ? <><Loader2 size={12} className="animate-spin" /> Generating...</> : <><Link2 size={12} /> Generate Invite Link</>}
                 </button>
@@ -295,13 +294,15 @@ export default function SettingsPage() {
             {users.filter(u => u.email !== currentUser?.email).map(user => (
               <div key={user.id} className="px-6 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user.role === 'super_admin' ? 'bg-purple-500/10' : 'bg-white/5'}`}>
-                    {user.role === 'super_admin' ? <ShieldCheck size={14} className="text-purple-400" /> : <User size={14} className="text-white/30" />}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user.role === 'super_admin' ? 'bg-purple-500/10' : user.role === 'employee' ? 'bg-blue-500/10' : 'bg-white/5'}`}>
+                    {user.role === 'super_admin' ? <ShieldCheck size={14} className="text-purple-400" /> : user.role === 'employee' ? <User size={14} className="text-blue-400" /> : <Shield size={14} className="text-[#C9A84C]" />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm">{user.email}</span>
                       {user.role === 'super_admin' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">Developer</span>}
+                      {user.role === 'employee' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Employee</span>}
+                      {user.role === 'admin' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20">Admin</span>}
                     </div>
                     <div className="flex items-center gap-3 text-[10px] text-white/20">
                       <span className="flex items-center gap-1"><Clock size={9} /> Last sign in: {formatDate(user.lastSignIn)}</span>

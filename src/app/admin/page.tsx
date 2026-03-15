@@ -334,54 +334,37 @@ export default function AdminDashboard() {
           </div>
         </Link>
 
-        {/* Row 3: Email Hero Button */}
-        <Link ref={emailBtnRef} href="/admin/inbox"
-          className="relative overflow-hidden rounded-2xl border border-[#D4772C]/25 group active:scale-[0.98] transition-transform z-10"
-          style={{
-            background: 'linear-gradient(135deg, #1a1208 0%, #1f150a 40%, #0f0a04 100%)',
-          }}
-        >
-          {/* Animated glow border */}
-          <div className="absolute inset-0 rounded-2xl opacity-40 group-hover:opacity-70 transition-opacity"
-            style={{ boxShadow: '0 0 20px rgba(212,119,44,0.15), inset 0 1px 0 rgba(212,119,44,0.1)' }} />
-          {/* Content */}
-          <div className="relative px-4 py-4 flex items-center gap-4">
-            {/* Icon container with pulse */}
-            <div className="relative flex-shrink-0">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(145deg, #D4772C, #b8621e)' }}>
-                <Mail size={24} className="text-white" />
+        {/* Row 3: Quick Actions */}
+        <div ref={row3Ref} className="grid grid-cols-4 gap-2 relative z-10">
+          {/* Email — standout blue icon */}
+          <Link href="/admin/inbox"
+            className="relative border border-[#2a6aaa]/30 rounded-xl p-2.5 flex flex-col items-center gap-1.5 group active:scale-95 transition-transform"
+            style={{ background: 'linear-gradient(145deg, #0c1a2e, #0a1220)' }}
+          >
+            <div className="relative">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(145deg, #3b8dd4, #1B6AB5)',
+                  boxShadow: '0 4px 15px rgba(59,141,212,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+                }}>
+                <Mail size={22} className="text-white drop-shadow-sm" />
               </div>
               {unreadCount > 0 && (
                 <>
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold px-1.5 shadow-lg shadow-red-500/30">
+                  <span className="absolute -top-2 -right-2 min-w-[20px] h-[20px] flex items-center justify-center rounded-full text-[10px] font-bold px-1 shadow-lg"
+                    style={{ background: '#ef4444', color: 'white', boxShadow: '0 2px 8px rgba(239,68,68,0.5)' }}>
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] rounded-full bg-red-500 animate-ping opacity-40" />
+                  <span className="absolute -top-2 -right-2 min-w-[20px] h-[20px] rounded-full bg-red-500 animate-ping opacity-30" />
                 </>
               )}
             </div>
-            {/* Text */}
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base font-bold text-white leading-tight">Inbox</h3>
-              <p className="text-[13px] text-white/30 mt-0.5">
-                {unreadCount > 0 ? `${unreadCount} unread message${unreadCount !== 1 ? 's' : ''}` : 'All caught up'}
-              </p>
-            </div>
-            {/* Arrow */}
-            <ArrowUpRight size={20} className="text-[#D4772C] flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </div>
-          {/* Bottom accent line */}
-          <div className="h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #D4772C, transparent)' }} />
-        </Link>
-
-        {/* Row 4: Quick Actions */}
-        <div ref={row3Ref} className="grid grid-cols-4 gap-2 relative z-10">
+            <p className="text-[11px] font-semibold text-center leading-tight" style={{ color: '#5ba3dc' }}>Email</p>
+          </Link>
           {[
             { href: '/admin/site-editor', icon: Pencil, label: 'Editor' },
             { href: '/admin/projects',    icon: Camera, label: 'Portfolio' },
             { href: '/admin/checklist',   icon: FileText, label: 'Pages' },
-            { href: '/admin/settings',    icon: Video, label: 'Media' },
           ].map(({ href, icon: Icon, label }) => (
             <Link key={href} href={href}
               className="bg-[#141414] border border-white/5 rounded-xl p-2.5 flex flex-col items-center gap-1.5 group">
