@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Plus, Search, Users, Phone, Mail, Calendar,
-  X, Loader2, ChevronRight, Trash2,
+  X, Loader2, ChevronRight, Trash2, Send, Copy, Check, Share2, Link2, Clock,
 } from 'lucide-react';
 
 interface Employee {
@@ -91,6 +91,16 @@ export default function EmployeesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // Intake state
+  const [showIntake, setShowIntake] = useState(false);
+  const [intakeName, setIntakeName] = useState('');
+  const [intakePhone, setIntakePhone] = useState('');
+  const [intakeTitle, setIntakeTitle] = useState('');
+  const [intakeLink, setIntakeLink] = useState('');
+  const [intakeCopied, setIntakeCopied] = useState(false);
+  const [creatingIntake, setCreatingIntake] = useState(false);
+  const [intakes, setIntakes] = useState<any[]>([]);
+
   const fetchEmployees = async (status?: string) => {
     setLoading(true);
     try {
@@ -110,6 +120,46 @@ export default function EmployeesPage() {
   useEffect(() => {
     fetchEmployees(activeTab);
   }, [activeTab]);
+
+  // Fetch pending intakes
+  useEffect(() => {
+    fetch('/api/admin/intakes').then(r => r.json()).then(d => { if (Array.isArray(d)) setIntakes(d.filter(i => i.status !== 'approved')); }).catch(() => {});
+  }, []);
+
+  const generateIntakeLink = async () => {
+    setCreatingIntake(true);
+    setIntakeLink('');
+    try {
+      const res = await fetch('/api/admin/intakes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidate_name: intakeName || null,
+          candidate_phone: intakePhone || null,
+          position_title: intakeTitle || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.intake_url) setIntakeLink(data.intake_url);
+    } catch {} finally { setCreatingIntake(false); }
+  };
+
+  const copyIntakeLink = () => {
+    navigator.clipboard.writeText(intakeLink);
+    setIntakeCopied(true);
+    setTimeout(() => setIntakeCopied(false), 2000);
+  };
+
+  const shareIntakeLink = () => {
+    const msg = intakeName
+      ? `Hey ${intakeName.split(' ')[0]}, fill out this form for RO Unlimited:\n${intakeLink}`
+      : `Fill out this onboarding form for RO Unlimited:\n${intakeLink}`;
+    if (navigator.share) {
+      navigator.share({ title: 'RO Unlimited Onboarding', text: msg, url: intakeLink }).catch(() => {});
+    } else {
+      window.open(`sms:${intakePhone ? intakePhone : ''}?body=${encodeURIComponent(msg)}`, '_blank');
+    }
+  };
 
   const deleteEmployee = async (id: string, name: string) => {
     if (!confirm(`Permanently delete ${name}? This cannot be undone.`)) return;
@@ -189,13 +239,16 @@ export default function EmployeesPage() {
               <p className="text-[13px] text-white/30">Manage your team</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#C9A84C] text-black text-[14px] font-semibold rounded-xl hover:bg-[#d4b55a] transition-colors"
-          >
-            <Plus size={16} />
-            Add Employee
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { setShowIntake(true); setIntakeLink(''); setIntakeName(''); setIntakePhone(''); setIntakeTitle(''); }}
+              className="flex items-center gap-2 px-3 py-2.5 bg-[#D4772C]/15 border border-[#D4772C]/30 text-[#D4772C] text-[13px] font-semibold rounded-xl hover:bg-[#D4772C]/25 transition-colors">
+              <Send size={14} /> Intake
+            </button>
+            <button onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 px-3 py-2.5 bg-[#C9A84C] text-black text-[13px] font-semibold rounded-xl hover:bg-[#d4b55a] transition-colors">
+              <Plus size={14} /> Add
+            </button>
+          </div>
         </div>
 
         {/* Status filter tabs */}
@@ -524,6 +577,76 @@ export default function EmployeesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════
+          INTAKE FORM MODAL
+      ══════════════════════════════════════════════ */}
+      {showIntake && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowIntake(false)} />
+          <div className="relative w-full max-w-md bg-[#141414] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+              <div>
+                <h3 className="text-[16px] font-bold text-white">Send Intake Form</h3>
+                <p className="text-[12px] text-white/25 mt-0.5">Generate a link for a new hire to fill out</p>
+              </div>
+              <button onClick={() => setShowIntake(false)} className="text-white/30 hover:text-white"><X size={18} /></button>
+            </div>
+
+            {!intakeLink ? (
+              <div className="px-5 py-4 space-y-3">
+                <p className="text-[13px] text-white/30">All fields are optional — you can send a blank form and let them fill everything in.</p>
+                <div>
+                  <label className="block text-[12px] text-white/30 mb-1">Name (optional)</label>
+                  <input type="text" placeholder="Their name if you know it" value={intakeName} onChange={e => setIntakeName(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#D4772C]/40" />
+                </div>
+                <div>
+                  <label className="block text-[12px] text-white/30 mb-1">Phone (optional)</label>
+                  <input type="tel" placeholder="Their phone number" value={intakePhone} onChange={e => setIntakePhone(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#D4772C]/40" />
+                </div>
+                <div>
+                  <label className="block text-[12px] text-white/30 mb-1">Position (optional)</label>
+                  <input type="text" placeholder="e.g. Foreman, Laborer" value={intakeTitle} onChange={e => setIntakeTitle(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#D4772C]/40" />
+                </div>
+                <div className="pt-2 flex gap-2">
+                  <button onClick={generateIntakeLink} disabled={creatingIntake}
+                    className="flex-1 py-3 bg-[#D4772C] text-white text-[14px] font-bold rounded-xl hover:bg-[#c06a24] disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+                    {creatingIntake ? <><Loader2 size={14} className="animate-spin" /> Generating...</> : <><Link2 size={14} /> Generate Link</>}
+                  </button>
+                  <button onClick={() => { setIntakeName(''); setIntakePhone(''); setIntakeTitle(''); generateIntakeLink(); }} disabled={creatingIntake}
+                    className="py-3 px-4 bg-white/5 border border-white/10 text-white/50 text-[13px] font-medium rounded-xl hover:bg-white/10 disabled:opacity-50 transition-colors"
+                    title="Quick send — no info needed">
+                    <Send size={14} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="px-5 py-4 space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-[12px] text-green-400/60 font-medium">Link ready — expires in 30 days</span>
+                </div>
+                {intakeName && <p className="text-[13px] text-white/40">For: <span className="text-white/70">{intakeName}</span></p>}
+                <div className="flex gap-2">
+                  <input type="text" value={intakeLink} readOnly className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white/40 font-mono truncate" />
+                  <button onClick={copyIntakeLink} className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-[12px] text-white/60 hover:bg-white/10 flex items-center gap-1.5 flex-shrink-0">
+                    {intakeCopied ? <><Check size={12} className="text-green-400" /> Copied</> : <><Copy size={12} /> Copy</>}
+                  </button>
+                </div>
+                <button onClick={shareIntakeLink}
+                  className="w-full py-3 bg-[#D4772C] text-white text-[14px] font-bold rounded-xl hover:bg-[#c06a24] transition-colors flex items-center justify-center gap-2">
+                  <Share2 size={14} /> Send via Text
+                </button>
+                <button onClick={() => { setIntakeLink(''); setShowIntake(false); }}
+                  className="w-full py-2 text-white/25 text-[13px] hover:text-white/40 transition-colors">Done</button>
+              </div>
+            )}
           </div>
         </div>
       )}

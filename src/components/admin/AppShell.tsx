@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { gsap } from 'gsap';
+import NotificationBell from '@/components/admin/NotificationBell';
 import {
   LayoutDashboard, HardHat, MessageCircle, GripHorizontal,
   ClipboardList, Pencil, Camera, BarChart3, Receipt, CalendarDays,
@@ -455,9 +456,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <span className="text-[11px] text-white/20 uppercase tracking-wider border-l border-white/10 pl-2">Admin</span>
         </a>
         <div className="flex items-center gap-2">
-          <button className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
-            <Bell size={14} className="text-white/30" />
-          </button>
+          <NotificationBell />
         </div>
       </header>
 
