@@ -140,3 +140,23 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
+
+// DELETE — permanently remove employee and all related data
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
+  try {
+    const { id } = params;
+    const supabase = createAdminClient();
+
+    // Cascading deletes handle documents, equipment, etc. via FK constraints
+    const { error } = await supabase
+      .from('employee_profiles')
+      .delete()
+      .eq('id', id);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('[employees/[id]] DELETE error:', err);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}

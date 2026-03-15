@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Plus, Search, Users, Phone, Mail, Calendar,
-  X, Loader2, ChevronRight,
+  X, Loader2, ChevronRight, Trash2,
 } from 'lucide-react';
 
 interface Employee {
@@ -110,6 +110,14 @@ export default function EmployeesPage() {
   useEffect(() => {
     fetchEmployees(activeTab);
   }, [activeTab]);
+
+  const deleteEmployee = async (id: string, name: string) => {
+    if (!confirm(`Permanently delete ${name}? This cannot be undone.`)) return;
+    try {
+      await fetch(`/api/admin/employees/${id}`, { method: 'DELETE' });
+      setEmployees(prev => prev.filter(e => e.id !== id));
+    } catch {}
+  };
 
   const filtered = employees.filter((emp) => {
     if (!search) return true;
@@ -302,8 +310,16 @@ export default function EmployeesPage() {
                       </div>
                     </div>
 
-                    {/* Chevron */}
-                    <ChevronRight size={18} className="text-white/10 group-hover:text-white/30 transition-colors flex-shrink-0" />
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteEmployee(emp.id, fullName); }}
+                        className="w-9 h-9 rounded-lg flex items-center justify-center text-white/10 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                      <ChevronRight size={18} className="text-white/10 group-hover:text-white/30 transition-colors" />
+                    </div>
                   </div>
                 </Link>
               );
