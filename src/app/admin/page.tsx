@@ -13,7 +13,9 @@ interface SiteSettings { heroVideoUrl?: string; }
 export default function AdminDashboard() {
   const [settings, setSettings] = useState<SiteSettings>({});
   const [projectCount, setProjectCount] = useState(0);
+  const [employeeCount, setEmployeeCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [recentActivity, setRecentActivity] = useState<{ action: string; details: string; created_at: string }[]>([]);
   const emailBtnRef = useRef<HTMLAnchorElement>(null);
 
   // Splash refs
@@ -43,6 +45,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetch('/api/admin/settings').then(r => r.json()).then(setSettings).catch(() => {});
     fetch('/api/admin/projects').then(r => r.json()).then(d => setProjectCount(Array.isArray(d) ? d.length : 0)).catch(() => {});
+    fetch('/api/admin/employees').then(r => r.json()).then(d => setEmployeeCount(Array.isArray(d) ? d.filter((e: any) => e.status === 'active').length : 0)).catch(() => {});
     // Fetch unread inbox count
     fetch('/api/email/threads?folder=inbox')
       .then(r => r.json())
@@ -313,8 +316,8 @@ export default function AdminDashboard() {
               <p className="text-[13px] font-semibold text-white/50 leading-tight mt-0.5">{projectCount}</p>
             </div>
             <div className="bg-[#141414] border border-white/5 rounded-lg px-3 py-2 text-center min-w-[65px]">
-              <p className="text-[10px] text-white/25 uppercase tracking-wider leading-none">Pages</p>
-              <p className="text-[13px] font-semibold text-white/50 leading-tight mt-0.5">6</p>
+              <p className="text-[10px] text-white/25 uppercase tracking-wider leading-none">Team</p>
+              <p className="text-[13px] font-semibold text-white/50 leading-tight mt-0.5">{employeeCount}</p>
             </div>
           </div>
         </div>
@@ -403,39 +406,39 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* Row 4: Activity */}
+        {/* Row 4: Quick Stats */}
         <div ref={activityRef} className="flex-1 min-h-0 flex flex-col relative z-10">
-          <p className="text-[11px] text-white/20 uppercase tracking-wider mb-2 px-0.5">Recent Activity</p>
+          <p className="text-[11px] text-white/20 uppercase tracking-wider mb-2 px-0.5">System Status</p>
           <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 scrollbar-hide">
-            <div ref={card1Ref} className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5 backdrop-blur-sm">
-              <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 size={11} className="text-green-400" />
+            <div ref={card1Ref} className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2.5 flex items-center gap-2.5 backdrop-blur-sm">
+              <div className="w-7 h-7 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 size={13} className="text-green-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] text-white/60 leading-tight">Hero video uploaded</p>
-                <p className="text-[11px] text-white/15">Sequence 01.mp4</p>
+                <p className="text-[14px] text-white/60 leading-tight">Website Live</p>
+                <p className="text-[12px] text-white/20">rounlimited.com</p>
               </div>
-              <span className="text-[10px] text-white/10 flex-shrink-0">Today</span>
+              <span className="text-[11px] text-green-400/50 flex-shrink-0">Online</span>
             </div>
-            <div ref={card2Ref} className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5 backdrop-blur-sm">
-              <div className="w-6 h-6 rounded-full bg-[#C9A84C]/10 flex items-center justify-center flex-shrink-0">
-                <Clock size={11} className="text-[#C9A84C]" />
+            <div ref={card2Ref} className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2.5 flex items-center gap-2.5 backdrop-blur-sm">
+              <div className="w-7 h-7 rounded-full bg-[#3b8dd4]/10 flex items-center justify-center flex-shrink-0">
+                <Mail size={13} className="text-[#3b8dd4]" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] text-white/60 leading-tight">Admin portal launched</p>
-                <p className="text-[11px] text-white/15">Dashboard, checklist, editor</p>
+                <p className="text-[14px] text-white/60 leading-tight">Email System</p>
+                <p className="text-[12px] text-white/20">{unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}</p>
               </div>
-              <span className="text-[10px] text-white/10 flex-shrink-0">Today</span>
+              <span className="text-[11px] text-[#3b8dd4]/50 flex-shrink-0">Active</span>
             </div>
-            <div ref={card3Ref} className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5 backdrop-blur-sm">
-              <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                <FileText size={11} className="text-blue-400" />
+            <div ref={card3Ref} className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2.5 flex items-center gap-2.5 backdrop-blur-sm">
+              <div className="w-7 h-7 rounded-full bg-[#D4772C]/10 flex items-center justify-center flex-shrink-0">
+                <Users size={13} className="text-[#D4772C]" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] text-white/60 leading-tight">Website deployed</p>
-                <p className="text-[11px] text-white/15">rounlimited.com</p>
+                <p className="text-[14px] text-white/60 leading-tight">Team</p>
+                <p className="text-[12px] text-white/20">{employeeCount} active employee{employeeCount !== 1 ? 's' : ''}</p>
               </div>
-              <span className="text-[10px] text-white/10 flex-shrink-0">Today</span>
+              <span className="text-[11px] text-[#D4772C]/50 flex-shrink-0">{projectCount} projects</span>
             </div>
           </div>
         </div>
