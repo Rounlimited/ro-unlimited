@@ -54,15 +54,7 @@ export default function NotificationBell() {
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  // Outside click handled by fixed backdrop overlay
 
   const markAllRead = async () => {
     await fetch('/api/admin/notifications', {
@@ -100,8 +92,10 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 mt-2 w-80 max-h-[400px] overflow-y-auto bg-[#111] border border-white/10 rounded-2xl shadow-2xl z-[200]"
-          style={{ boxShadow: '0 12px 40px rgba(0,0,0,0.6)' }}>
+        <>
+        <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
+        <div className="fixed right-3 w-80 max-h-[70vh] overflow-y-auto bg-[#111] border border-white/10 rounded-2xl z-[9999]"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 52px)', boxShadow: '0 12px 40px rgba(0,0,0,0.8)' }}>
           <div className="sticky top-0 bg-[#111] px-4 py-3 border-b border-white/5 flex items-center justify-between z-10">
             <p className="text-[14px] font-bold text-white">Notifications</p>
             {notifications.length > 0 && (
@@ -135,7 +129,11 @@ export default function NotificationBell() {
               ))}
             </div>
           )}
+          <a href="/admin/intakes" className="block px-4 py-3 text-center text-[12px] text-[#C9A84C]/60 hover:text-[#C9A84C] border-t border-white/5 transition-colors">
+            View All Intakes
+          </a>
         </div>
+        </>
       )}
     </div>
   );
