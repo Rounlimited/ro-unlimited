@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { gsap } from 'gsap';
 import {
   Video, FileText, ArrowUpRight, CheckCircle2,
-  AlertCircle, Pencil, Camera, Clock
+  AlertCircle, Pencil, Camera, Clock, MessageCircle
 } from 'lucide-react';
 
 interface SiteSettings { heroVideoUrl?: string; }
@@ -274,23 +274,23 @@ export default function AdminDashboard() {
         {/* Row 1: Stats */}
         <div ref={row1Ref} className="flex items-center justify-between relative z-10">
           <div>
-            <h2 className="text-lg font-bold text-white leading-tight">Dashboard</h2>
-            <p className="text-[9px] text-white/25 uppercase tracking-wider">Site overview</p>
+            <h2 className="text-xl font-bold text-white leading-tight">Dashboard</h2>
+            <p className="text-[11px] text-white/25 uppercase tracking-wider">Site overview</p>
           </div>
           <div className="flex gap-1.5">
-            <div className="bg-[#141414] border border-white/5 rounded-lg px-2.5 py-1.5 text-center min-w-[60px]">
-              <p className="text-[8px] text-white/25 uppercase tracking-wider leading-none">Hero</p>
-              <p className={`text-[11px] font-semibold leading-tight mt-0.5 ${hasVideo ? 'text-green-400' : 'text-yellow-400'}`}>
+            <div className="bg-[#141414] border border-white/5 rounded-lg px-3 py-2 text-center min-w-[65px]">
+              <p className="text-[10px] text-white/25 uppercase tracking-wider leading-none">Hero</p>
+              <p className={`text-[13px] font-semibold leading-tight mt-0.5 ${hasVideo ? 'text-green-400' : 'text-yellow-400'}`}>
                 {hasVideo ? 'Active' : 'None'}
               </p>
             </div>
-            <div className="bg-[#141414] border border-white/5 rounded-lg px-2.5 py-1.5 text-center min-w-[60px]">
-              <p className="text-[8px] text-white/25 uppercase tracking-wider leading-none">Projects</p>
-              <p className="text-[11px] font-semibold text-white/50 leading-tight mt-0.5">{projectCount}</p>
+            <div className="bg-[#141414] border border-white/5 rounded-lg px-3 py-2 text-center min-w-[65px]">
+              <p className="text-[10px] text-white/25 uppercase tracking-wider leading-none">Projects</p>
+              <p className="text-[13px] font-semibold text-white/50 leading-tight mt-0.5">{projectCount}</p>
             </div>
-            <div className="bg-[#141414] border border-white/5 rounded-lg px-2.5 py-1.5 text-center min-w-[60px]">
-              <p className="text-[8px] text-white/25 uppercase tracking-wider leading-none">Pages</p>
-              <p className="text-[11px] font-semibold text-white/50 leading-tight mt-0.5">6</p>
+            <div className="bg-[#141414] border border-white/5 rounded-lg px-3 py-2 text-center min-w-[65px]">
+              <p className="text-[10px] text-white/25 uppercase tracking-wider leading-none">Pages</p>
+              <p className="text-[13px] font-semibold text-white/50 leading-tight mt-0.5">6</p>
             </div>
           </div>
         </div>
@@ -300,10 +300,10 @@ export default function AdminDashboard() {
           className="block bg-gradient-to-r from-[#C9A84C]/10 to-transparent border border-[#C9A84C]/20 rounded-xl px-3 py-2.5 group relative z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <AlertCircle size={14} className="text-[#C9A84C] flex-shrink-0" />
+              <AlertCircle size={18} className="text-[#C9A84C] flex-shrink-0" />
               <div>
-                <h3 className="text-sm font-bold text-white leading-tight">Launch Checklist</h3>
-                <p className="text-[10px] text-white/25">Items needed to go live</p>
+                <h3 className="text-base font-bold text-white leading-tight">Launch Checklist</h3>
+                <p className="text-[12px] text-white/25">Items needed to go live</p>
               </div>
             </div>
             <ArrowUpRight size={16} className="text-[#C9A84C] flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -311,56 +311,57 @@ export default function AdminDashboard() {
         </Link>
 
         {/* Row 3: Quick Actions */}
-        <div ref={row3Ref} className="grid grid-cols-4 gap-2 relative z-10">
+        <div ref={row3Ref} className="grid grid-cols-5 gap-2 relative z-10">
           {[
+            { href: '/admin/inbox',       icon: MessageCircle, label: 'Email', highlight: true },
             { href: '/admin/site-editor', icon: Pencil, label: 'Editor' },
             { href: '/admin/projects',    icon: Camera, label: 'Portfolio' },
             { href: '/admin/checklist',   icon: FileText, label: 'Pages' },
             { href: '/admin/settings',    icon: Video, label: 'Media' },
-          ].map(({ href, icon: Icon, label }) => (
+          ].map(({ href, icon: Icon, label, highlight }) => (
             <Link key={href} href={href}
-              className="bg-[#141414] border border-white/5 rounded-xl p-2.5 flex flex-col items-center gap-1.5 group">
-              <div className="w-9 h-9 rounded-xl bg-[#C9A84C]/10 flex items-center justify-center">
-                <Icon size={16} className="text-[#C9A84C]" />
+              className={`border rounded-xl p-2.5 flex flex-col items-center gap-1.5 group ${highlight ? 'bg-[#D4772C]/10 border-[#D4772C]/20' : 'bg-[#141414] border-white/5'}`}>
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${highlight ? 'bg-[#D4772C]/20' : 'bg-[#C9A84C]/10'}`}>
+                <Icon size={20} className={highlight ? 'text-[#D4772C]' : 'text-[#C9A84C]'} />
               </div>
-              <p className="text-[9px] text-white/40 text-center leading-tight">{label}</p>
+              <p className={`text-[11px] text-center leading-tight ${highlight ? 'text-[#D4772C]/70 font-semibold' : 'text-white/40'}`}>{label}</p>
             </Link>
           ))}
         </div>
 
         {/* Row 4: Activity */}
         <div ref={activityRef} className="flex-1 min-h-0 flex flex-col relative z-10">
-          <p className="text-[9px] text-white/20 uppercase tracking-wider mb-2 px-0.5">Recent Activity</p>
+          <p className="text-[11px] text-white/20 uppercase tracking-wider mb-2 px-0.5">Recent Activity</p>
           <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 scrollbar-hide">
             <div ref={card1Ref} className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5 backdrop-blur-sm">
               <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
                 <CheckCircle2 size={11} className="text-green-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-white/60 leading-tight">Hero video uploaded</p>
-                <p className="text-[9px] text-white/15">Sequence 01.mp4</p>
+                <p className="text-[13px] text-white/60 leading-tight">Hero video uploaded</p>
+                <p className="text-[11px] text-white/15">Sequence 01.mp4</p>
               </div>
-              <span className="text-[8px] text-white/10 flex-shrink-0">Today</span>
+              <span className="text-[10px] text-white/10 flex-shrink-0">Today</span>
             </div>
             <div ref={card2Ref} className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5 backdrop-blur-sm">
               <div className="w-6 h-6 rounded-full bg-[#C9A84C]/10 flex items-center justify-center flex-shrink-0">
                 <Clock size={11} className="text-[#C9A84C]" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-white/60 leading-tight">Admin portal launched</p>
-                <p className="text-[9px] text-white/15">Dashboard, checklist, editor</p>
+                <p className="text-[13px] text-white/60 leading-tight">Admin portal launched</p>
+                <p className="text-[11px] text-white/15">Dashboard, checklist, editor</p>
               </div>
-              <span className="text-[8px] text-white/10 flex-shrink-0">Today</span>
+              <span className="text-[10px] text-white/10 flex-shrink-0">Today</span>
             </div>
             <div ref={card3Ref} className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5 backdrop-blur-sm">
               <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
                 <FileText size={11} className="text-blue-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-white/60 leading-tight">Website deployed</p>
-                <p className="text-[9px] text-white/15">rounlimited.com</p>
+                <p className="text-[13px] text-white/60 leading-tight">Website deployed</p>
+                <p className="text-[11px] text-white/15">rounlimited.com</p>
               </div>
-              <span className="text-[8px] text-white/10 flex-shrink-0">Today</span>
+              <span className="text-[10px] text-white/10 flex-shrink-0">Today</span>
             </div>
           </div>
         </div>

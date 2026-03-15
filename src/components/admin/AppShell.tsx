@@ -453,7 +453,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             alt="RO Unlimited"
             className="w-48 h-auto object-contain"
           />
-          <span className="text-[9px] text-white/20 uppercase tracking-wider border-l border-white/10 pl-2">Admin</span>
+          <span className="text-[11px] text-white/20 uppercase tracking-wider border-l border-white/10 pl-2">Admin</span>
         </div>
         <div className="flex items-center gap-2">
           <button className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
@@ -472,12 +472,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           onClick={() => setTabBarVisible(true)}
           aria-label="Show navigation"
           style={{
-            position: 'fixed', bottom: 'max(4px, env(safe-area-inset-bottom, 4px))', left: '50%', transform: 'translateX(-50%)',
-            zIndex: 45, background: 'rgba(201,168,76,0.25)', border: '1px solid rgba(201,168,76,0.3)',
-            borderRadius: 12, padding: '5px 28px', cursor: 'pointer', backdropFilter: 'blur(8px)',
+            position: 'fixed', bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))', left: '50%', transform: 'translateX(-50%)',
+            zIndex: 45, background: 'rgba(201,168,76,0.3)', border: '1px solid rgba(201,168,76,0.4)',
+            borderRadius: 14, padding: '8px 32px', cursor: 'pointer', backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)', transition: 'opacity 0.2s',
           }}>
-          <div style={{ width: 32, height: 3, borderRadius: 2, background: 'rgba(201,168,76,0.7)' }} />
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(201,168,76,0.8)' }} />
         </button>
       )}
 
@@ -501,10 +501,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               const Icon = tab.icon;
               return (
                 <button key={tab.id} onClick={() => handleTab(tab.id)} className="flex flex-col items-center gap-0.5 px-4 py-1 transition-all">
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isActive ? 'bg-[#C9A84C]/15' : ''}`}>
-                    <Icon size={20} className={`transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/25'}`} />
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isActive ? 'bg-[#C9A84C]/15' : ''}`}>
+                    <Icon size={24} className={`transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/25'}`} />
                   </div>
-                  <span className={`text-[9px] font-medium transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/20'}`}>{tab.label}</span>
+                  <span className={`text-[11px] font-medium transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/20'}`}>{tab.label}</span>
                 </button>
               );
             })}
@@ -531,7 +531,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   transition: 'transform 0.3s ease',
                 }} />
               </div>
-              <span className="text-[9px] font-semibold" style={{ color: '#C9A84C' }}>Menu</span>
+              <span className="text-[11px] font-semibold" style={{ color: '#C9A84C' }}>Menu</span>
               <style>{`
                 @keyframes menuPulse {
                   0%, 100% { opacity: 0.5; transform: scale(1); }
@@ -547,10 +547,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               const Icon = tab.icon;
               return (
                 <button key={tab.id} onClick={() => handleTab(tab.id)} className="flex flex-col items-center gap-0.5 px-4 py-1 transition-all">
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${isActive ? 'bg-[#C9A84C]/15' : ''}`}>
-                    <Icon size={20} className={`transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/25'}`} />
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isActive ? 'bg-[#C9A84C]/15' : ''}`}>
+                    <Icon size={24} className={`transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/25'}`} />
                   </div>
-                  <span className={`text-[9px] font-medium transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/20'}`}>{tab.label}</span>
+                  <span className={`text-[11px] font-medium transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/20'}`}>{tab.label}</span>
                 </button>
               );
             })}
@@ -596,31 +596,31 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   onMouseLeave={handleLongPressEnd}
                   className="flex flex-col items-center gap-1.5 group"
                 >
-                  <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-active:scale-90" style={{ background: app.bg }}>
+                  <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-active:scale-90" style={{ background: app.bg }}>
                     <img src="/ro-icon.svg" alt="" aria-hidden="true" className="absolute pointer-events-none select-none" style={{ opacity: 0.08 }} />
-                    <Icon size={24} style={{ color: app.color }} />
+                    <Icon size={26} style={{ color: app.color }} />
                     {app.badge && (
-                      <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-[#C9A84C] text-black text-[7px] font-bold rounded-full">{app.badge}</span>
+                      <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-[#C9A84C] text-black text-[8px] font-bold rounded-full">{app.badge}</span>
                     )}
                   </div>
-                  <span className="text-[10px] text-white/50 text-center leading-tight">{app.label}</span>
+                  <span className="text-[12px] text-white/50 text-center leading-tight">{app.label}</span>
                 </button>
               );
             })}
           </div>
 
-          <p className="text-[10px] text-white/25 uppercase tracking-wider mb-3 px-1">Coming Soon</p>
+          <p className="text-[12px] text-white/25 uppercase tracking-wider mb-3 px-1">Coming Soon</p>
           <div className="grid grid-cols-4 gap-y-5 gap-x-2 relative" style={{ zIndex: 1 }}>
             {filtered.filter(a => !a.active).map(app => {
               const Icon = app.icon;
               return (
                 <button key={app.id} onClick={() => handleAppIcon(app)} className="flex flex-col items-center gap-1.5 opacity-80">
-                  <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.06)' }}>                    <Icon size={24} style={{ color: '#888' }} />
-                    <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-black/60 flex items-center justify-center translate-x-0.5 translate-y-0.5">
-                      <Lock size={7} className="text-white/40" />
+                  <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.06)' }}>                    <Icon size={26} style={{ color: '#888' }} />
+                    <div className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center translate-x-0.5 translate-y-0.5">
+                      <Lock size={8} className="text-white/40" />
                     </div>
                   </div>
-                  <span className="text-[10px] text-white/40 text-center leading-tight">{app.label}</span>
+                  <span className="text-[12px] text-white/40 text-center leading-tight">{app.label}</span>
                 </button>
               );
             })}
