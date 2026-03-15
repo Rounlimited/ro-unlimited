@@ -58,8 +58,6 @@ export default function IntakesPage() {
   const router = useRouter();
   const [intakes, setIntakes] = useState<Intake[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/admin/intakes')
@@ -68,32 +66,6 @@ export default function IntakesPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
-
-  const approveIntake = async (id: string) => {
-    if (!confirm('Approve this intake and create an employee profile?')) return;
-    setActionLoading(id);
-    try {
-      const res = await fetch(`/api/admin/intakes/${id}`, { method: 'PUT' });
-      const data = await res.json();
-      if (data.employee_id) {
-        setIntakes(prev => prev.map(i => i.id === id ? { ...i, status: 'approved' } : i));
-        router.push(`/admin/employees/${data.employee_id}`);
-      }
-    } catch {} finally { setActionLoading(null); }
-  };
-
-  const rejectIntake = async (id: string) => {
-    if (!confirm('Reject this intake application?')) return;
-    setActionLoading(id);
-    try {
-      await fetch(`/api/admin/intakes/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'rejected' }),
-      });
-      setIntakes(prev => prev.map(i => i.id === id ? { ...i, status: 'rejected' } : i));
-    } catch {} finally { setActionLoading(null); }
-  };
 
   const submitted = intakes.filter(i => i.status === 'submitted');
   const inProgress = intakes.filter(i => i.status === 'in_progress' || i.status === 'pending');
@@ -108,16 +80,11 @@ export default function IntakesPage() {
   const renderIntake = (intake: Intake) => {
     const name = getName(intake);
     const s = STATUS_MAP[intake.status] || STATUS_MAP.pending;
-    const expanded = expandedId === intake.id;
-    const p = intake.personal_info || {};
-    const e = intake.employment_info || {};
-    const c = intake.certifications_info || {};
-    const a = intake.agreements_info || {};
 
     return (
       <div key={intake.id} className="bg-[#111] border border-white/5 rounded-xl">
-        <button onClick={() => setExpandedId(expanded ? null : intake.id)}
-          className="w-full px-4 py-3.5 flex items-center gap-3 text-left hover:bg-white/[0.02] transition-colors">
+        <a href={`/admin/intakes/${intake.id}`}
+          className="w-full px-4 py-3.5 flex items-center gap-3 text-left hover:bg-white/[0.02] transition-colors block">
           <div className="w-10 h-10 rounded-full bg-[#D4772C]/10 flex items-center justify-center flex-shrink-0">
             <UserPlus size={18} className="text-[#D4772C]" />
           </div>
@@ -134,91 +101,8 @@ export default function IntakesPage() {
               <span>Step {intake.current_step + 1}/6</span>
             </div>
           </div>
-          <ChevronRight size={16} className={`text-white/15 transition-transform ${expanded ? 'rotate-90' : ''}`} />
-        </button>
-
-        {expanded && (
-          <div className="px-4 pb-4 border-t border-white/5 pt-3 space-y-3">
-            {/* Personal Info */}
-            {p.first_name && (
-              <div className="bg-black/20 rounded-xl p-3">
-                <p className="text-[12px] text-white/25 uppercase tracking-wider mb-2">Personal Info</p>
-                <div className="grid grid-cols-2 gap-2 text-[13px]">
-                  <div><span className="text-white/30">Name:</span> <span className="text-white/70">{p.first_name} {p.last_name}</span></div>
-                  <div><span className="text-white/30">Phone:</span> <span className="text-white/70">{p.phone || intake.candidate_phone || '--'}</span></div>
-                  {p.email && <div><span className="text-white/30">Email:</span> <span className="text-white/70">{p.email}</span></div>}
-                  {p.date_of_birth && <div><span className="text-white/30">DOB:</span> <span className="text-white/70">{p.date_of_birth}</span></div>}
-                  {p.address_city && <div className="col-span-2"><span className="text-white/30">Address:</span> <span className="text-white/70">{p.address_street}, {p.address_city}, {p.address_state} {p.address_zip}</span></div>}
-                  {p.emergency_contact_name && <div className="col-span-2"><span className="text-white/30">Emergency:</span> <span className="text-white/70">{p.emergency_contact_name} ({p.emergency_contact_relationship}) — {p.emergency_contact_phone}</span></div>}
-                </div>
-              </div>
-            )}
-
-            {/* Employment */}
-            {e.years_experience && (
-              <div className="bg-black/20 rounded-xl p-3">
-                <p className="text-[12px] text-white/25 uppercase tracking-wider mb-2">Employment</p>
-                <div className="grid grid-cols-2 gap-2 text-[13px]">
-                  <div><span className="text-white/30">Experience:</span> <span className="text-white/70">{e.years_experience} years</span></div>
-                  {e.trade_primary && <div><span className="text-white/30">Trade:</span> <span className="text-white/70">{e.trade_primary}</span></div>}
-                  {e.previous_employer && <div><span className="text-white/30">Previous:</span> <span className="text-white/70">{e.previous_employer}</span></div>}
-                  {e.available_start_date && <div><span className="text-white/30">Available:</span> <span className="text-white/70">{e.available_start_date}</span></div>}
-                  {e.preferred_pay_rate && <div><span className="text-white/30">Desired pay:</span> <span className="text-white/70">${e.preferred_pay_rate}/hr</span></div>}
-                  <div><span className="text-white/30">Transportation:</span> <span className="text-white/70">{e.has_transportation ? 'Yes' : 'No'}</span></div>
-                </div>
-              </div>
-            )}
-
-            {/* Certifications */}
-            {c.drivers_license_number && (
-              <div className="bg-black/20 rounded-xl p-3">
-                <p className="text-[12px] text-white/25 uppercase tracking-wider mb-2">Certifications</p>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {c.osha_10 && <span className="px-2 py-1 rounded-lg bg-green-500/10 text-green-400 text-[11px]">OSHA 10</span>}
-                  {c.osha_30 && <span className="px-2 py-1 rounded-lg bg-green-500/10 text-green-400 text-[11px]">OSHA 30</span>}
-                  {c.cpr_first_aid && <span className="px-2 py-1 rounded-lg bg-green-500/10 text-green-400 text-[11px]">CPR/First Aid</span>}
-                  {c.forklift_certified && <span className="px-2 py-1 rounded-lg bg-green-500/10 text-green-400 text-[11px]">Forklift</span>}
-                </div>
-                <div className="text-[13px]">
-                  <span className="text-white/30">DL:</span> <span className="text-white/70">{c.drivers_license_number} ({c.drivers_license_state}, {c.drivers_license_class || 'Regular'})</span>
-                  {c.drivers_license_expiry && <span className="text-white/30 ml-2">Exp: {c.drivers_license_expiry}</span>}
-                </div>
-              </div>
-            )}
-
-            {/* Agreements */}
-            {a.electronic_signature && (
-              <div className="bg-black/20 rounded-xl p-3">
-                <p className="text-[12px] text-white/25 uppercase tracking-wider mb-2">Agreements</p>
-                <div className="space-y-1 text-[13px]">
-                  {a.safety_policy_acknowledged && <div className="flex items-center gap-2"><Check size={12} className="text-green-400" /><span className="text-white/50">Safety policy acknowledged</span></div>}
-                  {a.drug_testing_consent && <div className="flex items-center gap-2"><Check size={12} className="text-green-400" /><span className="text-white/50">Drug testing consent</span></div>}
-                  {a.background_check_consent && <div className="flex items-center gap-2"><Check size={12} className="text-green-400" /><span className="text-white/50">Background check consent</span></div>}
-                  {a.at_will_acknowledged && <div className="flex items-center gap-2"><Check size={12} className="text-green-400" /><span className="text-white/50">At-will acknowledged</span></div>}
-                  {a.info_truthful && <div className="flex items-center gap-2"><Check size={12} className="text-green-400" /><span className="text-white/50">Info truthful</span></div>}
-                  <div className="mt-2 pt-2 border-t border-white/5">
-                    <span className="text-white/30">E-Signature:</span> <span className="text-white/70 italic">{a.electronic_signature}</span>
-                    {a.signature_date && <span className="text-white/25 ml-2">— {a.signature_date}</span>}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Action buttons */}
-            {intake.status === 'submitted' && (
-              <div className="flex gap-2 pt-2">
-                <button onClick={() => approveIntake(intake.id)} disabled={actionLoading === intake.id}
-                  className="flex-1 py-3 bg-green-500/15 border border-green-500/25 text-green-400 text-[14px] font-bold rounded-xl hover:bg-green-500/25 disabled:opacity-50 flex items-center justify-center gap-2">
-                  {actionLoading === intake.id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />} Approve & Create Employee
-                </button>
-                <button onClick={() => rejectIntake(intake.id)} disabled={actionLoading === intake.id}
-                  className="py-3 px-5 bg-red-500/10 border border-red-500/20 text-red-400 text-[14px] font-semibold rounded-xl hover:bg-red-500/20 disabled:opacity-50">
-                  <XCircle size={16} />
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+          <ChevronRight size={16} className="text-white/15" />
+        </a>
       </div>
     );
   };
