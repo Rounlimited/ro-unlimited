@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import {
-  User, Phone, Mail, Calendar, MapPin, Heart, Briefcase, Shield,
-  FileText, Wrench, CheckCircle2, XCircle, Loader2, Clock, AlertCircle,
-  UserPlus, Key, Copy, Check, Eye, EyeOff, ChevronDown, ChevronRight,
+  User, Mail, Heart, Briefcase, Shield,
+  FileText, CheckCircle2, XCircle, Loader2,
+  UserPlus, Key, Copy, Check, ChevronDown, ChevronRight,
 } from 'lucide-react';
 
 interface Intake {
@@ -64,11 +64,8 @@ export default function IntakeDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
 
-  // Account creation
-  const [showCreateAccount, setShowCreateAccount] = useState(false);
+  // Invite link
   const [accountEmail, setAccountEmail] = useState('');
-  const [accountPassword, setAccountPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [accountCreated, setAccountCreated] = useState(false);
   const [copied, setCopied] = useState('');
@@ -119,38 +116,10 @@ export default function IntakeDetailPage() {
     } catch {} finally { setActionLoading(false); }
   };
 
-  const createAccount = async () => {
-    if (!accountEmail || !accountPassword) return;
-    setCreatingAccount(true);
-    try {
-      const res = await fetch('/api/admin/create-account', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: accountEmail,
-          password: accountPassword,
-          role: 'employee',
-          intake_id: intake?.id,
-          employee_id: intake?.employee_id,
-        }),
-      });
-      const data = await res.json();
-      if (data.error) alert(data.error);
-      else setAccountCreated(true);
-    } catch { alert('Failed to create account'); }
-    finally { setCreatingAccount(false); }
-  };
-
   const copyText = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopied(key);
     setTimeout(() => setCopied(''), 2000);
-  };
-
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$';
-    let pw = '';
-    for (let i = 0; i < 12; i++) pw += chars.charAt(Math.floor(Math.random() * chars.length));
-    setAccountPassword(pw);
   };
 
   if (loading) return <div className="h-full overflow-y-auto bg-[#0a0a0a] flex items-center justify-center"><Loader2 className="animate-spin text-[#C9A84C]" size={24} /></div>;
@@ -268,51 +237,30 @@ export default function IntakeDetailPage() {
         {/* Documents */}
         <Section title="Uploaded Documents" icon={FileText}>
           <div className="space-y-2">
-            {d.drivers_license_front && (
-              <div className="flex items-center gap-3 bg-black/20 rounded-lg px-4 py-3">
-                <FileText size={16} className="text-[#C9A84C] flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] text-white/70">Driver's License (Front)</p>
-                  <p className="text-[12px] text-white/25 truncate">{d.drivers_license_front}</p>
+            {[
+              { key: 'drivers_license_front', label: "Driver's License (Front)", file: d.drivers_license_front },
+              { key: 'drivers_license_back', label: "Driver's License (Back)", file: d.drivers_license_back },
+              ...(d.certification_photos || []).map((f: string, i: number) => ({ key: `cert_${i}`, label: `Certification #${i + 1}`, file: f })),
+              { key: 'resume', label: 'Resume / CV', file: d.resume },
+              { key: 'vehicle_insurance', label: 'Vehicle Insurance', file: d.vehicle_insurance },
+            ].filter(item => item.file).map(item => {
+              const isImage = /\.(jpg|jpeg|png|gif|webp|heic)$/i.test(item.file);
+              const isPdf = /\.pdf$/i.test(item.file);
+              return (
+                <div key={item.key} className="bg-black/20 rounded-xl overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <FileText size={16} className={item.key === 'resume' ? 'text-blue-400 flex-shrink-0' : 'text-[#C9A84C] flex-shrink-0'} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] text-white/70 font-medium">{item.label}</p>
+                      <p className="text-[12px] text-white/25 truncate">{item.file}</p>
+                    </div>
+                    <span className="text-[11px] px-2 py-0.5 rounded bg-white/5 text-white/20">
+                      {isImage ? 'Image' : isPdf ? 'PDF' : 'File'}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
-            {d.drivers_license_back && (
-              <div className="flex items-center gap-3 bg-black/20 rounded-lg px-4 py-3">
-                <FileText size={16} className="text-[#C9A84C] flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] text-white/70">Driver's License (Back)</p>
-                  <p className="text-[12px] text-white/25 truncate">{d.drivers_license_back}</p>
-                </div>
-              </div>
-            )}
-            {d.certification_photos?.length > 0 && d.certification_photos.map((f: string, i: number) => (
-              <div key={i} className="flex items-center gap-3 bg-black/20 rounded-lg px-4 py-3">
-                <FileText size={16} className="text-[#C9A84C] flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] text-white/70">Certification #{i + 1}</p>
-                  <p className="text-[12px] text-white/25 truncate">{f}</p>
-                </div>
-              </div>
-            ))}
-            {d.resume && (
-              <div className="flex items-center gap-3 bg-black/20 rounded-lg px-4 py-3">
-                <FileText size={16} className="text-blue-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] text-white/70">Resume / CV</p>
-                  <p className="text-[12px] text-white/25 truncate">{d.resume}</p>
-                </div>
-              </div>
-            )}
-            {d.vehicle_insurance && (
-              <div className="flex items-center gap-3 bg-black/20 rounded-lg px-4 py-3">
-                <FileText size={16} className="text-[#C9A84C] flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] text-white/70">Vehicle Insurance</p>
-                  <p className="text-[12px] text-white/25 truncate">{d.vehicle_insurance}</p>
-                </div>
-              </div>
-            )}
+              );
+            })}
             {!d.drivers_license_front && !d.resume && (!d.certification_photos || d.certification_photos.length === 0) && (
               <p className="text-[14px] text-white/20 text-center py-4">No documents uploaded</p>
             )}
@@ -369,61 +317,56 @@ export default function IntakeDetailPage() {
           />
         </Section>
 
-        {/* Create Account */}
+        {/* Send Login Link */}
         {(intake.status === 'approved' || intake.status === 'submitted') && (
-          <Section title="Create Login Account" icon={Key} defaultOpen={false}>
+          <Section title="Employee Login Access" icon={Key} defaultOpen={false}>
             {accountCreated ? (
-              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 text-center">
-                <CheckCircle2 size={24} className="text-green-400 mx-auto mb-2" />
-                <p className="text-[15px] text-green-400 font-semibold">Account Created</p>
-                <p className="text-[13px] text-white/30 mt-1">Send them their login credentials</p>
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center gap-2 bg-black/30 rounded-lg px-3 py-2.5">
-                    <span className="text-[12px] text-white/25 flex-shrink-0 w-16">Email:</span>
-                    <span className="text-[14px] text-white/70 flex-1 truncate">{accountEmail}</span>
-                    <button onClick={() => copyText(accountEmail, 'email')} className="text-white/20 hover:text-white/50 flex-shrink-0">
-                      {copied === 'email' ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-5 text-center">
+                <CheckCircle2 size={28} className="text-green-400 mx-auto mb-2" />
+                <p className="text-[16px] text-green-400 font-bold">Invite Link Generated</p>
+                <p className="text-[13px] text-white/30 mt-1">Send this link — they'll create their own email and password</p>
+                <div className="mt-4">
+                  <div className="flex gap-2 mb-3">
+                    <input type="text" value={accountEmail} readOnly className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-[12px] text-white/40 font-mono truncate" />
+                    <button onClick={() => copyText(accountEmail, 'link')} className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-[12px] text-white/60 hover:bg-white/10 flex items-center gap-1.5 flex-shrink-0">
+                      {copied === 'link' ? <><Check size={12} className="text-green-400" /> Copied</> : <><Copy size={12} /> Copy</>}
                     </button>
                   </div>
-                  <div className="flex items-center gap-2 bg-black/30 rounded-lg px-3 py-2.5">
-                    <span className="text-[12px] text-white/25 flex-shrink-0 w-16">Password:</span>
-                    <span className="text-[14px] text-white/70 flex-1 font-mono">{showPassword ? accountPassword : '••••••••'}</span>
-                    <button onClick={() => setShowPassword(!showPassword)} className="text-white/20 hover:text-white/50 flex-shrink-0">
-                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                    <button onClick={() => copyText(accountPassword, 'pw')} className="text-white/20 hover:text-white/50 flex-shrink-0">
-                      {copied === 'pw' ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
-                    </button>
-                  </div>
+                  <button onClick={() => {
+                    const msg = `You've been invited to the RO Unlimited admin portal. Create your account here:\n${accountEmail}`;
+                    if (navigator.share) {
+                      navigator.share({ title: 'RO Unlimited Login', text: msg, url: accountEmail }).catch(() => {});
+                    } else {
+                      const phone = p.phone || intake?.candidate_phone || '';
+                      window.open(`sms:${phone}?body=${encodeURIComponent(msg)}`, '_blank');
+                    }
+                  }} className="w-full py-3 bg-[#C9A84C] text-black text-[14px] font-bold rounded-xl hover:bg-[#d4b55a] transition-colors flex items-center justify-center gap-2">
+                    <Mail size={16} /> Send via Text
+                  </button>
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                <p className="text-[13px] text-white/30">Create a login so this employee can access the admin portal.</p>
-                <div>
-                  <label className="block text-[12px] text-white/30 mb-1">Login Email</label>
-                  <input type="email" value={accountEmail} onChange={e => setAccountEmail(e.target.value)}
-                    placeholder="their@email.com" className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/40" />
-                </div>
-                <div>
-                  <label className="block text-[12px] text-white/30 mb-1">Password</label>
-                  <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <input type={showPassword ? 'text' : 'password'} value={accountPassword} onChange={e => setAccountPassword(e.target.value)}
-                        placeholder="Set a password" className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/40 pr-10" />
-                      <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50">
-                        {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                    </div>
-                    <button onClick={generatePassword} className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[12px] text-white/40 hover:text-white/60 hover:bg-white/10 flex-shrink-0">
-                      Generate
-                    </button>
-                  </div>
-                </div>
-                <button onClick={createAccount} disabled={creatingAccount || !accountEmail || !accountPassword}
-                  className="w-full py-3 bg-[#C9A84C] text-black text-[14px] font-bold rounded-xl hover:bg-[#d4b55a] disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
-                  {creatingAccount ? <><Loader2 size={16} className="animate-spin" /> Creating...</> : <><Key size={16} /> Create Account</>}
+              <div className="space-y-4">
+                <p className="text-[14px] text-white/40">Generate an invite link for this employee. They'll open it and create their own email and password to sign into the admin portal.</p>
+                <button onClick={async () => {
+                  setCreatingAccount(true);
+                  try {
+                    const res = await fetch('/api/admin/invite-token', {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ role: 'employee', label: name }),
+                    });
+                    const data = await res.json();
+                    if (data.inviteLink) {
+                      setAccountEmail(data.inviteLink);
+                      setAccountCreated(true);
+                    } else { alert(data.error || 'Failed to generate link'); }
+                  } catch { alert('Failed to generate link'); }
+                  finally { setCreatingAccount(false); }
+                }} disabled={creatingAccount}
+                  className="w-full py-3.5 bg-[#C9A84C] text-black text-[15px] font-bold rounded-xl hover:bg-[#d4b55a] disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+                  {creatingAccount ? <><Loader2 size={16} className="animate-spin" /> Generating...</> : <><Key size={16} /> Generate Login Link</>}
                 </button>
+                <p className="text-[12px] text-white/15 text-center">Link expires in 7 days. They create their own password.</p>
               </div>
             )}
           </Section>
