@@ -43,19 +43,11 @@ interface FolderCounts {
   inbox: number; sent: number; starred: number; drafts: number; trash: number; spam: number;
 }
 
-// --- Multi-Account Config (mirrors server-side) ---
+// --- Multi-Account Config (fetched from DB) ---
 interface EmailAccount {
-  email: string; display_name: string; color: string; initials: string;
+  id?: string; email: string; display_name: string; color: string; initials: string;
 }
-const EMAIL_ACCOUNTS: EmailAccount[] = [
-  { email: "build@rounlimited.com", display_name: "RO Unlimited", color: "#D4772C", initials: "RO" },
-  { email: "jr@rounlimited.com", display_name: "JR — RO Unlimited", color: "#1B2A4A", initials: "JR" },
-  { email: "info@rounlimited.com", display_name: "RO Unlimited Info", color: "#2a6a4a", initials: "IN" },
-  { email: "sarah@rounlimited.com", display_name: "Sarah — RO Unlimited", color: "#7C3AED", initials: "SA" },
-  { email: "david@rounlimited.com", display_name: "David — RO Unlimited", color: "#0891B2", initials: "DA" },
-];
 const DEFAULT_FROM = "build@rounlimited.com";
-function getAccount(email: string) { return EMAIL_ACCOUNTS.find(a => a.email === email) || EMAIL_ACCOUNTS[0]; }
 
 // --- Helpers ---
 function timeAgo(d: string) {
@@ -131,9 +123,9 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
 }
 
 // --- From Account Selector ---
-function FromSelector({ value, onChange }: { value: string; onChange: (email: string) => void }) {
+function FromSelector({ value, onChange, accounts }: { value: string; onChange: (email: string) => void; accounts: EmailAccount[] }) {
   const [open, setOpen] = useState(false);
-  const account = getAccount(value);
+  const account = accounts.find(a => a.email === value) || accounts[0] || { email: value, display_name: value, color: "#C9A84C", initials: "?" };
   return (
     <div style={{ position: "relative" }}>
       <button onClick={() => setOpen(!open)} type="button"
@@ -144,7 +136,7 @@ function FromSelector({ value, onChange }: { value: string; onChange: (email: st
       </button>
       {open && (
         <div style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#0d1420", border: "1px solid #1e2d45", borderRadius: 10, zIndex: 200, minWidth: 260, boxShadow: "0 8px 30px rgba(0,0,0,0.6)", overflow: "hidden" }}>
-          {EMAIL_ACCOUNTS.map(a => (
+          {accounts.map(a => (
             <button key={a.email} onClick={() => { onChange(a.email); setOpen(false); }} type="button"
               style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 16px", border: "none", background: a.email === value ? "rgba(212,119,44,0.08)" : "transparent", color: a.email === value ? "#D4772C" : "#d0dae8", fontSize: 12, cursor: "pointer", textAlign: "left", borderBottom: "1px solid #1e2d4533" }}>
               <span style={{ width: 10, height: 10, borderRadius: "50%", background: a.color, flexShrink: 0 }} />
@@ -162,7 +154,10 @@ function FromSelector({ value, onChange }: { value: string; onChange: (email: st
 
 // --- Main Component ---
 export default function AdminInbox() {
+  const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
+  const getAccount = useCallback((email: string) => emailAccounts.find(a => a.email === email) || emailAccounts[0] || { email, display_name: email, color: "#C9A84C", initials: email.slice(0, 2).toUpperCase() }, [emailAccounts]);
   const [activeAccount, setActiveAccount] = useState<string | null>(null); // null = all accounts
+  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
   const [activeFolder, setActiveFolder] = useState<EmailFolder>("inbox");
   const [threads, setThreads] = useState<EmailThread[]>([]);
   const [folderCounts, setFolderCounts] = useState<FolderCounts>({ inbox: 0, sent: 0, starred: 0, drafts: 0, trash: 0, spam: 0 });
@@ -442,6 +437,14 @@ export default function AdminInbox() {
   const someSelected = selectedIds.size > 0;
   const selectedThreadData = threads.find(t => t.thread_id === selectedThread);
 
+  // Fetch email accounts from DB on mount
+  useEffect(() => {
+    fetch("/api/admin/email-accounts")
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data) && data.length) setEmailAccounts(data); })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => { fetchThreads(); setSelectedIds(new Set()); }, [fetchThreads]);
   useEffect(() => { if (contactsOpen) fetchContacts(); }, [contactsOpen, fetchContacts]);
   useEffect(() => {
@@ -516,20 +519,32 @@ export default function AdminInbox() {
             style={{ display: "none", alignSelf: "flex-end", alignItems: "center", justifyContent: "center", width: 32, height: 32, border: "none", background: "transparent", color: "#6a7a8a", cursor: "pointer", borderRadius: 8 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
-          {/* Account Switcher */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 4 }}>
-            <button onClick={() => { setActiveAccount(null); setSelectedThread(null); setSelectedIds(new Set()); }}
-              style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px !important", borderRadius: 10, border: activeAccount === null ? `1px solid ${ORANGE}44` : `1px solid transparent`, background: activeAccount === null ? `rgba(212,119,44,0.08)` : "transparent", color: activeAccount === null ? ORANGE : MUTED, fontSize: 12, fontWeight: activeAccount === null ? 700 : 400, cursor: "pointer", textAlign: "left" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#888", flexShrink: 0 }} />
-              All Accounts
+          {/* Account Switcher — Dropdown */}
+          <div style={{ position: "relative", marginBottom: 4 }}>
+            <button onClick={() => setAccountDropdownOpen(p => !p)}
+              style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 12px !important", borderRadius: 10, border: `1px solid ${BORDER}`, background: BG2, color: activeAccount ? (getAccount(activeAccount)?.color || TEXT) : ORANGE, fontSize: 13, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: activeAccount ? (getAccount(activeAccount)?.color || "#888") : ORANGE, flexShrink: 0 }} />
+              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {activeAccount ? activeAccount.split("@")[0] : "All Accounts"}
+              </span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, transform: accountDropdownOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }}><path d="M6 9l6 6 6-6"/></svg>
             </button>
-            {EMAIL_ACCOUNTS.map(a => (
-              <button key={a.email} onClick={() => { setActiveAccount(a.email); setSelectedThread(null); setSelectedIds(new Set()); }}
-                style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px !important", borderRadius: 10, border: activeAccount === a.email ? `1px solid ${a.color}44` : `1px solid transparent`, background: activeAccount === a.email ? `${a.color}14` : "transparent", color: activeAccount === a.email ? a.color : MUTED, fontSize: 12, fontWeight: activeAccount === a.email ? 700 : 400, cursor: "pointer", textAlign: "left", overflow: "hidden" }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: a.color, flexShrink: 0 }} />
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.email.split("@")[0]}</span>
-              </button>
-            ))}
+            {accountDropdownOpen && (
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 100, marginTop: 4, background: "#0d1420", border: `1px solid ${BORDER}`, borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.6)", maxHeight: 280, overflowY: "auto", padding: 4 }}>
+                <button onClick={() => { setActiveAccount(null); setSelectedThread(null); setSelectedIds(new Set()); setAccountDropdownOpen(false); }}
+                  style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "9px 12px !important", borderRadius: 8, border: "none", background: activeAccount === null ? `rgba(212,119,44,0.1)` : "transparent", color: activeAccount === null ? ORANGE : MUTED, fontSize: 12, fontWeight: activeAccount === null ? 700 : 400, cursor: "pointer", textAlign: "left" }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#888", flexShrink: 0 }} />
+                  All Accounts
+                </button>
+                {emailAccounts.map(a => (
+                  <button key={a.email} onClick={() => { setActiveAccount(a.email); setSelectedThread(null); setSelectedIds(new Set()); setAccountDropdownOpen(false); }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "9px 12px !important", borderRadius: 8, border: "none", background: activeAccount === a.email ? `${a.color}14` : "transparent", color: activeAccount === a.email ? a.color : MUTED, fontSize: 12, fontWeight: activeAccount === a.email ? 700 : 400, cursor: "pointer", textAlign: "left", overflow: "hidden" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: a.color, flexShrink: 0 }} />
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.email.split("@")[0]}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div style={{ height: 1, background: BORDER, margin: "0 4px" }} />
           <button onClick={() => { setComposeFrom(activeAccount || DEFAULT_FROM); setComposeMode("new"); }}
@@ -829,7 +844,7 @@ export default function AdminInbox() {
               {/* From selector */}
               <div style={{ padding: "10px 18px 6px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                 <span style={{ fontSize: 12, color: MUTED, width: 40, flexShrink: 0 }}>From</span>
-                <FromSelector value={composeFrom} onChange={setComposeFrom} />
+                <FromSelector value={composeFrom} onChange={setComposeFrom} accounts={emailAccounts} />
               </div>
               {/* To field */}
               <div style={{ padding: "6px 18px", display: "flex", alignItems: "center", gap: 8, flexShrink: 0, position: "relative" }}>

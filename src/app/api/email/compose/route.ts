@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
-import { logEmail, buildEmailHtml, stripHtml, getFromHeader, DEFAULT_FROM_EMAIL } from '@/lib/email';
+import { logEmail, buildEmailHtml, stripHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL } from '@/lib/email';
 import { randomUUID } from 'crypto';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { to_email, to_name, subject, body: emailBody, body_html: richHtml, lead_id, draft_id, cc_emails, bcc_emails, from_email } = body;
 
+    const accounts = await fetchEmailAccounts();
     if (!to_email || !subject || (!emailBody && !richHtml)) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
     let resendMessageId: string | undefined;
     const r = getResend();
     const params: Parameters<typeof r.emails.send>[0] = {
-      from: getFromHeader(senderEmail),
+      from: getFromHeader(senderEmail, accounts),
       to: [to_email],
       subject,
       html,

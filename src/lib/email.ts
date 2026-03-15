@@ -50,28 +50,55 @@ export interface EmailContact {
 
 // --- Multi-Account Configuration ---
 export interface EmailAccount {
+  id?: string;
   email: string;
   display_name: string;
   color: string;       // avatar/badge color
   initials: string;    // 2-char badge
 }
 
-export const EMAIL_ACCOUNTS: EmailAccount[] = [
+// Fallback accounts used if DB query fails
+const FALLBACK_ACCOUNTS: EmailAccount[] = [
   { email: 'build@rounlimited.com', display_name: 'RO Unlimited', color: '#D4772C', initials: 'RO' },
-  { email: 'jr@rounlimited.com', display_name: 'JR — RO Unlimited', color: '#1B2A4A', initials: 'JR' },
-  { email: 'info@rounlimited.com', display_name: 'RO Unlimited Info', color: '#2a6a4a', initials: 'IN' },
-  { email: 'sarah@rounlimited.com', display_name: 'Sarah — RO Unlimited', color: '#7C3AED', initials: 'SA' },
-  { email: 'david@rounlimited.com', display_name: 'David — RO Unlimited', color: '#0891B2', initials: 'DA' },
 ];
+
+// Cache for server-side account lookups (refreshes every 60s)
+let _cachedAccounts: EmailAccount[] | null = null;
+let _cacheTime = 0;
+
+export async function fetchEmailAccounts(): Promise<EmailAccount[]> {
+  if (_cachedAccounts && Date.now() - _cacheTime < 60000) return _cachedAccounts;
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('email_accounts')
+      .select('*')
+      .eq('active', true)
+      .order('is_default', { ascending: false })
+      .order('email');
+    if (error || !data?.length) return FALLBACK_ACCOUNTS;
+    _cachedAccounts = data;
+    _cacheTime = Date.now();
+    return data;
+  } catch {
+    return FALLBACK_ACCOUNTS;
+  }
+}
+
+// Synchronous fallback for places that can't await — will use cached data if available
+export function getEmailAccountsCached(): EmailAccount[] {
+  return _cachedAccounts || FALLBACK_ACCOUNTS;
+}
 
 export const DEFAULT_FROM_EMAIL = 'build@rounlimited.com';
 
-export function getAccountConfig(email: string): EmailAccount {
-  return EMAIL_ACCOUNTS.find(a => a.email === email) || EMAIL_ACCOUNTS[0];
+export function getAccountConfig(email: string, accounts?: EmailAccount[]): EmailAccount {
+  const list = accounts || _cachedAccounts || FALLBACK_ACCOUNTS;
+  return list.find(a => a.email === email) || list[0];
 }
 
-export function getFromHeader(fromEmail: string): string {
-  const account = getAccountConfig(fromEmail);
+export function getFromHeader(fromEmail: string, accounts?: EmailAccount[]): string {
+  const account = getAccountConfig(fromEmail, accounts);
   return `${account.display_name} <${account.email}>`;
 }
 
