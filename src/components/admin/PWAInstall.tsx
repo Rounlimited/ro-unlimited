@@ -48,7 +48,7 @@ export default function PWAInstall() {
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       // Show install banner if not dismissed recently
       const dismissed = localStorage.getItem('pwa-install-dismissed');
-      if (!dismissed || Date.now() - parseInt(dismissed) > 7 * 24 * 60 * 60 * 1000) {
+      if (!dismissed || Date.now() - parseInt(dismissed) > 5 * 60 * 1000) {
         setShowInstallBanner(true);
       }
     };
