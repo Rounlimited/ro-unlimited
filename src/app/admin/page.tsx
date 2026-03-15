@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { gsap } from 'gsap';
 import {
   Video, FileText, ArrowUpRight, CheckCircle2,
-  AlertCircle, Pencil, Camera, Clock, MessageCircle, Mail
+  AlertCircle, Pencil, Camera, Clock, MessageCircle, Mail, Users
 } from 'lucide-react';
 
 interface SiteSettings { heroVideoUrl?: string; }
@@ -334,37 +334,64 @@ export default function AdminDashboard() {
           </div>
         </Link>
 
-        {/* Row 3: Quick Actions */}
-        <div ref={row3Ref} className="grid grid-cols-4 gap-2 relative z-10">
-          {/* Email — standout blue icon */}
+        {/* Row 3: Hero buttons — Email + Team */}
+        <div ref={row3Ref} className="grid grid-cols-2 gap-2.5 relative z-10">
+          {/* Email — blue */}
           <Link href="/admin/inbox"
-            className="relative border border-[#2a6aaa]/30 rounded-xl p-2.5 flex flex-col items-center gap-1.5 group active:scale-95 transition-transform"
+            className="relative overflow-hidden border border-[#2a6aaa]/30 rounded-2xl p-3.5 flex items-center gap-3 group active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(145deg, #0c1a2e, #0a1220)' }}
           >
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center"
                 style={{
                   background: 'linear-gradient(145deg, #3b8dd4, #1B6AB5)',
-                  boxShadow: '0 4px 15px rgba(59,141,212,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  boxShadow: '0 4px 15px rgba(59,141,212,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
                 }}>
-                <Mail size={22} className="text-white drop-shadow-sm" />
+                <Mail size={22} className="text-white" />
               </div>
               {unreadCount > 0 && (
                 <>
-                  <span className="absolute -top-2 -right-2 min-w-[20px] h-[20px] flex items-center justify-center rounded-full text-[10px] font-bold px-1 shadow-lg"
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold px-1"
                     style={{ background: '#ef4444', color: 'white', boxShadow: '0 2px 8px rgba(239,68,68,0.5)' }}>
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
-                  <span className="absolute -top-2 -right-2 min-w-[20px] h-[20px] rounded-full bg-red-500 animate-ping opacity-30" />
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full bg-red-500 animate-ping opacity-30" />
                 </>
               )}
             </div>
-            <p className="text-[11px] font-semibold text-center leading-tight" style={{ color: '#5ba3dc' }}>Email</p>
+            <div className="min-w-0">
+              <p className="text-[14px] font-bold leading-tight" style={{ color: '#5ba3dc' }}>Email</p>
+              <p className="text-[11px] text-white/25 mt-0.5">{unreadCount > 0 ? `${unreadCount} new` : 'Inbox'}</p>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #3b8dd4, transparent)' }} />
           </Link>
+
+          {/* Team — orange/gold */}
+          <Link href="/admin/employees"
+            className="relative overflow-hidden border border-[#D4772C]/25 rounded-2xl p-3.5 flex items-center gap-3 group active:scale-[0.97] transition-transform"
+            style={{ background: 'linear-gradient(145deg, #1a1208, #140e06)' }}
+          >
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{
+                background: 'linear-gradient(145deg, #D4772C, #b8621e)',
+                boxShadow: '0 4px 15px rgba(212,119,44,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
+              }}>
+              <Users size={22} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[14px] font-bold leading-tight text-[#D4772C]">Team</p>
+              <p className="text-[11px] text-white/25 mt-0.5">Employees</p>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #D4772C, transparent)' }} />
+          </Link>
+        </div>
+
+        {/* Row 4: Quick Actions */}
+        <div className="grid grid-cols-3 gap-2 relative z-10">
           {[
-            { href: '/admin/site-editor', icon: Pencil, label: 'Editor' },
             { href: '/admin/projects',    icon: Camera, label: 'Portfolio' },
-            { href: '/admin/checklist',   icon: FileText, label: 'Pages' },
+            { href: '/admin/site-editor', icon: Pencil, label: 'Editor' },
+            { href: '/admin/settings',    icon: Video, label: 'Settings' },
           ].map(({ href, icon: Icon, label }) => (
             <Link key={href} href={href}
               className="bg-[#141414] border border-white/5 rounded-xl p-2.5 flex flex-col items-center gap-1.5 group">

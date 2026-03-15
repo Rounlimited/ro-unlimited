@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
       hire_date,
       pay_rate,
       pay_type,
+      employment_type,
       email_access,
       notes,
     } = await req.json();
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
         hire_date: hire_date || null,
         pay_rate: pay_rate || null,
         pay_type: pay_type || null,
+        employment_type: employment_type || null,
         notes: notes || null,
         status: 'active',
       })

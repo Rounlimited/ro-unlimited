@@ -23,8 +23,14 @@ interface Employee {
 }
 
 const STATUS_TABS = ['all', 'active', 'suspended', 'terminated'] as const;
-const DEPARTMENTS = ['Office', 'Residential', 'Commercial', 'Grading', 'Maintenance'];
-const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Seasonal', '1099 Contractor'];
+const DEPARTMENTS = ['Office', 'Residential', 'Commercial', 'Grading', 'Maintenance', 'General / Multi-Division'];
+const EMPLOYMENT_TYPES = [
+  { value: 'full-time', label: 'Full-time' },
+  { value: 'part-time', label: 'Part-time' },
+  { value: 'seasonal', label: 'Seasonal' },
+  { value: '1099', label: '1099 Contractor' },
+  { value: 'temp', label: 'Temp' },
+];
 const PAY_TYPES = ['hourly', 'salary'] as const;
 
 function getInitials(first: string, last: string) {
@@ -388,15 +394,29 @@ export default function EmployeesPage() {
               <div>
                 <label className="block text-[13px] text-white/40 mb-1.5">Department</label>
                 <select
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  value={DEPARTMENTS.includes(formData.department) || !formData.department ? formData.department : '__custom__'}
+                  onChange={(e) => {
+                    if (e.target.value === '__custom__') setFormData({ ...formData, department: '' });
+                    else setFormData({ ...formData, department: e.target.value });
+                  }}
                   className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-[14px] text-white focus:outline-none focus:border-[#C9A84C]/40 appearance-none"
                 >
                   <option value="">Select department...</option>
                   {DEPARTMENTS.map((d) => (
                     <option key={d} value={d}>{d}</option>
                   ))}
+                  <option value="__custom__">Custom...</option>
                 </select>
+                {!DEPARTMENTS.includes(formData.department) && formData.department !== '' && (
+                  <input
+                    type="text"
+                    placeholder="Enter custom department..."
+                    value={formData.department}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    className="w-full mt-2 bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/40"
+                    autoFocus
+                  />
+                )}
               </div>
 
               {/* Employment type */}
@@ -409,7 +429,7 @@ export default function EmployeesPage() {
                 >
                   <option value="">Select type...</option>
                   {EMPLOYMENT_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                    <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>
               </div>
