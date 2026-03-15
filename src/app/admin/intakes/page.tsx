@@ -115,7 +115,7 @@ export default function IntakesPage() {
     const a = intake.agreements_info || {};
 
     return (
-      <div key={intake.id} className="bg-[#111] border border-white/5 rounded-xl overflow-hidden">
+      <div key={intake.id} className="bg-[#111] border border-white/5 rounded-xl">
         <button onClick={() => setExpandedId(expanded ? null : intake.id)}
           className="w-full px-4 py-3.5 flex items-center gap-3 text-left hover:bg-white/[0.02] transition-colors">
           <div className="w-10 h-10 rounded-full bg-[#D4772C]/10 flex items-center justify-center flex-shrink-0">
@@ -227,7 +227,7 @@ export default function IntakesPage() {
     <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white">
       <AdminHeader title="Intakes" subtitle="Onboarding Applications" backHref="/admin/employees" />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-24 space-y-6">
         {/* Needs Review */}
         {submitted.length > 0 && (
           <div>

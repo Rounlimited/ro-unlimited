@@ -77,7 +77,7 @@ export default function AdminDashboard() {
 
       // Skip splash if already played this session
       if (alreadyPlayed) {
-        if (splashRef.current) { splashRef.current.style.opacity = '0'; splashRef.current.style.pointerEvents = 'none'; }
+        if (splashRef.current) { splashRef.current.style.display = 'none'; }
         return;
       }
       (window as any).__roAdminSplashPlayed = true;
@@ -127,7 +127,7 @@ export default function AdminDashboard() {
       .to(splashRef.current, {
         opacity: 0, duration: 0.4, ease: 'power2.inOut',
         onComplete: () => {
-          if (splashRef.current) splashRef.current.style.pointerEvents = 'none';
+          if (splashRef.current) splashRef.current.style.display = 'none';
         },
       }, 1.0)
       .to(headerEl,            { opacity: 1, y: 0, duration: 0.35, ease: 'power3.out' }, 1.1)
@@ -155,7 +155,7 @@ export default function AdminDashboard() {
       <div
         ref={splashRef}
         className="fixed inset-0 bg-[#020b12] flex items-center justify-center"
-        style={{ zIndex: 100 }}
+        style={{ zIndex: 50 }}
       >
         {/* Blueprint grid */}
         <div
