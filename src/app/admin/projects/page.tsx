@@ -115,7 +115,7 @@ export default function ProjectsPage() {
     d ? new Date(d).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : null;
 
   return (
-    <div className="min-h-screen" style={{ background: '#050810' }}>
+    <div className="h-full overflow-y-auto" style={{ background: '#050810' }}>
       <AdminHeader title="Job Files" subtitle={`${projects.length} project${projects.length !== 1 ? 's' : ''}`} backHref="/admin" />
 
       {/* Neon grid */}

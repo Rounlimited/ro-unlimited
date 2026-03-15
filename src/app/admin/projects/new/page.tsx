@@ -155,7 +155,7 @@ export default function NewProjectPage() {
   const canAdvanceWhen = true;  // all optional
 
   return (
-    <div className="min-h-screen" style={{ background: '#050810' }}>
+    <div className="h-full overflow-y-auto" style={{ background: '#050810' }}>
       <AdminHeader title="New Job File" subtitle="Create a master record" backHref="/admin/projects" />
 
       {/* Neon grid background */}

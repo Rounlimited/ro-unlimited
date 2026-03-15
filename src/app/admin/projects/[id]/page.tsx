@@ -510,7 +510,7 @@ export default function ProjectDetailPage() {
   const DivIcon = div.icon;
 
   return (
-    <div className="min-h-screen" style={{ background:'#050810' }}>
+    <div className="h-full overflow-y-auto" style={{ background:'#050810' }}>
       {/* Neon grid */}
       <div className="fixed inset-0 pointer-events-none" style={{
         backgroundImage:`linear-gradient(rgba(42,74,138,0.05) 1px, transparent 1px),linear-gradient(90deg, rgba(42,74,138,0.05) 1px, transparent 1px)`,

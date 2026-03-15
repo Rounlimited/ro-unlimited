@@ -86,7 +86,7 @@ export default function TestimonialsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white">
       <AdminHeader title="Client Testimonials" subtitle="Let your clients sell for you" backHref="/admin/checklist" />
 
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-4">

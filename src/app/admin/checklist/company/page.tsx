@@ -228,7 +228,7 @@ export default function CompanyPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white">
       <AdminHeader title="Tell Your Story" subtitle="Company Info & Credentials" backHref="/admin/checklist" />
       <div ref={pageRef} className="max-w-2xl mx-auto px-4 py-8 space-y-4">
 

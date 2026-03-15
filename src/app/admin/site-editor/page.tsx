@@ -239,7 +239,7 @@ export default function SiteEditor() {
   };
 
   return (
-    <div>
+    <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white px-4 py-4">
       <div className="mb-8 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
