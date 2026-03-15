@@ -447,14 +447,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex-shrink-0 h-[env(safe-area-inset-top)] bg-[#0a0a0a] relative z-10" />
 
       <header data-admin-header className="flex-shrink-0 px-4 py-2.5 flex items-center justify-between bg-[#0f0f0f] border-b border-white/5 relative z-10">
-        <div className="flex items-center gap-2">
+        <a href="/admin" className="flex items-center gap-2">
           <img
             src="/ro-unlimited-logo.svg"
             alt="RO Unlimited"
             className="w-48 h-auto object-contain"
           />
           <span className="text-[11px] text-white/20 uppercase tracking-wider border-l border-white/10 pl-2">Admin</span>
-        </div>
+        </a>
         <div className="flex items-center gap-2">
           <button className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
             <Bell size={14} className="text-white/30" />

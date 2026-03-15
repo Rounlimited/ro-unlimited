@@ -575,6 +575,10 @@ export default function AdminInbox() {
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
             {/* Search */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
+              <a href="/admin"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, height: 36, border: "none", background: "rgba(255,255,255,0.05)", color: "#6a7a8a", cursor: "pointer", flexShrink: 0, borderRadius: 10, textDecoration: "none" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+              </a>
               <button className="rou-hamburger" onClick={() => setSidebarOpen(true)}
                 style={{ display: "none", alignItems: "center", justifyContent: "center", width: 36, height: 36, border: "none", background: "transparent", color: "#6a7a8a", cursor: "pointer", flexShrink: 0, borderRadius: 8 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
