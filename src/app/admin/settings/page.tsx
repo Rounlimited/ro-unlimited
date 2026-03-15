@@ -370,7 +370,7 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[12px] text-white/30 mb-1">Display Name</label>
-                    <input type="text" placeholder="e.g. Sarah — RO Unlimited" value={emailDisplayName} onChange={e => setEmailDisplayName(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#3b8dd4]/50" />
+                    <input type="text" placeholder="Display name" value={emailDisplayName} onChange={e => setEmailDisplayName(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#3b8dd4]/50" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
