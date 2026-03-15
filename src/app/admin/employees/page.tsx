@@ -18,8 +18,8 @@ interface Employee {
   status: string;
   phone: string | null;
   hire_date: string | null;
-  photo_url: string | null;
-  employee_email_access: { count: number }[];
+  profile_photo_url: string | null;
+  employment_type: string | null;
 }
 
 const STATUS_TABS = ['all', 'active', 'suspended', 'terminated'] as const;
@@ -244,7 +244,6 @@ export default function EmployeesPage() {
           <div className="space-y-2">
             {filtered.map((emp) => {
               const fullName = `${emp.first_name} ${emp.last_name}`;
-              const emailCount = emp.employee_email_access?.[0]?.count ?? 0;
               return (
                 <Link
                   key={emp.id}
@@ -253,9 +252,9 @@ export default function EmployeesPage() {
                 >
                   <div className="flex items-center gap-4">
                     {/* Avatar */}
-                    {emp.photo_url ? (
+                    {emp.profile_photo_url ? (
                       <img
-                        src={emp.photo_url}
+                        src={emp.profile_photo_url}
                         alt={fullName}
                         className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                       />
@@ -295,10 +294,9 @@ export default function EmployeesPage() {
                             {emp.phone}
                           </span>
                         )}
-                        {emailCount > 0 && (
-                          <span className="flex items-center gap-1.5 text-[13px] text-white/25">
-                            <Mail size={12} />
-                            {emailCount} account{emailCount !== 1 ? 's' : ''}
+                        {emp.employment_type && (
+                          <span className="text-[13px] text-white/25 capitalize">
+                            {emp.employment_type}
                           </span>
                         )}
                       </div>

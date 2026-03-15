@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from('employee_profiles')
-      .select('*, employee_email_access(count)')
-      .order('last_name', { ascending: true });
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (status) {
       query = query.eq('status', status);
