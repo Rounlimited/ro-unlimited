@@ -71,7 +71,17 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
+    const alreadyPlayed = (window as any).__roAdminSplashPlayed;
     const ctx = gsap.context(() => {
+      const headerEl = document.querySelector('[data-admin-header]');
+
+      // Skip splash if already played this session
+      if (alreadyPlayed) {
+        if (splashRef.current) { splashRef.current.style.opacity = '0'; splashRef.current.style.pointerEvents = 'none'; }
+        return;
+      }
+      (window as any).__roAdminSplashPlayed = true;
+
       // ── Initial hide state ──
       gsap.set([row1Ref.current, row2Ref.current, row3Ref.current], { opacity: 0, y: 20 });
       gsap.set(activityRef.current, { opacity: 0, y: 20 });
@@ -84,89 +94,50 @@ export default function AdminDashboard() {
       gsap.set(coordRef.current, { opacity: 0 });
       gsap.set([hLine1Ref.current, hLine2Ref.current], { scaleX: 0, opacity: 0, transformOrigin: 'left center' });
       gsap.set([vLine1Ref.current, vLine2Ref.current], { scaleY: 0, opacity: 0, transformOrigin: 'center top' });
-
-      const headerEl = document.querySelector('[data-admin-header]');
       if (headerEl) gsap.set(headerEl, { opacity: 0, y: -30 });
 
       const tl = gsap.timeline();
 
-      // ── PHASE 1: RO materializes ──
+      // ── PHASE 1: RO materializes + blueprint draws simultaneously ──
       tl.to(splashRoRef.current, {
         opacity: 0.9, scale: 1,
-        duration: 1.0, ease: 'power2.out',
+        duration: 0.5, ease: 'power2.out',
       })
-
-      // ── PHASE 2: Blueprint draws in while RO holds ──
-      // Grid fades in
-      .to(gridRef.current, { opacity: 1, duration: 0.5, ease: 'power1.out' }, '-=0.1')
-
-      // Horizontal laser lines draw across (staggered)
-      .to(hLine1Ref.current, { scaleX: 1, opacity: 1, duration: 0.6, ease: 'power2.inOut' }, '-=0.2')
-      .to(hLine2Ref.current, { scaleX: 1, opacity: 1, duration: 0.6, ease: 'power2.inOut' }, '-=0.4')
-
-      // Vertical laser lines drop down
-      .to(vLine1Ref.current, { scaleY: 1, opacity: 1, duration: 0.5, ease: 'power2.inOut' }, '-=0.4')
-      .to(vLine2Ref.current, { scaleY: 1, opacity: 1, duration: 0.5, ease: 'power2.inOut' }, '-=0.35')
-
-      // Corner crosshairs lock in
-      .to([cornerTLRef.current, cornerBRRef.current], {
-        opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(2)',
-      }, '-=0.2')
-      .to([cornerTRRef.current, cornerBLRef.current], {
-        opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(2)',
-      }, '-=0.15')
-
-      // Scan line sweeps down
+      .to(gridRef.current, { opacity: 1, duration: 0.25, ease: 'power1.out' }, 0.15)
+      .to(hLine1Ref.current, { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' }, 0.2)
+      .to(hLine2Ref.current, { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' }, 0.25)
+      .to(vLine1Ref.current, { scaleY: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' }, 0.25)
+      .to(vLine2Ref.current, { scaleY: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' }, 0.3)
+      .to([cornerTLRef.current, cornerBRRef.current, cornerTRRef.current, cornerBLRef.current], {
+        opacity: 1, scale: 1, duration: 0.2, ease: 'back.out(2)', stagger: 0.04,
+      }, 0.35)
       .to(scanRef.current, {
-        opacity: 0.7, scaleX: 1, duration: 0.4, ease: 'power1.in',
-        onComplete: () => {
-          gsap.to(scanRef.current, { opacity: 0, duration: 0.3, delay: 0.05 });
-        }
-      }, '-=0.1')
+        opacity: 0.7, scaleX: 1, duration: 0.25, ease: 'power1.in',
+        onComplete: () => { gsap.to(scanRef.current, { opacity: 0, duration: 0.15 }); }
+      }, 0.4)
+      .to(coordRef.current, { opacity: 1, duration: 0.1, ease: 'none' }, 0.5)
 
-      // Coordinate text flickers in
-      .to(coordRef.current, {
-        opacity: 1, duration: 0.15, ease: 'none',
-        onComplete: () => {
-          // Typewriter flicker effect
-          let count = 0;
-          const flicker = setInterval(() => {
-            if (coordRef.current) {
-              coordRef.current.style.opacity = count % 2 === 0 ? '0' : '1';
-              count++;
-              if (count > 5) {
-                coordRef.current.style.opacity = '1';
-                clearInterval(flicker);
-              }
-            }
-          }, 80);
-        }
-      }, '-=0.2')
-
-      // RO breathes while blueprint is visible
+      // ── PHASE 2: Quick RO pulse then dissolve ──
       .to(splashRoRef.current, {
-        scale: 1.04, opacity: 1,
-        duration: 1.1, ease: 'sine.inOut',
-        yoyo: true, repeat: 1,
-      }, '-=0.3')
+        scale: 1.03, duration: 0.4, ease: 'sine.inOut',
+        yoyo: true, repeat: 0,
+      }, 0.55)
 
-      // ── PHASE 3: Everything dissolves, dashboard assembles ──
+      // ── PHASE 3: Fast dissolve + dashboard assembles ──
       .to(splashRef.current, {
-        opacity: 0, duration: 0.75, ease: 'power2.inOut',
+        opacity: 0, duration: 0.4, ease: 'power2.inOut',
         onComplete: () => {
           if (splashRef.current) splashRef.current.style.pointerEvents = 'none';
         },
-      }, '+=0.15')
-
-      // Cards slide in from right
-      .to(activityRef.current, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, '-=0.35')
-      .to(card1Ref.current,    { opacity: 1, x: 0, duration: 0.45, ease: 'power3.out' }, '-=0.05')
-      .to(card2Ref.current,    { opacity: 1, x: 0, duration: 0.45, ease: 'power3.out' }, '-=0.22')
-      .to(card3Ref.current,    { opacity: 1, x: 0, duration: 0.45, ease: 'power3.out' }, '-=0.22')
-      .to(row3Ref.current,     { opacity: 1, y: 0, duration: 0.4,  ease: 'power3.out' }, '-=0.18')
-      .to(row2Ref.current,     { opacity: 1, y: 0, duration: 0.4,  ease: 'power3.out' }, '-=0.2')
-      .to(row1Ref.current,     { opacity: 1, y: 0, duration: 0.4,  ease: 'power3.out' }, '-=0.2')
-      .to(headerEl,            { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, '-=0.1');
+      }, 1.0)
+      .to(headerEl,            { opacity: 1, y: 0, duration: 0.35, ease: 'power3.out' }, 1.1)
+      .to(row1Ref.current,     { opacity: 1, y: 0, duration: 0.3,  ease: 'power3.out' }, 1.15)
+      .to(row2Ref.current,     { opacity: 1, y: 0, duration: 0.3,  ease: 'power3.out' }, 1.2)
+      .to(row3Ref.current,     { opacity: 1, y: 0, duration: 0.3,  ease: 'power3.out' }, 1.25)
+      .to(activityRef.current, { opacity: 1, y: 0, duration: 0.3,  ease: 'power3.out' }, 1.3)
+      .to(card1Ref.current,    { opacity: 1, x: 0, duration: 0.3,  ease: 'power3.out' }, 1.3)
+      .to(card2Ref.current,    { opacity: 1, x: 0, duration: 0.3,  ease: 'power3.out' }, 1.35)
+      .to(card3Ref.current,    { opacity: 1, x: 0, duration: 0.3,  ease: 'power3.out' }, 1.4);
     });
 
     return () => ctx.revert();
