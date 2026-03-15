@@ -157,7 +157,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white">
       <AdminHeader title="Settings" subtitle={isNexa ? 'Developer Controls' : 'Site Configuration'} backHref="/admin" />
 
       <div className="max-w-4xl mx-auto px-6 py-8">
@@ -241,84 +241,83 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* ── User Management ──────────────────────────────────────────────── */}
-        {isNexa && (
-          <section className="bg-[#111] border border-white/5 rounded-xl overflow-hidden mb-6">
-            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-[#C9A84C]/10 rounded-lg flex items-center justify-center">
-                  <Shield size={16} className="text-[#C9A84C]" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-semibold">Team & Access</h2>
-                  <p className="text-[11px] text-white/25">Manage who can access this admin portal</p>
-                </div>
+        {/* ── User Management (all admins can invite) ─────────────────────── */}
+        <section className="bg-[#111] border border-white/5 rounded-xl overflow-hidden mb-6">
+          <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-[#C9A84C]/10 rounded-lg flex items-center justify-center">
+                <Shield size={16} className="text-[#C9A84C]" />
               </div>
-              <button onClick={() => setShowInvite(!showInvite)} className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-[#C9A84C] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 border border-[#C9A84C]/20 rounded-lg transition-all">
-                <UserPlus size={12} /> Invite New User
-              </button>
+              <div>
+                <h2 className="text-sm font-semibold">Team & Access</h2>
+                <p className="text-[11px] text-white/25">Manage who can access this admin portal</p>
+              </div>
             </div>
+            <button onClick={() => setShowInvite(!showInvite)} className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-[#C9A84C] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 border border-[#C9A84C]/20 rounded-lg transition-all">
+              <UserPlus size={12} /> Invite New User
+            </button>
+          </div>
 
-            {showInvite && (
-              <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
-                <p className="text-xs text-white/30 mb-3">Choose an access level and generate a link. Send it to anyone — they will create their own account.</p>
-                <div className="flex gap-3">
+          {showInvite && (
+            <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
+              <p className="text-xs text-white/30 mb-3">Generate an invite link and send it to anyone. They will create their own email and password to access the admin portal.</p>
+              <div className="flex gap-3">
+                {isNexa ? (
                   <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} className="bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:border-[#C9A84C]/50 focus:outline-none">
                     <option value="admin">Admin (Client)</option>
                     <option value="super_admin">Developer (NexaVision)</option>
                   </select>
-                  <button onClick={generateInviteLink} disabled={inviting} className="flex-1 px-4 py-2.5 bg-[#C9A84C] text-black text-xs font-semibold rounded-lg hover:bg-[#d4b55a] disabled:opacity-50 transition-all flex items-center justify-center gap-2">
-                    {inviting ? <><Loader2 size={12} className="animate-spin" /> Generating...</> : <><Link2 size={12} /> Generate Invite Link</>}
-                  </button>
-                </div>
+                ) : null}
+                <button onClick={generateInviteLink} disabled={inviting} className="flex-1 px-4 py-2.5 bg-[#C9A84C] text-black text-xs font-semibold rounded-lg hover:bg-[#d4b55a] disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                  {inviting ? <><Loader2 size={12} className="animate-spin" /> Generating...</> : <><Link2 size={12} /> Generate Invite Link</>}
+                </button>
               </div>
-            )}
-
-            <div className="divide-y divide-white/[0.03]">
-              {users.map(user => (
-                <div key={user.id} className="px-6 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user.role === 'super_admin' ? 'bg-purple-500/10' : 'bg-white/5'}`}>
-                      {user.role === 'super_admin' ? <ShieldCheck size={14} className="text-purple-400" /> : <User size={14} className="text-white/30" />}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">{user.email}</span>
-                        {user.role === 'super_admin' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">Developer</span>}
-                        {user.email === currentUser?.email && <span className="text-[9px] text-white/20">(you)</span>}
-                      </div>
-                      <div className="flex items-center gap-3 text-[10px] text-white/20">
-                        <span className="flex items-center gap-1"><Clock size={9} /> Last sign in: {formatDate(user.lastSignIn)}</span>
-                        <span>Joined: {formatDate(user.createdAt)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  {user.email !== currentUser?.email && (
-                    <button onClick={() => deleteUser(user.id, user.email || '')} className="p-1.5 text-white/10 hover:text-red-400 transition-colors">
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              ))}
             </div>
-          </section>
-        )}
+          )}
 
-        {/* Non-NexaVision view */}
-        {!isNexa && (
-          <section className="bg-[#111] border border-white/5 rounded-xl p-6 mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-white/5 rounded-lg flex items-center justify-center">
-                <User size={16} className="text-white/30" />
+          {/* Current user info */}
+          <div className="px-6 py-3 border-b border-white/[0.03] bg-white/[0.01]">
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isNexa ? 'bg-purple-500/10' : 'bg-[#C9A84C]/10'}`}>
+                {isNexa ? <ShieldCheck size={14} className="text-purple-400" /> : <User size={14} className="text-[#C9A84C]" />}
               </div>
               <div>
-                <h2 className="text-sm font-semibold">Your Account</h2>
-                <p className="text-[11px] text-white/25">{currentUser?.email}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">{currentUser?.email}</span>
+                  <span className="text-[9px] text-white/20">(you)</span>
+                  {isNexa && <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">Developer</span>}
+                </div>
               </div>
             </div>
-            <p className="text-xs text-white/30">Contact NexaVision Group to manage team access or change account settings.</p>
-          </section>
-        )}
+          </div>
+
+          <div className="divide-y divide-white/[0.03]">
+            {users.filter(u => u.email !== currentUser?.email).map(user => (
+              <div key={user.id} className="px-6 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user.role === 'super_admin' ? 'bg-purple-500/10' : 'bg-white/5'}`}>
+                    {user.role === 'super_admin' ? <ShieldCheck size={14} className="text-purple-400" /> : <User size={14} className="text-white/30" />}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{user.email}</span>
+                      {user.role === 'super_admin' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">Developer</span>}
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] text-white/20">
+                      <span className="flex items-center gap-1"><Clock size={9} /> Last sign in: {formatDate(user.lastSignIn)}</span>
+                      <span>Joined: {formatDate(user.createdAt)}</span>
+                    </div>
+                  </div>
+                </div>
+                {(isNexa || currentUser?.role === 'admin') && (
+                  <button onClick={() => deleteUser(user.id, user.email || '')} className="p-1.5 text-white/10 hover:text-red-400 transition-colors">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
 
         {isNexa && (
           <div className="text-center py-4">

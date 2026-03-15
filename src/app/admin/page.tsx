@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { gsap } from 'gsap';
 import {
   Video, FileText, ArrowUpRight, CheckCircle2,
-  AlertCircle, Pencil, Camera, Clock, MessageCircle
+  AlertCircle, Pencil, Camera, Clock, MessageCircle, Mail
 } from 'lucide-react';
 
 interface SiteSettings { heroVideoUrl?: string; }
@@ -13,6 +13,8 @@ interface SiteSettings { heroVideoUrl?: string; }
 export default function AdminDashboard() {
   const [settings, setSettings] = useState<SiteSettings>({});
   const [projectCount, setProjectCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const emailBtnRef = useRef<HTMLAnchorElement>(null);
 
   // Splash refs
   const splashRef      = useRef<HTMLDivElement>(null);
@@ -41,6 +43,28 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetch('/api/admin/settings').then(r => r.json()).then(setSettings).catch(() => {});
     fetch('/api/admin/projects').then(r => r.json()).then(d => setProjectCount(Array.isArray(d) ? d.length : 0)).catch(() => {});
+    // Fetch unread inbox count
+    fetch('/api/email/threads?folder=inbox')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.threads) {
+          const unread = data.threads.reduce((sum: number, t: any) => sum + (t.unread_count || 0), 0);
+          setUnreadCount(unread);
+        }
+      })
+      .catch(() => {});
+    // Poll for new mail every 30s
+    const interval = setInterval(() => {
+      fetch('/api/email/threads?folder=inbox')
+        .then(r => r.json())
+        .then(data => {
+          if (data?.threads) {
+            setUnreadCount(data.threads.reduce((sum: number, t: any) => sum + (t.unread_count || 0), 0));
+          }
+        })
+        .catch(() => {});
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -310,21 +334,61 @@ export default function AdminDashboard() {
           </div>
         </Link>
 
-        {/* Row 3: Quick Actions */}
-        <div ref={row3Ref} className="grid grid-cols-5 gap-2 relative z-10">
+        {/* Row 3: Email Hero Button */}
+        <Link ref={emailBtnRef} href="/admin/inbox"
+          className="relative overflow-hidden rounded-2xl border border-[#D4772C]/25 group active:scale-[0.98] transition-transform z-10"
+          style={{
+            background: 'linear-gradient(135deg, #1a1208 0%, #1f150a 40%, #0f0a04 100%)',
+          }}
+        >
+          {/* Animated glow border */}
+          <div className="absolute inset-0 rounded-2xl opacity-40 group-hover:opacity-70 transition-opacity"
+            style={{ boxShadow: '0 0 20px rgba(212,119,44,0.15), inset 0 1px 0 rgba(212,119,44,0.1)' }} />
+          {/* Content */}
+          <div className="relative px-4 py-4 flex items-center gap-4">
+            {/* Icon container with pulse */}
+            <div className="relative flex-shrink-0">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                style={{ background: 'linear-gradient(145deg, #D4772C, #b8621e)' }}>
+                <Mail size={24} className="text-white" />
+              </div>
+              {unreadCount > 0 && (
+                <>
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold px-1.5 shadow-lg shadow-red-500/30">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] rounded-full bg-red-500 animate-ping opacity-40" />
+                </>
+              )}
+            </div>
+            {/* Text */}
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-bold text-white leading-tight">Inbox</h3>
+              <p className="text-[13px] text-white/30 mt-0.5">
+                {unreadCount > 0 ? `${unreadCount} unread message${unreadCount !== 1 ? 's' : ''}` : 'All caught up'}
+              </p>
+            </div>
+            {/* Arrow */}
+            <ArrowUpRight size={20} className="text-[#D4772C] flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </div>
+          {/* Bottom accent line */}
+          <div className="h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #D4772C, transparent)' }} />
+        </Link>
+
+        {/* Row 4: Quick Actions */}
+        <div ref={row3Ref} className="grid grid-cols-4 gap-2 relative z-10">
           {[
-            { href: '/admin/inbox',       icon: MessageCircle, label: 'Email', highlight: true },
             { href: '/admin/site-editor', icon: Pencil, label: 'Editor' },
             { href: '/admin/projects',    icon: Camera, label: 'Portfolio' },
             { href: '/admin/checklist',   icon: FileText, label: 'Pages' },
             { href: '/admin/settings',    icon: Video, label: 'Media' },
-          ].map(({ href, icon: Icon, label, highlight }) => (
+          ].map(({ href, icon: Icon, label }) => (
             <Link key={href} href={href}
-              className={`border rounded-xl p-2.5 flex flex-col items-center gap-1.5 group ${highlight ? 'bg-[#D4772C]/10 border-[#D4772C]/20' : 'bg-[#141414] border-white/5'}`}>
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${highlight ? 'bg-[#D4772C]/20' : 'bg-[#C9A84C]/10'}`}>
-                <Icon size={20} className={highlight ? 'text-[#D4772C]' : 'text-[#C9A84C]'} />
+              className="bg-[#141414] border border-white/5 rounded-xl p-2.5 flex flex-col items-center gap-1.5 group">
+              <div className="w-11 h-11 rounded-xl bg-[#C9A84C]/10 flex items-center justify-center">
+                <Icon size={20} className="text-[#C9A84C]" />
               </div>
-              <p className={`text-[11px] text-center leading-tight ${highlight ? 'text-[#D4772C]/70 font-semibold' : 'text-white/40'}`}>{label}</p>
+              <p className="text-[11px] text-white/40 text-center leading-tight">{label}</p>
             </Link>
           ))}
         </div>
