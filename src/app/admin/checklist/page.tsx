@@ -240,7 +240,7 @@ export default function ChecklistPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white">
       <div className="px-4 pt-4 pb-2 flex items-center gap-3">
         <button onClick={() => router.back()} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/30">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
