@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, X, FileText, UserPlus, Mail, Check, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { Bell, FileText, UserPlus, Mail, Check, ChevronRight } from 'lucide-react';
 
 interface Notification {
   id: string;
@@ -37,7 +38,9 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -54,8 +57,6 @@ export default function NotificationBell() {
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  // Outside click handled by fixed backdrop overlay
-
   const markAllRead = async () => {
     await fetch('/api/admin/notifications', {
       method: 'PATCH',
@@ -67,14 +68,65 @@ export default function NotificationBell() {
   };
 
   const handleClick = (notif: Notification) => {
-    if (notif.url) {
-      window.location.href = notif.url;
-    }
+    if (notif.url) window.location.href = notif.url;
     setOpen(false);
   };
 
+  const dropdown = open && mounted ? createPortal(
+    <>
+      {/* Full-screen backdrop */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'rgba(0,0,0,0.4)' }} onClick={() => setOpen(false)} />
+      {/* Dropdown */}
+      <div style={{
+        position: 'fixed', top: 52, right: 12, width: 320, maxHeight: '70vh',
+        overflowY: 'auto', zIndex: 99999, background: '#111',
+        border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16,
+        boxShadow: '0 16px 48px rgba(0,0,0,0.9)',
+      }}>
+        <div style={{ position: 'sticky', top: 0, background: '#111', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>Notifications</p>
+          {notifications.length > 0 && (
+            <button onClick={markAllRead} style={{ fontSize: 11, color: 'rgba(201,168,76,0.6)', background: 'none', border: 'none', cursor: 'pointer' }}>Mark all read</button>
+          )}
+        </div>
+
+        {notifications.length === 0 ? (
+          <div style={{ padding: '32px 16px', textAlign: 'center' }}>
+            <Bell size={24} style={{ color: 'rgba(255,255,255,0.1)', margin: '0 auto 8px' }} />
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.2)' }}>No notifications yet</p>
+          </div>
+        ) : (
+          <div>
+            {notifications.map(notif => (
+              <button key={notif.id} onClick={() => handleClick(notif)}
+                style={{
+                  width: '100%', textAlign: 'left', padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 12,
+                  background: !notif.read ? 'rgba(201,168,76,0.03)' : 'transparent',
+                  border: 'none', borderBottom: '1px solid rgba(255,255,255,0.02)', cursor: 'pointer', color: 'white',
+                }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                  {getIcon(notif.type)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, lineHeight: 1.3, fontWeight: !notif.read ? 600 : 400, color: !notif.read ? 'white' : 'rgba(255,255,255,0.6)' }}>{notif.title}</p>
+                  {notif.body && <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{notif.body}</p>}
+                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)', marginTop: 4 }}>{timeAgo(notif.created_at)}</p>
+                </div>
+                {notif.url && <ChevronRight size={14} style={{ color: 'rgba(255,255,255,0.1)', flexShrink: 0, marginTop: 4 }} />}
+              </button>
+            ))}
+          </div>
+        )}
+        <a href="/admin/intakes" style={{ display: 'block', padding: '12px 16px', textAlign: 'center', fontSize: 12, color: 'rgba(201,168,76,0.6)', borderTop: '1px solid rgba(255,255,255,0.05)', textDecoration: 'none' }}>
+          View All Intakes
+        </a>
+      </div>
+    </>,
+    document.body
+  ) : null;
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <>
       <button
         onClick={() => { setOpen(!open); if (!open && unreadCount > 0) markAllRead(); }}
         className="relative w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
@@ -90,51 +142,7 @@ export default function NotificationBell() {
           </>
         )}
       </button>
-
-      {open && (
-        <>
-        <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
-        <div className="fixed right-3 w-80 max-h-[70vh] overflow-y-auto bg-[#111] border border-white/10 rounded-2xl z-[9999]"
-          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 52px)', boxShadow: '0 12px 40px rgba(0,0,0,0.8)' }}>
-          <div className="sticky top-0 bg-[#111] px-4 py-3 border-b border-white/5 flex items-center justify-between z-10">
-            <p className="text-[14px] font-bold text-white">Notifications</p>
-            {notifications.length > 0 && (
-              <button onClick={markAllRead} className="text-[11px] text-[#C9A84C]/60 hover:text-[#C9A84C]">Mark all read</button>
-            )}
-          </div>
-
-          {notifications.length === 0 ? (
-            <div className="px-4 py-8 text-center">
-              <Bell size={24} className="text-white/10 mx-auto mb-2" />
-              <p className="text-[13px] text-white/20">No notifications yet</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-white/[0.03]">
-              {notifications.map(notif => (
-                <button
-                  key={notif.id}
-                  onClick={() => handleClick(notif)}
-                  className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-white/[0.03] transition-colors ${!notif.read ? 'bg-[#C9A84C]/[0.03]' : ''}`}
-                >
-                  <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    {getIcon(notif.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-[13px] leading-tight ${!notif.read ? 'text-white font-semibold' : 'text-white/60'}`}>{notif.title}</p>
-                    {notif.body && <p className="text-[12px] text-white/25 mt-0.5 truncate">{notif.body}</p>}
-                    <p className="text-[11px] text-white/15 mt-1">{timeAgo(notif.created_at)}</p>
-                  </div>
-                  {notif.url && <ChevronRight size={14} className="text-white/10 flex-shrink-0 mt-1" />}
-                </button>
-              ))}
-            </div>
-          )}
-          <a href="/admin/intakes" className="block px-4 py-3 text-center text-[12px] text-[#C9A84C]/60 hover:text-[#C9A84C] border-t border-white/5 transition-colors">
-            View All Intakes
-          </a>
-        </div>
-        </>
-      )}
-    </div>
+      {dropdown}
+    </>
   );
 }

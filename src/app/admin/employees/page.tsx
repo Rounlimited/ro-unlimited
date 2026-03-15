@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import {
-  Plus, Search, Users, Phone, Mail, Calendar,
+  Plus, Search, Users, Phone, Mail, Calendar, UserPlus,
   X, Loader2, ChevronRight, Trash2, Send, Copy, Check, Share2, Link2, Clock,
 } from 'lucide-react';
 
@@ -250,6 +250,28 @@ export default function EmployeesPage() {
             </button>
           </div>
         </div>
+
+        {/* Pending intakes banner */}
+        {intakes.filter(i => i.status === 'submitted').length > 0 && (
+          <a href="/admin/intakes"
+            className="flex items-center justify-between mb-4 px-4 py-3 bg-[#D4772C]/10 border border-[#D4772C]/20 rounded-xl hover:bg-[#D4772C]/15 transition-colors">
+            <div className="flex items-center gap-2">
+              <UserPlus size={16} className="text-[#D4772C]" />
+              <span className="text-[14px] font-semibold text-[#D4772C]">{intakes.filter(i => i.status === 'submitted').length} intake{intakes.filter(i => i.status === 'submitted').length !== 1 ? 's' : ''} waiting for review</span>
+            </div>
+            <ChevronRight size={16} className="text-[#D4772C]/50" />
+          </a>
+        )}
+        {intakes.filter(i => i.status === 'submitted').length === 0 && intakes.filter(i => i.status === 'pending' || i.status === 'in_progress').length > 0 && (
+          <a href="/admin/intakes"
+            className="flex items-center justify-between mb-4 px-4 py-3 bg-blue-500/5 border border-blue-500/10 rounded-xl hover:bg-blue-500/10 transition-colors">
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-blue-400/60" />
+              <span className="text-[14px] text-blue-400/60">{intakes.filter(i => i.status === 'pending' || i.status === 'in_progress').length} intake{intakes.filter(i => i.status === 'pending' || i.status === 'in_progress').length !== 1 ? 's' : ''} pending</span>
+            </div>
+            <ChevronRight size={16} className="text-blue-400/30" />
+          </a>
+        )}
 
         {/* Status filter tabs */}
         <div className="flex gap-1 bg-[#111] border border-white/5 rounded-xl p-1 mb-4">
