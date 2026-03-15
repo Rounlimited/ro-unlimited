@@ -299,21 +299,21 @@ function FeatureModal({ appId, onClose }: { appId: string; onClose: () => void }
         {/* Content */}
         <div className="relative px-6 pt-6 pb-5">
           {/* Icon + Title */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="modal-icon w-12 h-12 rounded-2xl flex items-center justify-center" style={{
+          <div className="flex items-center gap-4 mb-5">
+            <div className="modal-icon w-14 h-14 rounded-2xl flex items-center justify-center" style={{
               background: isActive ? 'rgba(201,168,76,0.15)' : 'rgba(255,255,255,0.06)',
             }}>
-              <Icon size={24} style={{ color: isActive ? '#C9A84C' : '#888' }} />
+              <Icon size={28} style={{ color: isActive ? '#C9A84C' : '#888' }} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white leading-tight">{info.title}</h3>
+              <h3 className="text-lg font-bold text-white leading-tight">{info.title}</h3>
               {info.eta && (
-                <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 font-medium">
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20 font-medium mt-1 inline-block">
                   Coming {info.eta}
                 </span>
               )}
               {isActive && (
-                <span className="text-[9px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 font-medium">
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 font-medium mt-1 inline-block">
                   Active
                 </span>
               )}
@@ -321,17 +321,17 @@ function FeatureModal({ appId, onClose }: { appId: string; onClose: () => void }
           </div>
 
           {/* Headline */}
-          <p className="text-sm font-semibold text-white/80 mb-2">{info.headline}</p>
+          <p className="text-base font-semibold text-white/80 mb-2">{info.headline}</p>
 
           {/* Description */}
-          <p className="text-xs text-white/40 leading-relaxed mb-4">{info.description}</p>
+          <p className="text-sm text-white/40 leading-relaxed mb-5">{info.description}</p>
 
           {/* Bullets */}
-          <div className="space-y-2 mb-5">
+          <div className="space-y-3 mb-6">
             {info.bullets.map((b, i) => (
-              <div key={i} className="bullet-item flex items-start gap-2.5">
-                <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: isActive ? '#C9A84C' : '#555' }} />
-                <span className="text-xs text-white/50">{b}</span>
+              <div key={i} className="bullet-item flex items-start gap-3">
+                <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: isActive ? '#C9A84C' : '#555' }} />
+                <span className="text-sm text-white/50 leading-snug">{b}</span>
               </div>
             ))}
           </div>
@@ -340,14 +340,14 @@ function FeatureModal({ appId, onClose }: { appId: string; onClose: () => void }
           {isActive && app.href ? (
             <button
               onClick={() => { handleClose(); }}
-              className="w-full py-2.5 bg-[#C9A84C] text-black font-semibold text-xs rounded-lg hover:bg-[#d4b55a] transition-colors flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[#C9A84C] text-black font-semibold text-sm rounded-lg hover:bg-[#d4b55a] transition-colors flex items-center justify-center gap-2"
             >
-              <Zap size={14} /> Open {info.title}
+              <Zap size={16} /> Open {info.title}
             </button>
           ) : (
-            <div className="w-full py-2.5 bg-white/[0.03] border border-white/5 rounded-lg flex items-center justify-center gap-2">
-              <Sparkles size={14} className="text-[#C9A84C]/50" />
-              <span className="text-xs text-white/30 font-medium">In Development</span>
+            <div className="w-full py-3 bg-white/[0.03] border border-white/5 rounded-lg flex items-center justify-center gap-2">
+              <Sparkles size={16} className="text-[#C9A84C]/50" />
+              <span className="text-sm text-white/30 font-medium">In Development</span>
             </div>
           )}
         </div>
