@@ -228,7 +228,7 @@ const APP_ICONS: AppIcon[] = [
   { id: 'subs', label: 'Subs', icon: Truck, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'materials', label: 'Materials', icon: Building2, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'reports', label: 'Reports', icon: PieChart, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
-  { id: 'support', label: 'Support', icon: LifeBuoy, href: '/admin', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
+  { id: 'support', label: 'Help', icon: LifeBuoy, href: '/admin/help', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
 ];
 
 const TABS = [

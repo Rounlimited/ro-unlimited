@@ -270,7 +270,7 @@ export default function AdminDashboard() {
         />
 
         {/* Row 1: Stats */}
-        <div ref={row1Ref} className="flex items-center justify-between relative z-10">
+        <div ref={row1Ref} data-tour="dashboard-stats" className="flex items-center justify-between relative z-10">
           <div>
             <h2 className="text-xl font-bold text-white leading-tight">Dashboard</h2>
             <p className="text-[11px] text-white/25 uppercase tracking-wider">Site overview</p>
@@ -294,7 +294,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Row 2: Checklist CTA */}
-        <Link ref={row2Ref} href="/admin/checklist"
+        <Link ref={row2Ref} href="/admin/checklist" data-tour="checklist-cta"
           className="block bg-gradient-to-r from-[#C9A84C]/10 to-transparent border border-[#C9A84C]/20 rounded-xl px-3 py-2.5 group relative z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

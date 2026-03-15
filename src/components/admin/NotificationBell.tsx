@@ -128,6 +128,7 @@ export default function NotificationBell() {
   return (
     <>
       <button
+        data-tour="notification-bell"
         onClick={() => { setOpen(!open); if (!open && unreadCount > 0) markAllRead(); }}
         className="relative w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
       >
