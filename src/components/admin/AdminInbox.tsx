@@ -51,6 +51,8 @@ const EMAIL_ACCOUNTS: EmailAccount[] = [
   { email: "build@rounlimited.com", display_name: "RO Unlimited", color: "#D4772C", initials: "RO" },
   { email: "jr@rounlimited.com", display_name: "JR — RO Unlimited", color: "#1B2A4A", initials: "JR" },
   { email: "info@rounlimited.com", display_name: "RO Unlimited Info", color: "#2a6a4a", initials: "IN" },
+  { email: "sarah@rounlimited.com", display_name: "Sarah — RO Unlimited", color: "#7C3AED", initials: "SA" },
+  { email: "david@rounlimited.com", display_name: "David — RO Unlimited", color: "#0891B2", initials: "DA" },
 ];
 const DEFAULT_FROM = "build@rounlimited.com";
 function getAccount(email: string) { return EMAIL_ACCOUNTS.find(a => a.email === email) || EMAIL_ACCOUNTS[0]; }
