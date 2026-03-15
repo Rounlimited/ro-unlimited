@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { createClient } from '@/lib/supabase/client';
-import { UserPlus, Trash2, Copy, Check, Shield, User, Loader2, X, Clock, ShieldCheck, Link2, Share2, Zap } from 'lucide-react';
+import { UserPlus, Trash2, Copy, Check, Shield, User, Loader2, X, Clock, ShieldCheck, Link2, Share2, Zap, Mail, Plus, Edit3 } from 'lucide-react';
 
 interface AdminUser {
   id: string;
@@ -31,6 +31,16 @@ export default function SettingsPage() {
   const [accessLinkExpiry, setAccessLinkExpiry] = useState('');
   const [copiedAccess, setCopiedAccess] = useState(false);
 
+  // Email accounts state
+  const [emailAccounts, setEmailAccounts] = useState<{ id: string; email: string; display_name: string; color: string; initials: string; active: boolean }[]>([]);
+  const [showCreateEmail, setShowCreateEmail] = useState(false);
+  const [emailPrefix, setEmailPrefix] = useState('');
+  const [emailDisplayName, setEmailDisplayName] = useState('');
+  const [emailColor, setEmailColor] = useState('#C9A84C');
+  const [emailInitials, setEmailInitials] = useState('');
+  const [creatingEmail, setCreatingEmail] = useState(false);
+  const [editingEmail, setEditingEmail] = useState<string | null>(null);
+
   const supabase = createClient();
   const isNexa = currentUser?.role === 'super_admin';
 
@@ -52,6 +62,8 @@ export default function SettingsPage() {
       setLoading(false);
     };
     init();
+    // Fetch email accounts
+    fetch('/api/admin/email-accounts').then(r => r.json()).then(d => { if (Array.isArray(d)) setEmailAccounts(d); }).catch(() => {});
   }, [supabase]);
 
   // Generate invite link (for adding new users)
@@ -317,6 +329,127 @@ export default function SettingsPage() {
                 )}
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ── Email Accounts ──────────────────────────────────────────── */}
+        <section className="bg-[#111] border border-white/5 rounded-xl overflow-hidden mb-6">
+          <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-[#3b8dd4]/10 rounded-lg flex items-center justify-center">
+                <Mail size={16} className="text-[#3b8dd4]" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold">Email Accounts</h2>
+                <p className="text-[11px] text-white/25">Manage @rounlimited.com email addresses</p>
+              </div>
+            </div>
+            <button onClick={() => { setShowCreateEmail(true); setEmailPrefix(''); setEmailDisplayName(''); setEmailColor('#C9A84C'); setEmailInitials(''); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-[#3b8dd4] bg-[#3b8dd4]/10 hover:bg-[#3b8dd4]/20 border border-[#3b8dd4]/20 rounded-lg transition-all">
+              <Plus size={12} /> New Account
+            </button>
+          </div>
+
+          {/* Create email form */}
+          {showCreateEmail && (
+            <div className="px-6 py-4 bg-white/[0.02] border-b border-white/5">
+              <p className="text-xs text-white/30 mb-3">Create a new @rounlimited.com email. No DNS changes needed — it works instantly.</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[12px] text-white/30 mb-1">Email Address</label>
+                  <div className="flex items-center gap-0">
+                    <input type="text" placeholder="name" value={emailPrefix} onChange={e => {
+                      const val = e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, '');
+                      setEmailPrefix(val);
+                      if (val && !emailInitials) setEmailInitials(val.slice(0, 2).toUpperCase());
+                      if (val && !emailDisplayName) setEmailDisplayName(val.charAt(0).toUpperCase() + val.slice(1) + ' — RO Unlimited');
+                    }} className="flex-1 bg-black/50 border border-white/10 rounded-l-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#3b8dd4]/50" />
+                    <span className="bg-black/30 border border-l-0 border-white/10 rounded-r-lg px-3 py-2.5 text-sm text-white/30">@rounlimited.com</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[12px] text-white/30 mb-1">Display Name</label>
+                    <input type="text" placeholder="e.g. Sarah — RO Unlimited" value={emailDisplayName} onChange={e => setEmailDisplayName(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#3b8dd4]/50" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[12px] text-white/30 mb-1">Initials</label>
+                      <input type="text" maxLength={2} placeholder="SA" value={emailInitials} onChange={e => setEmailInitials(e.target.value.toUpperCase())} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white text-center focus:outline-none focus:border-[#3b8dd4]/50" />
+                    </div>
+                    <div>
+                      <label className="block text-[12px] text-white/30 mb-1">Color</label>
+                      <div className="flex gap-1.5 flex-wrap py-1">
+                        {['#D4772C', '#1B2A4A', '#2a6a4a', '#7C3AED', '#0891B2', '#C9A84C', '#dc2626', '#4ade80'].map(c => (
+                          <button key={c} onClick={() => setEmailColor(c)} className="w-7 h-7 rounded-full border-2 transition-all" style={{ background: c, borderColor: emailColor === c ? 'white' : 'transparent' }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Preview */}
+                {emailPrefix && (
+                  <div className="flex items-center gap-3 bg-black/30 rounded-lg px-3 py-2.5">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white" style={{ background: emailColor }}>{emailInitials || '??'}</div>
+                    <div>
+                      <p className="text-sm text-white">{emailDisplayName || emailPrefix}</p>
+                      <p className="text-xs text-white/30">{emailPrefix}@rounlimited.com</p>
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button onClick={async () => {
+                    if (!emailPrefix) { setMessage({ type: 'error', text: 'Enter an email address' }); return; }
+                    setCreatingEmail(true);
+                    try {
+                      const res = await fetch('/api/admin/email-accounts', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: `${emailPrefix}@rounlimited.com`, display_name: emailDisplayName || emailPrefix, color: emailColor, initials: emailInitials || emailPrefix.slice(0, 2).toUpperCase() }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error);
+                      setEmailAccounts(prev => [...prev, data]);
+                      setShowCreateEmail(false);
+                      setMessage({ type: 'success', text: `${emailPrefix}@rounlimited.com created! It's ready to use in the inbox.` });
+                    } catch (e: any) {
+                      setMessage({ type: 'error', text: e.message || 'Failed to create email account' });
+                    } finally { setCreatingEmail(false); }
+                  }} disabled={creatingEmail || !emailPrefix}
+                    className="flex-1 py-2.5 bg-[#3b8dd4] text-white text-xs font-semibold rounded-lg hover:bg-[#2a7bc4] disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+                    {creatingEmail ? <><Loader2 size={12} className="animate-spin" /> Creating...</> : <><Plus size={12} /> Create Email Account</>}
+                  </button>
+                  <button onClick={() => setShowCreateEmail(false)} className="px-4 py-2.5 text-white/30 text-xs hover:text-white/60 transition-colors">Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Account list */}
+          <div className="divide-y divide-white/[0.03]">
+            {emailAccounts.map(acct => (
+              <div key={acct.id} className="px-6 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold text-white" style={{ background: acct.color }}>
+                    {acct.initials}
+                  </div>
+                  <div>
+                    <p className="text-sm text-white">{acct.display_name}</p>
+                    <p className="text-[11px] text-white/25">{acct.email}</p>
+                  </div>
+                </div>
+                <button onClick={async () => {
+                  if (!confirm(`Deactivate ${acct.email}? It will be removed from the inbox.`)) return;
+                  await fetch(`/api/admin/email-accounts?id=${acct.id}`, { method: 'DELETE' });
+                  setEmailAccounts(prev => prev.filter(a => a.id !== acct.id));
+                  setMessage({ type: 'success', text: `${acct.email} deactivated` });
+                }} className="p-1.5 text-white/10 hover:text-red-400 transition-colors">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            {emailAccounts.length === 0 && (
+              <div className="px-6 py-6 text-center text-[13px] text-white/20">No email accounts configured</div>
+            )}
           </div>
         </section>
 

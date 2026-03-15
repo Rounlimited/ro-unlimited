@@ -543,6 +543,11 @@ export default function AdminInbox() {
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.email.split("@")[0]}</span>
                   </button>
                 ))}
+                <div style={{ height: 1, background: BORDER, margin: "4px" }} />
+                <a href="/admin/settings" style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "9px 12px !important", borderRadius: 8, border: "none", background: "transparent", color: "#3b8dd4", fontSize: 12, cursor: "pointer", textAlign: "left", textDecoration: "none" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Manage Accounts
+                </a>
               </div>
             )}
           </div>
