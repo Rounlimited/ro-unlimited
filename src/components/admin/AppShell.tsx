@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -194,7 +194,6 @@ const FEATURE_INFO: Record<string, { title: string; headline: string; descriptio
     bullets: ['Purchase order creation', 'Delivery tracking and confirmation', 'Cost per project allocation', 'Supplier price comparison'],
     eta: 'Q4 2026',
   },
-  // Reports
   reports: {
     title: 'Reports & Analytics',
     headline: 'Run Your Business by the Numbers',
@@ -239,6 +238,303 @@ const TABS = [
   { id: 'messages', label: 'Messages', icon: MessageCircle },
 ];
 
+// ============================================================
+// OPERATIONS HINT ANIMATION — Canvas-based boot sequence
+// Shows first 10 sessions, teaches swipe-up gesture
+// ============================================================
+const HINT_MAX_SESSIONS = 10;
+const GOLD = '#C9A84C';
+const GOLD_LIGHT = '#E8D48B';
+const GOLD_DARK = '#A07B2A';
+const TANGERINE = '#D4772C';
+const PARTICLE_COUNT = 60;
+
+function randomBetween(min: number, max: number) {
+  return Math.random() * (max - min) + min;
+}
+
+function easeOutQuart(t: number) {
+  return 1 - Math.pow(1 - t, 4);
+}
+
+interface Particle {
+  x: number; y: number; vx: number; vy: number;
+  size: number; opacity: number; decay: number; color: string;
+  wobble: number; wobbleSpeed: number;
+}
+
+function OperationsHint({ onComplete }: { onComplete: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animRef = useRef<number>(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+
+    const resize = () => {
+      const rect = canvas.parentElement!.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const mainText = 'OPERATIONS';
+    const subText = 'swipe up to access';
+
+    let phase = 'idle';
+    let lineProgress = 0, lineOpacity = 0;
+    let chevronOpacity = 0, chevronY = 0;
+    let textProgress = 0, subTextProgress = 0;
+    let holdTimer = 0, dissolveProgress = 0, shimmerX = -0.2;
+    let particles: Particle[] = [];
+    const startTime = performance.now();
+    let lastTime = startTime;
+
+    const initParticles = (cx: number, cy: number, w: number, h: number) => {
+      const p: Particle[] = [];
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        p.push({
+          x: cx + randomBetween(-w / 2, w / 2),
+          y: cy + randomBetween(-h / 2, h / 2),
+          vx: randomBetween(-1.5, 1.5),
+          vy: randomBetween(0.5, 3),
+          size: randomBetween(1, 3.5),
+          opacity: randomBetween(0.5, 1),
+          decay: randomBetween(0.008, 0.025),
+          color: [GOLD, GOLD_LIGHT, GOLD_DARK, TANGERINE][Math.floor(Math.random() * 4)],
+          wobble: randomBetween(0, Math.PI * 2),
+          wobbleSpeed: randomBetween(0.02, 0.08),
+        });
+      }
+      return p;
+    };
+
+    const animate = (now: number) => {
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+      const elapsed = (now - startTime) / 1000;
+      const w = canvas.width / dpr;
+      const h = canvas.height / dpr;
+      const cx = w / 2;
+      const bottomY = h - 20;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Phase machine
+      if (phase === 'idle' && elapsed > 0.8) phase = 'line';
+      if (phase === 'line') {
+        lineOpacity = Math.min(lineOpacity + dt * 3, 1);
+        lineProgress = Math.min(lineProgress + dt * 1.2, 1);
+        shimmerX += dt * 0.4;
+        if (shimmerX > 1.2) shimmerX = -0.2;
+        if (lineProgress >= 1) phase = 'chevron';
+      }
+      if (phase === 'chevron') {
+        chevronOpacity = Math.min(chevronOpacity + dt * 2.5, 1);
+        shimmerX += dt * 0.4;
+        if (shimmerX > 1.2) shimmerX = -0.2;
+        chevronY = Math.sin((elapsed - 1.5) * 2.2) * 6;
+        if (chevronOpacity >= 1 && elapsed > 2.8) phase = 'text';
+      }
+      if (phase === 'text') {
+        shimmerX += dt * 0.4;
+        if (shimmerX > 1.2) shimmerX = -0.2;
+        textProgress = Math.min(textProgress + dt * 1.8, 1);
+        if (textProgress >= 1) subTextProgress = Math.min(subTextProgress + dt * 2.2, 1);
+        if (subTextProgress >= 1) { phase = 'hold'; holdTimer = 0; }
+      }
+      if (phase === 'hold') {
+        shimmerX += dt * 0.4;
+        if (shimmerX > 1.2) shimmerX = -0.2;
+        holdTimer += dt;
+        chevronY = Math.sin((elapsed - 1.5) * 2.2) * 5;
+        if (holdTimer > 1.8) {
+          particles = initParticles(cx, bottomY - 35, w * 0.55, 60);
+          phase = 'dissolve';
+        }
+      }
+      if (phase === 'dissolve') {
+        dissolveProgress = Math.min(dissolveProgress + dt * 0.8, 1);
+        lineOpacity = Math.max(0, 1 - dissolveProgress * 3);
+        chevronOpacity = Math.max(0, 1 - dissolveProgress * 2.5);
+        textProgress = Math.max(0, 1 - dissolveProgress * 2);
+        subTextProgress = Math.max(0, 1 - dissolveProgress * 2.5);
+        for (const p of particles) {
+          p.x += p.vx + Math.sin(p.wobble) * 0.3;
+          p.y += p.vy;
+          p.wobble += p.wobbleSpeed;
+          p.opacity -= p.decay;
+          p.vy *= 0.995;
+          p.vx *= 0.99;
+        }
+        particles = particles.filter(p => p.opacity > 0);
+        if (dissolveProgress >= 1 && particles.length === 0) {
+          phase = 'done';
+          onComplete();
+          return;
+        }
+      }
+
+      // ============ DRAWING ============
+      const lineWidth = w * 0.55;
+      const lineY = bottomY;
+      const lineX1 = cx - (lineWidth * easeOutQuart(lineProgress)) / 2;
+      const lineX2 = cx + (lineWidth * easeOutQuart(lineProgress)) / 2;
+
+      // --- Gold line ---
+      if (lineOpacity > 0 && lineProgress > 0) {
+        ctx.save();
+        ctx.globalAlpha = lineOpacity;
+        const grad = ctx.createLinearGradient(lineX1, lineY, lineX2, lineY);
+        grad.addColorStop(0, GOLD_DARK + '00');
+        grad.addColorStop(0.15, GOLD);
+        grad.addColorStop(0.5, GOLD_LIGHT);
+        grad.addColorStop(0.85, GOLD);
+        grad.addColorStop(1, GOLD_DARK + '00');
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(lineX1, lineY);
+        ctx.lineTo(lineX2, lineY);
+        ctx.stroke();
+        // Glow
+        ctx.shadowColor = GOLD;
+        ctx.shadowBlur = 12;
+        ctx.strokeStyle = GOLD + '60';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(lineX1, lineY);
+        ctx.lineTo(lineX2, lineY);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        // Shimmer
+        if (shimmerX > 0 && shimmerX < 1) {
+          const shimX = lineX1 + (lineX2 - lineX1) * shimmerX;
+          const shimGrad = ctx.createRadialGradient(shimX, lineY, 0, shimX, lineY, 30);
+          shimGrad.addColorStop(0, GOLD_LIGHT + 'CC');
+          shimGrad.addColorStop(0.5, GOLD + '44');
+          shimGrad.addColorStop(1, GOLD + '00');
+          ctx.fillStyle = shimGrad;
+          ctx.fillRect(shimX - 30, lineY - 4, 60, 8);
+        }
+        ctx.restore();
+      }
+
+      // --- Chevron ---
+      const chevronBaseY = bottomY - 18;
+      if (chevronOpacity > 0) {
+        ctx.save();
+        ctx.globalAlpha = chevronOpacity;
+        const cy2 = chevronBaseY + chevronY;
+        ctx.strokeStyle = GOLD;
+        ctx.lineWidth = 1.8;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.shadowColor = GOLD;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, cy2 + 5);
+        ctx.lineTo(cx, cy2 - 2);
+        ctx.lineTo(cx + 10, cy2 + 5);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+
+      // --- Main text: OPERATIONS ---
+      const textY = bottomY - 40;
+      if (textProgress > 0) {
+        ctx.save();
+        const visibleChars = Math.floor(textProgress * mainText.length);
+        const displayText = mainText.substring(0, visibleChars);
+        ctx.font = "600 18px -apple-system, 'Helvetica Neue', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = GOLD;
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = GOLD_LIGHT;
+        ctx.fillText(displayText, cx, textY);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = GOLD;
+        ctx.fillText(displayText, cx, textY);
+        // Cursor blink during typing
+        if (textProgress < 1 && Math.floor(elapsed * 8) % 2 === 0) {
+          const textW = ctx.measureText(displayText).width;
+          ctx.fillStyle = GOLD_LIGHT;
+          ctx.fillRect(cx + textW / 2 + 6, textY - 8, 1.5, 16);
+        }
+        ctx.restore();
+      }
+
+      // --- Sub text ---
+      const subTextY = bottomY - 25;
+      if (subTextProgress > 0) {
+        ctx.save();
+        const visibleChars = Math.floor(subTextProgress * subText.length);
+        const displayText = subText.substring(0, visibleChars);
+        ctx.font = "300 11px -apple-system, 'Helvetica Neue', sans-serif";
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = GOLD_DARK + 'CC';
+        ctx.fillText(displayText, cx, subTextY);
+        if (subTextProgress < 1 && Math.floor(elapsed * 10) % 2 === 0) {
+          const textW = ctx.measureText(displayText).width;
+          ctx.fillStyle = GOLD_DARK + '88';
+          ctx.fillRect(cx + textW / 2 + 4, subTextY - 5, 1, 10);
+        }
+        ctx.restore();
+      }
+
+      // --- Particles ---
+      for (const p of particles) {
+        if (p.opacity <= 0) continue;
+        ctx.save();
+        ctx.globalAlpha = p.opacity;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+
+      // --- Ambient glow ---
+      if (phase !== 'idle' && phase !== 'done') {
+        const glowOp = phase === 'dissolve' ? Math.max(0, 0.15 - dissolveProgress * 0.15) : 0.15;
+        const ambGrad = ctx.createRadialGradient(cx, h, 0, cx, h, 100);
+        ambGrad.addColorStop(0, GOLD + Math.round(glowOp * 255).toString(16).padStart(2, '0'));
+        ambGrad.addColorStop(1, GOLD + '00');
+        ctx.fillStyle = ambGrad;
+        ctx.fillRect(0, h - 100, w, 100);
+      }
+
+      animRef.current = requestAnimationFrame(animate);
+    };
+
+    animRef.current = requestAnimationFrame(animate);
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      window.removeEventListener('resize', resize);
+    };
+  }, [onComplete]);
+
+  return (
+    <canvas ref={canvasRef} style={{
+      position: 'fixed', bottom: 0, left: 0, width: '100%', height: '120px',
+      pointerEvents: 'none', zIndex: 55,
+    }} />
+  );
+}
+
 // Feature Info Modal Component
 function FeatureModal({ appId, onClose }: { appId: string; onClose: () => void }) {
   const info = FEATURE_INFO[appId];
@@ -248,19 +544,16 @@ function FeatureModal({ appId, onClose }: { appId: string; onClose: () => void }
 
   useEffect(() => {
     if (!modalRef.current || !contentRef.current) return;
-    // Entrance animation
     gsap.fromTo(modalRef.current, { opacity: 0 }, { opacity: 1, duration: 0.2 });
     gsap.fromTo(contentRef.current,
       { y: 60, opacity: 0, scale: 0.95 },
       { y: 0, opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(1.4)' }
     );
-    // Stagger the bullets
     const bullets = contentRef.current.querySelectorAll('.bullet-item');
     gsap.fromTo(bullets,
       { x: -20, opacity: 0 },
       { x: 0, opacity: 1, stagger: 0.08, duration: 0.3, ease: 'power2.out', delay: 0.25 }
     );
-    // Shimmer on the icon
     const iconEl = contentRef.current.querySelector('.modal-icon');
     if (iconEl) {
       gsap.fromTo(iconEl,
@@ -284,21 +577,15 @@ function FeatureModal({ appId, onClose }: { appId: string; onClose: () => void }
     <div ref={modalRef} className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 pb-8" style={{ opacity: 0 }}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={handleClose} />
       <div ref={contentRef} className="relative w-full max-w-sm bg-[#161616] border border-white/10 rounded-2xl overflow-hidden shadow-2xl" style={{ opacity: 0 }}>
-        {/* Glow effect at top */}
         <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none" style={{
           background: isActive
             ? 'radial-gradient(ellipse at 50% -20%, rgba(201,168,76,0.15) 0%, transparent 70%)'
             : 'radial-gradient(ellipse at 50% -20%, rgba(255,255,255,0.06) 0%, transparent 70%)'
         }} />
-
-        {/* Close button */}
         <button onClick={handleClose} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/30 hover:text-white/60 z-10 transition-colors">
           <X size={14} />
         </button>
-
-        {/* Content */}
         <div className="relative px-6 pt-6 pb-5">
-          {/* Icon + Title */}
           <div className="flex items-center gap-4 mb-5">
             <div className="modal-icon w-14 h-14 rounded-2xl flex items-center justify-center" style={{
               background: isActive ? 'rgba(201,168,76,0.15)' : 'rgba(255,255,255,0.06)',
@@ -319,14 +606,8 @@ function FeatureModal({ appId, onClose }: { appId: string; onClose: () => void }
               )}
             </div>
           </div>
-
-          {/* Headline */}
           <p className="text-base font-semibold text-white/80 mb-2">{info.headline}</p>
-
-          {/* Description */}
           <p className="text-sm text-white/40 leading-relaxed mb-5">{info.description}</p>
-
-          {/* Bullets */}
           <div className="space-y-3 mb-6">
             {info.bullets.map((b, i) => (
               <div key={i} className="bullet-item flex items-start gap-3">
@@ -335,13 +616,8 @@ function FeatureModal({ appId, onClose }: { appId: string; onClose: () => void }
               </div>
             ))}
           </div>
-
-          {/* CTA */}
           {isActive && app.href ? (
-            <button
-              onClick={() => { handleClose(); }}
-              className="w-full py-3 bg-[#C9A84C] text-black font-semibold text-sm rounded-lg hover:bg-[#d4b55a] transition-colors flex items-center justify-center gap-2"
-            >
+            <button onClick={() => { handleClose(); }} className="w-full py-3 bg-[#C9A84C] text-black font-semibold text-sm rounded-lg hover:bg-[#d4b55a] transition-colors flex items-center justify-center gap-2">
               <Zap size={16} /> Open {info.title}
             </button>
           ) : (
@@ -361,6 +637,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerSearch, setDrawerSearch] = useState('');
   const [featureModal, setFeatureModal] = useState<string | null>(null);
+  const [showHint, setShowHint] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
@@ -369,6 +646,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const tabBarTimer = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Session counter for OPERATIONS hint — first 10 sessions
+  useEffect(() => {
+    try {
+      const key = 'ro_admin_hint_count';
+      const count = parseInt(localStorage.getItem(key) || '0', 10);
+      if (count < HINT_MAX_SESSIONS) {
+        setShowHint(true);
+        localStorage.setItem(key, String(count + 1));
+      }
+    } catch (e) {
+      // localStorage unavailable, skip hint
+    }
+  }, []);
+
+  const onHintComplete = useCallback(() => {
+    setShowHint(false);
+  }, []);
 
   // Auto-hide tab bar after 4 seconds of being visible
   useEffect(() => {
@@ -383,6 +678,43 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === '/admin' || pathname === '/admin/') setActiveTab('dashboard');
     else setActiveTab('dashboard');
   }, [pathname]);
+
+  // ============================================================
+  // INVISIBLE SWIPE-UP ZONE — Stage 1 trigger
+  // Detects upward swipe from bottom 60px of screen
+  // ============================================================
+  const swipeTouchStartY = useRef(0);
+  const swipeTouchStartTime = useRef(0);
+
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      const screenH = window.innerHeight;
+      const touchY = e.touches[0].clientY;
+      // Only trigger if touch starts in bottom 60px
+      if (touchY > screenH - 60 && !tabBarVisible && !drawerOpen) {
+        swipeTouchStartY.current = touchY;
+        swipeTouchStartTime.current = Date.now();
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (swipeTouchStartY.current === 0) return;
+      const diff = swipeTouchStartY.current - e.changedTouches[0].clientY;
+      const elapsed = Date.now() - swipeTouchStartTime.current;
+      // Upward swipe of at least 30px within 500ms
+      if (diff > 30 && elapsed < 500 && !tabBarVisible && !drawerOpen) {
+        setTabBarVisible(true);
+      }
+      swipeTouchStartY.current = 0;
+    };
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [tabBarVisible, drawerOpen]);
 
   const openDrawer = useCallback(() => {
     setDrawerOpen(true);
@@ -412,7 +744,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const handleAppIcon = (app: AppIcon) => {
     if (!app.active) {
-      // Show feature info modal for coming soon apps
       setFeatureModal(app.id);
       return;
     }
@@ -420,12 +751,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (app.href) router.push(app.href);
   };
 
-  // Long press for active apps to show info
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const handleLongPressStart = (app: AppIcon) => {
-    longPressTimer.current = setTimeout(() => {
-      setFeatureModal(app.id);
-    }, 500);
+    longPressTimer.current = setTimeout(() => { setFeatureModal(app.id); }, 500);
   };
   const handleLongPressEnd = () => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
@@ -436,8 +764,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     : APP_ICONS;
 
   const touchStartY = useRef(0);
-  const handleTouchStart = (e: React.TouchEvent) => { touchStartY.current = e.touches[0].clientY; };
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleDrawerTouchStart = (e: React.TouchEvent) => { touchStartY.current = e.touches[0].clientY; };
+  const handleDrawerTouchEnd = (e: React.TouchEvent) => {
     const diff = e.changedTouches[0].clientY - touchStartY.current;
     if (diff > 80) closeDrawer();
   };
@@ -448,11 +776,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <header data-admin-header className="flex-shrink-0 px-4 py-2.5 flex items-center justify-between bg-[#0f0f0f] border-b border-white/5 relative z-10">
         <a href="/admin" className="flex items-center gap-2">
-          <img
-            src="/ro-unlimited-logo.svg"
-            alt="RO Unlimited"
-            className="w-48 h-auto object-contain"
-          />
+          <img src="/ro-unlimited-logo.svg" alt="RO Unlimited" className="w-48 h-auto object-contain" />
           <span className="text-[11px] text-white/20 uppercase tracking-wider border-l border-white/10 pl-2">Admin</span>
         </a>
         <div className="flex items-center gap-2">
@@ -464,30 +788,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* Pull-up handle — always visible when tab bar is hidden */}
-      {!tabBarVisible && !drawerOpen && (
-        <button
-          onClick={() => setTabBarVisible(true)}
-          aria-label="Show navigation"
-          style={{
-            position: 'fixed', bottom: 'max(28px, calc(12px + env(safe-area-inset-bottom, 28px)))', left: '50%', transform: 'translateX(-50%)',
-            zIndex: 45, background: 'rgba(201,168,76,0.35)', border: '1px solid rgba(201,168,76,0.5)',
-            borderRadius: 16, padding: '10px 36px', cursor: 'pointer', backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)', transition: 'opacity 0.2s',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
-          }}>
-          <div style={{ width: 40, height: 5, borderRadius: 3, background: 'rgba(201,168,76,0.9)' }} />
-        </button>
-      )}
+      {/* OPERATIONS boot hint animation */}
+      {showHint && <OperationsHint onComplete={onHintComplete} />}
 
+      {/* Tab bar — slides in via swipe gesture, auto-hides after 4s */}
       <nav ref={navRef} className="bg-[#0f0f0f] border-t border-white/5 px-2 pb-2"
         style={{
           paddingBottom: "max(8px, env(safe-area-inset-bottom, 8px))",
           position: tabBarVisible ? 'relative' : 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 40,
+          bottom: 0, left: 0, right: 0, zIndex: 40,
           transform: tabBarVisible ? "translateY(0)" : "translateY(110%)",
           transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1)",
           flexShrink: 0,
@@ -508,7 +817,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               );
             })}
           </div>
-          {/* Center - menu button dead center */}
+          {/* Center - menu button */}
           <div className="flex-shrink-0 flex items-center justify-center px-2">
             <button onClick={() => handleTab('menu')} className="flex flex-col items-center gap-0.5 py-1 relative">
               <span className="absolute rounded-full pointer-events-none" style={{
@@ -561,8 +870,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div ref={backdropRef} className="fixed inset-0 bg-black/60 z-40 opacity-0 pointer-events-none" onClick={closeDrawer} />
 
       {/* App Drawer */}
-      <div ref={drawerRef} className="fixed left-0 right-0 bottom-0 z-50 bg-[#141414] rounded-t-3xl border-t border-white/10 shadow-2xl" style={{ transform: 'translateY(100%)', maxHeight: '85vh' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        {/* RO watermark locked to drawer, icons scroll over it */}
+      <div ref={drawerRef} className="fixed left-0 right-0 bottom-0 z-50 bg-[#141414] rounded-t-3xl border-t border-white/10 shadow-2xl" style={{ transform: 'translateY(100%)', maxHeight: '85vh' }} onTouchStart={handleDrawerTouchStart} onTouchEnd={handleDrawerTouchEnd}>
         <img src="/ro-icon.svg" alt="" aria-hidden="true" className="absolute pointer-events-none select-none" style={{ opacity: 0.12, width: '90%', left: '5%', top: '50%', transform: 'translateY(-50%) scaleY(1.4)', transformOrigin: 'center center', objectFit: 'fill', zIndex: 1 }} />
         <div ref={handleRef} className="flex justify-center pt-3 pb-2 cursor-grab">
           <div className="w-10 h-1 rounded-full bg-white/20" />
@@ -614,7 +922,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               const Icon = app.icon;
               return (
                 <button key={app.id} onClick={() => handleAppIcon(app)} className="flex flex-col items-center gap-1.5 opacity-80">
-                  <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.06)' }}>                    <Icon size={26} style={{ color: '#888' }} />
+                  <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    <Icon size={26} style={{ color: '#888' }} />
                     <div className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center translate-x-0.5 translate-y-0.5">
                       <Lock size={8} className="text-white/40" />
                     </div>
@@ -635,5 +944,3 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-
