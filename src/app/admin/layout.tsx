@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import AuthGuard from '@/components/admin/AuthGuard';
 import AppShell from '@/components/admin/AppShell';
+import PWAInstall from '@/components/admin/PWAInstall';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -21,6 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <AuthGuard>
       <AppShell>{children}</AppShell>
+      <PWAInstall />
     </AuthGuard>
   );
 }

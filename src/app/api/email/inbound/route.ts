@@ -97,6 +97,26 @@ export async function POST(req: NextRequest) {
       body_text: body_text ?? undefined,
     });
 
+    // Send push notification for new email
+    try {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+      await fetch(`${siteUrl}/api/admin/push-send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-push-secret': process.env.PUSH_SECRET || '',
+        },
+        body: JSON.stringify({
+          title: `New Email from ${from_email}`,
+          body: subjectStr,
+          url: '/admin/inbox',
+          tag: 'email-' + (logged?.thread_id || 'new'),
+        }),
+      });
+    } catch (pushErr) {
+      console.error('Push notification failed (non-fatal):', pushErr);
+    }
+
     return NextResponse.json({ success: true, message_id: logged?.id, thread_id: logged?.thread_id });
   } catch (err: unknown) {
     console.error('Inbound route error:', err);
