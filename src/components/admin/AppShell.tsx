@@ -145,11 +145,10 @@ const FEATURE_INFO: Record<string, { title: string; headline: string; descriptio
   },
   // Team & HR
   team: {
-    title: 'Team Directory',
+    title: 'Team Management',
     headline: 'Your Whole Crew, Organized',
-    description: 'Employee and subcontractor profiles with contact info, certifications, pay rates, and availability. Know who you have, what they can do, and when they are free.',
-    bullets: ['Employee and sub profiles', 'Certification and license tracking', 'Availability and schedule view', 'Emergency contact information'],
-    eta: 'Q4 2026',
+    description: 'Full employee profiles, certifications, equipment tracking, email account management, safety records, and performance scoring. Everything you need to run your crew.',
+    bullets: ['Employee profiles with certs & docs', 'Email account assignment & control', 'Equipment & vehicle tracking', 'Safety incidents & training records'],
   },
   timesheets: {
     title: 'Time Tracking',
@@ -221,7 +220,7 @@ const APP_ICONS: AppIcon[] = [
   { id: 'budgets', label: 'Budgets', icon: BarChart3, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'payments', label: 'Payments', icon: CreditCard, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'expenses', label: 'Expenses', icon: Receipt, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
-  { id: 'team', label: 'Team', icon: Users, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
+  { id: 'team', label: 'Team', icon: Users, href: '/admin/employees', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'timesheets', label: 'Timesheets', icon: Clock, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'safety', label: 'Safety', icon: Shield, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'equipment', label: 'Equipment', icon: Wrench, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
