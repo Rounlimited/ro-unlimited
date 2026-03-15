@@ -223,7 +223,7 @@ export default function EmployeeDetailPage() {
         {activeTab === 'email' && <EmailTab employee={employee} onUpdate={fetchEmployee} id={id} />}
         {activeTab === 'docs' && <DocsTab employee={employee} onUpdate={fetchEmployee} id={id} />}
         {activeTab === 'equipment' && <EquipmentTab employee={employee} onUpdate={fetchEmployee} id={id} />}
-        {activeTab === 'performance' && <PerformanceTab />}
+        {activeTab === 'performance' && <PerformanceTab id={id} />}
         {activeTab === 'financial' && <FinancialTab employee={employee} />}
         {activeTab === 'notes' && <NotesTab employee={employee} id={id} onUpdate={fetchEmployee} />}
         {activeTab === 'activity' && <ActivityTab employee={employee} />}
@@ -958,36 +958,338 @@ function EquipmentTab({ employee, onUpdate, id }: { employee: EmployeeDetail; on
 }
 
 // ══════════════════════════════════════════════════════════════
-// TAB 5: PERFORMANCE (Coming Soon)
+// TAB 5: PERFORMANCE
 // ══════════════════════════════════════════════════════════════
-function PerformanceTab() {
+const REVIEW_CATEGORIES = [
+  { key: 'job_knowledge', label: 'Job Knowledge', desc: 'Technical skills and trade competency' },
+  { key: 'work_quality', label: 'Work Quality', desc: 'Craftsmanship and attention to detail' },
+  { key: 'productivity', label: 'Productivity', desc: 'Efficiency and output' },
+  { key: 'safety_compliance', label: 'Safety', desc: 'PPE, protocols, hazard awareness' },
+  { key: 'attendance', label: 'Attendance', desc: 'Punctuality and reliability' },
+  { key: 'teamwork', label: 'Teamwork', desc: 'Collaboration with crew' },
+  { key: 'communication', label: 'Communication', desc: 'Clear, professional interaction' },
+  { key: 'initiative', label: 'Initiative', desc: 'Problem-solving and self-direction' },
+  { key: 'leadership', label: 'Leadership', desc: 'Guiding and mentoring others' },
+  { key: 'professionalism', label: 'Professionalism', desc: 'Conduct and work ethic' },
+];
+const SCORE_LABELS = ['', 'Unsatisfactory', 'Needs Improvement', 'Meets Expectations', 'Exceeds', 'Outstanding'];
+const SKILL_CATEGORIES = ['general', 'carpentry', 'concrete', 'steel', 'grading', 'heavy-equipment', 'electrical', 'plumbing', 'safety', 'management', 'other'];
+const PROFICIENCY_LABELS = ['', 'Learning', 'Basic', 'Proficient', 'Expert'];
+
+interface Review { id: string; review_type: string; review_period: string | null; review_date: string; reviewer_name: string | null; overall_score: number | null; strengths: string | null; improvements: string | null; goals: string | null; supervisor_comments: string | null; [key: string]: any; }
+interface Skill { id: string; skill_name: string; category: string; proficiency: number; assessed_date: string; assessed_by: string | null; }
+
+function PerformanceTab({ id }: { id: string }) {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showReview, setShowReview] = useState(false);
+  const [showSkill, setShowSkill] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [expandedReview, setExpandedReview] = useState<string | null>(null);
+
+  // Review form
+  const [reviewForm, setReviewForm] = useState<Record<string, any>>({
+    review_type: 'quarterly', review_period: '', reviewer_name: '', strengths: '', improvements: '', goals: '', supervisor_comments: '',
+  });
+
+  // Skill form
+  const [skillForm, setSkillForm] = useState({ skill_name: '', category: 'general', proficiency: 2, assessed_by: '' });
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const [revRes, skillRes] = await Promise.all([
+      fetch(`/api/admin/employees/${id}/reviews`).then(r => r.json()).catch(() => []),
+      fetch(`/api/admin/employees/${id}/skills`).then(r => r.json()).catch(() => []),
+    ]);
+    if (Array.isArray(revRes)) setReviews(revRes);
+    if (Array.isArray(skillRes)) setSkills(skillRes);
+    setLoading(false);
+  }, [id]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const submitReview = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/employees/${id}/reviews`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reviewForm),
+      });
+      if (res.ok) { setShowReview(false); setReviewForm({ review_type: 'quarterly', review_period: '', reviewer_name: '', strengths: '', improvements: '', goals: '', supervisor_comments: '' }); fetchData(); }
+    } catch {} finally { setSaving(false); }
+  };
+
+  const submitSkill = async () => {
+    if (!skillForm.skill_name) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/admin/employees/${id}/skills`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(skillForm),
+      });
+      setShowSkill(false); setSkillForm({ skill_name: '', category: 'general', proficiency: 2, assessed_by: '' }); fetchData();
+    } catch {} finally { setSaving(false); }
+  };
+
+  const deleteReview = async (reviewId: string) => {
+    if (!confirm('Delete this review?')) return;
+    await fetch(`/api/admin/employees/${id}/reviews?review_id=${reviewId}`, { method: 'DELETE' });
+    fetchData();
+  };
+
+  const deleteSkill = async (skillId: string) => {
+    await fetch(`/api/admin/employees/${id}/skills?skill_id=${skillId}`, { method: 'DELETE' });
+    fetchData();
+  };
+
+  // Calculate averages
+  const avgScore = reviews.length > 0 ? (reviews.reduce((s, r) => s + (r.overall_score || 0), 0) / reviews.length).toFixed(1) : null;
+  const latestReview = reviews[0];
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-[#C9A84C]" size={24} /></div>;
+
   return (
-    <div className="flex items-center justify-center py-12">
-      <div className="bg-[#111] border border-white/5 rounded-2xl p-8 max-w-md w-full text-center">
-        <div className="w-16 h-16 rounded-2xl bg-[#D4772C]/10 flex items-center justify-center mx-auto mb-5">
-          <Construction size={28} className="text-[#D4772C]" />
+    <div className="space-y-5">
+      {/* Score Overview Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-[#111] border border-white/5 rounded-2xl p-4 text-center">
+          <p className="text-[12px] text-white/25 uppercase tracking-wider mb-1">Overall</p>
+          <p className="text-[28px] font-bold text-[#C9A84C]">{avgScore || '--'}</p>
+          <p className="text-[11px] text-white/20">/ 5.0</p>
         </div>
-        <h3 className="text-[18px] font-bold text-white mb-2">In Development</h3>
-        <p className="text-[14px] text-white/40 mb-6">
-          The performance module is being built and will include powerful tools to track and improve your team.
-        </p>
-        <div className="space-y-3 text-left">
-          {[
-            { label: 'Performance Reviews', desc: 'Regular evaluations with scoring' },
-            { label: 'Skills Matrix', desc: 'Track certifications and competencies' },
-            { label: 'Training Records', desc: 'Log completed training and courses' },
-            { label: 'Goal Tracking', desc: 'Set and monitor employee goals' },
-          ].map((item) => (
-            <div key={item.label} className="flex items-start gap-3 bg-white/[0.02] border border-white/5 rounded-xl p-3">
-              <div className="w-2 h-2 rounded-full bg-[#D4772C]/40 mt-1.5 flex-shrink-0" />
-              <div>
-                <p className="text-[14px] text-white/60 font-medium">{item.label}</p>
-                <p className="text-[13px] text-white/20">{item.desc}</p>
-              </div>
-            </div>
-          ))}
+        <div className="bg-[#111] border border-white/5 rounded-2xl p-4 text-center">
+          <p className="text-[12px] text-white/25 uppercase tracking-wider mb-1">Reviews</p>
+          <p className="text-[28px] font-bold text-white">{reviews.length}</p>
+          <p className="text-[11px] text-white/20">total</p>
+        </div>
+        <div className="bg-[#111] border border-white/5 rounded-2xl p-4 text-center">
+          <p className="text-[12px] text-white/25 uppercase tracking-wider mb-1">Skills</p>
+          <p className="text-[28px] font-bold text-white">{skills.length}</p>
+          <p className="text-[11px] text-white/20">tracked</p>
+        </div>
+        <div className="bg-[#111] border border-white/5 rounded-2xl p-4 text-center">
+          <p className="text-[12px] text-white/25 uppercase tracking-wider mb-1">Latest</p>
+          <p className="text-[20px] font-bold text-white">{latestReview ? new Date(latestReview.review_date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : '--'}</p>
+          <p className="text-[11px] text-white/20">review</p>
         </div>
       </div>
+
+      {/* Reviews Section */}
+      <div className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+          <h3 className="text-[16px] font-bold text-white">Performance Reviews</h3>
+          <button onClick={() => setShowReview(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#C9A84C] text-black text-[13px] font-semibold rounded-lg">
+            <Plus size={14} /> New Review
+          </button>
+        </div>
+
+        {reviews.length === 0 ? (
+          <div className="px-5 py-8 text-center text-[14px] text-white/25">No reviews yet. Create the first one.</div>
+        ) : (
+          <div className="divide-y divide-white/[0.03]">
+            {reviews.map(rev => {
+              const expanded = expandedReview === rev.id;
+              return (
+                <div key={rev.id}>
+                  <button onClick={() => setExpandedReview(expanded ? null : rev.id)} className="w-full px-5 py-3.5 flex items-center justify-between hover:bg-white/[0.02] transition-colors text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: rev.overall_score && rev.overall_score >= 4 ? 'rgba(74,222,128,0.1)' : rev.overall_score && rev.overall_score >= 3 ? 'rgba(201,168,76,0.1)' : 'rgba(239,68,68,0.1)' }}>
+                        <span className="text-[16px] font-bold" style={{ color: rev.overall_score && rev.overall_score >= 4 ? '#4ade80' : rev.overall_score && rev.overall_score >= 3 ? '#C9A84C' : '#ef4444' }}>{rev.overall_score || '--'}</span>
+                      </div>
+                      <div>
+                        <p className="text-[14px] font-semibold text-white capitalize">{rev.review_type} Review</p>
+                        <p className="text-[12px] text-white/25">{rev.review_period || new Date(rev.review_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}{rev.reviewer_name ? ` · by ${rev.reviewer_name}` : ''}</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={16} className={`text-white/20 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+                  </button>
+                  {expanded && (
+                    <div className="px-5 pb-4 space-y-3">
+                      {/* Category scores */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {REVIEW_CATEGORIES.map(cat => {
+                          const val = rev[cat.key];
+                          if (!val) return null;
+                          return (
+                            <div key={cat.key} className="flex items-center justify-between bg-black/20 rounded-lg px-3 py-2">
+                              <span className="text-[13px] text-white/50">{cat.label}</span>
+                              <div className="flex items-center gap-1">
+                                {[1,2,3,4,5].map(n => (
+                                  <div key={n} className="w-2.5 h-2.5 rounded-full" style={{ background: n <= val ? (val >= 4 ? '#4ade80' : val >= 3 ? '#C9A84C' : '#ef4444') : 'rgba(255,255,255,0.06)' }} />
+                                ))}
+                                <span className="text-[12px] text-white/30 ml-1">{val}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {rev.strengths && <div><p className="text-[12px] text-white/25 mb-1">Strengths</p><p className="text-[14px] text-white/60">{rev.strengths}</p></div>}
+                      {rev.improvements && <div><p className="text-[12px] text-white/25 mb-1">Areas to Improve</p><p className="text-[14px] text-white/60">{rev.improvements}</p></div>}
+                      {rev.goals && <div><p className="text-[12px] text-white/25 mb-1">Goals</p><p className="text-[14px] text-white/60">{rev.goals}</p></div>}
+                      {rev.supervisor_comments && <div><p className="text-[12px] text-white/25 mb-1">Comments</p><p className="text-[14px] text-white/60">{rev.supervisor_comments}</p></div>}
+                      <button onClick={() => deleteReview(rev.id)} className="text-[12px] text-red-400/50 hover:text-red-400">Delete review</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Skills Matrix */}
+      <div className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+          <h3 className="text-[16px] font-bold text-white">Skills Matrix</h3>
+          <button onClick={() => setShowSkill(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 text-white text-[13px] font-medium rounded-lg hover:bg-white/10">
+            <Plus size={14} /> Add Skill
+          </button>
+        </div>
+
+        {skills.length === 0 ? (
+          <div className="px-5 py-8 text-center text-[14px] text-white/25">No skills tracked yet.</div>
+        ) : (
+          <div className="divide-y divide-white/[0.03]">
+            {skills.map(skill => (
+              <div key={skill.id} className="px-5 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-0.5">
+                    {[1,2,3,4].map(n => (
+                      <div key={n} className="w-3 h-3 rounded-sm" style={{ background: n <= skill.proficiency ? '#C9A84C' : 'rgba(255,255,255,0.06)' }} />
+                    ))}
+                  </div>
+                  <div>
+                    <p className="text-[14px] text-white font-medium">{skill.skill_name}</p>
+                    <p className="text-[12px] text-white/25 capitalize">{skill.category} · {PROFICIENCY_LABELS[skill.proficiency]}</p>
+                  </div>
+                </div>
+                <button onClick={() => deleteSkill(skill.id)} className="text-white/10 hover:text-red-400 p-1"><Trash2 size={13} /></button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ─── NEW REVIEW MODAL ─── */}
+      {showReview && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowReview(false)} />
+          <div className="relative w-full max-w-lg max-h-[85vh] overflow-y-auto bg-[#141414] border border-white/10 rounded-2xl shadow-2xl">
+            <div className="sticky top-0 bg-[#141414] px-5 py-4 border-b border-white/5 flex items-center justify-between z-10">
+              <h3 className="text-[16px] font-bold text-white">New Performance Review</h3>
+              <button onClick={() => setShowReview(false)} className="text-white/30 hover:text-white"><X size={18} /></button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[13px] text-white/40 mb-1">Review Type</label>
+                  <select value={reviewForm.review_type} onChange={e => setReviewForm({...reviewForm, review_type: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-[14px] text-white focus:outline-none appearance-none">
+                    <option value="quarterly">Quarterly</option><option value="annual">Annual</option><option value="project-end">Project End</option><option value="probation">Probation</option><option value="spot">Spot Check</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[13px] text-white/40 mb-1">Period</label>
+                  <input type="text" placeholder="e.g. Q1 2026" value={reviewForm.review_period || ''} onChange={e => setReviewForm({...reviewForm, review_period: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[13px] text-white/40 mb-1">Reviewer Name</label>
+                <input type="text" placeholder="Who is reviewing" value={reviewForm.reviewer_name || ''} onChange={e => setReviewForm({...reviewForm, reviewer_name: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none" />
+              </div>
+              <div>
+                <p className="text-[14px] font-semibold text-white mb-3">Rate each category (1-5)</p>
+                <div className="space-y-2.5">
+                  {REVIEW_CATEGORIES.map(cat => (
+                    <div key={cat.key} className="flex items-center justify-between bg-black/20 rounded-xl px-3 py-2.5">
+                      <div>
+                        <p className="text-[14px] text-white/70">{cat.label}</p>
+                        <p className="text-[11px] text-white/20">{cat.desc}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        {[1,2,3,4,5].map(n => (
+                          <button key={n} onClick={() => setReviewForm({...reviewForm, [cat.key]: reviewForm[cat.key] === n ? null : n})}
+                            className="w-8 h-8 rounded-lg text-[13px] font-bold transition-all"
+                            style={{ background: reviewForm[cat.key] === n ? (n >= 4 ? '#4ade80' : n >= 3 ? '#C9A84C' : '#ef4444') : 'rgba(255,255,255,0.04)', color: reviewForm[cat.key] === n ? (n >= 4 ? '#052e16' : n >= 3 ? '#1a1400' : '#fff') : 'rgba(255,255,255,0.2)' }}>
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-[13px] text-white/40 mb-1">Strengths</label>
+                <textarea rows={2} value={reviewForm.strengths || ''} onChange={e => setReviewForm({...reviewForm, strengths: e.target.value})} placeholder="What this employee does well..." className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none resize-none" />
+              </div>
+              <div>
+                <label className="block text-[13px] text-white/40 mb-1">Areas to Improve</label>
+                <textarea rows={2} value={reviewForm.improvements || ''} onChange={e => setReviewForm({...reviewForm, improvements: e.target.value})} placeholder="What needs work..." className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none resize-none" />
+              </div>
+              <div>
+                <label className="block text-[13px] text-white/40 mb-1">Goals for Next Period</label>
+                <textarea rows={2} value={reviewForm.goals || ''} onChange={e => setReviewForm({...reviewForm, goals: e.target.value})} placeholder="Targets and objectives..." className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none resize-none" />
+              </div>
+              <div>
+                <label className="block text-[13px] text-white/40 mb-1">Supervisor Comments</label>
+                <textarea rows={2} value={reviewForm.supervisor_comments || ''} onChange={e => setReviewForm({...reviewForm, supervisor_comments: e.target.value})} placeholder="Additional notes..." className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none resize-none" />
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-[#141414] px-5 py-4 border-t border-white/5">
+              <button onClick={submitReview} disabled={saving} className="w-full py-3 bg-[#C9A84C] text-black text-[14px] font-bold rounded-xl hover:bg-[#d4b55a] disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+                {saving ? <><Loader2 size={16} className="animate-spin" /> Saving...</> : <><Check size={16} /> Submit Review</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── ADD SKILL MODAL ─── */}
+      {showSkill && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowSkill(false)} />
+          <div className="relative w-full max-w-md bg-[#141414] border border-white/10 rounded-2xl shadow-2xl">
+            <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+              <h3 className="text-[16px] font-bold text-white">Add Skill</h3>
+              <button onClick={() => setShowSkill(false)} className="text-white/30 hover:text-white"><X size={18} /></button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              <div>
+                <label className="block text-[13px] text-white/40 mb-1">Skill Name</label>
+                <input type="text" placeholder="e.g. Concrete Forming, Blueprint Reading" value={skillForm.skill_name} onChange={e => setSkillForm({...skillForm, skill_name: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-[13px] text-white/40 mb-1">Category</label>
+                <select value={skillForm.category} onChange={e => setSkillForm({...skillForm, category: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-[14px] text-white focus:outline-none appearance-none capitalize">
+                  {SKILL_CATEGORIES.map(c => <option key={c} value={c}>{c.replace('-', ' ')}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[13px] text-white/40 mb-2">Proficiency Level</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[1,2,3,4].map(n => (
+                    <button key={n} onClick={() => setSkillForm({...skillForm, proficiency: n})}
+                      className="py-2.5 rounded-xl text-[13px] font-medium transition-all border"
+                      style={{ background: skillForm.proficiency === n ? 'rgba(201,168,76,0.15)' : 'transparent', borderColor: skillForm.proficiency === n ? 'rgba(201,168,76,0.3)' : 'rgba(255,255,255,0.05)', color: skillForm.proficiency === n ? '#C9A84C' : 'rgba(255,255,255,0.3)' }}>
+                      {PROFICIENCY_LABELS[n]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-[13px] text-white/40 mb-1">Assessed By</label>
+                <input type="text" placeholder="Supervisor name" value={skillForm.assessed_by} onChange={e => setSkillForm({...skillForm, assessed_by: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none" />
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-white/5">
+              <button onClick={submitSkill} disabled={saving || !skillForm.skill_name} className="w-full py-3 bg-[#C9A84C] text-black text-[14px] font-bold rounded-xl hover:bg-[#d4b55a] disabled:opacity-50 transition-colors">
+                {saving ? 'Saving...' : 'Add Skill'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
