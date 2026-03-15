@@ -52,6 +52,7 @@ interface DocumentsInfo {
   drivers_license_back: string;
   certification_photos: string[];
   vehicle_insurance: string;
+  resume: string;
 }
 
 interface AgreementsInfo {
@@ -61,6 +62,7 @@ interface AgreementsInfo {
   at_will_employment: boolean;
   truthful_information: boolean;
   electronic_signature: string;
+  drawn_signature: string;
   signature_date: string;
 }
 
@@ -121,6 +123,7 @@ const defaultDocumentsInfo: DocumentsInfo = {
   drivers_license_back: '',
   certification_photos: [],
   vehicle_insurance: '',
+  resume: '',
 };
 
 const defaultAgreementsInfo: AgreementsInfo = {
@@ -130,6 +133,7 @@ const defaultAgreementsInfo: AgreementsInfo = {
   at_will_employment: false,
   truthful_information: false,
   electronic_signature: '',
+  drawn_signature: '',
   signature_date: new Date().toISOString().split('T')[0],
 };
 
@@ -311,17 +315,123 @@ function Checkbox({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Signature Pad — touch/mouse drawing canvas
+// ---------------------------------------------------------------------------
+function SignaturePad({ value, onChange }: { value: string; onChange: (dataUrl: string) => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawingRef = useRef(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    // Set canvas resolution
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+    ctx.scale(2, 2);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#C9A84C';
+    // Restore saved signature
+    if (value) {
+      const img = new Image();
+      img.onload = () => { ctx.drawImage(img, 0, 0, rect.width, rect.height); };
+      img.src = value;
+    }
+  }, []);
+
+  const getPos = (e: React.TouchEvent | React.MouseEvent) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    if ('touches' in e) {
+      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+    }
+    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top };
+  };
+
+  const startDraw = (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    drawingRef.current = true;
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return;
+    const pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+  };
+
+  const draw = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!drawingRef.current) return;
+    e.preventDefault();
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return;
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  };
+
+  const endDraw = () => {
+    drawingRef.current = false;
+    if (canvasRef.current) {
+      onChange(canvasRef.current.toDataURL('image/png'));
+    }
+  };
+
+  const clear = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    onChange('');
+  };
+
+  return (
+    <div>
+      <div className="relative rounded-lg border-2 border-dashed border-[#333] bg-[#1a1a1a] overflow-hidden" style={{ touchAction: 'none' }}>
+        <canvas
+          ref={canvasRef}
+          className="w-full cursor-crosshair"
+          style={{ height: 120 }}
+          onMouseDown={startDraw}
+          onMouseMove={draw}
+          onMouseUp={endDraw}
+          onMouseLeave={endDraw}
+          onTouchStart={startDraw}
+          onTouchMove={draw}
+          onTouchEnd={endDraw}
+        />
+        {!value && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <p className="text-white/15 text-sm">Sign here with your finger</p>
+          </div>
+        )}
+      </div>
+      {value && (
+        <button type="button" onClick={clear} className="mt-2 text-sm text-red-400/60 hover:text-red-400">
+          Clear signature
+        </button>
+      )}
+    </div>
+  );
+}
+
 function FileUpload({
   label,
   required,
   fileName,
   multiple,
+  accept,
   onSelect,
 }: {
   label: string;
   required?: boolean;
   fileName: string | string[];
   multiple?: boolean;
+  accept?: string;
   onSelect: (names: string | string[]) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -355,7 +465,7 @@ function FileUpload({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*,application/pdf"
+        accept={accept || "image/*,application/pdf"}
         capture="environment"
         multiple={multiple}
         onChange={handleChange}
@@ -584,6 +694,12 @@ function StepDocuments({
       {hasTransportation && (
         <FileUpload label="Vehicle Insurance" fileName={data.vehicle_insurance} onSelect={(n) => onChange({ vehicle_insurance: n as string })} />
       )}
+
+      <div className="border-t border-[#222] pt-4 mt-2">
+        <h3 className="text-base font-semibold text-white mb-2">Resume (optional)</h3>
+        <p className="text-gray-500 text-sm mb-3">Upload your resume if you have one — PDF, Word, or image.</p>
+        <FileUpload label="Resume / CV" fileName={data.resume} accept=".pdf,.doc,.docx,image/*" onSelect={(n) => onChange({ resume: n as string })} />
+      </div>
     </div>
   );
 }
@@ -635,6 +751,16 @@ function StepAgreements({
           value={data.electronic_signature}
           onChange={(e) => onChange({ electronic_signature: (e.target as HTMLInputElement).value })}
         />
+
+        {/* Drawn Signature Pad */}
+        <div className="mt-4">
+          <Label>Draw your signature</Label>
+          <SignaturePad
+            value={data.drawn_signature}
+            onChange={(dataUrl) => onChange({ drawn_signature: dataUrl })}
+          />
+        </div>
+
         <div className="mt-4">
           <Label>Signature Date</Label>
           <input
