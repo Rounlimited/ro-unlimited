@@ -472,12 +472,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           onClick={() => setTabBarVisible(true)}
           aria-label="Show navigation"
           style={{
-            position: 'fixed', bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))', left: '50%', transform: 'translateX(-50%)',
-            zIndex: 45, background: 'rgba(201,168,76,0.3)', border: '1px solid rgba(201,168,76,0.4)',
-            borderRadius: 14, padding: '8px 32px', cursor: 'pointer', backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)', transition: 'opacity 0.2s',
+            position: 'fixed', bottom: 'max(28px, calc(12px + env(safe-area-inset-bottom, 28px)))', left: '50%', transform: 'translateX(-50%)',
+            zIndex: 45, background: 'rgba(201,168,76,0.35)', border: '1px solid rgba(201,168,76,0.5)',
+            borderRadius: 16, padding: '10px 36px', cursor: 'pointer', backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)', transition: 'opacity 0.2s',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
           }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(201,168,76,0.8)' }} />
+          <div style={{ width: 40, height: 5, borderRadius: 3, background: 'rgba(201,168,76,0.9)' }} />
         </button>
       )}
 
