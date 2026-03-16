@@ -341,6 +341,43 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Pre-detect data queries — fetch from DB before AI call
+    const dataQueryPatterns = [
+      { pattern: /(?:show|list|read|get|how many|what|who) (?:me |the |all |my |our )?customer/i, table: 'customers' },
+      { pattern: /(?:show|list|read|get|how many|what) (?:me |the |all |my |our )?estimate/i, table: 'estimates' },
+      { pattern: /(?:show|list|read|get|how many|what) (?:me |the |all |my |our )?employee/i, table: 'employee_profiles' },
+      { pattern: /(?:show|list|read|get|how many|what) (?:me |the |all |my |our )?vendor/i, table: 'vendors' },
+      { pattern: /(?:show|list|read|get|how many|what) (?:me |the |all |my |our )?intake/i, table: 'employee_intakes' },
+      { pattern: /(?:show|list|read|see|check) (?:me |the |all |my |our )?(?:login|activity|log|history|who.*login|who.*access)/i, table: 'activity_log' },
+      { pattern: /(?:show|list|read|get|how many|what) (?:me |the |all |my |our )?notif/i, table: 'admin_notifications' },
+    ];
+
+    for (const dq of dataQueryPatterns) {
+      if (dq.pattern.test(lastUserMsg)) {
+        const { data: rows } = await supabase
+          .from(dq.table)
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(15);
+
+        if (rows?.length) {
+          const summary = rows.map((r: any, i: number) => {
+            if (dq.table === 'customers') return (i+1) + '. ' + (r.first_name || '') + ' ' + (r.last_name || '') + ' — ' + (r.phone || '') + ' — ' + (r.email || '') + (r.company_name ? ' (' + r.company_name + ')' : '');
+            if (dq.table === 'estimates') return (i+1) + '. ' + (r.estimate_number || '') + ' — ' + (r.project_name || '') + ' — $' + (r.total || 0) + ' — ' + (r.status || '');
+            if (dq.table === 'employee_profiles') return (i+1) + '. ' + (r.first_name || '') + ' ' + (r.last_name || '') + ' — ' + (r.title || '') + ' — ' + (r.status || '');
+            if (dq.table === 'vendors') return (i+1) + '. ' + (r.company_name || '') + ' — ' + (r.trade || '') + ' — ' + (r.contact_name || '');
+            if (dq.table === 'activity_log') return (i+1) + '. ' + (r.action || '') + ' — ' + (r.details || '') + ' — ' + (r.created_at || '');
+            if (dq.table === 'admin_notifications') return (i+1) + '. ' + (r.title || '') + ' — ' + (r.body || '') + ' — ' + (r.read ? 'read' : 'unread');
+            return JSON.stringify(r);
+          }).join('\n');
+          contextNote += '\n\n## LIVE DATA — ' + dq.table.toUpperCase() + ' (most recent ' + rows.length + '):\n' + summary + '\n\nSummarize this data for the user.';
+        } else {
+          contextNote += '\n\n## LIVE DATA — ' + dq.table.toUpperCase() + ': No records found.';
+        }
+        break;
+      }
+    }
+
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -411,8 +448,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Detect memory save commands in AI response
-    const memoryMatch = content.match(/```memory\s*(\{[\s\S]*?\})\s*```/);
+    // Detect memory save commands — handle malformed blocks too
+    const memoryMatch = content.match(/`{1,3}memory\s*(\{[\s\S]*?\})\s*`{0,3}/);
     if (memoryMatch) {
       try {
         const mem = JSON.parse(memoryMatch[1]);
@@ -422,12 +459,10 @@ export async function POST(req: NextRequest) {
           source: 'ai',
         });
       } catch {}
-      // Remove the memory block from visible response
-      content = content.replace(/```memory[\s\S]*?```/g, '').trim();
     }
 
     // Detect forget commands
-    const forgetMatch = content.match(/```forget\s*(\{[\s\S]*?\})\s*```/);
+    const forgetMatch = content.match(/`{1,3}forget\s*(\{[\s\S]*?\})\s*`{0,3}/);
     if (forgetMatch) {
       try {
         const fg = JSON.parse(forgetMatch[1]);
@@ -437,6 +472,11 @@ export async function POST(req: NextRequest) {
       } catch {}
       content = content.replace(/```forget[\s\S]*?```/g, '').trim();
     }
+
+    // Final cleanup — strip ALL code blocks that are command blocks (memory, forget, search, action)
+    content = content.replace(/`{1,3}(?:memory|forget|search|action)\s*\{[\s\S]*?\}\s*`{0,3}/g, '').trim();
+    // Also strip any remaining triple-backtick blocks that look like commands
+    content = content.replace(/```(?:memory|forget|search|action)[\s\S]*?```/g, '').trim();
 
     return NextResponse.json({ role: 'assistant', content });
   } catch (err: any) {
