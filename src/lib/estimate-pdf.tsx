@@ -64,7 +64,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 1.5,
+    borderBottomWidth: 3,
     borderBottomColor: c.orange,
   },
   pageHeaderRight: { fontSize: 7.5, color: c.label, textAlign: 'right', lineHeight: 1.4 },
@@ -156,13 +156,13 @@ const s = StyleSheet.create({
   exclusionText: { fontSize: 9, color: c.textLight, flex: 1, lineHeight: 1.5 },
 
   /* ── Acceptance block (Ref #7 — with doc ID) ── */
-  acceptBox: { borderWidth: 1, borderColor: c.navy, borderRadius: 3, padding: 22 },
-  acceptIntro: { fontSize: 9, color: c.textLight, lineHeight: 1.7, marginBottom: 16 },
-  sigRow: { flexDirection: 'row', gap: 30 },
+  acceptBox: { borderWidth: 1, borderColor: c.navy, borderRadius: 3, padding: 26 },
+  acceptIntro: { fontSize: 9, color: c.textLight, lineHeight: 1.7, marginBottom: 18 },
+  sigRow: { flexDirection: 'row', gap: 24 },
   sigCol: { flex: 1 },
-  sigColLabel: { fontSize: 7.5, textTransform: 'uppercase', letterSpacing: 1.2, color: c.navy, fontFamily: 'Helvetica-Bold', marginBottom: 8 },
-  sigLine: { borderBottomWidth: 1.5, borderBottomColor: c.text, minHeight: 32, marginBottom: 3 },
-  sigLineLight: { borderBottomWidth: 0.5, borderBottomColor: c.border, minHeight: 16, marginTop: 10, marginBottom: 3 },
+  sigColLabel: { fontSize: 7.5, textTransform: 'uppercase', letterSpacing: 1.2, color: c.navy, fontFamily: 'Helvetica-Bold', marginBottom: 10 },
+  sigLine: { borderBottomWidth: 1.5, borderBottomColor: c.text, minHeight: 38, marginBottom: 4 },
+  sigLineLight: { borderBottomWidth: 0.5, borderBottomColor: c.border, minHeight: 20, marginTop: 12, marginBottom: 4 },
   sigLabel: { fontSize: 7, color: c.labelLight },
 });
 
@@ -527,14 +527,27 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           </View>
         )}
 
-        {/* ═══ 7. TERMS & CONDITIONS — Rule 5: Break only between terms ═══ */}
+        {/* ═══ 7. TERMS & CONDITIONS — Fix 1: Header + first term kept together ═══ */}
         {disclaimers.length > 0 && (
           <View style={{ marginBottom: sectionGap }}>
-            <Text style={[s.sectionLabel, { minPresenceAhead: 60 }]}>Terms & Conditions</Text>
-            {disclaimers.map((d: any, i: number) => (
-              <View key={d.id || i} style={s.disclaimerBlock} wrap={false}>
+            {/* Header + first term as one unbreakable block to prevent orphaned header */}
+            <View wrap={false}>
+              <Text style={s.sectionLabel}>Terms & Conditions</Text>
+              {disclaimers.length > 0 && (
+                <View style={s.disclaimerBlock}>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                    <Text style={s.disclaimerNumber}>1.</Text>
+                    <Text style={s.disclaimerTitle}>{disclaimers[0].title}</Text>
+                  </View>
+                  <Text style={s.disclaimerBody}>{disclaimers[0].body}</Text>
+                </View>
+              )}
+            </View>
+            {/* Remaining terms — each is wrap={false} so breaks only between terms */}
+            {disclaimers.slice(1).map((d: any, i: number) => (
+              <View key={d.id || (i + 1)} style={s.disclaimerBlock} wrap={false}>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                  <Text style={s.disclaimerNumber}>{i + 1}.</Text>
+                  <Text style={s.disclaimerNumber}>{i + 2}.</Text>
                   <Text style={s.disclaimerTitle}>{d.title}</Text>
                 </View>
                 <Text style={s.disclaimerBody}>{d.body}</Text>
@@ -544,8 +557,9 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
         )}
 
         {/* ═══ 8. EXCLUSIONS — Rule 7: One unbreakable block ═══ */}
+        {/* Fix 2: minPresenceAhead pulls acceptance block onto same page if room */}
         {exclusionsList.length > 0 && (
-          <View style={{ marginBottom: sectionGap }} wrap={false}>
+          <View style={{ marginBottom: sectionGap }} wrap={false} minPresenceAhead={200}>
             <Text style={s.sectionLabel}>Exclusions</Text>
             <Text style={{ fontSize: 8.5, color: c.label, fontStyle: 'italic', marginBottom: 6 }}>
               The following items are NOT included in this estimate:
@@ -592,7 +606,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 18, paddingTop: 10, borderTopWidth: 0.5, borderTopColor: c.borderLight }}>
             <View>
               {/* QR code visual placeholder — 5x5 grid pattern */}
-              <Svg width="44" height="44" viewBox="0 0 44 44">
+              <Svg width="58" height="58" viewBox="0 0 44 44">
                 <Rect x="0" y="0" width="44" height="44" fill="white" stroke={c.border} strokeWidth="1" rx="2" />
                 <Rect x="4" y="4" width="12" height="12" fill={c.navy} rx="1" />
                 <Rect x="28" y="4" width="12" height="12" fill={c.navy} rx="1" />
