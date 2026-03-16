@@ -23,6 +23,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
       // No session — only redirect if not on a public admin route
       if (!session && !isPublicAdminRoute) {
+        setLoading(false);
         router.push('/admin/login');
         return;
       }
