@@ -76,9 +76,11 @@ export default function OnboardingProvider({ children }: OnboardingProviderProps
           return;
         }
 
-        const data = await res.json();
+        const json = await res.json();
         if (cancelled) return;
 
+        // API returns { onboarding: {...} } wrapper
+        const data = json.onboarding || json;
         setOnboarding(data);
 
         if (!data.welcome_completed) {
@@ -109,8 +111,8 @@ export default function OnboardingProvider({ children }: OnboardingProviderProps
         });
 
         if (res.ok) {
-          const updated = await res.json();
-          setOnboarding(updated);
+          const json = await res.json();
+          setOnboarding(json.onboarding || json);
         }
       } catch (err) {
         console.error('Failed to update onboarding:', err);

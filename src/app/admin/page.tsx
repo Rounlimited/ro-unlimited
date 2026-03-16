@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { gsap } from 'gsap';
 import {
   Video, FileText, ArrowUpRight, CheckCircle2,
-  AlertCircle, Pencil, Camera, Clock, MessageCircle, Mail, Users
+  AlertCircle, Pencil, Camera, Clock, MessageCircle, Mail, Users, Calculator
 } from 'lucide-react';
 
 interface SiteSettings { heroVideoUrl?: string; }
@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const [projectCount, setProjectCount] = useState(0);
   const [employeeCount, setEmployeeCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [estimateCount, setEstimateCount] = useState({ drafts: 0, sent: 0 });
   const [recentActivity, setRecentActivity] = useState<{ action: string; details: string; created_at: string }[]>([]);
   const emailBtnRef = useRef<HTMLAnchorElement>(null);
 
@@ -46,6 +47,14 @@ export default function AdminDashboard() {
     fetch('/api/admin/settings').then(r => r.json()).then(setSettings).catch(() => {});
     fetch('/api/admin/projects').then(r => r.json()).then(d => setProjectCount(Array.isArray(d) ? d.length : 0)).catch(() => {});
     fetch('/api/admin/employees').then(r => r.json()).then(d => setEmployeeCount(Array.isArray(d) ? d.filter((e: any) => e.status === 'active').length : 0)).catch(() => {});
+    fetch('/api/admin/estimates').then(r => r.json()).then(d => {
+      if (Array.isArray(d)) {
+        setEstimateCount({
+          drafts: d.filter((e: any) => e.status === 'draft').length,
+          sent: d.filter((e: any) => ['sent', 'viewed'].includes(e.status)).length,
+        });
+      }
+    }).catch(() => {});
     // Fetch unread inbox count
     fetch('/api/email/threads?folder=inbox')
       .then(r => r.json())
@@ -308,53 +317,80 @@ export default function AdminDashboard() {
           </div>
         </Link>
 
-        {/* Row 3: Hero buttons — Email + Team */}
-        <div ref={row3Ref} data-tour="hero-buttons" className="grid grid-cols-2 gap-2.5 relative z-10">
+        {/* Row 3: Hero buttons — Email + Estimates + Team */}
+        <div ref={row3Ref} data-tour="hero-buttons" className="grid grid-cols-3 gap-2 relative z-10">
           {/* Email — blue */}
           <Link href="/admin/inbox"
-            className="relative overflow-hidden border border-[#2a6aaa]/30 rounded-2xl p-3.5 flex items-center gap-3 group active:scale-[0.97] transition-transform"
+            className="relative overflow-hidden border border-[#2a6aaa]/30 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(145deg, #0c1a2e, #0a1220)' }}
           >
             <div className="relative flex-shrink-0">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center"
                 style={{
                   background: 'linear-gradient(145deg, #3b8dd4, #1B6AB5)',
                   boxShadow: '0 4px 15px rgba(59,141,212,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
                 }}>
-                <Mail size={22} className="text-white" />
+                <Mail size={20} className="text-white" />
               </div>
               {unreadCount > 0 && (
                 <>
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold px-1"
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[8px] font-bold px-0.5"
                     style={{ background: '#ef4444', color: 'white', boxShadow: '0 2px 8px rgba(239,68,68,0.5)' }}>
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full bg-red-500 animate-ping opacity-30" />
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] rounded-full bg-red-500 animate-ping opacity-30" />
                 </>
               )}
             </div>
-            <div className="min-w-0">
-              <p className="text-[14px] font-bold leading-tight" style={{ color: '#5ba3dc' }}>Email</p>
-              <p className="text-[11px] text-white/25 mt-0.5">{unreadCount > 0 ? `${unreadCount} new` : 'Inbox'}</p>
+            <div className="text-center min-w-0">
+              <p className="text-[13px] font-bold leading-tight" style={{ color: '#5ba3dc' }}>Email</p>
+              <p className="text-[10px] text-white/25 mt-0.5">{unreadCount > 0 ? `${unreadCount} new` : 'Inbox'}</p>
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #3b8dd4, transparent)' }} />
           </Link>
 
-          {/* Team — orange/gold */}
+          {/* Estimates — gold/green */}
+          <Link href="/admin/estimates"
+            className="relative overflow-hidden border border-[#C9A84C]/25 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
+            style={{ background: 'linear-gradient(145deg, #1a1508, #120f04)' }}
+          >
+            <div className="relative flex-shrink-0">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(145deg, #C9A84C, #a8893d)',
+                  boxShadow: '0 4px 15px rgba(201,168,76,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
+                }}>
+                <Calculator size={20} className="text-white" />
+              </div>
+              {(estimateCount.drafts + estimateCount.sent) > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[8px] font-bold px-0.5"
+                  style={{ background: '#C9A84C', color: '#000', boxShadow: '0 2px 8px rgba(201,168,76,0.5)' }}>
+                  {estimateCount.drafts + estimateCount.sent}
+                </span>
+              )}
+            </div>
+            <div className="text-center min-w-0">
+              <p className="text-[13px] font-bold leading-tight text-[#C9A84C]">Estimates</p>
+              <p className="text-[10px] text-white/25 mt-0.5">{estimateCount.drafts > 0 ? `${estimateCount.drafts} drafts` : 'Create new'}</p>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #C9A84C, transparent)' }} />
+          </Link>
+
+          {/* Team — orange */}
           <Link href="/admin/employees"
-            className="relative overflow-hidden border border-[#D4772C]/25 rounded-2xl p-3.5 flex items-center gap-3 group active:scale-[0.97] transition-transform"
+            className="relative overflow-hidden border border-[#D4772C]/25 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(145deg, #1a1208, #140e06)' }}
           >
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{
                 background: 'linear-gradient(145deg, #D4772C, #b8621e)',
                 boxShadow: '0 4px 15px rgba(212,119,44,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
               }}>
-              <Users size={22} className="text-white" />
+              <Users size={20} className="text-white" />
             </div>
-            <div className="min-w-0">
-              <p className="text-[14px] font-bold leading-tight text-[#D4772C]">Team</p>
-              <p className="text-[11px] text-white/25 mt-0.5">Employees</p>
+            <div className="text-center min-w-0">
+              <p className="text-[13px] font-bold leading-tight text-[#D4772C]">Team</p>
+              <p className="text-[10px] text-white/25 mt-0.5">{employeeCount > 0 ? `${employeeCount} active` : 'Employees'}</p>
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #D4772C, transparent)' }} />
           </Link>
