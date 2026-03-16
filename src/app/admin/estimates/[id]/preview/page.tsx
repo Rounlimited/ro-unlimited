@@ -330,13 +330,13 @@ export default function EstimatePreviewPage() {
             {/* ═══ 1. HEADER / LETTERHEAD ═══ */}
             <div className="print-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 24, borderBottom: '3px solid #1f2937', marginBottom: 24 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#111', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                  RO Unlimited
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginTop: 2 }}>
-                  Construction & Development
-                </div>
-                <div style={{ marginTop: 12, fontSize: 11, color: '#6b7280', lineHeight: 1.6 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/ro-unlimited-logo.png"
+                  alt="RO Unlimited"
+                  style={{ height: 48, width: 'auto', marginBottom: 8 }}
+                />
+                <div style={{ marginTop: 4, fontSize: 11, color: '#6b7280', lineHeight: 1.6 }}>
                   <div>Greenville, SC</div>
                   <div>(864) 304-0139</div>
                   <div>rounlimited.com</div>
