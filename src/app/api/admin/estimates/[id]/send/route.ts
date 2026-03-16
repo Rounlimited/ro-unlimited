@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL } from '@/lib/email';
+import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail } from '@/lib/email';
 import { Resend } from 'resend';
 import { generateEstimatePDF } from '@/lib/estimate-pdf';
 import crypto from 'crypto';
@@ -121,6 +121,19 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       console.error('[estimates/send] Resend error:', sendErr);
       return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
     }
+
+    // Log to email_messages so it appears in the sent box
+    await logEmail({
+      direction: 'outbound',
+      from_email: senderEmail,
+      to_email: to_email,
+      subject,
+      body_html: html,
+      body_text: `Estimate ${estimate.estimate_number}${message ? ` — ${message}` : ''}`,
+      folder: 'sent',
+      has_attachments: true,
+      read: true,
+    });
 
     // Update estimate status to sent
     const now = new Date().toISOString();
