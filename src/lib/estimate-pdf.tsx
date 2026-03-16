@@ -173,6 +173,35 @@ const colW = { num: 24, qty: 40, unit: 44, price: 70, total: 78 };
 
 interface PDFProps { estimate: any; lineItems: any[]; paymentSchedule: any[]; disclaimers: any[]; }
 
+/* ─── Table Header Row (reusable for continuation pages) ──── */
+function TableColumnHeaders() {
+  return (
+    <View style={s.tableHeader}>
+      <Text style={[s.tableHeaderCell, { width: colW.num }]}>#</Text>
+      <Text style={[s.tableHeaderCell, { flex: 1 }]}>Description</Text>
+      <Text style={[s.tableHeaderCell, { width: colW.qty, textAlign: 'right' }]}>Qty</Text>
+      <Text style={[s.tableHeaderCell, { width: colW.unit }]}>Unit</Text>
+      <Text style={[s.tableHeaderCell, { width: colW.price, textAlign: 'right' }]}>Unit Price</Text>
+      <Text style={[s.tableHeaderCell, { width: colW.total, textAlign: 'right' }]}>Total</Text>
+    </View>
+  );
+}
+
+/* ─── Line Item Row (wrap={false} so rows never split) ───── */
+function LineItemRow({ item, counter }: { item: any; counter: number }) {
+  const lineTotal = item.quantity * item.unit_cost * (1 + (item.markup_percent || 0) / 100);
+  return (
+    <View style={counter % 2 === 0 ? s.tableRowAlt : s.tableRow} wrap={false}>
+      <Text style={[s.tableCell, { width: colW.num, color: c.labelLight }]}>{counter}</Text>
+      <Text style={[s.tableCellBold, { flex: 1 }]}>{item.description || '--'}</Text>
+      <Text style={[s.tableCell, { width: colW.qty, textAlign: 'right' }]}>{item.quantity}</Text>
+      <Text style={[s.tableCell, { width: colW.unit }]}>{item.unit}</Text>
+      <Text style={[s.tableCell, { width: colW.price, textAlign: 'right' }]}>{fmt(item.unit_cost * (1 + (item.markup_percent || 0) / 100))}</Text>
+      <Text style={[s.tableCellBold, { width: colW.total, textAlign: 'right' }]}>{fmt(lineTotal)}</Text>
+    </View>
+  );
+}
+
 function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers }: PDFProps) {
   const customer = estimate.customer;
   const scopeText = estimate.scope_of_work || estimate.project_description || '';
@@ -216,6 +245,14 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
 
   let itemCounter = 0;
 
+  /* ── Rule 9: Adaptive Spacing ─────────────────────────────── */
+  const totalItems = (lineItems || []).length;
+  const phaseCount = Object.keys(grouped).length;
+  const isLight = totalItems <= 5;
+  const isHeavy = totalItems >= 15 || phaseCount >= 4;
+  const sectionGap = isLight ? 32 : isHeavy ? 16 : 24;
+  const innerGap = isLight ? 16 : isHeavy ? 8 : 12;
+
   return (
     <Document>
       <Page size="LETTER" style={s.page} wrap>
@@ -239,127 +276,155 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           <Text style={s.pageFooterRight} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
 
-        {/* ═══ 1. MAIN HEADER — Estimate info (visually secondary) ═══ */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, paddingBottom: 14, borderBottomWidth: 2, borderBottomColor: c.navy }}>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: 2.5, color: c.orange, fontFamily: 'Helvetica-Bold' }}>ESTIMATE</Text>
-              <Text style={{ fontSize: 16, fontFamily: 'Helvetica-Bold', color: c.navy }}>{estimate.estimate_number}</Text>
-            </View>
-            <View style={{ marginTop: 6, fontSize: 9, color: c.label, lineHeight: 1.5 }}>
-              <Text style={{ fontSize: 9, color: c.label }}>Date: {fmtDate(estimate.created_at)}</Text>
-              {estimate.valid_until && <Text style={{ fontSize: 9, color: c.label }}>Valid Until: {fmtDate(estimate.valid_until)}</Text>}
-            </View>
-          </View>
-        </View>
-
-        {/* Orange accent bar */}
-        <View style={{ height: 3, backgroundColor: c.orange, marginBottom: 22, borderRadius: 1 }} />
-
-        {/* ═══ 2. CLIENT (Ref #1 — generous spacing) ═══ */}
-        {customer && (
-          <View style={{ marginBottom: 24 }}>
-            <Text style={s.sectionLabel}>Prepared For</Text>
-            <View style={s.clientBox}>
-              <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: c.text }}>{customer.first_name} {customer.last_name}</Text>
-              {customer.company_name && <Text style={{ fontSize: 10, color: c.textLight, marginTop: 2 }}>{customer.company_name}</Text>}
-              <View style={{ fontSize: 9, color: c.label, lineHeight: 1.6, marginTop: 6 }}>
-                {(customer.address || customer.city) && (
-                  <Text>{[customer.address, customer.city, customer.state, customer.zip].filter(Boolean).join(', ')}</Text>
-                )}
-                {customer.phone && <Text>{customer.phone}</Text>}
-                {customer.email && <Text>{customer.email}</Text>}
+        {/* ═══ Rule 8: Prepared For + Project Details + Scope stay on page 1 ═══ */}
+        <View wrap={false}>
+          {/* ── 1. MAIN HEADER ── */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: isLight ? 10 : 6, paddingBottom: isLight ? 14 : 10, borderBottomWidth: 2, borderBottomColor: c.navy }}>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: 2.5, color: c.orange, fontFamily: 'Helvetica-Bold' }}>ESTIMATE</Text>
+                <Text style={{ fontSize: 16, fontFamily: 'Helvetica-Bold', color: c.navy }}>{estimate.estimate_number}</Text>
+              </View>
+              <View style={{ marginTop: 6, fontSize: 9, color: c.label, lineHeight: 1.5 }}>
+                <Text style={{ fontSize: 9, color: c.label }}>Date: {fmtDate(estimate.created_at)}</Text>
+                {estimate.valid_until && <Text style={{ fontSize: 9, color: c.label }}>Valid Until: {fmtDate(estimate.valid_until)}</Text>}
               </View>
             </View>
           </View>
-        )}
 
-        {/* ═══ 3. PROJECT DETAILS ═══ */}
-        <View style={{ marginBottom: 24 }}>
-          <Text style={s.sectionLabel}>Project Details</Text>
-          <View style={s.detailTable}>
-            {estimate.project_name && (
-              <View style={s.detailRow}>
-                <Text style={s.detailLabel}>Project</Text>
-                <Text style={s.detailValue}>{estimate.project_name}</Text>
-              </View>
-            )}
-            {projectAddr && (
-              <View style={s.detailRow}>
-                <Text style={s.detailLabel}>Address</Text>
-                <Text style={s.detailValueNormal}>{projectAddr}</Text>
-              </View>
-            )}
-            {estimate.division && (
-              <View style={s.detailRow}>
-                <Text style={s.detailLabel}>Division</Text>
-                <Text style={s.detailValueNormal}>{humanize(estimate.division)}</Text>
-              </View>
-            )}
-            {estimate.estimate_type && (
-              <View style={s.detailRow}>
-                <Text style={s.detailLabel}>Estimate Type</Text>
-                <Text style={s.detailValueNormal}>{humanize(estimate.estimate_type)}</Text>
-              </View>
-            )}
-            {estimate.contract_type && (
-              <View style={s.detailRowLast}>
-                <Text style={s.detailLabel}>Contract Type</Text>
-                <Text style={s.detailValueNormal}>{humanize(estimate.contract_type)}</Text>
-              </View>
-            )}
-          </View>
+          {/* Orange accent bar */}
+          <View style={{ height: 3, backgroundColor: c.orange, marginBottom: isLight ? 22 : 14, borderRadius: 1 }} />
 
-          {scopeText && scopeText !== '<p></p>' && (
-            <View style={{ marginTop: 14 }}>
-              <Text style={s.sectionLabel}>Scope of Work</Text>
-              <Text style={{ fontSize: 10, color: c.textMed, lineHeight: 1.7 }}>{stripHtml(scopeText)}</Text>
+          {/* ── 2. CLIENT ── */}
+          {customer && (
+            <View style={{ marginBottom: isLight ? 24 : 16 }}>
+              <Text style={s.sectionLabel}>Prepared For</Text>
+              <View style={s.clientBox}>
+                <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: c.text }}>{customer.first_name} {customer.last_name}</Text>
+                {customer.company_name && <Text style={{ fontSize: 10, color: c.textLight, marginTop: 2 }}>{customer.company_name}</Text>}
+                <View style={{ fontSize: 9, color: c.label, lineHeight: 1.6, marginTop: 6 }}>
+                  {(customer.address || customer.city) && (
+                    <Text>{[customer.address, customer.city, customer.state, customer.zip].filter(Boolean).join(', ')}</Text>
+                  )}
+                  {customer.phone && <Text>{customer.phone}</Text>}
+                  {customer.email && <Text>{customer.email}</Text>}
+                </View>
+              </View>
             </View>
           )}
-        </View>
 
-        {/* ═══ 4. LINE ITEMS ═══ */}
-        {Object.keys(grouped).length > 0 && (
-          <View style={{ marginBottom: 24 }}>
-            <Text style={s.sectionLabel}>Itemized Cost Breakdown</Text>
-            {Object.entries(grouped).map(([phase, items]) => (
-              <View key={phase} style={{ marginBottom: 12 }}>
-                <View style={s.phaseHeader}>
-                  <Text style={s.phaseHeaderText}>{phase}</Text>
+          {/* ── 3. PROJECT DETAILS ── */}
+          <View style={{ marginBottom: isLight ? 24 : 16 }}>
+            <Text style={s.sectionLabel}>Project Details</Text>
+            <View style={s.detailTable}>
+              {estimate.project_name && (
+                <View style={s.detailRow}>
+                  <Text style={s.detailLabel}>Project</Text>
+                  <Text style={s.detailValue}>{estimate.project_name}</Text>
                 </View>
-                <View style={s.tableHeader}>
-                  <Text style={[s.tableHeaderCell, { width: colW.num }]}>#</Text>
-                  <Text style={[s.tableHeaderCell, { flex: 1 }]}>Description</Text>
-                  <Text style={[s.tableHeaderCell, { width: colW.qty, textAlign: 'right' }]}>Qty</Text>
-                  <Text style={[s.tableHeaderCell, { width: colW.unit }]}>Unit</Text>
-                  <Text style={[s.tableHeaderCell, { width: colW.price, textAlign: 'right' }]}>Unit Price</Text>
-                  <Text style={[s.tableHeaderCell, { width: colW.total, textAlign: 'right' }]}>Total</Text>
+              )}
+              {projectAddr && (
+                <View style={s.detailRow}>
+                  <Text style={s.detailLabel}>Address</Text>
+                  <Text style={s.detailValueNormal}>{projectAddr}</Text>
                 </View>
-                {items.map((item: any, idx: number) => {
-                  itemCounter++;
-                  const lineTotal = item.quantity * item.unit_cost * (1 + (item.markup_percent || 0) / 100);
-                  return (
-                    <View key={item.id || idx} style={itemCounter % 2 === 0 ? s.tableRowAlt : s.tableRow}>
-                      <Text style={[s.tableCell, { width: colW.num, color: c.labelLight }]}>{itemCounter}</Text>
-                      <Text style={[s.tableCellBold, { flex: 1 }]}>{item.description || '--'}</Text>
-                      <Text style={[s.tableCell, { width: colW.qty, textAlign: 'right' }]}>{item.quantity}</Text>
-                      <Text style={[s.tableCell, { width: colW.unit }]}>{item.unit}</Text>
-                      <Text style={[s.tableCell, { width: colW.price, textAlign: 'right' }]}>{fmt(item.unit_cost * (1 + (item.markup_percent || 0) / 100))}</Text>
-                      <Text style={[s.tableCellBold, { width: colW.total, textAlign: 'right' }]}>{fmt(lineTotal)}</Text>
-                    </View>
-                  );
-                })}
-                <View style={s.phaseFooter}>
-                  <Text style={s.phaseFooterLabel}>{phase} Subtotal</Text>
-                  <Text style={s.phaseFooterValue}>{fmt(phaseSubtotals[phase])}</Text>
+              )}
+              {estimate.division && (
+                <View style={s.detailRow}>
+                  <Text style={s.detailLabel}>Division</Text>
+                  <Text style={s.detailValueNormal}>{humanize(estimate.division)}</Text>
                 </View>
+              )}
+              {estimate.estimate_type && (
+                <View style={s.detailRow}>
+                  <Text style={s.detailLabel}>Estimate Type</Text>
+                  <Text style={s.detailValueNormal}>{humanize(estimate.estimate_type)}</Text>
+                </View>
+              )}
+              {estimate.contract_type && (
+                <View style={s.detailRowLast}>
+                  <Text style={s.detailLabel}>Contract Type</Text>
+                  <Text style={s.detailValueNormal}>{humanize(estimate.contract_type)}</Text>
+                </View>
+              )}
+            </View>
+
+            {scopeText && scopeText !== '<p></p>' && (
+              <View style={{ marginTop: 14 }}>
+                <Text style={s.sectionLabel}>Scope of Work</Text>
+                <Text style={{ fontSize: 10, color: c.textMed, lineHeight: 1.7 }}>{stripHtml(scopeText)}</Text>
               </View>
-            ))}
+            )}
+          </View>
+        </View>
+        {/* ═══ END Rule 8 page-1 block ═══ */}
+
+        {/* ═══ 4. LINE ITEMS — Rules 1, 2, 10 ═══ */}
+        {Object.keys(grouped).length > 0 && (
+          <View style={{ marginBottom: sectionGap }}>
+            <Text style={s.sectionLabel}>Itemized Cost Breakdown</Text>
+            {Object.entries(grouped).map(([phase, items]) => {
+              const phaseItemStart = itemCounter;
+              return (
+                <View key={phase} style={{ marginBottom: innerGap }}>
+                  {/* Rule 1: Category header + column headers + first 2 rows kept together */}
+                  <View wrap={false}>
+                    <View style={s.phaseHeader}>
+                      <Text style={s.phaseHeaderText}>{phase}</Text>
+                    </View>
+                    <TableColumnHeaders />
+                    {items.slice(0, 2).map((item: any, idx: number) => {
+                      itemCounter++;
+                      return <LineItemRow key={item.id || idx} item={item} counter={itemCounter} />;
+                    })}
+                  </View>
+
+                  {/* Middle rows (each row is wrap={false} via LineItemRow) */}
+                  {items.length > 4 && items.slice(2, items.length - 2).map((item: any, idx: number) => {
+                    itemCounter++;
+                    return <LineItemRow key={item.id || (idx + 2)} item={item} counter={itemCounter} />;
+                  })}
+
+                  {/* Rule 2: Last 2 rows + subtotal kept together */}
+                  {items.length > 2 && (
+                    <View wrap={false}>
+                      {/* Rule 10: Continued header when table splits across pages */}
+                      {items.length > 4 && (
+                        <View style={[s.tableHeader, { borderTopWidth: 0.5, borderTopColor: c.border }]}>
+                          <Text style={[s.tableHeaderCell, { width: colW.num }]}>#</Text>
+                          <Text style={[s.tableHeaderCell, { flex: 1 }]}>Description</Text>
+                          <Text style={[s.tableHeaderCell, { width: colW.qty, textAlign: 'right' }]}>Qty</Text>
+                          <Text style={[s.tableHeaderCell, { width: colW.unit }]}>Unit</Text>
+                          <Text style={[s.tableHeaderCell, { width: colW.price, textAlign: 'right' }]}>Unit Price</Text>
+                          <Text style={[s.tableHeaderCell, { width: colW.total, textAlign: 'right' }]}>Total</Text>
+                        </View>
+                      )}
+                      {(items.length <= 4 ? items.slice(2) : items.slice(items.length - 2)).map((item: any, idx: number) => {
+                        itemCounter++;
+                        return <LineItemRow key={item.id || (idx + 100)} item={item} counter={itemCounter} />;
+                      })}
+                      <View style={s.phaseFooter}>
+                        <Text style={s.phaseFooterLabel}>{phase} Subtotal</Text>
+                        <Text style={s.phaseFooterValue}>{fmt(phaseSubtotals[phase])}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Categories with exactly 2 items: subtotal stays with header block */}
+                  {items.length <= 2 && (
+                    <View style={s.phaseFooter}>
+                      <Text style={s.phaseFooterLabel}>{phase} Subtotal</Text>
+                      <Text style={s.phaseFooterValue}>{fmt(phaseSubtotals[phase])}</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
 
-        {/* ═══ 5. FINANCIAL SUMMARY (Ref #4 — dramatic total) ═══ */}
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 28 }} wrap={false}>
+        {/* ═══ 5. FINANCIAL SUMMARY — Rule 3: One unbreakable block ═══ */}
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: sectionGap }} wrap={false}>
           <View style={s.summaryBox}>
             <Text style={s.summaryHeader}>Financial Summary</Text>
             <View style={s.summaryBody}>
@@ -406,9 +471,9 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           </View>
         </View>
 
-        {/* ═══ 6. PAYMENT SCHEDULE (Ref #5 — visual timeline) ═══ */}
+        {/* ═══ 6. PAYMENT SCHEDULE — Rule 4: One unbreakable block ═══ */}
         {milestones.length > 0 && (
-          <View wrap={false} style={{ marginBottom: 28 }}>
+          <View wrap={false} style={{ marginBottom: sectionGap }}>
             <Text style={s.sectionLabel}>Payment Schedule</Text>
 
             {/* Timeline visualization */}
@@ -462,12 +527,12 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           </View>
         )}
 
-        {/* ═══ 7. TERMS & CONDITIONS (Ref #6 — scannable blocks) ═══ */}
+        {/* ═══ 7. TERMS & CONDITIONS — Rule 5: Break only between terms ═══ */}
         {disclaimers.length > 0 && (
-          <View style={{ marginBottom: 24 }}>
-            <Text style={s.sectionLabel}>Terms & Conditions</Text>
+          <View style={{ marginBottom: sectionGap }}>
+            <Text style={[s.sectionLabel, { minPresenceAhead: 60 }]}>Terms & Conditions</Text>
             {disclaimers.map((d: any, i: number) => (
-              <View key={d.id || i} style={s.disclaimerBlock}>
+              <View key={d.id || i} style={s.disclaimerBlock} wrap={false}>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
                   <Text style={s.disclaimerNumber}>{i + 1}.</Text>
                   <Text style={s.disclaimerTitle}>{d.title}</Text>
@@ -478,9 +543,9 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           </View>
         )}
 
-        {/* ═══ 8. EXCLUSIONS ═══ */}
+        {/* ═══ 8. EXCLUSIONS — Rule 7: One unbreakable block ═══ */}
         {exclusionsList.length > 0 && (
-          <View style={{ marginBottom: 24 }}>
+          <View style={{ marginBottom: sectionGap }} wrap={false}>
             <Text style={s.sectionLabel}>Exclusions</Text>
             <Text style={{ fontSize: 8.5, color: c.label, fontStyle: 'italic', marginBottom: 6 }}>
               The following items are NOT included in this estimate:
@@ -494,7 +559,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           </View>
         )}
 
-        {/* ═══ 9. ACCEPTANCE (Ref #7 — with QR placeholder + doc ID) ═══ */}
+        {/* ═══ 9. ACCEPTANCE — Rule 6: One unbreakable block ═══ */}
         <View style={s.acceptBox} wrap={false}>
           <Text style={s.sectionLabel}>Acceptance & Authorization</Text>
           <Text style={s.acceptIntro}>
