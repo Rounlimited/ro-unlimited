@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, Printer, Send, Loader2 } from 'lucide-react';
+import { ChevronLeft, Download, Send, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -29,12 +29,12 @@ interface LineItem {
   unit_cost: number;
   markup_percent: number;
   sort_order: number;
-  notes?: string;
 }
 
 interface PaymentMilestone {
   id: string;
   milestone: string;
+  due_description?: string;
   description?: string;
   percent: number;
   amount: number;
@@ -55,30 +55,27 @@ interface Estimate {
   customer?: Customer;
   project_name?: string;
   project_address?: string;
+  project_city?: string;
+  project_state?: string;
+  project_zip?: string;
   division?: string;
   estimate_type?: string;
   contract_type?: string;
   scope_of_work?: string;
+  project_description?: string;
   overhead_percent: number;
   markup_percent: number;
   tax_percent: number;
   contingency_percent: number;
   permit_fees: number;
   subtotal: number;
-  overhead_amount: number;
-  markup_amount: number;
-  tax_amount: number;
-  contingency_amount: number;
   total: number;
   valid_until?: string;
-  valid_days?: number;
   exclusions?: string;
   disclaimer_ids?: string[];
-  notes?: string;
   client_signature?: string;
   client_signed_at?: string;
   created_at: string;
-  updated_at: string;
   line_items: LineItem[];
   payment_schedule: PaymentMilestone[];
 }
@@ -106,31 +103,32 @@ export default function EstimatePreviewPage() {
   const params = useParams();
   const router = useRouter();
   const estimateId = params.id as string;
+  const docRef = useRef<HTMLDivElement>(null);
 
   const [estimate, setEstimate] = useState<Estimate | null>(null);
   const [disclaimers, setDisclaimers] = useState<Disclaimer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [zoom, setZoom] = useState(0.48); // Start zoomed out to fit mobile
+
+  // Auto-detect desktop and zoom appropriately
+  useEffect(() => {
+    const w = window.innerWidth;
+    if (w >= 1024) setZoom(0.85);
+    else if (w >= 768) setZoom(0.65);
+    else setZoom(0.48);
+  }, []);
 
   useEffect(() => {
     if (!estimateId) return;
-
     const load = async () => {
       try {
         const [estRes, discRes] = await Promise.all([
           fetch(`/api/admin/estimates/${estimateId}`),
           fetch('/api/admin/disclaimers'),
         ]);
-
-        if (!estRes.ok) {
-          setError('Estimate not found');
-          setLoading(false);
-          return;
-        }
-
-        const estData = await estRes.json();
-        setEstimate(estData);
-
+        if (!estRes.ok) { setError('Estimate not found'); setLoading(false); return; }
+        setEstimate(await estRes.json());
         const discData = await discRes.json();
         if (Array.isArray(discData)) setDisclaimers(discData);
       } catch {
@@ -139,7 +137,6 @@ export default function EstimatePreviewPage() {
         setLoading(false);
       }
     };
-
     load();
   }, [estimateId]);
 
@@ -155,15 +152,8 @@ export default function EstimatePreviewPage() {
   if (error || !estimate) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-[#0a0a0a] text-white">
-        <div className="text-[18px] font-semibold text-red-400 mb-2">
-          {error || 'Estimate not found'}
-        </div>
-        <button
-          onClick={() => router.push('/admin/estimates')}
-          className="mt-4 px-5 py-2.5 text-[14px] text-white/60 border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
-        >
-          Back to Estimates
-        </button>
+        <div className="text-[18px] font-semibold text-red-400 mb-2">{error || 'Not found'}</div>
+        <button onClick={() => router.push('/admin/estimates')} className="mt-4 px-5 py-2.5 text-[14px] text-white/60 border border-white/10 rounded-lg hover:bg-white/5">Back</button>
       </div>
     );
   }
@@ -171,6 +161,8 @@ export default function EstimatePreviewPage() {
   /* ─── Data prep ──────────────────────────────────────────── */
 
   const customer = estimate.customer;
+  const scopeText = estimate.scope_of_work || estimate.project_description || '';
+  const projectAddr = [estimate.project_address, estimate.project_city, estimate.project_state, estimate.project_zip].filter(Boolean).join(', ');
 
   // Group line items by phase
   const grouped: Record<string, LineItem[]> = {};
@@ -180,659 +172,438 @@ export default function EstimatePreviewPage() {
     grouped[p].push(item);
   });
 
-  // Recalculate totals from line items for accuracy
+  // Calculate totals
   const subtotal = (estimate.line_items || []).reduce(
-    (sum, item) =>
-      sum + item.quantity * item.unit_cost * (1 + (item.markup_percent || 0) / 100),
-    0
+    (sum, item) => sum + item.quantity * item.unit_cost * (1 + (item.markup_percent || 0) / 100), 0
   );
   const overheadAmt = (subtotal * (estimate.overhead_percent || 0)) / 100;
   const markupAmt = (subtotal * (estimate.markup_percent || 0)) / 100;
   const taxable = subtotal + overheadAmt + markupAmt;
   const taxAmt = (taxable * (estimate.tax_percent || 0)) / 100;
   const contingencyAmt = (subtotal * (estimate.contingency_percent || 0)) / 100;
-  const grandTotal =
-    subtotal +
-    overheadAmt +
-    markupAmt +
-    taxAmt +
-    (estimate.permit_fees || 0) +
-    contingencyAmt;
+  const grandTotal = subtotal + overheadAmt + markupAmt + taxAmt + (estimate.permit_fees || 0) + contingencyAmt;
 
-  // Get selected disclaimers
+  // Disclaimers
   const selectedDisclaimers = (estimate.disclaimer_ids || [])
     .map((id) => disclaimers.find((d) => d.id === id))
     .filter(Boolean) as Disclaimer[];
 
-  // Exclusions as array
-  const exclusionsList = (estimate.exclusions || '')
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  // Exclusions
+  const exclusionsList = (estimate.exclusions || '').split('\n').map((s) => s.trim()).filter(Boolean);
 
   // Valid days
   const validDays = estimate.valid_until
-    ? Math.max(
-        0,
-        Math.ceil(
-          (new Date(estimate.valid_until).getTime() - new Date(estimate.created_at).getTime()) /
-            (1000 * 60 * 60 * 24)
-        )
-      )
-    : estimate.valid_days || 30;
+    ? Math.max(0, Math.ceil((new Date(estimate.valid_until).getTime() - new Date(estimate.created_at).getTime()) / 86400000))
+    : 30;
 
   // Phase subtotals
   const phaseSubtotals: Record<string, number> = {};
   Object.entries(grouped).forEach(([phase, items]) => {
-    phaseSubtotals[phase] = items.reduce(
-      (sum, item) =>
-        sum + item.quantity * item.unit_cost * (1 + (item.markup_percent || 0) / 100),
-      0
-    );
+    phaseSubtotals[phase] = items.reduce((sum, item) => sum + item.quantity * item.unit_cost * (1 + (item.markup_percent || 0) / 100), 0);
   });
 
-  // Payment schedule with recalculated amounts
+  // Payment schedule
   const paymentSchedule = (estimate.payment_schedule || []).map((m) => ({
     ...m,
     amount: (grandTotal * (m.percent || 0)) / 100,
   }));
 
-  /* ─── Line item row counter ─────────────────────────────── */
   let itemCounter = 0;
 
+  /* ─── Save as PDF via hidden iframe print ─────────────── */
+
+  const handleSavePDF = () => {
+    if (!docRef.current) return;
+    const html = docRef.current.innerHTML;
+    const printWindow = window.open('', '_blank', 'width=850,height=1100');
+    if (!printWindow) {
+      alert('Please allow popups to save as PDF');
+      return;
+    }
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head>
+<title>${estimate.estimate_number} - RO Unlimited</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Georgia', 'Times New Roman', serif; color: #111; background: white; }
+  @page { size: letter; margin: 0.5in 0.6in; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page-doc { box-shadow: none !important; }
+    table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; }
+    thead { display: table-header-group; }
+    .print-section { page-break-inside: avoid; }
+    .print-break-before { page-break-before: always; }
+  }
+  .page-doc { max-width: 8.5in; margin: 0 auto; padding: 0.5in 0.6in; }
+  table { width: 100%; border-collapse: collapse; }
+  .phase-hdr { background: #1f2937; color: white; padding: 6px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .tbl-hdr { background: #f3f4f6; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
+  .tbl-hdr th { padding: 6px 10px; font-weight: 600; }
+  .tbl-row td { padding: 5px 10px; font-size: 11px; border-bottom: 1px solid #f3f4f6; }
+  .tbl-row-alt { background: #fafafa; }
+  .tbl-foot td { padding: 6px 10px; font-size: 11px; font-weight: 700; background: #f3f4f6; border-top: 2px solid #d1d5db; }
+  .section-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: #9ca3af; font-weight: 600; margin-bottom: 8px; }
+  .summary-box { border: 2px solid #1f2937; border-radius: 4px; overflow: hidden; }
+  .summary-hdr { background: #1f2937; color: white; padding: 6px 16px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; }
+  .summary-row { display: flex; justify-content: space-between; padding: 4px 16px; font-size: 12px; }
+  .summary-total { border-top: 2px solid #1f2937; padding: 8px 16px; display: flex; justify-content: space-between; align-items: baseline; }
+  .sig-block { border: 2px solid #1f2937; border-radius: 4px; padding: 24px; }
+  .sig-line { border-bottom: 2px solid #1f2937; min-height: 36px; margin-bottom: 4px; }
+  .sig-label { font-size: 9px; color: #9ca3af; }
+  .client-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 12px 16px; }
+  .detail-table td { padding: 6px 16px; font-size: 12px; border-bottom: 1px solid #f3f4f6; }
+  .disclaimer-title { font-size: 11px; font-weight: 700; color: #1f2937; margin-bottom: 2px; }
+  .disclaimer-body { font-size: 10px; color: #4b5563; line-height: 1.5; padding-left: 12px; }
+</style>
+</head><body><div class="page-doc">${html}</div></body></html>`);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  };
+
   return (
-    <>
-      {/* Print styles */}
-      <style>{`
-        @media print {
-          /* Hide non-printable elements */
-          .no-print { display: none !important; }
+    <div className="h-full overflow-y-auto bg-[#0a0a0a]">
+      {/* ─── Toolbar ────────────────────────────────────── */}
+      <div className="sticky top-0 z-50 bg-[#111]/95 backdrop-blur-sm border-b border-white/10 px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1 text-[14px] text-white/60 hover:text-white transition-colors flex-shrink-0"
+          >
+            <ChevronLeft size={18} />
+            Back
+          </button>
 
-          /* Reset page */
-          html, body {
-            background: white !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-
-          /* Page setup */
-          @page {
-            size: letter;
-            margin: 0.6in 0.7in;
-          }
-
-          /* The document wrapper */
-          .print-area {
-            box-shadow: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            max-width: none !important;
-            width: 100% !important;
-            border: none !important;
-            border-radius: 0 !important;
-          }
-
-          /* Page background */
-          .preview-bg {
-            background: white !important;
-            padding: 0 !important;
-            min-height: auto !important;
-          }
-
-          /* Table handling */
-          table { page-break-inside: auto; }
-          tr { page-break-inside: avoid; }
-          thead { display: table-header-group; }
-
-          /* Section page breaks */
-          .print-section { page-break-inside: avoid; }
-          .print-break-before { page-break-before: always; }
-
-          /* Page numbers via CSS counter */
-          .print-area {
-            counter-reset: page-num;
-          }
-
-          .page-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 9px;
-            color: #999;
-            padding: 8px 0;
-          }
-        }
-
-        /* Screen preview styles */
-        @media screen {
-          .print-area {
-            font-family: 'Georgia', 'Times New Roman', serif;
-          }
-        }
-      `}</style>
-
-      <div className="h-full overflow-y-auto preview-bg bg-[#0a0a0a]">
-        {/* ─── Toolbar (hidden in print) ────────────────────── */}
-        <div className="no-print sticky top-0 z-50 bg-[#111]/95 backdrop-blur-sm border-b border-white/10 px-4 sm:px-6 py-3">
-          <div className="max-w-[900px] mx-auto flex items-center justify-between">
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-1.5 text-[14px] text-white/60 hover:text-white transition-colors"
-            >
-              <ChevronLeft size={18} />
-              Back
+          <div className="flex items-center gap-1.5">
+            {/* Zoom controls */}
+            <button onClick={() => setZoom(z => Math.max(0.3, z - 0.1))} className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+              <ZoomOut size={16} />
             </button>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-2 px-5 py-2.5 bg-white/10 border border-white/10 text-white text-[14px] font-medium rounded-lg hover:bg-white/15 transition-colors"
-              >
-                <Printer size={16} />
-                Print / Save PDF
-              </button>
-              <button
-                onClick={() => router.push(`/admin/estimates/${estimateId}`)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#C9A84C] text-black text-[14px] font-semibold rounded-lg hover:bg-[#C9A84C]/90 transition-colors"
-              >
-                <Send size={16} />
-                Send to Customer
-              </button>
-            </div>
+            <span className="text-[11px] text-white/30 w-10 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom(z => Math.min(1, z + 0.1))} className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+              <ZoomIn size={16} />
+            </button>
+
+            <button
+              onClick={handleSavePDF}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/10 border border-white/10 text-white text-[13px] font-medium rounded-lg hover:bg-white/15 transition-colors"
+            >
+              <Download size={14} />
+              <span className="hidden sm:inline">Save PDF</span>
+            </button>
+            <button
+              onClick={() => router.push(`/admin/estimates/${estimateId}`)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-[#C9A84C] text-black text-[13px] font-semibold rounded-lg hover:bg-[#C9A84C]/90 transition-colors"
+            >
+              <Send size={14} />
+              <span className="hidden sm:inline">Send</span>
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* ─── Document Preview ─────────────────────────────── */}
-        <div className="no-print py-8" />
-        <div className="max-w-[850px] mx-auto px-4 sm:px-0 pb-12">
-          <div className="print-area bg-white text-black rounded-lg shadow-2xl overflow-hidden" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
-            <div className="px-10 sm:px-14 py-10 sm:py-12">
+      {/* ─── Document Preview (zoomable, scrollable) ──── */}
+      <div className="overflow-x-auto py-6 px-3">
+        <div
+          style={{
+            width: '8.5in',
+            minHeight: '11in',
+            transform: `scale(${zoom})`,
+            transformOrigin: 'top left',
+            marginBottom: `calc(-11in * (1 - ${zoom}))`,
+          }}
+        >
+          <div
+            ref={docRef}
+            className="bg-white text-black shadow-2xl"
+            style={{
+              fontFamily: "'Georgia', 'Times New Roman', serif",
+              width: '8.5in',
+              minHeight: '11in',
+              padding: '0.6in 0.7in',
+            }}
+          >
 
-              {/* ═══════════════════════════════════════════════
-                  1. HEADER / LETTERHEAD
-                  ═══════════════════════════════════════════════ */}
-              <div className="print-section flex flex-col sm:flex-row justify-between items-start gap-6 pb-8 border-b-2 border-gray-800 mb-8">
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/ro-unlimited-logo-transparent.png"
-                      alt="RO Unlimited"
-                      className="h-14 sm:h-16 w-auto object-contain"
-                    />
-                  </div>
-                  <div className="text-[18px] sm:text-[20px] font-bold text-gray-900 tracking-tight leading-tight">
-                    RO Unlimited Construction<br />& Development
-                  </div>
-                  <div className="mt-3 text-[11px] sm:text-[12px] text-gray-500 leading-relaxed space-y-0.5">
-                    <div>Greenville, SC</div>
-                    <div>(864) 304-0139</div>
-                    <div>rounlimited.com</div>
-                  </div>
+            {/* ═══ 1. HEADER / LETTERHEAD ═══ */}
+            <div className="print-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 24, borderBottom: '3px solid #1f2937', marginBottom: 24 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#111', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                  RO Unlimited
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <div className="text-[11px] uppercase tracking-[0.15em] text-gray-400 font-medium mb-1">
-                    Estimate
-                  </div>
-                  <div className="text-[22px] sm:text-[26px] font-bold text-gray-900 tracking-tight">
-                    {estimate.estimate_number}
-                  </div>
-                  <div className="mt-3 space-y-1 text-[12px] text-gray-600">
-                    <div>
-                      <span className="text-gray-400">Date: </span>
-                      {fmtDate(estimate.created_at)}
-                    </div>
-                    {estimate.valid_until && (
-                      <div>
-                        <span className="text-gray-400">Valid Until: </span>
-                        {fmtDate(estimate.valid_until)}
-                      </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginTop: 2 }}>
+                  Construction & Development
+                </div>
+                <div style={{ marginTop: 12, fontSize: 11, color: '#6b7280', lineHeight: 1.6 }}>
+                  <div>Greenville, SC</div>
+                  <div>(864) 304-0139</div>
+                  <div>rounlimited.com</div>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#9ca3af', fontWeight: 600, marginBottom: 4 }}>
+                  Estimate
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: '#111', letterSpacing: '-0.02em' }}>
+                  {estimate.estimate_number}
+                </div>
+                <div style={{ marginTop: 10, fontSize: 11, color: '#6b7280', lineHeight: 1.8 }}>
+                  <div><span style={{ color: '#9ca3af' }}>Date: </span>{fmtDate(estimate.created_at)}</div>
+                  {estimate.valid_until && (
+                    <div><span style={{ color: '#9ca3af' }}>Valid Until: </span>{fmtDate(estimate.valid_until)}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ═══ 2. CLIENT INFO ═══ */}
+            {customer && (
+              <div className="print-section" style={{ marginBottom: 24 }}>
+                <div className="section-label" style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 6 }}>Prepared For</div>
+                <div className="client-box" style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 4, padding: '10px 16px' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>{customer.first_name} {customer.last_name}</div>
+                  {customer.company_name && <div style={{ fontSize: 12, color: '#4b5563', marginTop: 2 }}>{customer.company_name}</div>}
+                  <div style={{ marginTop: 6, fontSize: 11, color: '#6b7280', lineHeight: 1.6 }}>
+                    {(customer.address || customer.city) && (
+                      <div>{[customer.address, customer.city, customer.state, customer.zip].filter(Boolean).join(', ')}</div>
                     )}
+                    {customer.phone && <div>{customer.phone}</div>}
+                    {customer.email && <div>{customer.email}</div>}
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* ═══════════════════════════════════════════════
-                  2. CLIENT INFORMATION
-                  ═══════════════════════════════════════════════ */}
-              {customer && (
-                <div className="print-section mb-8">
-                  <div className="text-[10px] uppercase tracking-[0.15em] text-gray-400 font-semibold mb-2">
-                    Prepared For
-                  </div>
-                  <div className="bg-gray-50 border border-gray-200 rounded-md px-5 py-4">
-                    <div className="text-[15px] font-bold text-gray-900">
-                      {customer.first_name} {customer.last_name}
-                    </div>
-                    {customer.company_name && (
-                      <div className="text-[13px] text-gray-600 mt-0.5">
-                        {customer.company_name}
-                      </div>
-                    )}
-                    <div className="mt-2 text-[12px] text-gray-500 space-y-0.5">
-                      {(customer.address || customer.city) && (
-                        <div>
-                          {[customer.address, customer.city, customer.state, customer.zip]
-                            .filter(Boolean)
-                            .join(', ')}
-                        </div>
-                      )}
-                      {customer.phone && <div>{customer.phone}</div>}
-                      {customer.email && <div>{customer.email}</div>}
-                    </div>
-                  </div>
+            {/* ═══ 3. PROJECT DETAILS ═══ */}
+            <div className="print-section" style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 6 }}>Project Details</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e5e7eb', borderRadius: 4 }}>
+                <tbody>
+                  {estimate.project_name && (
+                    <tr className="detail-table"><td style={{ padding: '6px 16px', fontSize: 12, color: '#9ca3af', fontWeight: 500, width: 130, borderBottom: '1px solid #f3f4f6' }}>Project</td><td style={{ padding: '6px 16px', fontSize: 12, color: '#111', fontWeight: 600, borderBottom: '1px solid #f3f4f6' }}>{estimate.project_name}</td></tr>
+                  )}
+                  {projectAddr && (
+                    <tr><td style={{ padding: '6px 16px', fontSize: 12, color: '#9ca3af', fontWeight: 500, borderBottom: '1px solid #f3f4f6' }}>Address</td><td style={{ padding: '6px 16px', fontSize: 12, color: '#374151', borderBottom: '1px solid #f3f4f6' }}>{projectAddr}</td></tr>
+                  )}
+                  {estimate.division && (
+                    <tr><td style={{ padding: '6px 16px', fontSize: 12, color: '#9ca3af', fontWeight: 500, borderBottom: '1px solid #f3f4f6' }}>Division</td><td style={{ padding: '6px 16px', fontSize: 12, color: '#374151', textTransform: 'capitalize', borderBottom: '1px solid #f3f4f6' }}>{estimate.division}</td></tr>
+                  )}
+                  {estimate.estimate_type && (
+                    <tr><td style={{ padding: '6px 16px', fontSize: 12, color: '#9ca3af', fontWeight: 500, borderBottom: '1px solid #f3f4f6' }}>Type</td><td style={{ padding: '6px 16px', fontSize: 12, color: '#374151', borderBottom: '1px solid #f3f4f6' }}>{humanize(estimate.estimate_type)}</td></tr>
+                  )}
+                  {estimate.contract_type && (
+                    <tr><td style={{ padding: '6px 16px', fontSize: 12, color: '#9ca3af', fontWeight: 500 }}>Contract</td><td style={{ padding: '6px 16px', fontSize: 12, color: '#374151' }}>{humanize(estimate.contract_type)}</td></tr>
+                  )}
+                </tbody>
+              </table>
+
+              {scopeText && scopeText !== '<p></p>' && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 6 }}>Scope of Work</div>
+                  <div style={{ fontSize: 12, color: '#374151', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: scopeText }} />
                 </div>
               )}
+            </div>
 
-              {/* ═══════════════════════════════════════════════
-                  3. PROJECT DETAILS
-                  ═══════════════════════════════════════════════ */}
-              <div className="print-section mb-8">
-                <div className="text-[10px] uppercase tracking-[0.15em] text-gray-400 font-semibold mb-2">
-                  Project Details
-                </div>
-                <div className="border border-gray-200 rounded-md overflow-hidden">
-                  <table className="w-full text-[13px]">
-                    <tbody>
-                      {estimate.project_name && (
-                        <tr className="border-b border-gray-100">
-                          <td className="px-5 py-2.5 text-gray-400 font-medium w-[140px]">
-                            Project
-                          </td>
-                          <td className="px-5 py-2.5 text-gray-900 font-semibold">
-                            {estimate.project_name}
-                          </td>
+            {/* ═══ 4. LINE ITEMS ═══ */}
+            {Object.keys(grouped).length > 0 && (
+              <div className="print-section" style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Itemized Cost Breakdown</div>
+                {Object.entries(grouped).map(([phase, items]) => (
+                  <div key={phase} style={{ marginBottom: 16 }}>
+                    <div className="phase-hdr" style={{ background: '#1f2937', color: 'white', padding: '6px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', borderRadius: '4px 4px 0 0' }}>{phase}</div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr className="tbl-hdr" style={{ background: '#f3f4f6' }}>
+                          <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 32 }}>#</th>
+                          <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600 }}>Description</th>
+                          <th style={{ textAlign: 'right', padding: '6px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 50 }}>Qty</th>
+                          <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 50 }}>Unit</th>
+                          <th style={{ textAlign: 'right', padding: '6px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 85 }}>Unit Price</th>
+                          <th style={{ textAlign: 'right', padding: '6px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 95 }}>Total</th>
                         </tr>
-                      )}
-                      {estimate.project_address && (
-                        <tr className="border-b border-gray-100">
-                          <td className="px-5 py-2.5 text-gray-400 font-medium">Address</td>
-                          <td className="px-5 py-2.5 text-gray-700">
-                            {estimate.project_address}
-                          </td>
+                      </thead>
+                      <tbody>
+                        {items.map((item) => {
+                          itemCounter++;
+                          const lineTotal = item.quantity * item.unit_cost * (1 + (item.markup_percent || 0) / 100);
+                          return (
+                            <tr key={item.id} style={{ background: itemCounter % 2 === 0 ? '#fafafa' : 'white' }}>
+                              <td style={{ padding: '5px 10px', fontSize: 11, color: '#9ca3af', borderBottom: '1px solid #f3f4f6' }}>{itemCounter}</td>
+                              <td style={{ padding: '5px 10px', fontSize: 11, color: '#1f2937', fontWeight: 500, borderBottom: '1px solid #f3f4f6' }}>{item.description || '--'}</td>
+                              <td style={{ padding: '5px 10px', fontSize: 11, color: '#4b5563', textAlign: 'right', borderBottom: '1px solid #f3f4f6' }}>{item.quantity}</td>
+                              <td style={{ padding: '5px 10px', fontSize: 11, color: '#6b7280', borderBottom: '1px solid #f3f4f6' }}>{item.unit}</td>
+                              <td style={{ padding: '5px 10px', fontSize: 11, color: '#4b5563', textAlign: 'right', borderBottom: '1px solid #f3f4f6' }}>{fmt(item.unit_cost * (1 + (item.markup_percent || 0) / 100))}</td>
+                              <td style={{ padding: '5px 10px', fontSize: 11, color: '#111', fontWeight: 600, textAlign: 'right', borderBottom: '1px solid #f3f4f6' }}>{fmt(lineTotal)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr style={{ background: '#f3f4f6', borderTop: '2px solid #d1d5db' }}>
+                          <td colSpan={5} style={{ padding: '6px 10px', fontSize: 10, color: '#6b7280', fontWeight: 600, textAlign: 'right', textTransform: 'uppercase' }}>{phase} Subtotal</td>
+                          <td style={{ padding: '6px 10px', fontSize: 12, color: '#111', fontWeight: 700, textAlign: 'right' }}>{fmt(phaseSubtotals[phase])}</td>
                         </tr>
-                      )}
-                      {estimate.division && (
-                        <tr className="border-b border-gray-100">
-                          <td className="px-5 py-2.5 text-gray-400 font-medium">Division</td>
-                          <td className="px-5 py-2.5 text-gray-700 capitalize">
-                            {estimate.division}
-                          </td>
-                        </tr>
-                      )}
-                      {estimate.estimate_type && (
-                        <tr className="border-b border-gray-100">
-                          <td className="px-5 py-2.5 text-gray-400 font-medium">Estimate Type</td>
-                          <td className="px-5 py-2.5 text-gray-700">
-                            {humanize(estimate.estimate_type)}
-                          </td>
-                        </tr>
-                      )}
-                      {estimate.contract_type && (
-                        <tr>
-                          <td className="px-5 py-2.5 text-gray-400 font-medium">Contract Type</td>
-                          <td className="px-5 py-2.5 text-gray-700">
-                            {humanize(estimate.contract_type)}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                      </tfoot>
+                    </table>
+                  </div>
+                ))}
+              </div>
+            )}
 
-                {/* Scope of Work */}
-                {estimate.scope_of_work &&
-                  estimate.scope_of_work !== '<p></p>' && (
-                    <div className="mt-5">
-                      <div className="text-[10px] uppercase tracking-[0.15em] text-gray-400 font-semibold mb-2">
-                        Scope of Work
-                      </div>
-                      <div
-                        className="text-[13px] text-gray-700 leading-relaxed prose prose-sm max-w-none prose-headings:text-gray-800 prose-p:text-gray-700 prose-li:text-gray-700"
-                        dangerouslySetInnerHTML={{ __html: estimate.scope_of_work }}
-                      />
+            {/* ═══ 5. FINANCIAL SUMMARY ═══ */}
+            <div className="print-section" style={{ marginBottom: 24, display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ width: 300, border: '2px solid #1f2937', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ background: '#1f2937', color: 'white', padding: '6px 16px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>Financial Summary</div>
+                <div style={{ padding: '8px 16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
+                    <span style={{ color: '#6b7280' }}>Subtotal</span>
+                    <span style={{ color: '#111', fontWeight: 500 }}>{fmt(subtotal)}</span>
+                  </div>
+                  {estimate.overhead_percent > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
+                      <span style={{ color: '#6b7280' }}>Overhead ({estimate.overhead_percent}%)</span>
+                      <span style={{ color: '#111', fontWeight: 500 }}>{fmt(overheadAmt)}</span>
                     </div>
                   )}
-              </div>
-
-              {/* ═══════════════════════════════════════════════
-                  4. ITEMIZED COST BREAKDOWN
-                  ═══════════════════════════════════════════════ */}
-              {Object.keys(grouped).length > 0 && (
-                <div className="print-section mb-8">
-                  <div className="text-[10px] uppercase tracking-[0.15em] text-gray-400 font-semibold mb-3">
-                    Itemized Cost Breakdown
-                  </div>
-
-                  {Object.entries(grouped).map(([phase, items]) => (
-                    <div key={phase} className="mb-5 last:mb-0">
-                      {/* Phase Header */}
-                      <div className="bg-gray-800 text-white px-4 py-2 text-[12px] font-bold uppercase tracking-wider rounded-t-md">
-                        {phase}
-                      </div>
-
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="bg-gray-100 text-[10px] uppercase tracking-wider text-gray-500">
-                            <th className="text-left px-3 py-2 font-semibold w-[40px]">#</th>
-                            <th className="text-left px-3 py-2 font-semibold">Description</th>
-                            <th className="text-right px-3 py-2 font-semibold w-[55px]">Qty</th>
-                            <th className="text-left px-3 py-2 font-semibold w-[55px]">Unit</th>
-                            <th className="text-right px-3 py-2 font-semibold w-[90px]">Unit Price</th>
-                            <th className="text-right px-3 py-2 font-semibold w-[100px]">Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {items.map((item) => {
-                            itemCounter++;
-                            const lineTotal =
-                              item.quantity *
-                              item.unit_cost *
-                              (1 + (item.markup_percent || 0) / 100);
-                            const isEven = itemCounter % 2 === 0;
-                            return (
-                              <tr
-                                key={item.id}
-                                className={`border-b border-gray-100 text-[12px] ${
-                                  isEven ? 'bg-gray-50' : 'bg-white'
-                                }`}
-                              >
-                                <td className="px-3 py-2 text-gray-400">{itemCounter}</td>
-                                <td className="px-3 py-2 text-gray-800 font-medium">
-                                  {item.description || '--'}
-                                </td>
-                                <td className="px-3 py-2 text-gray-600 text-right">
-                                  {item.quantity}
-                                </td>
-                                <td className="px-3 py-2 text-gray-500">{item.unit}</td>
-                                <td className="px-3 py-2 text-gray-600 text-right">
-                                  {fmt(
-                                    item.unit_cost * (1 + (item.markup_percent || 0) / 100)
-                                  )}
-                                </td>
-                                <td className="px-3 py-2 text-gray-900 font-semibold text-right">
-                                  {fmt(lineTotal)}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                        <tfoot>
-                          <tr className="bg-gray-100 border-t-2 border-gray-300">
-                            <td colSpan={5} className="px-3 py-2 text-[11px] text-gray-500 font-semibold text-right uppercase">
-                              {phase} Subtotal
-                            </td>
-                            <td className="px-3 py-2 text-[13px] text-gray-900 font-bold text-right">
-                              {fmt(phaseSubtotals[phase])}
-                            </td>
-                          </tr>
-                        </tfoot>
-                      </table>
+                  {estimate.markup_percent > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
+                      <span style={{ color: '#6b7280' }}>Markup ({estimate.markup_percent}%)</span>
+                      <span style={{ color: '#111', fontWeight: 500 }}>{fmt(markupAmt)}</span>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* ═══════════════════════════════════════════════
-                  5. FINANCIAL SUMMARY
-                  ═══════════════════════════════════════════════ */}
-              <div className="print-section mb-8">
-                <div className="flex justify-end">
-                  <div className="w-full sm:w-[320px] border-2 border-gray-800 rounded-md overflow-hidden">
-                    <div className="bg-gray-800 text-white px-5 py-2 text-[10px] uppercase tracking-[0.15em] font-semibold">
-                      Financial Summary
+                  )}
+                  {estimate.tax_percent > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
+                      <span style={{ color: '#6b7280' }}>Tax ({estimate.tax_percent}%)</span>
+                      <span style={{ color: '#111', fontWeight: 500 }}>{fmt(taxAmt)}</span>
                     </div>
-                    <div className="px-5 py-3 space-y-2 text-[13px]">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Subtotal</span>
-                        <span className="text-gray-900 font-medium">{fmt(subtotal)}</span>
-                      </div>
-                      {estimate.overhead_percent > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">
-                            Overhead ({estimate.overhead_percent}%)
-                          </span>
-                          <span className="text-gray-900 font-medium">{fmt(overheadAmt)}</span>
-                        </div>
-                      )}
-                      {estimate.markup_percent > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">
-                            Markup ({estimate.markup_percent}%)
-                          </span>
-                          <span className="text-gray-900 font-medium">{fmt(markupAmt)}</span>
-                        </div>
-                      )}
-                      {estimate.tax_percent > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">
-                            Tax ({estimate.tax_percent}%)
-                          </span>
-                          <span className="text-gray-900 font-medium">{fmt(taxAmt)}</span>
-                        </div>
-                      )}
-                      {estimate.permit_fees > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Permit Fees</span>
-                          <span className="text-gray-900 font-medium">
-                            {fmt(estimate.permit_fees)}
-                          </span>
-                        </div>
-                      )}
-                      {estimate.contingency_percent > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">
-                            Contingency ({estimate.contingency_percent}%)
-                          </span>
-                          <span className="text-gray-900 font-medium">
-                            {fmt(contingencyAmt)}
-                          </span>
-                        </div>
-                      )}
-                      <div className="border-t-2 border-gray-800 pt-3 mt-2">
-                        <div className="flex justify-between items-baseline">
-                          <span className="text-[14px] font-bold text-gray-900 uppercase tracking-wide">
-                            Total
-                          </span>
-                          <span className="text-[22px] font-bold text-gray-900">
-                            {fmt(grandTotal)}
-                          </span>
-                        </div>
-                      </div>
+                  )}
+                  {(estimate.permit_fees || 0) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
+                      <span style={{ color: '#6b7280' }}>Permit Fees</span>
+                      <span style={{ color: '#111', fontWeight: 500 }}>{fmt(estimate.permit_fees)}</span>
                     </div>
+                  )}
+                  {estimate.contingency_percent > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
+                      <span style={{ color: '#6b7280' }}>Contingency ({estimate.contingency_percent}%)</span>
+                      <span style={{ color: '#111', fontWeight: 500 }}>{fmt(contingencyAmt)}</span>
+                    </div>
+                  )}
+                  <div style={{ borderTop: '2px solid #1f2937', marginTop: 6, paddingTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</span>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: '#111' }}>{fmt(grandTotal)}</span>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* ═══════════════════════════════════════════════
-                  6. PAYMENT SCHEDULE
-                  ═══════════════════════════════════════════════ */}
-              {paymentSchedule.length > 0 && (
-                <div className="print-section mb-8">
-                  <div className="text-[10px] uppercase tracking-[0.15em] text-gray-400 font-semibold mb-3">
-                    Payment Schedule
-                  </div>
-                  <table className="w-full border-collapse border border-gray-200 rounded-md overflow-hidden">
-                    <thead>
-                      <tr className="bg-gray-100 text-[10px] uppercase tracking-wider text-gray-500">
-                        <th className="text-left px-4 py-2.5 font-semibold">Milestone</th>
-                        <th className="text-center px-4 py-2.5 font-semibold w-[70px]">%</th>
-                        <th className="text-right px-4 py-2.5 font-semibold w-[120px]">Amount</th>
-                        <th className="text-left px-4 py-2.5 font-semibold">When Due</th>
+            {/* ═══ 6. PAYMENT SCHEDULE ═══ */}
+            {paymentSchedule.length > 0 && (
+              <div className="print-section" style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Payment Schedule</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e5e7eb' }}>
+                  <thead>
+                    <tr style={{ background: '#f3f4f6' }}>
+                      <th style={{ textAlign: 'left', padding: '6px 12px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600 }}>Milestone</th>
+                      <th style={{ textAlign: 'center', padding: '6px 12px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 60 }}>%</th>
+                      <th style={{ textAlign: 'right', padding: '6px 12px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 110 }}>Amount</th>
+                      <th style={{ textAlign: 'left', padding: '6px 12px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600 }}>When Due</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paymentSchedule.map((m, i) => (
+                      <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                        <td style={{ padding: '6px 12px', fontSize: 11, color: '#1f2937', fontWeight: 500, borderBottom: '1px solid #f3f4f6' }}>{m.milestone || `Milestone ${i + 1}`}</td>
+                        <td style={{ padding: '6px 12px', fontSize: 11, color: '#4b5563', textAlign: 'center', borderBottom: '1px solid #f3f4f6' }}>{m.percent}%</td>
+                        <td style={{ padding: '6px 12px', fontSize: 11, color: '#111', fontWeight: 600, textAlign: 'right', borderBottom: '1px solid #f3f4f6' }}>{fmt(m.amount)}</td>
+                        <td style={{ padding: '6px 12px', fontSize: 11, color: '#6b7280', borderBottom: '1px solid #f3f4f6' }}>{m.due_description || m.description || '--'}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {paymentSchedule.map((m, i) => (
-                        <tr
-                          key={m.id || i}
-                          className={`border-b border-gray-100 text-[12px] ${
-                            i % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                          }`}
-                        >
-                          <td className="px-4 py-2.5 text-gray-800 font-medium">
-                            {m.milestone || `Milestone ${i + 1}`}
-                          </td>
-                          <td className="px-4 py-2.5 text-gray-600 text-center">
-                            {m.percent}%
-                          </td>
-                          <td className="px-4 py-2.5 text-gray-900 font-semibold text-right">
-                            {fmt(m.amount)}
-                          </td>
-                          <td className="px-4 py-2.5 text-gray-500">
-                            {m.due_description || m.description || '--'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className="mt-2 text-[11px] text-gray-400 italic">
-                    A deposit may be required before work commences. Payment terms are net 15 days
-                    from invoice date unless otherwise specified.
-                  </div>
-                </div>
-              )}
-
-              {/* ═══════════════════════════════════════════════
-                  7. TERMS & CONDITIONS
-                  ═══════════════════════════════════════════════ */}
-              {selectedDisclaimers.length > 0 && (
-                <div className="print-section mb-8">
-                  <div className="text-[10px] uppercase tracking-[0.15em] text-gray-400 font-semibold mb-3">
-                    Terms & Conditions
-                  </div>
-                  <div className="space-y-4">
-                    {selectedDisclaimers.map((d, i) => (
-                      <div key={d.id}>
-                        <div className="text-[12px] font-bold text-gray-800 mb-1">
-                          {i + 1}. {d.title}
-                        </div>
-                        <div className="text-[11px] text-gray-600 leading-relaxed whitespace-pre-wrap pl-4">
-                          {d.body}
-                        </div>
-                      </div>
                     ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ═══════════════════════════════════════════════
-                  8. EXCLUSIONS
-                  ═══════════════════════════════════════════════ */}
-              {exclusionsList.length > 0 && (
-                <div className="print-section mb-8">
-                  <div className="text-[10px] uppercase tracking-[0.15em] text-gray-400 font-semibold mb-3">
-                    Exclusions
-                  </div>
-                  <div className="text-[12px] text-gray-600 leading-relaxed">
-                    <p className="text-[11px] text-gray-500 italic mb-2">
-                      The following items are NOT included in this estimate:
-                    </p>
-                    <ul className="list-disc pl-5 space-y-1">
-                      {exclusionsList.map((item, i) => (
-                        <li key={i}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-
-              {/* ═══════════════════════════════════════════════
-                  9. ACCEPTANCE BLOCK
-                  ═══════════════════════════════════════════════ */}
-              <div className="print-section print-break-before mb-8">
-                <div className="border-2 border-gray-800 rounded-md p-6 sm:p-8">
-                  <div className="text-[10px] uppercase tracking-[0.15em] text-gray-400 font-semibold mb-3">
-                    Acceptance & Authorization
-                  </div>
-                  <p className="text-[12px] text-gray-600 leading-relaxed mb-6">
-                    By signing below, you accept this estimate and authorize RO Unlimited
-                    Construction & Development to begin work as described above. This acceptance
-                    constitutes a binding agreement subject to the terms and conditions stated
-                    herein.
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
-                    {/* Client Signature */}
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.12em] text-gray-400 font-semibold mb-2">
-                        Client
-                      </div>
-                      {estimate.client_signature ? (
-                        <div className="border-b-2 border-gray-800 pb-1 mb-2 min-h-[48px] flex items-end">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={estimate.client_signature}
-                            alt="Client Signature"
-                            className="h-12 w-auto"
-                          />
-                        </div>
-                      ) : (
-                        <div className="border-b-2 border-gray-800 pb-1 mb-2 min-h-[48px]" />
-                      )}
-                      <div className="text-[10px] text-gray-400">Signature</div>
-
-                      <div className="mt-4 border-b border-gray-300 pb-1 mb-1 min-h-[20px]">
-                        {customer && (
-                          <span className="text-[12px] text-gray-700">
-                            {customer.first_name} {customer.last_name}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-gray-400">Printed Name</div>
-
-                      <div className="mt-4 border-b border-gray-300 pb-1 mb-1 min-h-[20px]">
-                        {estimate.client_signed_at && (
-                          <span className="text-[12px] text-gray-700">
-                            {fmtDate(estimate.client_signed_at)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-gray-400">Date</div>
-                    </div>
-
-                    {/* Contractor Signature */}
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.12em] text-gray-400 font-semibold mb-2">
-                        Contractor
-                      </div>
-                      <div className="border-b-2 border-gray-800 pb-1 mb-2 min-h-[48px]" />
-                      <div className="text-[10px] text-gray-400">Signature</div>
-
-                      <div className="mt-4 border-b border-gray-300 pb-1 mb-1 min-h-[20px]" />
-                      <div className="text-[10px] text-gray-400">Printed Name</div>
-
-                      <div className="mt-4 border-b border-gray-300 pb-1 mb-1 min-h-[20px]" />
-                      <div className="text-[10px] text-gray-400">Date</div>
-                    </div>
-                  </div>
+                  </tbody>
+                </table>
+                <div style={{ marginTop: 6, fontSize: 10, color: '#9ca3af', fontStyle: 'italic' }}>
+                  A deposit may be required before work commences. Payment terms are net 15 days from invoice date unless otherwise specified.
                 </div>
               </div>
+            )}
 
-              {/* ═══════════════════════════════════════════════
-                  10. FOOTER
-                  ═══════════════════════════════════════════════ */}
-              <div className="print-section border-t-2 border-gray-800 pt-4 mt-8">
-                <div className="text-center text-[10px] text-gray-400 space-y-1">
-                  <div className="font-semibold text-gray-500">
-                    Licensed and Insured | RO Unlimited Construction & Development
+            {/* ═══ 7. TERMS & CONDITIONS ═══ */}
+            {selectedDisclaimers.length > 0 && (
+              <div className="print-section" style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Terms & Conditions</div>
+                {selectedDisclaimers.map((d, i) => (
+                  <div key={d.id} style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#1f2937', marginBottom: 2 }}>{i + 1}. {d.title}</div>
+                    <div style={{ fontSize: 10, color: '#4b5563', lineHeight: 1.5, paddingLeft: 12 }}>{d.body}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ═══ 8. EXCLUSIONS ═══ */}
+            {exclusionsList.length > 0 && (
+              <div className="print-section" style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Exclusions</div>
+                <div style={{ fontSize: 10, color: '#6b7280', fontStyle: 'italic', marginBottom: 6 }}>The following items are NOT included in this estimate:</div>
+                <ul style={{ paddingLeft: 20, fontSize: 11, color: '#4b5563', lineHeight: 1.6 }}>
+                  {exclusionsList.map((item, i) => <li key={i}>{item}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {/* ═══ 9. ACCEPTANCE BLOCK ═══ */}
+            <div className="print-section print-break-before" style={{ marginBottom: 24 }}>
+              <div style={{ border: '2px solid #1f2937', borderRadius: 4, padding: 24 }}>
+                <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Acceptance & Authorization</div>
+                <p style={{ fontSize: 11, color: '#4b5563', lineHeight: 1.6, marginBottom: 20 }}>
+                  By signing below, you accept this estimate and authorize RO Unlimited Construction & Development to begin work as described above.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 40px' }}>
+                  <div>
+                    <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Client</div>
+                    {estimate.client_signature ? (
+                      <div style={{ borderBottom: '2px solid #1f2937', minHeight: 36, marginBottom: 4, display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
+                        <img src={estimate.client_signature} alt="Signature" style={{ height: 40, width: 'auto' }} />
+                      </div>
+                    ) : (
+                      <div style={{ borderBottom: '2px solid #1f2937', minHeight: 36, marginBottom: 4 }} />
+                    )}
+                    <div style={{ fontSize: 9, color: '#9ca3af' }}>Signature</div>
+                    <div style={{ borderBottom: '1px solid #d1d5db', minHeight: 18, marginTop: 12, marginBottom: 4 }}>
+                      {customer && <span style={{ fontSize: 11, color: '#374151' }}>{customer.first_name} {customer.last_name}</span>}
+                    </div>
+                    <div style={{ fontSize: 9, color: '#9ca3af' }}>Printed Name</div>
+                    <div style={{ borderBottom: '1px solid #d1d5db', minHeight: 18, marginTop: 12, marginBottom: 4 }}>
+                      {estimate.client_signed_at && <span style={{ fontSize: 11, color: '#374151' }}>{fmtDate(estimate.client_signed_at)}</span>}
+                    </div>
+                    <div style={{ fontSize: 9, color: '#9ca3af' }}>Date</div>
                   </div>
                   <div>
-                    This estimate is valid for {validDays} days from date of issue.
-                  </div>
-                  <div className="text-[9px] text-gray-300 mt-2">
-                    (864) 304-0139 | rounlimited.com
+                    <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Contractor</div>
+                    <div style={{ borderBottom: '2px solid #1f2937', minHeight: 36, marginBottom: 4 }} />
+                    <div style={{ fontSize: 9, color: '#9ca3af' }}>Signature</div>
+                    <div style={{ borderBottom: '1px solid #d1d5db', minHeight: 18, marginTop: 12, marginBottom: 4 }} />
+                    <div style={{ fontSize: 9, color: '#9ca3af' }}>Printed Name</div>
+                    <div style={{ borderBottom: '1px solid #d1d5db', minHeight: 18, marginTop: 12, marginBottom: 4 }} />
+                    <div style={{ fontSize: 9, color: '#9ca3af' }}>Date</div>
                   </div>
                 </div>
               </div>
-
             </div>
+
+            {/* ═══ 10. FOOTER ═══ */}
+            <div style={{ borderTop: '3px solid #1f2937', paddingTop: 12, marginTop: 24, textAlign: 'center', fontSize: 10, color: '#9ca3af' }}>
+              <div style={{ fontWeight: 600, color: '#6b7280' }}>Licensed and Insured | RO Unlimited Construction & Development</div>
+              <div style={{ marginTop: 2 }}>This estimate is valid for {validDays} days from date of issue.</div>
+              <div style={{ fontSize: 9, color: '#d1d5db', marginTop: 6 }}>(864) 304-0139 | rounlimited.com</div>
+            </div>
+
           </div>
         </div>
-        <div className="no-print py-8" />
       </div>
-    </>
+    </div>
   );
 }
