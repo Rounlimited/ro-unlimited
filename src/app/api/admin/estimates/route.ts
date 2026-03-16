@@ -95,10 +95,13 @@ export async function POST(req: NextRequest) {
         version: body.version || 1,
         project_name: body.project_name || null,
         project_address: body.project_address || null,
+        project_city: body.project_city || null,
+        project_state: body.project_state || 'SC',
+        project_zip: body.project_zip || null,
         estimate_type: body.estimate_type || null,
+        contract_type: body.contract_type || null,
         division: body.division || null,
-        description: body.description || null,
-        scope_of_work: body.scope_of_work || null,
+        project_description: body.project_description || body.description || body.scope_of_work || null,
         overhead_percent: body.overhead_percent ?? 0,
         markup_percent: body.markup_percent ?? 0,
         tax_percent: body.tax_percent ?? 0,
@@ -106,7 +109,6 @@ export async function POST(req: NextRequest) {
         permit_fees: body.permit_fees ?? 0,
         valid_until: body.valid_until || null,
         notes: body.notes || null,
-        internal_notes: body.internal_notes || null,
       })
       .select()
       .single();

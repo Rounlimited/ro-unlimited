@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const supabase = createAdminClient();
 
     const { data, error } = await supabase
-      .from('estimate_payment_schedule')
+      .from('estimate_payment_schedules')
       .select('*')
       .eq('estimate_id', id)
       .order('sort_order', { ascending: true });
@@ -37,7 +37,7 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
 
     // Delete all existing milestones for this estimate
     await supabase
-      .from('estimate_payment_schedule')
+      .from('estimate_payment_schedules')
       .delete()
       .eq('estimate_id', id);
 
@@ -46,16 +46,14 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
       const rows = items.map((item: any, idx: number) => ({
         estimate_id: id,
         milestone: item.milestone || null,
-        description: item.description || null,
+        due_description: item.description || item.due_description || null,
         amount: item.amount || 0,
         percent: item.percent || 0,
-        due_date: item.due_date || null,
         sort_order: item.sort_order ?? idx,
-        status: item.status || 'pending',
       }));
 
       const { data, error } = await supabase
-        .from('estimate_payment_schedule')
+        .from('estimate_payment_schedules')
         .insert(rows)
         .select();
 

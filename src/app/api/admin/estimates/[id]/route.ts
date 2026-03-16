@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
         .order('phase', { ascending: true })
         .order('sort_order', { ascending: true }),
       supabase
-        .from('estimate_payment_schedule')
+        .from('estimate_payment_schedules')
         .select('*')
         .eq('estimate_id', id)
         .order('sort_order', { ascending: true }),
@@ -77,6 +77,16 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     delete body.id;
     delete body.created_at;
     delete body.estimate_number;
+
+    // Map aliased field names to actual column names
+    if (body.scope_of_work !== undefined) {
+      body.project_description = body.scope_of_work;
+      delete body.scope_of_work;
+    }
+    if (body.description !== undefined && body.project_description === undefined) {
+      body.project_description = body.description;
+      delete body.description;
+    }
 
     if (Object.keys(body).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
