@@ -11,7 +11,7 @@ interface AdminHeaderProps {
   showLogout?: boolean;
 }
 
-export default function AdminHeader({ title, subtitle, showLogout = true }: AdminHeaderProps) {
+export default function AdminHeader({ title, subtitle, backHref, showLogout = true }: AdminHeaderProps) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -25,7 +25,7 @@ export default function AdminHeader({ title, subtitle, showLogout = true }: Admi
       <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => router.back()}
+            onClick={() => backHref ? router.push(backHref) : router.back()}
             className="text-white/30 hover:text-white transition-colors"
           >
             <ArrowLeft size={18} />

@@ -530,7 +530,7 @@ export default function EstimateDetailPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white">
-      <AdminHeader title={estimate.estimate_number} subtitle="Estimate Detail" />
+      <AdminHeader title={estimate.estimate_number} subtitle="Estimate Detail" backHref="/admin/estimates" />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-32">
         {/* ─── Header Section ───────────────────────────────────── */}

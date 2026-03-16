@@ -249,7 +249,7 @@ export default function EstimatePreviewPage() {
       <div className="sticky top-0 z-50 bg-[#111]/95 backdrop-blur-sm border-b border-[#C9A84C]/15 px-3 py-2.5 flex-shrink-0">
         <div className="flex items-center justify-between gap-2">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push(`/admin/estimates/${estimateId}`)}
             className="flex items-center gap-1 text-[14px] text-white/60 hover:text-white transition-colors flex-shrink-0"
           >
             <ChevronLeft size={18} />
@@ -315,7 +315,7 @@ export default function EstimatePreviewPage() {
               Try again or check your estimate data
             </div>
             <button
-              onClick={() => router.back()}
+              onClick={() => router.push(`/admin/estimates/${estimateId}`)}
               className="mt-4 px-5 py-2.5 text-[14px] text-white/60 border border-white/10 rounded-lg hover:bg-white/5"
             >
               Go Back
