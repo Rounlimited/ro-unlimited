@@ -3,6 +3,56 @@ import { createAdminClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
+// Web search using DuckDuckGo instant answer + HTML scraping
+async function webSearch(query: string): Promise<string> {
+  try {
+    // Use DuckDuckGo HTML search (no API key needed)
+    const encoded = encodeURIComponent(query);
+    const res = await fetch(`https://html.duckduckgo.com/html/?q=${encoded}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+      cache: 'no-store',
+    });
+
+    if (!res.ok) return 'Search failed — answer from training data only.';
+
+    const html = await res.text();
+
+    // Extract search result snippets from DuckDuckGo HTML
+    const results: string[] = [];
+    const snippetRegex = /<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+    const titleRegex = /<a class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g;
+
+    let match;
+    const titles: { url: string; title: string }[] = [];
+    while ((match = titleRegex.exec(html)) !== null && titles.length < 6) {
+      const url = match[1].replace(/.*uddg=/, '').split('&')[0];
+      const title = match[2].replace(/<[^>]*>/g, '').trim();
+      try {
+        titles.push({ url: decodeURIComponent(url), title });
+      } catch {
+        titles.push({ url, title });
+      }
+    }
+
+    const snippets: string[] = [];
+    while ((match = snippetRegex.exec(html)) !== null && snippets.length < 6) {
+      snippets.push(match[1].replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim());
+    }
+
+    for (let i = 0; i < Math.min(titles.length, snippets.length); i++) {
+      results.push(`[${i + 1}] ${titles[i].title}\n${snippets[i]}\nSource: ${titles[i].url}\n`);
+    }
+
+    if (results.length === 0) return 'No search results found. Answer from training data.';
+    return results.join('\n');
+  } catch (err) {
+    console.error('[webSearch] error:', err);
+    return 'Search failed — answer from training data only.';
+  }
+}
+
 const SYSTEM_PROMPT = `You are the RO Unlimited AI Assistant — a smart, helpful assistant for a construction company admin portal in Greenville, SC. You help the owner (JR) and his team with everything from navigating the app to answering construction questions to looking up project data.
 
 ## WHO YOU ARE
@@ -185,6 +235,14 @@ You have a persistent memory. Memories from previous sessions are loaded below u
 - Always confirm what you saved/forgot
 - Use your memories to give personalized, contextual answers
 
+## WEB SEARCH
+You can search the web for current information. When you need to look something up (codes, regulations, pricing, materials, specs, news, or anything you're not confident about):
+- Include a JSON block in your response: \`\`\`search{"query":"your search query"}\`\`\`
+- The system will run the search and give you the results
+- Then answer the user's question using those results
+- ALWAYS search for: current codes/regulations, specific product specs, current pricing, anything with a year/date, anything you're unsure about
+- Include the source URL when citing search results
+
 ## PROJECT CONTEXT
 When the user asks about a specific project or estimate, context data will be injected below.
 `;
@@ -287,6 +345,50 @@ export async function POST(req: NextRequest) {
 
     const data = await res.json();
     let content = data.choices?.[0]?.message?.content || '';
+
+    // Detect web search request
+    const searchMatch = content.match(/```search\s*(\{[\s\S]*?\})\s*```/);
+    if (searchMatch) {
+      try {
+        const searchReq = JSON.parse(searchMatch[1]);
+        if (searchReq.query) {
+          // Run web search via Google Custom Search (free tier) or fallback
+          const searchResults = await webSearch(searchReq.query);
+
+          // Strip the search block from the content
+          content = content.replace(/```search[\s\S]*?```/g, '').trim();
+
+          // Second AI call with search results injected
+          const searchContext = `\n\n## WEB SEARCH RESULTS for "${searchReq.query}":\n${searchResults}\n\nNow answer the user's question using these search results. Include source URLs when citing information.`;
+
+          const res2 = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'llama-3.3-70b-versatile',
+              messages: [
+                { role: 'system', content: SYSTEM_PROMPT + contextNote + searchContext },
+                ...messages,
+              ],
+              temperature: 0.7,
+              max_tokens: 2000,
+            }),
+          });
+
+          if (res2.ok) {
+            const data2 = await res2.json();
+            content = data2.choices?.[0]?.message?.content || content;
+            // Clean any nested search blocks
+            content = content.replace(/```search[\s\S]*?```/g, '').trim();
+          }
+        }
+      } catch (err) {
+        console.error('[ai-chat] search error:', err);
+      }
+    }
 
     // Detect memory save commands in AI response
     const memoryMatch = content.match(/```memory\s*(\{[\s\S]*?\})\s*```/);

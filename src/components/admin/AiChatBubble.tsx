@@ -156,7 +156,7 @@ export default function AiChatBubble() {
 
   // Full chat panel
   return (
-    <div className="fixed bottom-20 right-4 z-[90] w-[360px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-8rem)] bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+    <div className="fixed inset-3 sm:inset-4 sm:left-auto sm:w-[480px] sm:top-4 sm:bottom-20 z-[90] bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
       style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 20px rgba(201,168,76,0.1)' }}
     >
       {/* Header */}
@@ -166,8 +166,8 @@ export default function AiChatBubble() {
             <Sparkles size={16} className="text-black" />
           </div>
           <div>
-            <span className="text-[14px] font-semibold text-white block leading-tight">RO Assistant</span>
-            <span className="text-[11px] text-green-400">Online</span>
+            <span className="text-[16px] font-semibold text-white block leading-tight">RO Assistant</span>
+            <span className="text-[12px] text-green-400">Online</span>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -194,8 +194,8 @@ export default function AiChatBubble() {
         {messages.length === 0 && (
           <div className="text-center py-6">
             <Sparkles size={32} className="text-[#C9A84C]/30 mx-auto mb-3" />
-            <p className="text-[14px] text-white/50 mb-1">How can I help?</p>
-            <p className="text-[12px] text-white/25 mb-4">Ask about the app, construction codes, conversions, or your projects</p>
+            <p className="text-[16px] text-white/50 mb-1">How can I help?</p>
+            <p className="text-[14px] text-white/25 mb-4">Ask about the app, construction codes, conversions, or your projects</p>
             <div className="flex flex-wrap gap-1.5 justify-center">
               {[
                 'How do I create an estimate?',
@@ -206,7 +206,7 @@ export default function AiChatBubble() {
                 <button
                   key={q}
                   onClick={() => { setInput(q); inputRef.current?.focus(); }}
-                  className="px-2.5 py-1.5 text-[11px] bg-white/5 text-white/40 rounded-lg hover:bg-white/10 hover:text-white/60 transition-colors"
+                  className="px-3 py-2 text-[13px] bg-white/5 text-white/40 rounded-lg hover:bg-white/10 hover:text-white/60 transition-colors"
                 >
                   {q}
                 </button>
@@ -217,7 +217,7 @@ export default function AiChatBubble() {
 
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
+            <div className={`max-w-[90%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${
               msg.role === 'user'
                 ? 'bg-[#C9A84C]/15 text-white rounded-br-md'
                 : 'bg-[#111] border border-white/5 text-white/80 rounded-bl-md'
@@ -230,8 +230,8 @@ export default function AiChatBubble() {
         {loading && (
           <div className="flex justify-start">
             <div className="bg-[#111] border border-white/5 rounded-2xl rounded-bl-md px-3.5 py-2.5 flex items-center gap-2">
-              <Loader2 size={14} className="animate-spin text-[#C9A84C]" />
-              <span className="text-[13px] text-white/40">Thinking...</span>
+              <Loader2 size={16} className="animate-spin text-[#C9A84C]" />
+              <span className="text-[15px] text-white/40">Thinking...</span>
             </div>
           </div>
         )}
@@ -246,7 +246,7 @@ export default function AiChatBubble() {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
             placeholder="Ask anything..."
-            className="flex-1 bg-[#1a1a1a] border border-white/10 rounded-xl px-3.5 py-2.5 text-white text-[13px] placeholder-white/25 focus:outline-none focus:border-[#C9A84C]/50 transition-colors"
+            className="flex-1 bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 text-white text-[15px] placeholder-white/25 focus:outline-none focus:border-[#C9A84C]/50 transition-colors"
             disabled={loading}
           />
           <button
