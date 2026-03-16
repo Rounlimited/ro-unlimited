@@ -207,19 +207,22 @@ export default function WizardStep4({ lineItems, onChange }: Props) {
             Add Phase
           </button>
           {showPhaseMenu && (
-            <div className="absolute right-0 top-full mt-1 z-50 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl w-52 max-h-[320px] overflow-y-auto">
-              {PHASES.map(p => (
-                <button
-                  key={p}
-                  onClick={() => addPhase(p)}
-                  className={`w-full text-left px-4 py-2.5 text-[14px] hover:bg-white/5 transition-colors ${
-                    grouped[p] ? 'text-[#C9A84C]' : 'text-white'
-                  }`}
-                >
-                  {p} {grouped[p] ? `(${grouped[p].length})` : ''}
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowPhaseMenu(false)} />
+              <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-50 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl w-52 max-h-[320px] overflow-y-auto">
+                {PHASES.map(p => (
+                  <button
+                    key={p}
+                    onClick={() => addPhase(p)}
+                    className={`w-full text-left px-4 py-2.5 text-[14px] hover:bg-white/5 transition-colors ${
+                      grouped[p] ? 'text-[#C9A84C]' : 'text-white'
+                    }`}
+                  >
+                    {p} {grouped[p] ? `(${grouped[p].length})` : ''}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
