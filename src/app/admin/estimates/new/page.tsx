@@ -459,10 +459,18 @@ export default function NewEstimateWizard() {
     setSaving(true);
     try {
       if (estimateId) {
-        await patchEstimate({ status: 'draft' });
-        await saveLineItems();
-        await savePaymentSchedule();
+        // Save ALL wizard state so PDF preview reflects current data
         await patchEstimate({
+          status: 'draft',
+          customer_id: step1.customer_id,
+          project_name: step1.project_name,
+          project_address: step1.project_address || null,
+          project_city: step1.project_city || null,
+          project_state: step1.project_state || 'SC',
+          project_zip: step1.project_zip || null,
+          division: step1.division,
+          estimate_type: step1.estimate_type,
+          contract_type: step1.contract_type,
           scope_of_work: scopeHtml,
           overhead_percent: financials.overhead_percent,
           markup_percent: financials.markup_percent,
@@ -472,6 +480,8 @@ export default function NewEstimateWizard() {
           disclaimer_ids: disclaimerIds,
           exclusions,
         });
+        await saveLineItems();
+        await savePaymentSchedule();
       }
     } catch {}
     setSaving(false);

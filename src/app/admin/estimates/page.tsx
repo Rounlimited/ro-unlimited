@@ -7,7 +7,7 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Plus, Search, FileText, X, ChevronRight, DollarSign,
   Clock, AlertTriangle, Send, Eye, CheckCircle2, XCircle,
-  Home, Building2, Mountain, Filter,
+  Home, Building2, Mountain, Filter, Trash2, Loader2,
 } from 'lucide-react';
 
 interface Estimate {
@@ -90,6 +90,21 @@ export default function EstimatesPage() {
   const [activeTab, setActiveTab] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [divisionFilter, setDivisionFilter] = useState('all');
+  const [deleteTarget, setDeleteTarget] = useState<Estimate | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/estimates/${deleteTarget.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setEstimates(prev => prev.filter(e => e.id !== deleteTarget.id));
+        setDeleteTarget(null);
+      }
+    } catch {}
+    setDeleting(false);
+  };
 
   const fetchEstimates = async () => {
     setLoading(true);
@@ -332,10 +347,10 @@ export default function EstimatesPage() {
               const expired = isExpired(estimate.valid_until, estimate.status);
 
               return (
+                <div key={estimate.id} className="relative group">
                 <Link
-                  key={estimate.id}
                   href={estimate.status === 'draft' ? `/admin/estimates/new?edit=${estimate.id}` : `/admin/estimates/${estimate.id}`}
-                  className="block bg-[#111] border border-white/5 rounded-xl p-4 hover:border-white/10 hover:bg-[#141414] transition-all group"
+                  className="block bg-[#111] border border-white/5 rounded-xl p-4 hover:border-white/10 hover:bg-[#141414] transition-all"
                 >
                   {/* Top row: estimate number + status + total */}
                   <div className="flex items-center justify-between mb-2">
@@ -385,8 +400,57 @@ export default function EstimatesPage() {
                     )}
                   </div>
                 </Link>
+                {/* Delete button — visible on hover / always on mobile */}
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(estimate); }}
+                  className="absolute top-3 right-3 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 opacity-0 group-hover:opacity-100 sm:opacity-0 active:opacity-100 transition-opacity hover:bg-red-500/20 z-10"
+                  title="Delete estimate"
+                >
+                  <Trash2 size={14} />
+                </button>
+                </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Delete confirmation modal */}
+        {deleteTarget && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4" onClick={() => !deleting && setDeleteTarget(null)}>
+            <div className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+              <div className="p-6 text-center">
+                <div className="w-12 h-12 rounded-full bg-red-500/15 flex items-center justify-center mx-auto mb-4">
+                  <Trash2 size={22} className="text-red-400" />
+                </div>
+                <h3 className="text-[16px] font-semibold text-white mb-2">Delete Estimate?</h3>
+                <p className="text-[14px] text-white/50 mb-1">
+                  <span className="text-[#C9A84C] font-semibold">{deleteTarget.estimate_number}</span>
+                </p>
+                <p className="text-[13px] text-white/30">
+                  {deleteTarget.project_name}
+                </p>
+                <p className="text-[13px] text-red-400/70 mt-3">
+                  This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex border-t border-white/10">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deleting}
+                  className="flex-1 py-3.5 text-[14px] text-white/60 font-medium hover:bg-white/5 transition-colors rounded-bl-2xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 py-3.5 text-[14px] text-red-400 font-semibold hover:bg-red-500/10 transition-colors border-l border-white/10 rounded-br-2xl flex items-center justify-center gap-2"
+                >
+                  {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -18,7 +18,7 @@ interface Props {
   subtotal: number;
   grandTotal: number;
   templateName: string | null;
-  onSaveDraft: () => void;
+  onSaveDraft: () => Promise<void> | void;
   saving: boolean;
 }
 
@@ -52,6 +52,16 @@ export default function WizardStep8({
   });
   const [sending, setSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
+  const [savingForPreview, setSavingForPreview] = useState(false);
+
+  const handlePreviewPdf = async () => {
+    setSavingForPreview(true);
+    try {
+      await onSaveDraft();
+    } catch {}
+    setSavingForPreview(false);
+    window.location.href = `/admin/estimates/${estimateId}/preview`;
+  };
 
   // Load email accounts
   useEffect(() => {
@@ -310,13 +320,14 @@ export default function WizardStep8({
           Save as Draft
         </button>
 
-        <a
-          href={`/admin/estimates/${estimateId}/preview`}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-[#3b8dd4]/15 border border-[#3b8dd4]/30 text-[#3b8dd4] text-[15px] font-medium rounded-xl hover:bg-[#3b8dd4]/25 transition-colors"
+        <button
+          onClick={handlePreviewPdf}
+          disabled={savingForPreview}
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-[#3b8dd4]/15 border border-[#3b8dd4]/30 text-[#3b8dd4] text-[15px] font-medium rounded-xl hover:bg-[#3b8dd4]/25 transition-colors disabled:opacity-40"
         >
-          <Eye size={18} />
-          Preview PDF
-        </a>
+          {savingForPreview ? <Loader2 size={18} className="animate-spin" /> : <Eye size={18} />}
+          {savingForPreview ? 'Saving...' : 'Preview PDF'}
+        </button>
 
         <button
           onClick={() => setShowSendModal(true)}
