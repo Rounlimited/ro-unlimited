@@ -27,9 +27,15 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       supabase.from('estimate_payment_schedules').select('*').eq('estimate_id', id).order('sort_order'),
     ]);
 
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const supaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+
     return NextResponse.json({
       _debug: 'This returns the exact data the PDF route uses',
       _timestamp: new Date().toISOString(),
+      _env_key_prefix: serviceKey.substring(0, 20) + '...',
+      _env_key_length: serviceKey.length,
+      _env_url: supaUrl,
       customer_id: estimate.customer_id,
       customer: estimate.customer,
       project_name: estimate.project_name,
