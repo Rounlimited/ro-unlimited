@@ -792,7 +792,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {showHint && <OperationsHint onComplete={onHintComplete} />}
 
       {/* Tab bar — slides in via swipe gesture, auto-hides after 4s */}
-      <nav ref={navRef} className="bg-[#0f0f0f] border-t border-white/5 px-2 pb-2"
+      <nav ref={navRef} data-tour="nav-bar" className="bg-[#0f0f0f] border-t border-white/5 px-2 pb-2"
         style={{
           paddingBottom: "max(8px, env(safe-area-inset-bottom, 8px))",
           position: tabBarVisible ? 'relative' : 'fixed',

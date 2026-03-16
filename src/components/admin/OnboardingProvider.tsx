@@ -169,14 +169,14 @@ export default function OnboardingProvider({ children }: OnboardingProviderProps
           : prev
       );
 
-      // If startTour is true, the parent component can handle
-      // starting the dashboard tour via onboarding state
-      if (startTour && onboarding) {
-        // Dashboard tour will be triggered by the dashboard page
-        // checking onboarding.dashboard_tour_completed === false
+      if (startTour) {
+        // Small delay so the welcome modal fully unmounts before tour starts
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('start-tour', { detail: 'dashboard' }));
+        }, 400);
       }
     },
-    [onboarding]
+    []
   );
 
   return (

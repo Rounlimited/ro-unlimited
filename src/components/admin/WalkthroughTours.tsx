@@ -179,12 +179,13 @@ export default function WalkthroughTours({
   /* Check if the tour is applicable to the current page */
   const isApplicable = useMemo(() => {
     if (!tourDef) return false;
-    // Tours without a pagePrefix (like "financials") can run on any page
+    // Tours without a pagePrefix can run on any page
     if (!tourDef.pagePrefix) return true;
-    // Dashboard tour is special — only exact /admin match
+    // Dashboard tour runs on /admin (exact)
     if (activeTour === 'dashboard') {
       return pathname === '/admin' || pathname === '/admin/';
     }
+    // Other tours check prefix match but exclude exact /admin
     return pathname?.startsWith(tourDef.pagePrefix) ?? false;
   }, [tourDef, pathname, activeTour]);
 

@@ -294,7 +294,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Row 2: Checklist CTA */}
-        <Link ref={row2Ref} href="/admin/checklist" data-tour="checklist-cta"
+        <Link ref={row2Ref} href="/admin/checklist" data-tour="checklist-cta" data-tour-checklist
           className="block bg-gradient-to-r from-[#C9A84C]/10 to-transparent border border-[#C9A84C]/20 rounded-xl px-3 py-2.5 group relative z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -309,7 +309,7 @@ export default function AdminDashboard() {
         </Link>
 
         {/* Row 3: Hero buttons — Email + Team */}
-        <div ref={row3Ref} className="grid grid-cols-2 gap-2.5 relative z-10">
+        <div ref={row3Ref} data-tour="hero-buttons" className="grid grid-cols-2 gap-2.5 relative z-10">
           {/* Email — blue */}
           <Link href="/admin/inbox"
             className="relative overflow-hidden border border-[#2a6aaa]/30 rounded-2xl p-3.5 flex items-center gap-3 group active:scale-[0.97] transition-transform"
@@ -361,7 +361,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Row 4: Quick Actions */}
-        <div className="grid grid-cols-3 gap-2 relative z-10">
+        <div data-tour="quick-actions" className="grid grid-cols-3 gap-2 relative z-10">
           {[
             { href: '/admin/projects',    icon: Camera, label: 'Portfolio' },
             { href: '/admin/site-editor', icon: Pencil, label: 'Editor' },
@@ -378,7 +378,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Row 4: Quick Stats */}
-        <div ref={activityRef} className="flex-1 min-h-0 flex flex-col relative z-10">
+        <div ref={activityRef} data-tour="system-status" className="flex-1 min-h-0 flex flex-col relative z-10">
           <p className="text-[11px] text-white/20 uppercase tracking-wider mb-2 px-0.5">System Status</p>
           <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 scrollbar-hide">
             <div ref={card1Ref} className="bg-[#141414]/40 border border-white/5 rounded-lg px-3 py-2.5 flex items-center gap-2.5 backdrop-blur-sm">
