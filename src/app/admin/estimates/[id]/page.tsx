@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
+import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 import {
   ArrowLeft, Edit3, Copy, FileText, Send, Trash2, X,
   User, Building2, Mail, Phone, MapPin, Calendar,
@@ -222,6 +223,10 @@ export default function EstimateDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
 
+  // PDF preview state
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
   /* ─── Data Fetching ──────────────────────────────────────────── */
 
   const fetchEstimate = async () => {
@@ -398,6 +403,20 @@ export default function EstimateDetailPage() {
     }
   };
 
+  const handlePreviewPdf = async () => {
+    setPdfLoading(true);
+    try {
+      const res = await fetch(`/api/admin/estimates/${id}/pdf`);
+      if (!res.ok) throw new Error('Failed');
+      const blob = await res.blob();
+      setPdfPreviewUrl(URL.createObjectURL(blob));
+    } catch {
+      alert('Failed to generate PDF');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   /* ─── Computed Values ───────────────────────────────────────── */
 
   const lineItemsByPhase = useMemo(() => {
@@ -544,10 +563,11 @@ export default function EstimateDetailPage() {
               <Copy size={14} /> Duplicate
             </button>
             <button
-              onClick={() => window.open(`/admin/estimates/${id}/preview`, '_blank')}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-white/60 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all"
+              onClick={handlePreviewPdf}
+              disabled={pdfLoading}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-white/60 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
             >
-              <Eye size={14} /> Preview
+              {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />} Preview
             </button>
             <button
               onClick={() => setShowSendModal(true)}
@@ -1188,6 +1208,16 @@ export default function EstimateDetailPage() {
             </div>
           </div>
         </ModalBackdrop>
+      )}
+
+      {/* PDF Preview Modal */}
+      {(pdfPreviewUrl || pdfLoading) && (
+        <PdfPreviewModal
+          pdfUrl={pdfPreviewUrl}
+          loading={pdfLoading}
+          onClose={() => { setPdfPreviewUrl(null); setPdfLoading(false); }}
+          filename={estimate ? `${estimate.estimate_number}.pdf` : 'estimate.pdf'}
+        />
       )}
     </div>
   );

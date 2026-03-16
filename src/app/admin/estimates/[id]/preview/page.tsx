@@ -1,273 +1,255 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeft, Download, Send, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronLeft, Download, Send, Loader2 } from 'lucide-react';
 
-/* ─── Types ──────────────────────────────────────────────────── */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174";
 
-interface Customer {
-  id: string;
-  first_name: string;
-  last_name: string;
-  company_name?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-}
-
-interface LineItem {
-  id: string;
-  phase: string;
-  description: string;
-  category: string;
-  quantity: number;
-  unit: string;
-  unit_cost: number;
-  markup_percent: number;
-  sort_order: number;
-}
-
-interface PaymentMilestone {
-  id: string;
-  milestone: string;
-  due_description?: string;
-  description?: string;
-  percent: number;
-  amount: number;
-  sort_order: number;
-}
-
-interface Disclaimer {
-  id: string;
-  title: string;
-  body: string;
-}
-
-interface Estimate {
-  id: string;
-  estimate_number: string;
-  status: string;
-  customer_id: string;
-  customer?: Customer;
-  project_name?: string;
-  project_address?: string;
-  project_city?: string;
-  project_state?: string;
-  project_zip?: string;
-  division?: string;
-  estimate_type?: string;
-  contract_type?: string;
-  scope_of_work?: string;
-  project_description?: string;
-  overhead_percent: number;
-  markup_percent: number;
-  tax_percent: number;
-  contingency_percent: number;
-  permit_fees: number;
-  subtotal: number;
-  total: number;
-  valid_until?: string;
-  exclusions?: string;
-  disclaimer_ids?: string[];
-  client_signature?: string;
-  client_signed_at?: string;
-  created_at: string;
-  line_items: LineItem[];
-  payment_schedule: PaymentMilestone[];
-}
-
-/* ─── Helpers ────────────────────────────────────────────────── */
-
-const fmt = (n: number) =>
-  (n || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-
-const fmtDate = (d: string | undefined) => {
-  if (!d) return '--';
-  return new Date(d).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
+let pdfjsLoaded: Promise<any> | null = null;
+function loadPdfJs(): Promise<any> {
+  if (pdfjsLoaded) return pdfjsLoaded;
+  pdfjsLoaded = new Promise((resolve, reject) => {
+    if ((window as any).pdfjsLib) { resolve((window as any).pdfjsLib); return; }
+    const s = document.createElement("script");
+    s.src = `${PDFJS_CDN}/pdf.min.js`;
+    s.onload = () => {
+      const lib = (window as any).pdfjsLib;
+      lib.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.js`;
+      resolve(lib);
+    };
+    s.onerror = reject;
+    document.head.appendChild(s);
   });
-};
-
-const humanize = (s: string) =>
-  s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-
-/* ─── Component ──────────────────────────────────────────────── */
+  return pdfjsLoaded;
+}
 
 export default function EstimatePreviewPage() {
   const params = useParams();
   const router = useRouter();
   const estimateId = params.id as string;
-  const docRef = useRef<HTMLDivElement>(null);
 
-  const [estimate, setEstimate] = useState<Estimate | null>(null);
-  const [disclaimers, setDisclaimers] = useState<Disclaimer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [zoom, setZoom] = useState(0.48); // Start zoomed out to fit mobile
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(true);
+  const [pdfError, setPdfError] = useState('');
+  const [pages, setPages] = useState<string[]>([]);
+  const [rendering, setRendering] = useState(false);
+  const [renderError, setRenderError] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [estimateNumber, setEstimateNumber] = useState('');
 
-  // Auto-detect desktop and zoom appropriately
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Refs for pinch/pan state
+  const scaleRef = useRef(1);
+  const txRef = useRef(0);
+  const tyRef = useRef(0);
+  const gestureRef = useRef({
+    isPinching: false,
+    isPanning: false,
+    isScrolling: false,
+    startDist: 0,
+    startScale: 1,
+    panStartX: 0,
+    panStartY: 0,
+    panStartTx: 0,
+    panStartTy: 0,
+    scrollStartY: 0,
+    scrollStartTop: 0,
+  });
+
+  const applyTransform = useCallback(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const s = scaleRef.current;
+    if (s <= 1) {
+      el.style.transform = "none";
+    } else {
+      el.style.transform = `scale(${s}) translate(${txRef.current / s}px, ${tyRef.current / s}px)`;
+    }
+  }, []);
+
+  const resetZoom = useCallback(() => {
+    scaleRef.current = 1;
+    txRef.current = 0;
+    tyRef.current = 0;
+    applyTransform();
+    setZoomLevel(1);
+  }, [applyTransform]);
+
+  // Fetch PDF blob on mount
   useEffect(() => {
-    const w = window.innerWidth;
-    if (w >= 1024) setZoom(0.85);
-    else if (w >= 768) setZoom(0.65);
-    else setZoom(0.48);
+    if (!estimateId) return;
+    const fetchPdf = async () => {
+      setPdfLoading(true);
+      setPdfError('');
+      try {
+        const res = await fetch(`/api/admin/estimates/${estimateId}/pdf`);
+        if (!res.ok) throw new Error('Failed to generate PDF');
+
+        // Extract estimate number from content-disposition header
+        const disposition = res.headers.get('Content-Disposition') || '';
+        const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          setEstimateNumber(filenameMatch[1].replace('.pdf', '').replace(/_/g, ' '));
+        }
+
+        const blob = await res.blob();
+        setPdfBlobUrl(URL.createObjectURL(blob));
+      } catch {
+        setPdfError('Failed to generate PDF');
+      } finally {
+        setPdfLoading(false);
+      }
+    };
+    fetchPdf();
+
+    return () => {
+      // Cleanup blob URL on unmount
+      setPdfBlobUrl(prev => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    };
+  }, [estimateId]);
+
+  // Render PDF pages when blob is ready
+  const renderPdf = useCallback(async (url: string) => {
+    setRendering(true);
+    setRenderError(false);
+    setPages([]);
+
+    try {
+      const pdfjsLib = await loadPdfJs();
+      const pdf = await pdfjsLib.getDocument(url).promise;
+      const pageImages: string[] = [];
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d")!;
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        pageImages.push(canvas.toDataURL("image/png"));
+      }
+
+      setPages(pageImages);
+    } catch (err) {
+      console.error("PDF render error:", err);
+      setRenderError(true);
+    }
+    setRendering(false);
   }, []);
 
   useEffect(() => {
-    if (!estimateId) return;
-    const load = async () => {
-      try {
-        const [estRes, discRes] = await Promise.all([
-          fetch(`/api/admin/estimates/${estimateId}`),
-          fetch('/api/admin/disclaimers'),
-        ]);
-        if (!estRes.ok) { setError('Estimate not found'); setLoading(false); return; }
-        setEstimate(await estRes.json());
-        const discData = await discRes.json();
-        if (Array.isArray(discData)) setDisclaimers(discData);
-      } catch {
-        setError('Failed to load estimate');
-      } finally {
-        setLoading(false);
+    if (pdfBlobUrl && !pdfLoading) {
+      renderPdf(pdfBlobUrl);
+    }
+  }, [pdfBlobUrl, pdfLoading, renderPdf]);
+
+  // Touch event handling
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl || pages.length === 0) return;
+
+    const getDist = (t: TouchList) => {
+      const dx = t[1].clientX - t[0].clientX;
+      const dy = t[1].clientY - t[0].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const g = gestureRef.current;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        g.isPinching = true;
+        g.isPanning = false;
+        g.isScrolling = false;
+        g.startDist = getDist(e.touches);
+        g.startScale = scaleRef.current;
+      } else if (e.touches.length === 1) {
+        if (scaleRef.current > 1.05) {
+          e.preventDefault();
+          g.isPanning = true;
+          g.isScrolling = false;
+          g.panStartX = e.touches[0].clientX;
+          g.panStartY = e.touches[0].clientY;
+          g.panStartTx = txRef.current;
+          g.panStartTy = tyRef.current;
+        } else {
+          g.isScrolling = true;
+          g.isPanning = false;
+        }
       }
     };
-    load();
-  }, [estimateId]);
 
-  if (loading) {
-    return (
-      <div className="h-full flex items-center justify-center bg-[#0a0a0a]">
-        <Loader2 size={32} className="animate-spin text-[#C9A84C]" />
-        <span className="ml-3 text-[16px] text-white/50">Loading estimate...</span>
-      </div>
-    );
-  }
+    const onTouchMove = (e: TouchEvent) => {
+      if (g.isPinching && e.touches.length === 2) {
+        e.preventDefault();
+        const dist = getDist(e.touches);
+        const newScale = Math.min(5, Math.max(1, g.startScale * (dist / g.startDist)));
+        scaleRef.current = newScale;
+        if (newScale <= 1.01) {
+          txRef.current = 0;
+          tyRef.current = 0;
+        }
+        applyTransform();
+      } else if (g.isPanning && e.touches.length === 1 && scaleRef.current > 1.05) {
+        e.preventDefault();
+        txRef.current = g.panStartTx + (e.touches[0].clientX - g.panStartX);
+        tyRef.current = g.panStartTy + (e.touches[0].clientY - g.panStartY);
+        applyTransform();
+      }
+    };
 
-  if (error || !estimate) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center bg-[#0a0a0a] text-white">
-        <div className="text-[18px] font-semibold text-red-400 mb-2">{error || 'Not found'}</div>
-        <button onClick={() => router.push('/admin/estimates')} className="mt-4 px-5 py-2.5 text-[14px] text-white/60 border border-white/10 rounded-lg hover:bg-white/5">Back</button>
-      </div>
-    );
-  }
+    const onTouchEnd = () => {
+      if (g.isPinching) {
+        g.isPinching = false;
+        if (scaleRef.current < 1.05) {
+          scaleRef.current = 1;
+          txRef.current = 0;
+          tyRef.current = 0;
+          applyTransform();
+        }
+        setZoomLevel(scaleRef.current);
+      }
+      g.isPanning = false;
+      g.isScrolling = false;
+    };
 
-  /* ─── Data prep ──────────────────────────────────────────── */
+    scrollEl.addEventListener("touchstart", onTouchStart, { passive: false });
+    scrollEl.addEventListener("touchmove", onTouchMove, { passive: false });
+    scrollEl.addEventListener("touchend", onTouchEnd);
 
-  const customer = estimate.customer;
-  const scopeText = estimate.scope_of_work || estimate.project_description || '';
-  const projectAddr = [estimate.project_address, estimate.project_city, estimate.project_state, estimate.project_zip].filter(Boolean).join(', ');
+    return () => {
+      scrollEl.removeEventListener("touchstart", onTouchStart);
+      scrollEl.removeEventListener("touchmove", onTouchMove);
+      scrollEl.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [pages.length, applyTransform]);
 
-  // Group line items by phase
-  const grouped: Record<string, LineItem[]> = {};
-  (estimate.line_items || []).forEach((item) => {
-    const p = item.phase || 'Other';
-    if (!grouped[p]) grouped[p] = [];
-    grouped[p].push(item);
-  });
-
-  // Calculate totals
-  const subtotal = (estimate.line_items || []).reduce(
-    (sum, item) => sum + item.quantity * item.unit_cost * (1 + (item.markup_percent || 0) / 100), 0
-  );
-  const overheadAmt = (subtotal * (estimate.overhead_percent || 0)) / 100;
-  const markupAmt = (subtotal * (estimate.markup_percent || 0)) / 100;
-  const taxable = subtotal + overheadAmt + markupAmt;
-  const taxAmt = (taxable * (estimate.tax_percent || 0)) / 100;
-  const contingencyAmt = (subtotal * (estimate.contingency_percent || 0)) / 100;
-  const grandTotal = subtotal + overheadAmt + markupAmt + taxAmt + (estimate.permit_fees || 0) + contingencyAmt;
-
-  // Disclaimers
-  const selectedDisclaimers = (estimate.disclaimer_ids || [])
-    .map((id) => disclaimers.find((d) => d.id === id))
-    .filter(Boolean) as Disclaimer[];
-
-  // Exclusions
-  const exclusionsList = (estimate.exclusions || '').split('\n').map((s) => s.trim()).filter(Boolean);
-
-  // Valid days
-  const validDays = estimate.valid_until
-    ? Math.max(0, Math.ceil((new Date(estimate.valid_until).getTime() - new Date(estimate.created_at).getTime()) / 86400000))
-    : 30;
-
-  // Phase subtotals
-  const phaseSubtotals: Record<string, number> = {};
-  Object.entries(grouped).forEach(([phase, items]) => {
-    phaseSubtotals[phase] = items.reduce((sum, item) => sum + item.quantity * item.unit_cost * (1 + (item.markup_percent || 0) / 100), 0);
-  });
-
-  // Payment schedule
-  const paymentSchedule = (estimate.payment_schedule || []).map((m) => ({
-    ...m,
-    amount: (grandTotal * (m.percent || 0)) / 100,
-  }));
-
-  let itemCounter = 0;
-
-  /* ─── Save as PDF via hidden iframe print ─────────────── */
-
-  const handleSavePDF = () => {
-    if (!docRef.current) return;
-    const html = docRef.current.innerHTML;
-    const printWindow = window.open('', '_blank', 'width=850,height=1100');
-    if (!printWindow) {
-      alert('Please allow popups to save as PDF');
-      return;
-    }
-    printWindow.document.write(`<!DOCTYPE html>
-<html><head>
-<title>${estimate.estimate_number} - RO Unlimited</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Georgia', 'Times New Roman', serif; color: #111; background: white; }
-  @page { size: letter; margin: 0.5in 0.6in; }
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page-doc { box-shadow: none !important; }
-    table { page-break-inside: auto; }
-    tr { page-break-inside: avoid; }
-    thead { display: table-header-group; }
-    .print-section { page-break-inside: avoid; }
-    .print-break-before { page-break-before: always; }
-  }
-  .page-doc { max-width: 8.5in; margin: 0 auto; padding: 0.5in 0.6in; }
-  table { width: 100%; border-collapse: collapse; }
-  .phase-hdr { background: #1f2937; color: white; padding: 6px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-  .tbl-hdr { background: #f3f4f6; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
-  .tbl-hdr th { padding: 6px 10px; font-weight: 600; }
-  .tbl-row td { padding: 5px 10px; font-size: 11px; border-bottom: 1px solid #f3f4f6; }
-  .tbl-row-alt { background: #fafafa; }
-  .tbl-foot td { padding: 6px 10px; font-size: 11px; font-weight: 700; background: #f3f4f6; border-top: 2px solid #d1d5db; }
-  .section-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: #9ca3af; font-weight: 600; margin-bottom: 8px; }
-  .summary-box { border: 2px solid #1f2937; border-radius: 4px; overflow: hidden; }
-  .summary-hdr { background: #1f2937; color: white; padding: 6px 16px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; }
-  .summary-row { display: flex; justify-content: space-between; padding: 4px 16px; font-size: 12px; }
-  .summary-total { border-top: 2px solid #1f2937; padding: 8px 16px; display: flex; justify-content: space-between; align-items: baseline; }
-  .sig-block { border: 2px solid #1f2937; border-radius: 4px; padding: 24px; }
-  .sig-line { border-bottom: 2px solid #1f2937; min-height: 36px; margin-bottom: 4px; }
-  .sig-label { font-size: 9px; color: #9ca3af; }
-  .client-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 12px 16px; }
-  .detail-table td { padding: 6px 16px; font-size: 12px; border-bottom: 1px solid #f3f4f6; }
-  .disclaimer-title { font-size: 11px; font-weight: 700; color: #1f2937; margin-bottom: 2px; }
-  .disclaimer-body { font-size: 10px; color: #4b5563; line-height: 1.5; padding-left: 12px; }
-</style>
-</head><body><div class="page-doc">${html}</div></body></html>`);
-    printWindow.document.close();
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
+  const handleDownload = () => {
+    if (!pdfBlobUrl) return;
+    const a = document.createElement('a');
+    a.href = pdfBlobUrl;
+    a.download = estimateNumber ? `${estimateNumber.replace(/\s/g, '_')}.pdf` : 'estimate.pdf';
+    a.click();
   };
 
+  const showSpinner = pdfLoading || rendering;
+  const isZoomed = zoomLevel > 1.05;
+
   return (
-    <div className="h-full overflow-y-auto bg-[#0a0a0a]">
-      {/* ─── Toolbar ────────────────────────────────────── */}
-      <div className="sticky top-0 z-50 bg-[#111]/95 backdrop-blur-sm border-b border-white/10 px-3 py-2.5">
+    <div className="h-full overflow-hidden bg-[#0a0a0a] flex flex-col">
+      {/* Toolbar */}
+      <div className="sticky top-0 z-50 bg-[#111]/95 backdrop-blur-sm border-b border-[#C9A84C]/15 px-3 py-2.5 flex-shrink-0">
         <div className="flex items-center justify-between gap-2">
           <button
             onClick={() => router.back()}
@@ -278,21 +260,22 @@ export default function EstimatePreviewPage() {
           </button>
 
           <div className="flex items-center gap-1.5">
-            {/* Zoom controls */}
-            <button onClick={() => setZoom(z => Math.max(0.3, z - 0.1))} className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
-              <ZoomOut size={16} />
-            </button>
-            <span className="text-[11px] text-white/30 w-10 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(z => Math.min(1, z + 0.1))} className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
-              <ZoomIn size={16} />
-            </button>
+            {isZoomed && (
+              <button
+                onClick={resetZoom}
+                className="px-2.5 py-1.5 text-[11px] font-semibold text-[#C9A84C] bg-[#C9A84C]/10 border border-[#C9A84C]/25 rounded-lg hover:bg-[#C9A84C]/20 transition-colors"
+              >
+                {Math.round(zoomLevel * 100)}%
+              </button>
+            )}
 
             <button
-              onClick={handleSavePDF}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white/10 border border-white/10 text-white text-[13px] font-medium rounded-lg hover:bg-white/15 transition-colors"
+              onClick={handleDownload}
+              disabled={!pdfBlobUrl}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/10 border border-white/10 text-white text-[13px] font-medium rounded-lg hover:bg-white/15 transition-colors disabled:opacity-30"
             >
               <Download size={14} />
-              <span className="hidden sm:inline">Save PDF</span>
+              <span className="hidden sm:inline">Download</span>
             </button>
             <button
               onClick={() => router.push(`/admin/estimates/${estimateId}`)}
@@ -305,304 +288,71 @@ export default function EstimatePreviewPage() {
         </div>
       </div>
 
-      {/* ─── Document Preview (zoomable, scrollable) ──── */}
-      <div className="overflow-x-auto py-6 px-3">
-        <div
-          style={{
-            width: '8.5in',
-            minHeight: '11in',
-            transform: `scale(${zoom})`,
-            transformOrigin: 'top left',
-            marginBottom: `calc(-11in * (1 - ${zoom}))`,
-          }}
-        >
+      {/* PDF content area */}
+      <div
+        ref={scrollRef}
+        className="flex-1 relative"
+        style={{
+          overflow: isZoomed ? "hidden" : "auto",
+          WebkitOverflowScrolling: isZoomed ? undefined : "touch",
+          touchAction: pages.length > 0 ? "none" : "auto",
+        }}
+      >
+        {showSpinner ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <Loader2 size={40} className="animate-spin text-[#C9A84C]" />
+            <div className="text-[14px] text-[#C9A84C] font-semibold">
+              {pdfLoading ? "Generating PDF..." : "Rendering pages..."}
+            </div>
+            <div className="text-[12px] text-white/30">
+              This takes a few seconds
+            </div>
+          </div>
+        ) : pdfError || renderError ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <div className="text-[36px]">&#9888;</div>
+            <div className="text-[14px] text-red-400 font-semibold">
+              {pdfError || "Failed to render PDF"}
+            </div>
+            <div className="text-[12px] text-white/30">
+              Try again or check your estimate data
+            </div>
+            <button
+              onClick={() => router.back()}
+              className="mt-4 px-5 py-2.5 text-[14px] text-white/60 border border-white/10 rounded-lg hover:bg-white/5"
+            >
+              Go Back
+            </button>
+          </div>
+        ) : pages.length > 0 ? (
           <div
-            ref={docRef}
-            className="bg-white text-black shadow-2xl"
+            ref={contentRef}
             style={{
-              fontFamily: "'Georgia', 'Times New Roman', serif",
-              width: '8.5in',
-              minHeight: '11in',
-              padding: '0.6in 0.7in',
+              padding: 16,
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 16,
+              transformOrigin: "top center",
             }}
           >
-
-            {/* ═══ 1. HEADER / LETTERHEAD ═══ */}
-            <div className="print-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 24, borderBottom: '3px solid #1f2937', marginBottom: 24 }}>
-              <div style={{ flex: 1 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/ro-unlimited-logo.png"
-                  alt="RO Unlimited"
-                  style={{ height: 48, width: 'auto', marginBottom: 8 }}
-                />
-                <div style={{ marginTop: 4, fontSize: 11, color: '#6b7280', lineHeight: 1.6 }}>
-                  <div>Greenville, SC</div>
-                  <div>(864) 304-0139</div>
-                  <div>rounlimited.com</div>
-                </div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#9ca3af', fontWeight: 600, marginBottom: 4 }}>
-                  Estimate
-                </div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#111', letterSpacing: '-0.02em' }}>
-                  {estimate.estimate_number}
-                </div>
-                <div style={{ marginTop: 10, fontSize: 11, color: '#6b7280', lineHeight: 1.8 }}>
-                  <div><span style={{ color: '#9ca3af' }}>Date: </span>{fmtDate(estimate.created_at)}</div>
-                  {estimate.valid_until && (
-                    <div><span style={{ color: '#9ca3af' }}>Valid Until: </span>{fmtDate(estimate.valid_until)}</div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* ═══ 2. CLIENT INFO ═══ */}
-            {customer && (
-              <div className="print-section" style={{ marginBottom: 24 }}>
-                <div className="section-label" style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 6 }}>Prepared For</div>
-                <div className="client-box" style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 4, padding: '10px 16px' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>{customer.first_name} {customer.last_name}</div>
-                  {customer.company_name && <div style={{ fontSize: 12, color: '#4b5563', marginTop: 2 }}>{customer.company_name}</div>}
-                  <div style={{ marginTop: 6, fontSize: 11, color: '#6b7280', lineHeight: 1.6 }}>
-                    {(customer.address || customer.city) && (
-                      <div>{[customer.address, customer.city, customer.state, customer.zip].filter(Boolean).join(', ')}</div>
-                    )}
-                    {customer.phone && <div>{customer.phone}</div>}
-                    {customer.email && <div>{customer.email}</div>}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ═══ 3. PROJECT DETAILS ═══ */}
-            <div className="print-section" style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 6 }}>Project Details</div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e5e7eb', borderRadius: 4 }}>
-                <tbody>
-                  {estimate.project_name && (
-                    <tr className="detail-table"><td style={{ padding: '6px 16px', fontSize: 12, color: '#9ca3af', fontWeight: 500, width: 130, borderBottom: '1px solid #f3f4f6' }}>Project</td><td style={{ padding: '6px 16px', fontSize: 12, color: '#111', fontWeight: 600, borderBottom: '1px solid #f3f4f6' }}>{estimate.project_name}</td></tr>
-                  )}
-                  {projectAddr && (
-                    <tr><td style={{ padding: '6px 16px', fontSize: 12, color: '#9ca3af', fontWeight: 500, borderBottom: '1px solid #f3f4f6' }}>Address</td><td style={{ padding: '6px 16px', fontSize: 12, color: '#374151', borderBottom: '1px solid #f3f4f6' }}>{projectAddr}</td></tr>
-                  )}
-                  {estimate.division && (
-                    <tr><td style={{ padding: '6px 16px', fontSize: 12, color: '#9ca3af', fontWeight: 500, borderBottom: '1px solid #f3f4f6' }}>Division</td><td style={{ padding: '6px 16px', fontSize: 12, color: '#374151', textTransform: 'capitalize', borderBottom: '1px solid #f3f4f6' }}>{estimate.division}</td></tr>
-                  )}
-                  {estimate.estimate_type && (
-                    <tr><td style={{ padding: '6px 16px', fontSize: 12, color: '#9ca3af', fontWeight: 500, borderBottom: '1px solid #f3f4f6' }}>Type</td><td style={{ padding: '6px 16px', fontSize: 12, color: '#374151', borderBottom: '1px solid #f3f4f6' }}>{humanize(estimate.estimate_type)}</td></tr>
-                  )}
-                  {estimate.contract_type && (
-                    <tr><td style={{ padding: '6px 16px', fontSize: 12, color: '#9ca3af', fontWeight: 500 }}>Contract</td><td style={{ padding: '6px 16px', fontSize: 12, color: '#374151' }}>{humanize(estimate.contract_type)}</td></tr>
-                  )}
-                </tbody>
-              </table>
-
-              {scopeText && scopeText !== '<p></p>' && (
-                <div style={{ marginTop: 16 }}>
-                  <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 6 }}>Scope of Work</div>
-                  <div style={{ fontSize: 12, color: '#374151', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: scopeText }} />
-                </div>
-              )}
-            </div>
-
-            {/* ═══ 4. LINE ITEMS ═══ */}
-            {Object.keys(grouped).length > 0 && (
-              <div className="print-section" style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Itemized Cost Breakdown</div>
-                {Object.entries(grouped).map(([phase, items]) => (
-                  <div key={phase} style={{ marginBottom: 16 }}>
-                    <div className="phase-hdr" style={{ background: '#1f2937', color: 'white', padding: '6px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', borderRadius: '4px 4px 0 0' }}>{phase}</div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr className="tbl-hdr" style={{ background: '#f3f4f6' }}>
-                          <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 32 }}>#</th>
-                          <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600 }}>Description</th>
-                          <th style={{ textAlign: 'right', padding: '6px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 50 }}>Qty</th>
-                          <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 50 }}>Unit</th>
-                          <th style={{ textAlign: 'right', padding: '6px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 85 }}>Unit Price</th>
-                          <th style={{ textAlign: 'right', padding: '6px 10px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 95 }}>Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {items.map((item) => {
-                          itemCounter++;
-                          const lineTotal = item.quantity * item.unit_cost * (1 + (item.markup_percent || 0) / 100);
-                          return (
-                            <tr key={item.id} style={{ background: itemCounter % 2 === 0 ? '#fafafa' : 'white' }}>
-                              <td style={{ padding: '5px 10px', fontSize: 11, color: '#9ca3af', borderBottom: '1px solid #f3f4f6' }}>{itemCounter}</td>
-                              <td style={{ padding: '5px 10px', fontSize: 11, color: '#1f2937', fontWeight: 500, borderBottom: '1px solid #f3f4f6' }}>{item.description || '--'}</td>
-                              <td style={{ padding: '5px 10px', fontSize: 11, color: '#4b5563', textAlign: 'right', borderBottom: '1px solid #f3f4f6' }}>{item.quantity}</td>
-                              <td style={{ padding: '5px 10px', fontSize: 11, color: '#6b7280', borderBottom: '1px solid #f3f4f6' }}>{item.unit}</td>
-                              <td style={{ padding: '5px 10px', fontSize: 11, color: '#4b5563', textAlign: 'right', borderBottom: '1px solid #f3f4f6' }}>{fmt(item.unit_cost * (1 + (item.markup_percent || 0) / 100))}</td>
-                              <td style={{ padding: '5px 10px', fontSize: 11, color: '#111', fontWeight: 600, textAlign: 'right', borderBottom: '1px solid #f3f4f6' }}>{fmt(lineTotal)}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                      <tfoot>
-                        <tr style={{ background: '#f3f4f6', borderTop: '2px solid #d1d5db' }}>
-                          <td colSpan={5} style={{ padding: '6px 10px', fontSize: 10, color: '#6b7280', fontWeight: 600, textAlign: 'right', textTransform: 'uppercase' }}>{phase} Subtotal</td>
-                          <td style={{ padding: '6px 10px', fontSize: 12, color: '#111', fontWeight: 700, textAlign: 'right' }}>{fmt(phaseSubtotals[phase])}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* ═══ 5. FINANCIAL SUMMARY ═══ */}
-            <div className="print-section" style={{ marginBottom: 24, display: 'flex', justifyContent: 'flex-end' }}>
-              <div style={{ width: 300, border: '2px solid #1f2937', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ background: '#1f2937', color: 'white', padding: '6px 16px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600 }}>Financial Summary</div>
-                <div style={{ padding: '8px 16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
-                    <span style={{ color: '#6b7280' }}>Subtotal</span>
-                    <span style={{ color: '#111', fontWeight: 500 }}>{fmt(subtotal)}</span>
-                  </div>
-                  {estimate.overhead_percent > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
-                      <span style={{ color: '#6b7280' }}>Overhead ({estimate.overhead_percent}%)</span>
-                      <span style={{ color: '#111', fontWeight: 500 }}>{fmt(overheadAmt)}</span>
-                    </div>
-                  )}
-                  {estimate.markup_percent > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
-                      <span style={{ color: '#6b7280' }}>Markup ({estimate.markup_percent}%)</span>
-                      <span style={{ color: '#111', fontWeight: 500 }}>{fmt(markupAmt)}</span>
-                    </div>
-                  )}
-                  {estimate.tax_percent > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
-                      <span style={{ color: '#6b7280' }}>Tax ({estimate.tax_percent}%)</span>
-                      <span style={{ color: '#111', fontWeight: 500 }}>{fmt(taxAmt)}</span>
-                    </div>
-                  )}
-                  {(estimate.permit_fees || 0) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
-                      <span style={{ color: '#6b7280' }}>Permit Fees</span>
-                      <span style={{ color: '#111', fontWeight: 500 }}>{fmt(estimate.permit_fees)}</span>
-                    </div>
-                  )}
-                  {estimate.contingency_percent > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 12 }}>
-                      <span style={{ color: '#6b7280' }}>Contingency ({estimate.contingency_percent}%)</span>
-                      <span style={{ color: '#111', fontWeight: 500 }}>{fmt(contingencyAmt)}</span>
-                    </div>
-                  )}
-                  <div style={{ borderTop: '2px solid #1f2937', marginTop: 6, paddingTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: '#111', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</span>
-                    <span style={{ fontSize: 22, fontWeight: 800, color: '#111' }}>{fmt(grandTotal)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ═══ 6. PAYMENT SCHEDULE ═══ */}
-            {paymentSchedule.length > 0 && (
-              <div className="print-section" style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Payment Schedule</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e5e7eb' }}>
-                  <thead>
-                    <tr style={{ background: '#f3f4f6' }}>
-                      <th style={{ textAlign: 'left', padding: '6px 12px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600 }}>Milestone</th>
-                      <th style={{ textAlign: 'center', padding: '6px 12px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 60 }}>%</th>
-                      <th style={{ textAlign: 'right', padding: '6px 12px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600, width: 110 }}>Amount</th>
-                      <th style={{ textAlign: 'left', padding: '6px 12px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', fontWeight: 600 }}>When Due</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paymentSchedule.map((m, i) => (
-                      <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                        <td style={{ padding: '6px 12px', fontSize: 11, color: '#1f2937', fontWeight: 500, borderBottom: '1px solid #f3f4f6' }}>{m.milestone || `Milestone ${i + 1}`}</td>
-                        <td style={{ padding: '6px 12px', fontSize: 11, color: '#4b5563', textAlign: 'center', borderBottom: '1px solid #f3f4f6' }}>{m.percent}%</td>
-                        <td style={{ padding: '6px 12px', fontSize: 11, color: '#111', fontWeight: 600, textAlign: 'right', borderBottom: '1px solid #f3f4f6' }}>{fmt(m.amount)}</td>
-                        <td style={{ padding: '6px 12px', fontSize: 11, color: '#6b7280', borderBottom: '1px solid #f3f4f6' }}>{m.due_description || m.description || '--'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div style={{ marginTop: 6, fontSize: 10, color: '#9ca3af', fontStyle: 'italic' }}>
-                  A deposit may be required before work commences. Payment terms are net 15 days from invoice date unless otherwise specified.
-                </div>
-              </div>
-            )}
-
-            {/* ═══ 7. TERMS & CONDITIONS ═══ */}
-            {selectedDisclaimers.length > 0 && (
-              <div className="print-section" style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Terms & Conditions</div>
-                {selectedDisclaimers.map((d, i) => (
-                  <div key={d.id} style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#1f2937', marginBottom: 2 }}>{i + 1}. {d.title}</div>
-                    <div style={{ fontSize: 10, color: '#4b5563', lineHeight: 1.5, paddingLeft: 12 }}>{d.body}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* ═══ 8. EXCLUSIONS ═══ */}
-            {exclusionsList.length > 0 && (
-              <div className="print-section" style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Exclusions</div>
-                <div style={{ fontSize: 10, color: '#6b7280', fontStyle: 'italic', marginBottom: 6 }}>The following items are NOT included in this estimate:</div>
-                <ul style={{ paddingLeft: 20, fontSize: 11, color: '#4b5563', lineHeight: 1.6 }}>
-                  {exclusionsList.map((item, i) => <li key={i}>{item}</li>)}
-                </ul>
-              </div>
-            )}
-
-            {/* ═══ 9. ACCEPTANCE BLOCK ═══ */}
-            <div className="print-section print-break-before" style={{ marginBottom: 24 }}>
-              <div style={{ border: '2px solid #1f2937', borderRadius: 4, padding: 24 }}>
-                <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Acceptance & Authorization</div>
-                <p style={{ fontSize: 11, color: '#4b5563', lineHeight: 1.6, marginBottom: 20 }}>
-                  By signing below, you accept this estimate and authorize RO Unlimited Construction & Development to begin work as described above.
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 40px' }}>
-                  <div>
-                    <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Client</div>
-                    {estimate.client_signature ? (
-                      <div style={{ borderBottom: '2px solid #1f2937', minHeight: 36, marginBottom: 4, display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-                        <img src={estimate.client_signature} alt="Signature" style={{ height: 40, width: 'auto' }} />
-                      </div>
-                    ) : (
-                      <div style={{ borderBottom: '2px solid #1f2937', minHeight: 36, marginBottom: 4 }} />
-                    )}
-                    <div style={{ fontSize: 9, color: '#9ca3af' }}>Signature</div>
-                    <div style={{ borderBottom: '1px solid #d1d5db', minHeight: 18, marginTop: 12, marginBottom: 4 }}>
-                      {customer && <span style={{ fontSize: 11, color: '#374151' }}>{customer.first_name} {customer.last_name}</span>}
-                    </div>
-                    <div style={{ fontSize: 9, color: '#9ca3af' }}>Printed Name</div>
-                    <div style={{ borderBottom: '1px solid #d1d5db', minHeight: 18, marginTop: 12, marginBottom: 4 }}>
-                      {estimate.client_signed_at && <span style={{ fontSize: 11, color: '#374151' }}>{fmtDate(estimate.client_signed_at)}</span>}
-                    </div>
-                    <div style={{ fontSize: 9, color: '#9ca3af' }}>Date</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>Contractor</div>
-                    <div style={{ borderBottom: '2px solid #1f2937', minHeight: 36, marginBottom: 4 }} />
-                    <div style={{ fontSize: 9, color: '#9ca3af' }}>Signature</div>
-                    <div style={{ borderBottom: '1px solid #d1d5db', minHeight: 18, marginTop: 12, marginBottom: 4 }} />
-                    <div style={{ fontSize: 9, color: '#9ca3af' }}>Printed Name</div>
-                    <div style={{ borderBottom: '1px solid #d1d5db', minHeight: 18, marginTop: 12, marginBottom: 4 }} />
-                    <div style={{ fontSize: 9, color: '#9ca3af' }}>Date</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ═══ 10. FOOTER ═══ */}
-            <div style={{ borderTop: '3px solid #1f2937', paddingTop: 12, marginTop: 24, textAlign: 'center', fontSize: 10, color: '#9ca3af' }}>
-              <div style={{ fontWeight: 600, color: '#6b7280' }}>Licensed and Insured | RO Unlimited Construction & Development</div>
-              <div style={{ marginTop: 2 }}>This estimate is valid for {validDays} days from date of issue.</div>
-              <div style={{ fontSize: 9, color: '#d1d5db', marginTop: 6 }}>(864) 304-0139 | rounlimited.com</div>
-            </div>
-
+            {pages.map((src, i) => (
+              <img
+                key={i}
+                src={src}
+                alt={`Page ${i + 1}`}
+                draggable={false}
+                style={{
+                  width: "100%", maxWidth: 800,
+                  borderRadius: 4,
+                  boxShadow: "0 2px 20px rgba(0,0,0,0.5)",
+                  pointerEvents: "none",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                }}
+              />
+            ))}
+            {/* Bottom spacer for safe-area */}
+            <div style={{ height: 32 }} />
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );
