@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import {
   ChevronDown, ChevronRight, Plus, Trash2, Search,
-  ArrowUp, ArrowDown, X, PackageSearch, Loader2, Copy, BookmarkPlus,
+  ArrowUp, ArrowDown, X, PackageSearch, Loader2, Copy, BookmarkPlus, Sparkles,
 } from 'lucide-react';
+import AiAssistPanel from './AiAssistPanel';
 
 const FALLBACK_PHASES = [
   'Demolition', 'Site Prep', 'Foundation', 'Framing', 'Roofing',
@@ -45,6 +46,9 @@ interface CostItem {
 interface Props {
   lineItems: LineItem[];
   onChange: (items: LineItem[]) => void;
+  division?: string;
+  documentMode?: string;
+  projectName?: string;
 }
 
 let keyCounter = 0;
@@ -52,7 +56,24 @@ function nextKey() {
   return `li_${Date.now()}_${++keyCounter}`;
 }
 
-export default function WizardStep4({ lineItems, onChange }: Props) {
+export default function WizardStep4({ lineItems, onChange, division, documentMode, projectName }: Props) {
+  const [showAiPanel, setShowAiPanel] = useState(false);
+
+  const handleAiAddItems = (aiItems: any[]) => {
+    const newItems: LineItem[] = aiItems.map((item, idx) => ({
+      _key: nextKey(),
+      phase: item.phase || 'Other',
+      description: item.description || '',
+      category: item.category || 'material',
+      quantity: item.quantity || 1,
+      unit: item.unit || 'each',
+      unit_cost: item.unit_cost || 0,
+      markup_percent: item.markup_percent || 0,
+      total: (item.quantity || 1) * (item.unit_cost || 0) * (1 + (item.markup_percent || 0) / 100),
+      sort_order: lineItems.length + idx,
+    }));
+    onChange([...lineItems, ...newItems]);
+  };
   const [collapsedPhases, setCollapsedPhases] = useState<Set<string>>(new Set());
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryPhase, setLibraryPhase] = useState('');
@@ -267,10 +288,23 @@ export default function WizardStep4({ lineItems, onChange }: Props) {
         <p className="text-[14px] text-white/50">
           Add line items organized by construction phase.
         </p>
-        <div className="relative">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAiPanel(true)}
+            className="flex items-center gap-2 px-4 py-2.5 text-[14px] font-semibold rounded-lg transition-all"
+            style={{
+              background: 'linear-gradient(135deg, #C9A84C, #D4772C)',
+              color: '#000',
+              boxShadow: '0 0 16px rgba(201,168,76,0.25)',
+            }}
+          >
+            <Sparkles size={16} />
+            AI Assist
+          </button>
+          <div className="relative">
           <button
             onClick={() => setShowPhaseMenu(!showPhaseMenu)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#C9A84C] text-black text-[14px] font-semibold rounded-lg hover:bg-[#C9A84C]/90 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-white/10 text-white text-[14px] font-medium rounded-lg hover:bg-white/15 transition-colors border border-white/10"
           >
             <Plus size={16} />
             Add Phase
@@ -315,6 +349,7 @@ export default function WizardStep4({ lineItems, onChange }: Props) {
               </div>
             </>
           )}
+        </div>
         </div>
       </div>
 
@@ -577,6 +612,14 @@ export default function WizardStep4({ lineItems, onChange }: Props) {
           </div>
         </div>
       )}
+
+      {/* AI Assist Panel */}
+      <AiAssistPanel
+        open={showAiPanel}
+        onClose={() => setShowAiPanel(false)}
+        onAddItems={handleAiAddItems}
+        context={{ division, document_mode: documentMode, project_name: projectName, existing_items: lineItems }}
+      />
     </div>
   );
 }

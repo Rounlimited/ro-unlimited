@@ -801,6 +801,9 @@ export default function NewEstimateWizard() {
             <WizardStep4
               lineItems={lineItems}
               onChange={setLineItems}
+              division={step1.division}
+              documentMode={step1.document_mode}
+              projectName={step1.project_name}
             />
           )}
           {currentStep === 5 && (
