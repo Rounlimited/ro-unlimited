@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   FileText, User, MapPin, DollarSign, ClipboardList,
-  Send, Eye, Save, Loader2, X, CheckCircle2,
+  Send, Eye, Save, Loader2, X, CheckCircle2, Link2, Check,
 } from 'lucide-react';
 
 interface Props {
@@ -53,6 +53,8 @@ export default function WizardStep8({
   const [sending, setSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [savingForPreview, setSavingForPreview] = useState(false);
+  const [copyingLink, setCopyingLink] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const handlePreviewPdf = async () => {
     setSavingForPreview(true);
@@ -65,6 +67,25 @@ export default function WizardStep8({
     }
     setSavingForPreview(false);
     window.location.href = `/admin/estimates/${estimateId}/preview`;
+  };
+
+  const handleCopyLink = async () => {
+    setCopyingLink(true);
+    try {
+      // Save all current data first
+      await onSaveDraft();
+      // Generate share token via API
+      const res = await fetch(`/api/admin/estimates/${estimateId}/share-link`, { method: 'POST' });
+      const data = await res.json();
+      if (data?.link) {
+        await navigator.clipboard.writeText(data.link);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 3000);
+      }
+    } catch (err) {
+      console.error('Copy link failed:', err);
+    }
+    setCopyingLink(false);
   };
 
   // Load email accounts
@@ -331,6 +352,19 @@ export default function WizardStep8({
         >
           {savingForPreview ? <Loader2 size={18} className="animate-spin" /> : <Eye size={18} />}
           {savingForPreview ? 'Saving...' : 'Preview PDF'}
+        </button>
+
+        <button
+          onClick={handleCopyLink}
+          disabled={copyingLink}
+          className={`flex items-center justify-center gap-2 px-6 py-3 text-[15px] font-medium rounded-xl transition-colors disabled:opacity-40 ${
+            linkCopied
+              ? 'bg-green-500/15 border border-green-500/30 text-green-400'
+              : 'bg-[#D4772C]/15 border border-[#D4772C]/30 text-[#D4772C] hover:bg-[#D4772C]/25'
+          }`}
+        >
+          {copyingLink ? <Loader2 size={18} className="animate-spin" /> : linkCopied ? <Check size={18} /> : <Link2 size={18} />}
+          {copyingLink ? 'Saving...' : linkCopied ? 'Link Copied!' : 'Copy Link'}
         </button>
 
         <button
