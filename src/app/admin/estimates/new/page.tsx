@@ -21,6 +21,7 @@ import WizardStep8 from '@/components/admin/estimates/WizardStep8';
 interface Step1Data {
   customer_id: string;
   customer?: any;
+  document_mode: string;
   division: string;
   estimate_type: string;
   contract_type: string;
@@ -87,6 +88,7 @@ export default function NewEstimateWizard() {
   // Step 1 data
   const [step1, setStep1] = useState<Step1Data>({
     customer_id: '',
+    document_mode: 'estimate',
     division: '',
     estimate_type: '',
     contract_type: 'fixed_price',
@@ -122,6 +124,7 @@ export default function NewEstimateWizard() {
   // Step 7 data
   const [disclaimerIds, setDisclaimerIds] = useState<string[]>([]);
   const [exclusions, setExclusions] = useState('');
+  const [inclusions, setInclusions] = useState('');
 
   /* ─── Load existing draft ──────────────────────────────────── */
 
@@ -140,6 +143,7 @@ export default function NewEstimateWizard() {
         setStep1({
           customer_id: data.customer_id || '',
           customer: data.customer || data.customers || null,
+          document_mode: data.document_mode || 'estimate',
           division: data.division || '',
           estimate_type: data.estimate_type || '',
           contract_type: data.contract_type || 'fixed_price',
@@ -193,9 +197,10 @@ export default function NewEstimateWizard() {
           })));
         }
 
-        // Step 7 — disclaimers & exclusions
+        // Step 7 — disclaimers, exclusions & inclusions
         if (data.disclaimer_ids?.length) setDisclaimerIds(data.disclaimer_ids);
         if (data.exclusions) setExclusions(data.exclusions);
+        if (data.inclusions) setInclusions(data.inclusions);
 
         // Mark all steps up to current as completed
         const startStep = editStep || 1;
@@ -250,6 +255,7 @@ export default function NewEstimateWizard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer_id: step1.customer_id,
+          document_mode: step1.document_mode || 'estimate',
           project_name: step1.project_name,
           project_address: step1.project_address || null,
           project_city: step1.project_city || null,
@@ -422,6 +428,7 @@ export default function NewEstimateWizard() {
           await patchEstimate({
             disclaimer_ids: disclaimerIds,
             exclusions,
+            inclusions,
           });
           break;
         }
@@ -476,7 +483,7 @@ export default function NewEstimateWizard() {
           await savePaymentSchedule();
           break;
         case 7:
-          await patchEstimate({ disclaimer_ids: disclaimerIds, exclusions });
+          await patchEstimate({ disclaimer_ids: disclaimerIds, exclusions, inclusions });
           break;
       }
     } catch {}
@@ -525,6 +532,8 @@ export default function NewEstimateWizard() {
           contingency_percent: financials.contingency_percent,
           disclaimer_ids: disclaimerIds,
           exclusions,
+          inclusions,
+          document_mode: step1.document_mode || 'estimate',
         });
       }
     } catch (err) {
@@ -771,8 +780,10 @@ export default function NewEstimateWizard() {
             <WizardStep7
               selectedDisclaimerIds={disclaimerIds}
               exclusions={exclusions}
+              inclusions={inclusions}
               onChangeDisclaimers={setDisclaimerIds}
               onChangeExclusions={setExclusions}
+              onChangeInclusions={setInclusions}
             />
           )}
           {currentStep === 8 && estimateId && (

@@ -230,6 +230,20 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
   const scopeText = estimate.scope_of_work || estimate.project_description || '';
   const projectAddr = [estimate.project_address, estimate.project_city, estimate.project_state, estimate.project_zip].filter(Boolean).join(', ');
 
+  /* ── Document mode labels ─────────────────────────────────── */
+  const docMode = estimate.document_mode || 'estimate';
+  const docTitleMap: Record<string, string> = {
+    estimate: 'ESTIMATE',
+    contract: 'PROPOSAL',
+    change_order: 'CHANGE ORDER',
+    quick_quote: 'QUICK QUOTE',
+  };
+  const docTitle = docTitleMap[docMode] || 'ESTIMATE';
+  const isContract = docMode === 'contract';
+  const isQuickQuote = docMode === 'quick_quote';
+
+  const inclusionsList = (estimate.inclusions || '').split('\n').map((x: string) => x.trim()).filter(Boolean);
+
   const grouped: Record<string, any[]> = {};
   (lineItems || []).forEach((item: any) => {
     const p = item.phase || 'Other';
@@ -308,7 +322,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: isLight ? 10 : 6, paddingBottom: isLight ? 14 : 10, borderBottomWidth: 2, borderBottomColor: c.navy }}>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: 2.5, color: c.orange, fontFamily: 'Helvetica-Bold' }}>ESTIMATE</Text>
+                <Text style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: 2.5, color: c.orange, fontFamily: 'Helvetica-Bold' }}>{docTitle}</Text>
                 <Text style={{ fontSize: 16, fontFamily: 'Helvetica-Bold', color: c.navy }}>{estimate.estimate_number}</Text>
               </View>
               <View style={{ marginTop: 6, fontSize: 9, color: c.label, lineHeight: 1.5 }}>
@@ -384,6 +398,22 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           </View>
         </View>
         {/* ═══ END Rule 8 page-1 block ═══ */}
+
+        {/* ═══ 3B. INCLUSIONS — if present ═══ */}
+        {inclusionsList.length > 0 && (
+          <View style={{ marginBottom: sectionGap }} wrap={false}>
+            <Text style={s.sectionLabel}>Inclusions</Text>
+            <Text style={{ fontSize: 8.5, color: c.label, fontStyle: 'italic', marginBottom: 6 }}>
+              The following items ARE included in this scope of work:
+            </Text>
+            {inclusionsList.map((item: string, i: number) => (
+              <View key={i} style={{ flexDirection: 'row', marginBottom: 3, paddingLeft: 4 }}>
+                <Text style={{ fontSize: 9, color: '#22c55e', width: 12 }}>+</Text>
+                <Text style={{ fontSize: 9, color: c.textLight, flex: 1, lineHeight: 1.5 }}>{item}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* ═══ 4. LINE ITEMS — Rules 1, 2, 10 ═══ */}
         {sortedPhases.length > 0 && (
@@ -600,10 +630,13 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
         )}
 
         {/* ═══ 9. ACCEPTANCE — Rule 6: One unbreakable block ═══ */}
+        {!isQuickQuote && (
         <View style={s.acceptBox} wrap={false}>
           <Text style={s.sectionLabel}>Acceptance & Authorization</Text>
           <Text style={s.acceptIntro}>
-            By signing below, you accept this estimate and authorize RO Unlimited Construction & Development to begin work as described above. This acceptance constitutes a binding agreement subject to the terms and conditions stated herein.
+            {isContract
+              ? 'By signing below, you agree to enter into this construction contract with RO Unlimited Construction & Development for the work described above. This signed document constitutes a binding agreement subject to the terms and conditions stated herein.'
+              : 'By signing below, you accept this estimate and authorize RO Unlimited Construction & Development to begin work as described above. This acceptance constitutes a binding agreement subject to the terms and conditions stated herein.'}
           </Text>
           <View style={s.sigRow}>
             <View style={s.sigCol}>
@@ -659,6 +692,19 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
             </View>
           </View>
         </View>
+        )}
+
+        {/* Quick quote disclaimer — no signature block */}
+        {isQuickQuote && (
+          <View style={{ marginTop: sectionGap, padding: 16, backgroundColor: c.bgWarm, borderRadius: 3, borderWidth: 1, borderColor: c.border }} wrap={false}>
+            <Text style={{ fontSize: 9, color: c.textLight, lineHeight: 1.7, fontStyle: 'italic' }}>
+              This quick quote is provided for budgetary reference only and does not constitute a formal bid, proposal, or binding contract. Actual costs may vary based on site conditions, material availability, and scope changes. Contact us for a detailed estimate.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
+              <Text style={{ fontSize: 8, color: c.label }}>Valid for {validDays} days from date of issue</Text>
+            </View>
+          </View>
+        )}
 
       </Page>
     </Document>

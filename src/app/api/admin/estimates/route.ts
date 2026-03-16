@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
     const status = req.nextUrl.searchParams.get('status');
     const estimate_type = req.nextUrl.searchParams.get('estimate_type');
     const division = req.nextUrl.searchParams.get('division');
+    const document_mode = req.nextUrl.searchParams.get('document_mode');
     const search = req.nextUrl.searchParams.get('search');
 
     let query = supabase
@@ -23,6 +24,9 @@ export async function GET(req: NextRequest) {
     }
     if (division) {
       query = query.eq('division', division);
+    }
+    if (document_mode) {
+      query = query.eq('document_mode', document_mode);
     }
 
     const { data, error } = await query;
@@ -68,9 +72,19 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient();
     const year = new Date().getFullYear();
-    const prefix = `RO-EST-${year}-`;
+    const docMode = body.document_mode || 'estimate';
 
-    // Find the max existing estimate_number for this year
+    // Document number prefix based on mode
+    const prefixMap: Record<string, string> = {
+      estimate: 'RO-EST',
+      contract: 'RO-CON',
+      change_order: 'RO-CO',
+      quick_quote: 'RO-QQ',
+    };
+    const docPrefix = prefixMap[docMode] || 'RO-EST';
+    const prefix = `${docPrefix}-${year}-`;
+
+    // Find the max existing number for this prefix
     const { data: existing } = await supabase
       .from('estimates')
       .select('estimate_number')
@@ -91,6 +105,7 @@ export async function POST(req: NextRequest) {
       .insert({
         estimate_number,
         customer_id,
+        document_mode: docMode,
         status: body.status || 'draft',
         version: body.version || 1,
         project_name: body.project_name || null,
@@ -109,6 +124,11 @@ export async function POST(req: NextRequest) {
         permit_fees: body.permit_fees ?? 0,
         valid_until: body.valid_until || null,
         notes: body.notes || null,
+        inclusions: body.inclusions || null,
+        project_start_date: body.project_start_date || null,
+        project_duration_days: body.project_duration_days || null,
+        weather_days: body.weather_days ?? 0,
+        schedule_notes: body.schedule_notes || null,
       })
       .select()
       .single();

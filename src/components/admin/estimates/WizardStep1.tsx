@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Plus, X, User, Building2, MapPin } from 'lucide-react';
+import { Search, Plus, X, User, Building2, MapPin, FileText, FileSignature, FileDiff, Zap } from 'lucide-react';
 
 interface Customer {
   id: string;
@@ -19,6 +19,7 @@ interface Customer {
 interface Step1Data {
   customer_id: string;
   customer?: Customer;
+  document_mode: string;
   division: string;
   estimate_type: string;
   contract_type: string;
@@ -133,8 +134,43 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
   const labelClass = 'block text-[14px] font-medium text-white/70 mb-1.5';
   const selectClass = 'w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-3 text-white text-[15px] focus:outline-none focus:border-[#C9A84C]/50 transition-colors appearance-none cursor-pointer';
 
+  const DOC_MODES = [
+    { id: 'estimate', label: 'Estimate', desc: 'Non-binding cost estimate', icon: FileText, color: '#C9A84C' },
+    { id: 'contract', label: 'Proposal', desc: 'Binding contract upon signature', icon: FileSignature, color: '#3b8dd4' },
+    { id: 'change_order', label: 'Change Order', desc: 'Modify an existing contract', icon: FileDiff, color: '#D4772C' },
+    { id: 'quick_quote', label: 'Quick Quote', desc: 'Simple quote for small jobs', icon: Zap, color: '#22c55e' },
+  ];
+
   return (
     <div className="space-y-6">
+      {/* Document Type */}
+      <div>
+        <label className={labelClass}>Document Type *</label>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {DOC_MODES.map((mode) => {
+            const Icon = mode.icon;
+            const selected = (data.document_mode || 'estimate') === mode.id;
+            return (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() => onChange({ document_mode: mode.id })}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all text-center ${
+                  selected
+                    ? 'border-white/20 bg-white/5'
+                    : 'border-white/5 bg-[#111] hover:border-white/10'
+                }`}
+                style={selected ? { borderColor: `${mode.color}40`, boxShadow: `0 0 12px ${mode.color}15` } : undefined}
+              >
+                <Icon size={20} style={{ color: selected ? mode.color : 'rgba(255,255,255,0.3)' }} />
+                <span className={`text-[13px] font-semibold ${selected ? 'text-white' : 'text-white/40'}`}>{mode.label}</span>
+                <span className="text-[11px] text-white/25 leading-tight">{mode.desc}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Customer Selection */}
       <div>
         <label className={labelClass}>Customer *</label>

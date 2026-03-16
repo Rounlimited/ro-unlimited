@@ -117,6 +117,11 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       }
     }
 
+    // If total_override is set, use it as the total instead of calculated
+    if (body.total_override !== undefined && body.total_override !== null) {
+      body.total = body.total_override;
+    }
+
     const { data, error } = await supabase
       .from('estimates')
       .update({ ...body, updated_at: new Date().toISOString() })
