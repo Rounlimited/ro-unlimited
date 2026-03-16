@@ -279,12 +279,18 @@ export default function NewEstimateWizard() {
   const patchEstimate = async (fields: Record<string, any>) => {
     if (!estimateId) return;
     try {
-      await fetch(`/api/admin/estimates/${estimateId}`, {
+      const res = await fetch(`/api/admin/estimates/${estimateId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fields),
       });
-    } catch {}
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error('PATCH estimate failed:', res.status, err);
+      }
+    } catch (err) {
+      console.error('PATCH estimate error:', err);
+    }
   };
 
   const saveLineItems = async () => {
@@ -306,9 +312,12 @@ export default function NewEstimateWizard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items }),
       });
+      if (!res.ok) {
+        console.error('Save line items failed:', res.status, await res.text().catch(() => ''));
+        return;
+      }
       const data = await res.json();
       if (Array.isArray(data)) {
-        // Update local items with server-assigned IDs
         setLineItems(prev =>
           prev.map((item, idx) => ({
             ...item,
@@ -316,7 +325,9 @@ export default function NewEstimateWizard() {
           }))
         );
       }
-    } catch {}
+    } catch (err) {
+      console.error('Save line items error:', err);
+    }
   };
 
   const savePaymentSchedule = async () => {
@@ -329,12 +340,17 @@ export default function NewEstimateWizard() {
       sort_order: idx,
     }));
     try {
-      await fetch(`/api/admin/estimates/${estimateId}/payment-schedule`, {
+      const res = await fetch(`/api/admin/estimates/${estimateId}/payment-schedule`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items }),
       });
-    } catch {}
+      if (!res.ok) {
+        console.error('Save payment schedule failed:', res.status, await res.text().catch(() => ''));
+      }
+    } catch (err) {
+      console.error('Save payment schedule error:', err);
+    }
   };
 
   /* ─── Step Navigation ───────────────────────────────────────── */
@@ -486,7 +502,10 @@ export default function NewEstimateWizard() {
     setSaving(true);
     try {
       if (estimateId) {
-        // Save ALL wizard state so PDF preview reflects current data
+        // Save line items & payment schedule FIRST so recalc uses new data
+        await saveLineItems();
+        await savePaymentSchedule();
+        // Then save all estimate fields (financial recalc will use new line items)
         await patchEstimate({
           status: 'draft',
           customer_id: step1.customer_id,
@@ -507,10 +526,10 @@ export default function NewEstimateWizard() {
           disclaimer_ids: disclaimerIds,
           exclusions,
         });
-        await saveLineItems();
-        await savePaymentSchedule();
       }
-    } catch {}
+    } catch (err) {
+      console.error('handleSaveDraft error:', err);
+    }
     setSaving(false);
   };
 

@@ -25,6 +25,11 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     // Add scope_of_work mapping
     estimate.scope_of_work = estimate.project_description;
 
+    console.log('[PDF] Generating for estimate:', id);
+    console.log('[PDF] customer_id:', estimate.customer_id, 'customer:', estimate.customer?.first_name, estimate.customer?.last_name);
+    console.log('[PDF] project_address:', estimate.project_address, estimate.project_city);
+    console.log('[PDF] total:', estimate.total);
+
     // Fetch related data
     const [{ data: lineItems }, { data: paymentSchedule }] = await Promise.all([
       supabase.from('estimate_line_items').select('*').eq('estimate_id', id).order('phase').order('sort_order'),
@@ -36,6 +41,12 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     if (estimate.disclaimer_ids?.length) {
       const { data } = await supabase.from('disclaimers').select('*').in('id', estimate.disclaimer_ids);
       selectedDisclaimers = data || [];
+    }
+
+    console.log('[PDF] line_items count:', (lineItems || []).length, 'payment_schedules:', (paymentSchedule || []).length, 'disclaimers:', selectedDisclaimers.length);
+    if (lineItems?.length) {
+      const liTotal = lineItems.reduce((s: number, i: any) => s + i.quantity * i.unit_cost * (1 + (i.markup_percent || 0) / 100), 0);
+      console.log('[PDF] line items calculated subtotal:', liTotal);
     }
 
     // Generate PDF
