@@ -9,11 +9,16 @@ export async function GET(req: NextRequest) {
     const trade = req.nextUrl.searchParams.get('trade');
     const search = req.nextUrl.searchParams.get('search');
     const preferred = req.nextUrl.searchParams.get('preferred');
+    const all = req.nextUrl.searchParams.get('all');
 
     let query = supabase
       .from('vendors')
       .select('*')
       .order('company_name', { ascending: true });
+
+    if (all !== 'true') {
+      query = query.eq('is_active', true);
+    }
 
     if (type) {
       query = query.eq('type', type);

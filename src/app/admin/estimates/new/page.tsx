@@ -260,8 +260,11 @@ export default function NewEstimateWizard() {
             await patchEstimate({
               customer_id: step1.customer_id,
               project_name: step1.project_name,
-              project_address: [step1.project_address, step1.project_city, step1.project_state, step1.project_zip]
-                .filter(Boolean).join(', '),
+              project_address: step1.project_address || null,
+              project_city: step1.project_city || null,
+              project_state: step1.project_state || 'SC',
+              project_zip: step1.project_zip || null,
+              contract_type: step1.contract_type,
               division: step1.division,
               estimate_type: step1.estimate_type,
             });

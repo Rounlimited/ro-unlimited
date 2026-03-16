@@ -67,7 +67,6 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
         total,
         sort_order: body.sort_order ?? 0,
         notes: body.notes || null,
-        cost_code: body.cost_code || null,
       })
       .select()
       .single();
@@ -134,7 +133,6 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
         total,
         sort_order: item.sort_order ?? idx,
         notes: item.notes || null,
-        cost_code: item.cost_code || null,
       };
     });
 

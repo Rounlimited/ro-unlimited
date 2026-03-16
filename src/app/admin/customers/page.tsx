@@ -107,7 +107,7 @@ export default function CustomersPage() {
     phone: '',
     address: '',
     city: '',
-    state: '',
+    state: 'SC',
     zip: '',
     type: 'residential',
     source: '',
@@ -188,7 +188,7 @@ export default function CustomersPage() {
       setShowCreate(false);
       setFormData({
         first_name: '', last_name: '', company_name: '', email: '',
-        phone: '', address: '', city: '', state: '', zip: '',
+        phone: '', address: '', city: '', state: 'SC', zip: '',
         type: 'residential', source: '', notes: '',
       });
       fetchCustomers(activeTab);

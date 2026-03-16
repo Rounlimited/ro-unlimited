@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       ? estimate.total.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
       : '$0.00';
 
-    const viewLink = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/estimate/${id}`;
+    const viewLink = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/admin/estimates/${id}/preview`;
 
     const bodyContent = `
       ${message ? `<p>${message}</p>` : ''}
@@ -106,8 +106,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     // Insert status history record
     await supabase.from('estimate_status_history').insert({
       estimate_id: id,
-      from_status: estimate.status,
-      to_status: 'sent',
+      old_status: estimate.status,
+      new_status: 'sent',
       notes: `Sent to ${to_email}`,
     });
 

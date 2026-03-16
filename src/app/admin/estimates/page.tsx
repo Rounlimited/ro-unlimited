@@ -20,7 +20,7 @@ interface Estimate {
   total: number;
   valid_until: string | null;
   created_at: string;
-  customers: {
+  customer: {
     first_name: string;
     last_name: string;
     company_name: string | null;
@@ -119,10 +119,10 @@ export default function EstimatesPage() {
     if (!search) return estimates;
     const q = search.toLowerCase();
     return estimates.filter((e) => {
-      const customerName = e.customers
-        ? `${e.customers.first_name} ${e.customers.last_name}`.toLowerCase()
+      const customerName = e.customer
+        ? `${e.customer.first_name} ${e.customer.last_name}`.toLowerCase()
         : '';
-      const companyName = e.customers?.company_name?.toLowerCase() || '';
+      const companyName = e.customer?.company_name?.toLowerCase() || '';
       return (
         e.estimate_number.toLowerCase().includes(q) ||
         e.project_name.toLowerCase().includes(q) ||
@@ -325,10 +325,10 @@ export default function EstimatesPage() {
               const statusCfg = STATUS_CONFIG[estimate.status] || STATUS_CONFIG.draft;
               const divCfg = DIVISION_CONFIG[estimate.division] || DIVISION_CONFIG.residential;
               const DivIcon = divCfg.icon;
-              const customerName = estimate.customers
-                ? `${estimate.customers.first_name} ${estimate.customers.last_name}`
+              const customerName = estimate.customer
+                ? `${estimate.customer.first_name} ${estimate.customer.last_name}`
                 : 'No Customer';
-              const companyName = estimate.customers?.company_name;
+              const companyName = estimate.customer?.company_name;
               const expired = isExpired(estimate.valid_until, estimate.status);
 
               return (

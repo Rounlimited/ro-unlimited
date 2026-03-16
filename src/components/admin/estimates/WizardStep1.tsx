@@ -312,7 +312,7 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
             <option value="preliminary">Preliminary</option>
             <option value="detailed">Detailed</option>
             <option value="change_order">Change Order</option>
-            <option value="time_and_materials">Time & Materials</option>
+            <option value="time_materials">Time & Materials</option>
           </select>
         </div>
         <div>
@@ -324,7 +324,7 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
           >
             <option value="fixed_price">Fixed Price</option>
             <option value="cost_plus">Cost Plus</option>
-            <option value="time_and_materials">Time & Materials</option>
+            <option value="time_materials">Time & Materials</option>
             <option value="unit_price">Unit Price</option>
           </select>
         </div>

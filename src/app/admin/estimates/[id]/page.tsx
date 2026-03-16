@@ -544,7 +544,7 @@ export default function EstimateDetailPage() {
               <Copy size={14} /> Duplicate
             </button>
             <button
-              onClick={() => window.open(`/estimate/${id}`, '_blank')}
+              onClick={() => window.open(`/admin/estimates/${id}/preview`, '_blank')}
               className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-white/60 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all"
             >
               <Eye size={14} /> Preview

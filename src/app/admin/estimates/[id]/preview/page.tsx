@@ -682,7 +682,7 @@ export default function EstimatePreviewPage() {
                             {fmt(m.amount)}
                           </td>
                           <td className="px-4 py-2.5 text-gray-500">
-                            {m.description || '--'}
+                            {m.due_description || m.description || '--'}
                           </td>
                         </tr>
                       ))}

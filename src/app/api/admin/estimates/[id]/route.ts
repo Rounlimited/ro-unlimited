@@ -41,6 +41,10 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
         .order('created_at', { ascending: false }),
     ]);
 
+    if (estimate) {
+      estimate.scope_of_work = estimate.project_description;
+    }
+
     return NextResponse.json({
       ...estimate,
       line_items: lineItemsRes.data || [],
@@ -127,8 +131,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     if (oldStatusChanged && body.status && body.status !== oldStatus) {
       await supabase.from('estimate_status_history').insert({
         estimate_id: id,
-        from_status: oldStatus,
-        to_status: body.status,
+        old_status: oldStatus,
+        new_status: body.status,
         notes: body.status_notes || null,
         changed_by: body.changed_by || null,
       });
