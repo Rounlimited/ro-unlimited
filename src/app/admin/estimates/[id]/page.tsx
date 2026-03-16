@@ -10,7 +10,7 @@ import {
   DollarSign, Clock, AlertTriangle, ChevronRight,
   TrendingUp, Percent, Shield, Receipt, CreditCard,
   History, CheckCircle2, XCircle, Eye, Loader2,
-  ExternalLink, Home, Mountain, Link2, Check,
+  ExternalLink, Home, Mountain, Link2, Check, FileSignature,
 } from 'lucide-react';
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -105,8 +105,15 @@ interface Estimate {
   accepted_at: string | null;
   declined_at: string | null;
   client_signature: string | null;
+  document_mode: string;
   disclaimer_ids: string[] | null;
   exclusions: string | null;
+  inclusions: string | null;
+  project_start_date: string | null;
+  project_duration_days: number | null;
+  weather_days: number;
+  schedule_notes: string | null;
+  total_override: number | null;
   notes: string | null;
   internal_notes: string | null;
   template_id: string | null;
@@ -555,6 +562,19 @@ export default function EstimateDetailPage() {
                 <DivIcon size={11} />
                 {divCfg.label}
               </span>
+              {estimate.document_mode && estimate.document_mode !== 'estimate' && (
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                  estimate.document_mode === 'contract' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                  estimate.document_mode === 'change_order' ? 'bg-[#D4772C]/10 text-[#D4772C] border border-[#D4772C]/20' :
+                  estimate.document_mode === 'quick_quote' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                  'bg-white/5 text-white/40'
+                }`}>
+                  {estimate.document_mode === 'contract' ? 'Proposal' :
+                   estimate.document_mode === 'change_order' ? 'Change Order' :
+                   estimate.document_mode === 'quick_quote' ? 'Quick Quote' :
+                   estimate.document_mode}
+                </span>
+              )}
               {estimate.version > 1 && (
                 <span className="text-[12px] text-white/30 font-medium">
                   v{estimate.version}
@@ -581,6 +601,21 @@ export default function EstimateDetailPage() {
             >
               <Copy size={14} /> Duplicate
             </button>
+            {(!estimate.document_mode || estimate.document_mode === 'estimate') && (
+              <button
+                onClick={async () => {
+                  await fetch(`/api/admin/estimates/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ document_mode: 'contract' }),
+                  });
+                  window.location.reload();
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-blue-400/70 bg-blue-500/5 border border-blue-500/10 rounded-lg hover:bg-blue-500/10 hover:text-blue-400 transition-all"
+              >
+                <FileSignature size={14} /> Convert to Proposal
+              </button>
+            )}
             <button
               onClick={handlePreviewPdf}
               disabled={pdfLoading}
