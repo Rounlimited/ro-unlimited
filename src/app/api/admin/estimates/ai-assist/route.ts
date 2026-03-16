@@ -78,9 +78,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'messages array required' }, { status: 400 });
     }
 
-    const apiKey = process.env.GROK_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'GROK_API_KEY not configured' }, { status: 500 });
+      return NextResponse.json({ error: 'GROQ_API_KEY not configured' }, { status: 500 });
     }
 
     // Build context-aware system prompt
@@ -94,14 +94,14 @@ export async function POST(req: NextRequest) {
       if (parts.length) contextNote = `\n\n## CURRENT ESTIMATE CONTEXT\n${parts.join('\n')}`;
     }
 
-    const res = await fetch('https://api.x.ai/v1/chat/completions', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'grok-3-mini',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT + contextNote },
           ...messages,
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       const err = await res.text();
-      console.error('[ai-assist] Grok API error:', res.status, err);
+      console.error('[ai-assist] Groq API error:', res.status, err);
       return NextResponse.json({ error: 'AI service error' }, { status: 502 });
     }
 
