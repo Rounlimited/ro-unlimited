@@ -13,10 +13,25 @@ export default function AiChatBubble() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = sessionStorage.getItem('ro_ai_chat');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [unread, setUnread] = useState(0);
+
+  // Persist chat to sessionStorage
+  useEffect(() => {
+    if (messages.length > 0) {
+      try { sessionStorage.setItem('ro_ai_chat', JSON.stringify(messages)); } catch {}
+    }
+  }, [messages]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -156,6 +171,15 @@ export default function AiChatBubble() {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {messages.length > 0 && (
+            <button
+              onClick={() => { setMessages([]); try { sessionStorage.removeItem('ro_ai_chat'); } catch {} }}
+              className="px-2 py-1 text-[11px] text-white/20 hover:text-white/50 transition-colors"
+              title="Clear chat"
+            >
+              Clear
+            </button>
+          )}
           <button onClick={() => setMinimized(true)} className="p-2 text-white/30 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
             <Minimize2 size={16} />
           </button>

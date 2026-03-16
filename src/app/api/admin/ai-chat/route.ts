@@ -178,8 +178,15 @@ const SYSTEM_PROMPT = `You are the RO Unlimited AI Assistant — a smart, helpfu
 - Interior doors: $400-800 each | Trim: $3-6/lnft
 - Demolition selective: $2-5/sqft | Cleanup: $0.15-0.30/sqft
 
+## MEMORY SYSTEM
+You have a persistent memory. Memories from previous sessions are loaded below under "SAVED MEMORIES".
+- When the user says "remember this", "save this", "note this", or asks you to remember something, respond normally AND include a JSON block: \`\`\`memory{"content":"...","category":"..."}\`\`\` (categories: general, pricing, preferences, projects, codes, materials)
+- When the user says "forget" or "delete" a memory, include: \`\`\`forget{"content":"keyword to match"}\`\`\`
+- Always confirm what you saved/forgot
+- Use your memories to give personalized, contextual answers
+
 ## PROJECT CONTEXT
-When the user asks about a specific project or estimate, context data will be injected below. Use it to answer questions about that project's scope, pricing, status, etc.
+When the user asks about a specific project or estimate, context data will be injected below.
 `;
 
 export async function POST(req: NextRequest) {
@@ -195,9 +202,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'AI not configured' }, { status: 500 });
     }
 
+    const supabase = createAdminClient();
+
+    // Load persistent memories
+    const { data: memories } = await supabase
+      .from('ai_memories')
+      .select('content, category')
+      .order('category')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
     // Build context
     let contextNote = '';
     const parts: string[] = [];
+
+    // Inject memories
+    if (memories && memories.length > 0) {
+      parts.push('\n## SAVED MEMORIES');
+      const grouped: Record<string, string[]> = {};
+      memories.forEach((m: any) => {
+        const cat = m.category || 'general';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(m.content);
+      });
+      Object.entries(grouped).forEach(([cat, items]) => {
+        parts.push(`**${cat}:**`);
+        items.forEach(i => parts.push(`- ${i}`));
+      });
+    }
 
     if (currentPage) {
       parts.push(`User is currently on page: ${currentPage}`);
@@ -254,7 +286,34 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await res.json();
-    const content = data.choices?.[0]?.message?.content || '';
+    let content = data.choices?.[0]?.message?.content || '';
+
+    // Detect memory save commands in AI response
+    const memoryMatch = content.match(/```memory\s*(\{[\s\S]*?\})\s*```/);
+    if (memoryMatch) {
+      try {
+        const mem = JSON.parse(memoryMatch[1]);
+        await supabase.from('ai_memories').insert({
+          content: mem.content,
+          category: mem.category || 'general',
+          source: 'ai',
+        });
+      } catch {}
+      // Remove the memory block from visible response
+      content = content.replace(/```memory[\s\S]*?```/g, '').trim();
+    }
+
+    // Detect forget commands
+    const forgetMatch = content.match(/```forget\s*(\{[\s\S]*?\})\s*```/);
+    if (forgetMatch) {
+      try {
+        const fg = JSON.parse(forgetMatch[1]);
+        if (fg.content) {
+          await supabase.from('ai_memories').delete().ilike('content', `%${fg.content}%`);
+        }
+      } catch {}
+      content = content.replace(/```forget[\s\S]*?```/g, '').trim();
+    }
 
     return NextResponse.json({ role: 'assistant', content });
   } catch (err: any) {
