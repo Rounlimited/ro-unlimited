@@ -1,15 +1,8 @@
 import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
 import React from 'react';
-import path from 'path';
-import fs from 'fs';
 
-// Load logo as base64 for PDF embedding
-let logoBase64: string | null = null;
-try {
-  const logoPath = path.join(process.cwd(), 'public', 'ro-unlimited-logo.png');
-  const logoBuffer = fs.readFileSync(logoPath);
-  logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
-} catch { /* logo not available */ }
+// Logo URL — works on both local dev and Vercel production
+const LOGO_URL = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/ro-unlimited-logo.png`;
 
 /* ─── Helpers ────────────────────────────────────────────────── */
 
@@ -271,15 +264,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
         {/* ═══ 1. MAIN HEADER (first page) ═══ */}
         <View style={s.mainHeader}>
           <View style={s.companyBlock}>
-            {logoBase64 && (
-              <Image src={logoBase64} style={{ width: 180, height: 'auto', marginBottom: 6 }} />
-            )}
-            {!logoBase64 && (
-              <>
-                <Text style={s.companyName}>RO Unlimited</Text>
-                <Text style={s.companyTagline}>CONSTRUCTION & DEVELOPMENT</Text>
-              </>
-            )}
+            <Image src={LOGO_URL} style={{ width: 180, height: 'auto', marginBottom: 6 }} />
             <View style={s.companyInfo}>
               <Text>Greenville, SC</Text>
               <Text>(864) 304-0139</Text>
