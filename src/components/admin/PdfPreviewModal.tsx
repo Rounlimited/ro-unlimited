@@ -337,7 +337,7 @@ export default function PdfPreviewModal({ pdfUrl, loading, onClose, filename, es
             flex: 1, position: "relative",
             overflow: isZoomed ? "hidden" : "auto",
             WebkitOverflowScrolling: isZoomed ? undefined : "touch",
-            touchAction: pages.length > 0 ? "none" : "auto",
+            touchAction: isZoomed ? "none" : "auto",
           }}
         >
           {showSpinner ? (
