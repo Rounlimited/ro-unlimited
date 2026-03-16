@@ -334,7 +334,7 @@ export default function EstimatesPage() {
               return (
                 <Link
                   key={estimate.id}
-                  href={`/admin/estimates/${estimate.id}`}
+                  href={estimate.status === 'draft' ? `/admin/estimates/new?edit=${estimate.id}` : `/admin/estimates/${estimate.id}`}
                   className="block bg-[#111] border border-white/5 rounded-xl p-4 hover:border-white/10 hover:bg-[#141414] transition-all group"
                 >
                   {/* Top row: estimate number + status + total */}

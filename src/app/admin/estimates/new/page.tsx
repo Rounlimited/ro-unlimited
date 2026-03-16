@@ -74,12 +74,15 @@ export default function NewEstimateWizard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedCustomerId = searchParams.get('customer') || undefined;
+  const editId = searchParams.get('edit') || null;
+  const editStep = searchParams.get('step') ? parseInt(searchParams.get('step')!) : null;
 
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(editStep || 1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  const [estimateId, setEstimateId] = useState<string | null>(null);
+  const [estimateId, setEstimateId] = useState<string | null>(editId);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [loadingDraft, setLoadingDraft] = useState(!!editId);
 
   // Step 1 data
   const [step1, setStep1] = useState<Step1Data>({
@@ -119,6 +122,106 @@ export default function NewEstimateWizard() {
   // Step 7 data
   const [disclaimerIds, setDisclaimerIds] = useState<string[]>([]);
   const [exclusions, setExclusions] = useState('');
+
+  /* ─── Load existing draft ──────────────────────────────────── */
+
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+
+    async function loadDraft() {
+      try {
+        const res = await fetch(`/api/admin/estimates/${editId}`);
+        if (!res.ok) throw new Error('Failed to load estimate');
+        const data = await res.json();
+        if (cancelled) return;
+
+        // Populate Step 1
+        setStep1({
+          customer_id: data.customer_id || '',
+          customer: data.customer || data.customers || null,
+          division: data.division || '',
+          estimate_type: data.estimate_type || '',
+          contract_type: data.contract_type || 'fixed_price',
+          project_name: data.project_name || '',
+          project_address: data.project_address || '',
+          project_city: data.project_city || '',
+          project_state: data.project_state || 'SC',
+          project_zip: data.project_zip || '',
+        });
+
+        // Step 2
+        if (data.template_id) setSelectedTemplateId(data.template_id);
+
+        // Step 3
+        setScopeHtml(data.scope_of_work || data.project_description || '');
+
+        // Step 4 — line items
+        if (data.line_items?.length) {
+          setLineItems(data.line_items.map((li: any, idx: number) => ({
+            _key: `load_${li.id || idx}`,
+            id: li.id,
+            phase: li.phase || 'Other',
+            description: li.description || '',
+            category: li.category || 'material',
+            quantity: li.quantity || 1,
+            unit: li.unit || 'each',
+            unit_cost: li.unit_cost || 0,
+            markup_percent: li.markup_percent || 0,
+            total: li.total || 0,
+            sort_order: li.sort_order || idx,
+          })));
+        }
+
+        // Step 5 — financials
+        setFinancials({
+          overhead_percent: data.overhead_percent || 0,
+          markup_percent: data.markup_percent || 0,
+          tax_percent: data.tax_percent || 0,
+          permit_fees: data.permit_fees || 0,
+          contingency_percent: data.contingency_percent || 0,
+        });
+
+        // Step 6 — payment schedule
+        if (data.payment_schedule?.length) {
+          setMilestones(data.payment_schedule.map((ps: any, idx: number) => ({
+            _key: `load_ps_${ps.id || idx}`,
+            milestone: ps.milestone || '',
+            percent: ps.percent || 0,
+            amount: ps.amount || 0,
+            description: ps.due_description || ps.description || '',
+          })));
+        }
+
+        // Step 7 — disclaimers & exclusions
+        if (data.disclaimer_ids?.length) setDisclaimerIds(data.disclaimer_ids);
+        if (data.exclusions) setExclusions(data.exclusions);
+
+        // Mark all steps up to current as completed
+        const startStep = editStep || 1;
+        const completed = new Set<number>();
+        for (let i = 1; i < startStep; i++) completed.add(i);
+        // If the estimate has data, mark those steps complete
+        if (data.customer_id) completed.add(1);
+        if (data.template_id) completed.add(2);
+        if (data.scope_of_work || data.project_description) completed.add(3);
+        if (data.line_items?.length) completed.add(4);
+        if (data.overhead_percent || data.markup_percent) completed.add(5);
+        if (data.payment_schedule?.length) completed.add(6);
+        if (data.disclaimer_ids?.length || data.exclusions) completed.add(7);
+        setCompletedSteps(completed);
+
+      } catch (err) {
+        console.error('Failed to load draft:', err);
+        setError('Failed to load estimate draft');
+      } finally {
+        if (!cancelled) setLoadingDraft(false);
+      }
+    }
+
+    loadDraft();
+    return () => { cancelled = true; };
+  }, [editId, editStep]);
 
   /* ─── Calculations ──────────────────────────────────────────── */
 
@@ -454,6 +557,17 @@ export default function NewEstimateWizard() {
 
   /* ─── Render ────────────────────────────────────────────────── */
 
+  if (loadingDraft) {
+    return (
+      <div className="h-full flex items-center justify-center bg-[#0a0a0a]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 size={28} className="animate-spin text-[#C9A84C]" />
+          <span className="text-[14px] text-white/40">Loading estimate...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-32">
@@ -468,7 +582,7 @@ export default function NewEstimateWizard() {
               Estimates
             </button>
             <h1 className="text-[22px] sm:text-[26px] font-bold text-white">
-              New Estimate
+              {editId ? 'Edit Estimate' : 'New Estimate'}
             </h1>
           </div>
           <button
