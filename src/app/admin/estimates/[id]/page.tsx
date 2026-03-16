@@ -218,6 +218,8 @@ export default function EstimateDetailPage() {
   const [sendMessage, setSendMessage] = useState('');
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [sending, setSending] = useState(false);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Action states
   const [deleting, setDeleting] = useState(false);
@@ -294,7 +296,8 @@ export default function EstimateDetailPage() {
         }),
       });
       if (!res.ok) throw new Error('Send failed');
-      setShowSendModal(false);
+      const data = await res.json();
+      if (data.share_link) setShareLink(data.share_link);
       setSendMessage('');
       fetchEstimate(); // Refresh to show updated status
     } catch {
@@ -1062,77 +1065,127 @@ export default function EstimateDetailPage() {
 
       {/* ─── SEND MODAL ───────────────────────────────────────── */}
       {showSendModal && (
-        <ModalBackdrop onClose={() => setShowSendModal(false)}>
+        <ModalBackdrop onClose={() => { setShowSendModal(false); setShareLink(null); setLinkCopied(false); }}>
           <div className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-[17px] font-bold text-white flex items-center gap-2">
                 <Send size={18} className="text-[#C9A84C]" />
-                Send Estimate
+                {shareLink ? 'Estimate Sent!' : 'Send Estimate'}
               </h3>
-              <button onClick={() => setShowSendModal(false)} className="text-white/30 hover:text-white">
+              <button onClick={() => { setShowSendModal(false); setShareLink(null); setLinkCopied(false); }} className="text-white/30 hover:text-white">
                 <X size={20} />
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[13px] text-white/40 mb-1.5">To Email</label>
-                <input
-                  type="email"
-                  value={sendTo}
-                  onChange={(e) => setSendTo(e.target.value)}
-                  placeholder="customer@email.com"
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/40"
-                />
-              </div>
+            {shareLink ? (
+              <div className="space-y-4">
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex items-center gap-3">
+                  <CheckCircle2 size={20} className="text-green-400 shrink-0" />
+                  <p className="text-[14px] text-green-400">
+                    Estimate sent to <span className="font-semibold text-green-300">{sendTo}</span>!
+                  </p>
+                </div>
 
-              <div>
-                <label className="block text-[13px] text-white/40 mb-1.5">From Account</label>
-                <select
-                  value={sendFrom}
-                  onChange={(e) => setSendFrom(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-[14px] text-white focus:outline-none focus:border-[#C9A84C]/40 appearance-none cursor-pointer"
+                <div>
+                  <label className="block text-[13px] text-white/40 mb-1.5 flex items-center gap-1.5">
+                    <ExternalLink size={12} />
+                    Copy link to send via text
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={shareLink}
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-[13px] text-white/70 focus:outline-none truncate"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(shareLink);
+                        setLinkCopied(true);
+                        setTimeout(() => setLinkCopied(false), 2000);
+                      }}
+                      className="px-4 py-2.5 text-[13px] font-semibold rounded-lg transition-all shrink-0 flex items-center gap-1.5"
+                      style={{
+                        background: linkCopied ? 'rgba(34,197,94,0.2)' : 'rgba(201,168,76,0.15)',
+                        border: linkCopied ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(201,168,76,0.3)',
+                        color: linkCopied ? '#4ade80' : '#C9A84C',
+                      }}
+                    >
+                      {linkCopied ? <><CheckCircle2 size={14} /> Copied</> : <><Copy size={14} /> Copy</>}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => { setShowSendModal(false); setShareLink(null); setLinkCopied(false); }}
+                  className="w-full px-4 py-2.5 text-[14px] text-white/60 border border-white/10 rounded-lg hover:bg-white/5 transition-colors mt-2"
                 >
-                  {emailAccounts.map((acc) => (
-                    <option key={acc.id} value={acc.email}>
-                      {acc.display_name} ({acc.email})
-                    </option>
-                  ))}
-                </select>
+                  Done
+                </button>
               </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[13px] text-white/40 mb-1.5">To Email</label>
+                    <input
+                      type="email"
+                      value={sendTo}
+                      onChange={(e) => setSendTo(e.target.value)}
+                      placeholder="customer@email.com"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/40"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-[13px] text-white/40 mb-1.5">Message (optional)</label>
-                <textarea
-                  value={sendMessage}
-                  onChange={(e) => setSendMessage(e.target.value)}
-                  placeholder="Add a personal message..."
-                  rows={4}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/40 resize-none"
-                />
-              </div>
-            </div>
+                  <div>
+                    <label className="block text-[13px] text-white/40 mb-1.5">From Account</label>
+                    <select
+                      value={sendFrom}
+                      onChange={(e) => setSendFrom(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-[14px] text-white focus:outline-none focus:border-[#C9A84C]/40 appearance-none cursor-pointer"
+                    >
+                      {emailAccounts.map((acc) => (
+                        <option key={acc.id} value={acc.email}>
+                          {acc.display_name} ({acc.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowSendModal(false)}
-                className="flex-1 px-4 py-2.5 text-[14px] text-white/60 border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSend}
-                disabled={!sendTo || sending}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-[14px] font-semibold text-black rounded-lg disabled:opacity-40 transition-all"
-                style={{ background: 'linear-gradient(135deg, #C9A84C, #D4772C)' }}
-              >
-                {sending ? (
-                  <><Loader2 size={16} className="animate-spin" /> Sending...</>
-                ) : (
-                  <><Send size={14} /> Send Estimate</>
-                )}
-              </button>
-            </div>
+                  <div>
+                    <label className="block text-[13px] text-white/40 mb-1.5">Message (optional)</label>
+                    <textarea
+                      value={sendMessage}
+                      onChange={(e) => setSendMessage(e.target.value)}
+                      placeholder="Add a personal message..."
+                      rows={4}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/40 resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => setShowSendModal(false)}
+                    className="flex-1 px-4 py-2.5 text-[14px] text-white/60 border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSend}
+                    disabled={!sendTo || sending}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-[14px] font-semibold text-black rounded-lg disabled:opacity-40 transition-all"
+                    style={{ background: 'linear-gradient(135deg, #C9A84C, #D4772C)' }}
+                  >
+                    {sending ? (
+                      <><Loader2 size={16} className="animate-spin" /> Sending...</>
+                    ) : (
+                      <><Send size={14} /> Send Estimate</>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </ModalBackdrop>
       )}

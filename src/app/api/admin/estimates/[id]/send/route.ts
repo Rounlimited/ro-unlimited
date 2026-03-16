@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL } from '@/lib/email';
 import { Resend } from 'resend';
 import { generateEstimatePDF } from '@/lib/estimate-pdf';
+import crypto from 'crypto';
 
 type RouteContext = { params: { id: string } };
 
@@ -47,6 +48,16 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     // Generate PDF
     const pdfBuffer = await generateEstimatePDF(estimate, lineItems || [], paymentScheduleData || [], selectedDisclaimers);
 
+    // Generate share token (32 char hex)
+    const shareToken = crypto.randomBytes(16).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 60); // 60-day expiry
+
+    await supabase.from('estimates').update({
+      share_token: shareToken,
+      share_token_expires_at: expiresAt.toISOString(),
+    }).eq('id', id);
+
     // Ensure email accounts are loaded
     await fetchEmailAccounts();
 
@@ -59,7 +70,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       ? new Date(estimate.valid_until).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
       : 'N/A';
 
-    const viewLink = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/admin/estimates/${id}/preview`;
+    const viewLink = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/estimate/${shareToken}`;
 
     const bodyContent = `
       ${message ? `<p>${message}</p>` : ''}
@@ -126,7 +137,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       notes: `Sent to ${to_email}`,
     });
 
-    return NextResponse.json({ ok: true, sent_to: to_email });
+    return NextResponse.json({ ok: true, sent_to: to_email, share_link: viewLink });
   } catch (err) {
     console.error('[estimates/send] POST error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

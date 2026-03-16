@@ -1,0 +1,592 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
+
+/* ─── Types ──────────────────────────────────────────────── */
+
+interface Customer {
+  first_name: string;
+  last_name: string;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+interface LineItem {
+  id: string;
+  phase: string;
+  description: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  unit_cost: number;
+  markup_percent: number;
+  total: number;
+  sort_order: number;
+}
+
+interface Milestone {
+  id: string;
+  milestone: string;
+  percent: number;
+  amount: number;
+  description: string;
+  sort_order: number;
+}
+
+interface Disclaimer {
+  id: string;
+  title: string;
+  body: string;
+}
+
+interface EstimateData {
+  id: string;
+  estimate_number: string;
+  status: string;
+  project_name: string;
+  project_address: string | null;
+  division: string;
+  estimate_type: string | null;
+  contract_type: string | null;
+  scope_of_work: string | null;
+  project_description: string | null;
+  subtotal: number;
+  overhead_percent: number;
+  overhead_amount: number;
+  markup_percent: number;
+  markup_amount: number;
+  tax_percent: number;
+  tax_amount: number;
+  contingency_percent: number;
+  contingency_amount: number;
+  permit_fees: number;
+  total: number;
+  valid_until: string | null;
+  created_at: string;
+  sent_at: string | null;
+  customer: Customer | null;
+  line_items: LineItem[];
+  payment_schedule: Milestone[];
+  disclaimers: Disclaimer[];
+  exclusions: string | null;
+}
+
+/* ─── Helpers ──────────────────────────────────────────────── */
+
+function fmt(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: 'USD',
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function fmtDate(d: string | null): string {
+  if (!d) return '--';
+  return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function getDaysUntil(d: string | null): number | null {
+  if (!d) return null;
+  const diff = new Date(d).getTime() - Date.now();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  draft:    { label: 'Draft',    color: '#666',    bg: '#f0f0f0' },
+  sent:     { label: 'Sent',     color: '#2563eb', bg: '#eff6ff' },
+  viewed:   { label: 'Viewed',   color: '#d97706', bg: '#fffbeb' },
+  accepted: { label: 'Accepted', color: '#16a34a', bg: '#f0fdf4' },
+  declined: { label: 'Declined', color: '#dc2626', bg: '#fef2f2' },
+  expired:  { label: 'Expired',  color: '#666',    bg: '#f0f0f0' },
+  revised:  { label: 'Revised',  color: '#7c3aed', bg: '#f5f3ff' },
+};
+
+const DIVISION_LABELS: Record<string, string> = {
+  residential: 'Residential',
+  commercial: 'Commercial',
+  grading: 'Grading',
+};
+
+/* ─── Component ──────────────────────────────────────────── */
+
+export default function PublicEstimatePage() {
+  const params = useParams();
+  const token = params.token as string;
+
+  const [estimate, setEstimate] = useState<EstimateData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<{ message: string; expired?: boolean } | null>(null);
+
+  // PDF preview
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+
+  // Message form
+  const [msgName, setMsgName] = useState('');
+  const [msgText, setMsgText] = useState('');
+  const [msgSending, setMsgSending] = useState(false);
+  const [msgSent, setMsgSent] = useState(false);
+
+  useEffect(() => {
+    const fetchEstimate = async () => {
+      try {
+        const res = await fetch(`/api/estimate/${token}`);
+        if (res.status === 410) {
+          setError({ message: 'This estimate link has expired. Please contact us for an updated link.', expired: true });
+          return;
+        }
+        if (!res.ok) {
+          setError({ message: 'This estimate could not be found.' });
+          return;
+        }
+        const data = await res.json();
+        setEstimate(data);
+      } catch {
+        setError({ message: 'Something went wrong. Please try again later.' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEstimate();
+  }, [token]);
+
+  const handlePreviewPdf = async () => {
+    if (!estimate) return;
+    setPdfLoading(true);
+    setShowPdfModal(true);
+    try {
+      const res = await fetch(`/api/admin/estimates/${estimate.id}/pdf`);
+      if (!res.ok) throw new Error('PDF generation failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setPdfPreviewUrl(url);
+    } catch {
+      setPdfPreviewUrl(null);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = () => {
+    if (!estimate) return;
+    window.open(`/api/admin/estimates/${estimate.id}/pdf`, '_blank');
+  };
+
+  const handleSendMessage = async () => {
+    if (!msgText.trim()) return;
+    setMsgSending(true);
+    try {
+      const res = await fetch(`/api/estimate/${token}/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: msgName, message: msgText }),
+      });
+      if (!res.ok) throw new Error('Send failed');
+      setMsgSent(true);
+      setMsgText('');
+      setMsgName('');
+    } catch {
+      alert('Failed to send message. Please try again.');
+    } finally {
+      setMsgSending(false);
+    }
+  };
+
+  /* ─── Loading State ──────────────────────────────────────── */
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#C9A84C]/20 border-t-[#C9A84C] rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[15px] text-gray-500">Loading estimate...</p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─── Error State ────────────────────────────────────────── */
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            {error.expired ? (
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+              </svg>
+            ) : (
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+            )}
+          </div>
+          <h1 className="text-[22px] font-bold text-gray-900 mb-2">
+            {error.expired ? 'Link Expired' : 'Estimate Not Found'}
+          </h1>
+          <p className="text-[15px] text-gray-500 mb-6">{error.message}</p>
+          <a
+            href="https://rounlimited.com"
+            className="inline-block px-6 py-3 text-[14px] font-semibold text-white rounded-lg"
+            style={{ background: 'linear-gradient(135deg, #C9A84C, #b8953f)' }}
+          >
+            Visit RO Unlimited
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (!estimate) return null;
+
+  const status = STATUS_LABELS[estimate.status] || STATUS_LABELS.draft;
+  const daysLeft = getDaysUntil(estimate.valid_until);
+  const customerName = estimate.customer
+    ? [estimate.customer.first_name, estimate.customer.last_name].filter(Boolean).join(' ')
+    : null;
+  const scopeHtml = estimate.scope_of_work || estimate.project_description || '';
+
+  // Group line items by phase
+  const phases = estimate.line_items.reduce<Record<string, LineItem[]>>((acc, item) => {
+    const phase = item.phase || 'General';
+    if (!acc[phase]) acc[phase] = [];
+    acc[phase].push(item);
+    return acc;
+  }, {});
+
+  return (
+    <div className="min-h-screen bg-[#f8f8f6]">
+      {/* ─── Header ──────────────────────────────────────────── */}
+      <header className="bg-[#0a0a0a] border-b-2 border-[#C9A84C]">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/ro-shield.png"
+              alt="RO Unlimited"
+              className="h-10 w-auto"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+            <div>
+              <div className="text-[16px] font-bold text-white tracking-wide">RO Unlimited</div>
+              <div className="text-[11px] text-[#C9A84C] uppercase tracking-wider">Construction & Development</div>
+            </div>
+          </div>
+          <div className="text-[13px] text-white/50 hidden sm:block">Estimate</div>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+
+        {/* ─── Header Card ───────────────────────────────────── */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="h-1" style={{ background: 'linear-gradient(90deg, #C9A84C, #D4772C)' }} />
+          <div className="p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-[26px] sm:text-[32px] font-bold text-gray-900">{estimate.estimate_number}</h1>
+                  <span
+                    className="px-3 py-1 rounded-full text-[12px] font-semibold uppercase tracking-wide"
+                    style={{ color: status.color, background: status.bg }}
+                  >
+                    {status.label}
+                  </span>
+                </div>
+                {estimate.project_name && (
+                  <p className="text-[16px] text-gray-600 font-medium">{estimate.project_name}</p>
+                )}
+              </div>
+              <div className="text-right text-[13px] text-gray-500 space-y-1 shrink-0">
+                <div>Date: <span className="text-gray-700 font-medium">{fmtDate(estimate.sent_at || estimate.created_at)}</span></div>
+                {estimate.valid_until && (
+                  <div>
+                    Valid Until: <span className="text-gray-700 font-medium">{fmtDate(estimate.valid_until)}</span>
+                    {daysLeft !== null && daysLeft > 0 && daysLeft <= 14 && (
+                      <span className="ml-2 text-[11px] text-amber-600 font-semibold">({daysLeft} days left)</span>
+                    )}
+                    {daysLeft !== null && daysLeft <= 0 && (
+                      <span className="ml-2 text-[11px] text-red-500 font-semibold">(Expired)</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── Project Summary ───────────────────────────────── */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+          <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-4">Project Details</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[14px]">
+            {customerName && (
+              <div>
+                <span className="text-gray-400 text-[12px] uppercase tracking-wide">Prepared For</span>
+                <p className="text-gray-900 font-semibold mt-0.5">{customerName}</p>
+                {estimate.customer?.company_name && (
+                  <p className="text-gray-500 text-[13px]">{estimate.customer.company_name}</p>
+                )}
+              </div>
+            )}
+            {estimate.project_address && (
+              <div>
+                <span className="text-gray-400 text-[12px] uppercase tracking-wide">Address</span>
+                <p className="text-gray-900 mt-0.5">{estimate.project_address}</p>
+              </div>
+            )}
+            {estimate.division && (
+              <div>
+                <span className="text-gray-400 text-[12px] uppercase tracking-wide">Division</span>
+                <p className="text-gray-900 mt-0.5">{DIVISION_LABELS[estimate.division] || estimate.division}</p>
+              </div>
+            )}
+            {estimate.estimate_type && (
+              <div>
+                <span className="text-gray-400 text-[12px] uppercase tracking-wide">Type</span>
+                <p className="text-gray-900 mt-0.5 capitalize">{estimate.estimate_type.replace(/_/g, ' ')}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ─── Scope of Work ──────────────────────────────────── */}
+        {scopeHtml && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+            <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-4">Scope of Work</h2>
+            <div
+              className="text-[14px] text-gray-700 leading-relaxed prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: scopeHtml }}
+            />
+          </div>
+        )}
+
+        {/* ─── Action Buttons ─────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={handlePreviewPdf}
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 text-[14px] font-semibold text-white rounded-xl shadow-md hover:shadow-lg transition-all"
+            style={{ background: 'linear-gradient(135deg, #C9A84C, #b8953f)' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+            </svg>
+            View Full Estimate PDF
+          </button>
+          <button
+            onClick={handleDownloadPdf}
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 text-[14px] font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 transition-all"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Download PDF
+          </button>
+          <button
+            disabled
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 text-[14px] font-semibold text-gray-400 bg-gray-100 border border-gray-200 rounded-xl cursor-not-allowed"
+            title="Coming soon"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Accept Estimate
+            <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full ml-1">Soon</span>
+          </button>
+        </div>
+
+        {/* ─── Financial Summary ──────────────────────────────── */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+          <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-4">Financial Summary</h2>
+          <div className="space-y-2 text-[14px]">
+            <div className="flex justify-between py-2 border-b border-gray-100">
+              <span className="text-gray-500">Subtotal</span>
+              <span className="text-gray-900 font-medium">{fmt(estimate.subtotal)}</span>
+            </div>
+            {estimate.overhead_amount > 0 && (
+              <div className="flex justify-between py-2 border-b border-gray-100">
+                <span className="text-gray-500">Overhead ({estimate.overhead_percent}%)</span>
+                <span className="text-gray-900">{fmt(estimate.overhead_amount)}</span>
+              </div>
+            )}
+            {estimate.markup_amount > 0 && (
+              <div className="flex justify-between py-2 border-b border-gray-100">
+                <span className="text-gray-500">Markup ({estimate.markup_percent}%)</span>
+                <span className="text-gray-900">{fmt(estimate.markup_amount)}</span>
+              </div>
+            )}
+            {estimate.tax_amount > 0 && (
+              <div className="flex justify-between py-2 border-b border-gray-100">
+                <span className="text-gray-500">Tax ({estimate.tax_percent}%)</span>
+                <span className="text-gray-900">{fmt(estimate.tax_amount)}</span>
+              </div>
+            )}
+            {estimate.contingency_amount > 0 && (
+              <div className="flex justify-between py-2 border-b border-gray-100">
+                <span className="text-gray-500">Contingency ({estimate.contingency_percent}%)</span>
+                <span className="text-gray-900">{fmt(estimate.contingency_amount)}</span>
+              </div>
+            )}
+            {estimate.permit_fees > 0 && (
+              <div className="flex justify-between py-2 border-b border-gray-100">
+                <span className="text-gray-500">Permit Fees</span>
+                <span className="text-gray-900">{fmt(estimate.permit_fees)}</span>
+              </div>
+            )}
+            <div className="flex justify-between py-3 mt-2">
+              <span className="text-[18px] font-bold text-gray-900">Total</span>
+              <span className="text-[22px] font-bold" style={{ color: '#C9A84C' }}>{fmt(estimate.total)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── Payment Schedule ───────────────────────────────── */}
+        {estimate.payment_schedule.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+            <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-4">Payment Schedule</h2>
+            <div className="overflow-x-auto -mx-5 sm:-mx-6 px-5 sm:px-6">
+              <table className="w-full text-[14px]">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2.5 text-[12px] font-semibold text-gray-400 uppercase tracking-wide">Milestone</th>
+                    <th className="text-left py-2.5 text-[12px] font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Description</th>
+                    <th className="text-right py-2.5 text-[12px] font-semibold text-gray-400 uppercase tracking-wide">%</th>
+                    <th className="text-right py-2.5 text-[12px] font-semibold text-gray-400 uppercase tracking-wide">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {estimate.payment_schedule.map((ms) => (
+                    <tr key={ms.id} className="border-b border-gray-50">
+                      <td className="py-3 text-gray-900 font-medium">{ms.milestone}</td>
+                      <td className="py-3 text-gray-500 hidden sm:table-cell">{ms.description}</td>
+                      <td className="py-3 text-gray-700 text-right">{ms.percent}%</td>
+                      <td className="py-3 text-gray-900 font-medium text-right">{fmt(ms.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Disclaimers ────────────────────────────────────── */}
+        {estimate.disclaimers.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+            <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-4">Terms & Conditions</h2>
+            <div className="space-y-4">
+              {estimate.disclaimers.map((d) => (
+                <div key={d.id}>
+                  <h3 className="text-[14px] font-semibold text-gray-800 mb-1">{d.title}</h3>
+                  <p className="text-[13px] text-gray-500 leading-relaxed whitespace-pre-wrap">{d.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ─── Exclusions ─────────────────────────────────────── */}
+        {estimate.exclusions && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+            <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-4">Exclusions</h2>
+            <div
+              className="text-[14px] text-gray-600 leading-relaxed prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: estimate.exclusions }}
+            />
+          </div>
+        )}
+
+        {/* ─── Message Section ────────────────────────────────── */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+          <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-1">Questions or Changes?</h2>
+          <p className="text-[13px] text-gray-400 mb-4">Send us a message about this estimate.</p>
+
+          {msgSent ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <p className="text-[14px] text-green-700 font-semibold">Message sent!</p>
+              <p className="text-[13px] text-green-600 mt-1">We&apos;ll get back to you shortly.</p>
+              <button
+                onClick={() => setMsgSent(false)}
+                className="mt-3 text-[13px] text-green-600 underline hover:text-green-800"
+              >
+                Send another message
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[12px] text-gray-400 uppercase tracking-wide mb-1">Your Name</label>
+                <input
+                  type="text"
+                  value={msgName}
+                  onChange={(e) => setMsgName(e.target.value)}
+                  placeholder="Enter your name"
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-[14px] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-[#C9A84C] focus:ring-1 focus:ring-[#C9A84C]/30 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-[12px] text-gray-400 uppercase tracking-wide mb-1">Message</label>
+                <textarea
+                  value={msgText}
+                  onChange={(e) => setMsgText(e.target.value)}
+                  placeholder="Type your message here..."
+                  rows={4}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-[14px] text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-[#C9A84C] focus:ring-1 focus:ring-[#C9A84C]/30 transition-colors resize-none"
+                />
+              </div>
+              <button
+                onClick={handleSendMessage}
+                disabled={!msgText.trim() || msgSending}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 text-[14px] font-semibold text-white rounded-lg disabled:opacity-40 transition-all hover:shadow-md"
+                style={{ background: 'linear-gradient(135deg, #C9A84C, #b8953f)' }}
+              >
+                {msgSending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                    Send Message
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* ─── Footer ──────────────────────────────────────────── */}
+      <footer className="border-t border-gray-200 mt-12">
+        <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+          <p className="text-[14px] font-semibold text-gray-700">RO Unlimited Construction & Development</p>
+          <div className="flex items-center justify-center gap-4 mt-2 text-[13px] text-gray-400">
+            <a href="tel:+1" className="hover:text-[#C9A84C] transition-colors">Contact Us</a>
+            <span>|</span>
+            <a href="https://rounlimited.com" className="hover:text-[#C9A84C] transition-colors">rounlimited.com</a>
+          </div>
+        </div>
+      </footer>
+
+      {/* ─── PDF Preview Modal ────────────────────────────────── */}
+      {showPdfModal && (
+        <PdfPreviewModal
+          pdfUrl={pdfPreviewUrl}
+          loading={pdfLoading}
+          onClose={() => { setShowPdfModal(false); setPdfPreviewUrl(null); }}
+          estimateId={estimate.id}
+        />
+      )}
+    </div>
+  );
+}
