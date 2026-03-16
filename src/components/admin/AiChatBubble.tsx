@@ -44,12 +44,26 @@ export default function AiChatBubble() {
     setLoading(true);
 
     try {
+      // Auto-fetch project context if on an estimate page
+      let projectContext = null;
+      const estimateMatch = pathname?.match(/\/admin\/estimates\/([a-f0-9-]{36})/);
+      if (estimateMatch) {
+        try {
+          const ctxRes = await fetch(`/api/admin/estimates/${estimateMatch[1]}`);
+          if (ctxRes.ok) {
+            const ctxData = await ctxRes.json();
+            projectContext = { type: 'estimate', data: ctxData };
+          }
+        } catch {}
+      }
+
       const res = await fetch('/api/admin/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
           currentPage: pathname,
+          projectContext,
         }),
       });
 
