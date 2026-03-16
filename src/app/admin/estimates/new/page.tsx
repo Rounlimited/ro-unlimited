@@ -136,6 +136,7 @@ export default function NewEstimateWizard() {
   const [disclaimerIds, setDisclaimerIds] = useState<string[]>([]);
   const [exclusions, setExclusions] = useState('');
   const [inclusions, setInclusions] = useState('');
+  const [recommendations, setRecommendations] = useState('');
 
   /* ─── Load existing draft ──────────────────────────────────── */
 
@@ -225,6 +226,7 @@ export default function NewEstimateWizard() {
         if (data.disclaimer_ids?.length) setDisclaimerIds(data.disclaimer_ids);
         if (data.exclusions) setExclusions(data.exclusions);
         if (data.inclusions) setInclusions(data.inclusions);
+        if (data.recommendations) setRecommendations(data.recommendations);
 
         // Mark all steps up to current as completed
         const startStep = editStep || 1;
@@ -569,6 +571,7 @@ export default function NewEstimateWizard() {
           disclaimer_ids: disclaimerIds,
           exclusions,
           inclusions,
+          recommendations,
           document_mode: step1.document_mode || 'estimate',
           total_override: totalOverride,
           project_start_date: timeline.project_start_date || null,
@@ -846,6 +849,8 @@ export default function NewEstimateWizard() {
               milestones={milestones}
               disclaimerIds={disclaimerIds}
               exclusions={exclusions}
+              recommendations={recommendations}
+              onChangeRecommendations={setRecommendations}
               subtotal={subtotal}
               grandTotal={grandTotal}
               templateName={templateName}

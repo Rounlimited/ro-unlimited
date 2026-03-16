@@ -16,6 +16,8 @@ interface Props {
   milestones: any[];
   disclaimerIds: string[];
   exclusions: string;
+  recommendations: string;
+  onChangeRecommendations: (text: string) => void;
   subtotal: number;
   grandTotal: number;
   templateName: string | null;
@@ -38,6 +40,8 @@ export default function WizardStep8({
   milestones,
   disclaimerIds,
   exclusions,
+  recommendations,
+  onChangeRecommendations,
   subtotal,
   grandTotal,
   templateName,
@@ -337,6 +341,21 @@ export default function WizardStep8({
           </div>
         </div>
       )}
+
+      {/* Recommendations (optional — shows on PDF if filled) */}
+      <div className="bg-[#111] border border-white/10 rounded-xl p-5">
+        <SectionTitle icon={ClipboardList} title="Recommendations for Customer" />
+        <p className="text-[13px] text-white/40 mb-3">
+          Optional notes, suggestions, or material alternatives for the customer. These show on the PDF as a &quot;Recommendations&quot; section.
+        </p>
+        <textarea
+          value={recommendations}
+          onChange={e => onChangeRecommendations(e.target.value)}
+          placeholder={"e.g. Consider rubber mulch in high-traffic areas and wood mulch elsewhere to reduce long-term cost.\n\nWe recommend upgrading to impact-resistant shingles for this roof pitch — qualifies for insurance discount in SC."}
+          rows={4}
+          className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 text-white text-[14px] placeholder-white/20 focus:outline-none focus:border-[#C9A84C]/50 transition-colors resize-y leading-relaxed"
+        />
+      </div>
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">

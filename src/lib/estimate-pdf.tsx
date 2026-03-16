@@ -262,6 +262,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
   const grandTotal = subtotal + overheadAmt + markupAmt + taxAmt + (estimate.permit_fees || 0) + contingencyAmt;
 
   const exclusionsList = (estimate.exclusions || '').split('\n').map((x: string) => x.trim()).filter(Boolean);
+  const recommendationsList = (estimate.recommendations || '').split('\n').map((x: string) => x.trim()).filter(Boolean);
   const validDays = estimate.valid_until
     ? Math.max(0, Math.ceil((new Date(estimate.valid_until).getTime() - new Date(estimate.created_at).getTime()) / 86400000))
     : 30;
@@ -624,6 +625,22 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
               <View key={i} style={s.exclusionItem}>
                 <Text style={s.exclusionBullet}>{'\u2022'}</Text>
                 <Text style={s.exclusionText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ═══ 8B. RECOMMENDATIONS — optional ═══ */}
+        {recommendationsList.length > 0 && (
+          <View style={{ marginBottom: sectionGap }} wrap={false}>
+            <Text style={s.sectionLabel}>Recommendations</Text>
+            <Text style={{ fontSize: 8.5, color: c.label, fontStyle: 'italic', marginBottom: 6 }}>
+              Our suggestions for your consideration:
+            </Text>
+            {recommendationsList.map((item: string, i: number) => (
+              <View key={i} style={{ flexDirection: 'row', marginBottom: 4, paddingLeft: 4 }}>
+                <Text style={{ fontSize: 9, color: c.navy, width: 14, fontFamily: 'Helvetica-Bold' }}>{'\u2713'}</Text>
+                <Text style={{ fontSize: 9.5, color: c.textMed, flex: 1, lineHeight: 1.6 }}>{item}</Text>
               </View>
             ))}
           </View>
