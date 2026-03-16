@@ -5,6 +5,7 @@ import {
   FileText, User, MapPin, DollarSign, ClipboardList,
   Send, Eye, Save, Loader2, X, CheckCircle2, Link2, Check,
 } from 'lucide-react';
+import PricingWarnings from './PricingWarnings';
 
 interface Props {
   estimateId: string;
@@ -157,9 +158,12 @@ export default function WizardStep8({
 
   return (
     <div className="space-y-6">
-      <p className="text-[14px] text-white/50">
+      <p className="text-[14px] text-white/50 mb-4">
         Review your estimate before saving or sending.
       </p>
+
+      {/* Pricing Intelligence Warnings */}
+      <PricingWarnings estimateId={estimateId} />
 
       {/* Customer & Project Info */}
       <div className="bg-[#111] border border-white/10 rounded-xl p-5">
