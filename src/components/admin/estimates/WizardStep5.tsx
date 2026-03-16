@@ -13,11 +13,14 @@ interface FinancialData {
 
 interface Props {
   subtotal: number;
+  grandTotal: number;
   data: FinancialData;
   onChange: (data: Partial<FinancialData>) => void;
+  totalOverride: number | null;
+  onChangeTotalOverride: (val: number | null) => void;
 }
 
-export default function WizardStep5({ subtotal, data, onChange }: Props) {
+export default function WizardStep5({ subtotal, grandTotal, data, onChange, totalOverride, onChangeTotalOverride }: Props) {
   const [converterMode, setConverterMode] = useState<'margin' | 'markup'>('markup');
   const [converterValue, setConverterValue] = useState('');
 
@@ -28,7 +31,6 @@ export default function WizardStep5({ subtotal, data, onChange }: Props) {
   const taxable = subtotal + overheadAmt + markupAmt;
   const taxAmt = (taxable * (data.tax_percent || 0)) / 100;
   const contingencyAmt = (subtotal * (data.contingency_percent || 0)) / 100;
-  const grandTotal = subtotal + overheadAmt + markupAmt + taxAmt + (data.permit_fees || 0) + contingencyAmt;
 
   // Margin <-> Markup converter
   const converted = useMemo(() => {
@@ -169,6 +171,54 @@ export default function WizardStep5({ subtotal, data, onChange }: Props) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ─── Manual Total Override ───────────────────────────────── */}
+      <div className="pt-4 mt-2 border-t border-white/10">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-[15px] font-semibold text-white">Total Override</h3>
+          <button
+            onClick={() => onChangeTotalOverride(totalOverride !== null ? null : grandTotal)}
+            className={`px-3 py-1.5 text-[13px] font-medium rounded-lg transition-colors ${
+              totalOverride !== null
+                ? 'bg-[#D4772C]/15 text-[#D4772C] border border-[#D4772C]/30'
+                : 'bg-white/5 text-white/40 border border-white/10 hover:text-white/60'
+            }`}
+          >
+            {totalOverride !== null ? 'Override Active' : 'Set Manual Total'}
+          </button>
+        </div>
+
+        {totalOverride !== null && (
+          <div className="bg-[#D4772C]/5 border border-[#D4772C]/20 rounded-xl p-4 space-y-3">
+            <p className="text-[13px] text-white/50">
+              Override the calculated total with a flat amount. Useful for rounding or negotiated pricing.
+            </p>
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 text-[15px]">$</span>
+                <input
+                  type="number"
+                  value={totalOverride || ''}
+                  onChange={e => onChangeTotalOverride(parseFloat(e.target.value) || 0)}
+                  className={`${inputClass} pl-7`}
+                  step="0.01"
+                  min={0}
+                />
+              </div>
+              <button
+                onClick={() => onChangeTotalOverride(null)}
+                className="px-3 py-2.5 text-[13px] text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+            <div className="flex justify-between text-[13px]">
+              <span className="text-white/40">Calculated total:</span>
+              <span className="text-white/50 line-through">{fmt(grandTotal)}</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

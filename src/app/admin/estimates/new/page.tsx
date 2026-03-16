@@ -121,6 +121,17 @@ export default function NewEstimateWizard() {
   // Step 6 data
   const [milestones, setMilestones] = useState<Milestone[]>([]);
 
+  // Total override
+  const [totalOverride, setTotalOverride] = useState<number | null>(null);
+
+  // Timeline data (inside Step 6)
+  const [timeline, setTimeline] = useState({
+    project_start_date: '',
+    project_duration_days: 0,
+    weather_days: 0,
+    schedule_notes: '',
+  });
+
   // Step 7 data
   const [disclaimerIds, setDisclaimerIds] = useState<string[]>([]);
   const [exclusions, setExclusions] = useState('');
@@ -195,6 +206,19 @@ export default function NewEstimateWizard() {
             amount: ps.amount || 0,
             description: ps.due_description || ps.description || '',
           })));
+        }
+
+        // Total override
+        if (data.total_override != null) setTotalOverride(data.total_override);
+
+        // Timeline
+        if (data.project_start_date || data.project_duration_days) {
+          setTimeline({
+            project_start_date: data.project_start_date || '',
+            project_duration_days: data.project_duration_days || 0,
+            weather_days: data.weather_days || 0,
+            schedule_notes: data.schedule_notes || '',
+          });
         }
 
         // Step 7 — disclaimers, exclusions & inclusions
@@ -422,6 +446,12 @@ export default function NewEstimateWizard() {
         }
         case 6: {
           await savePaymentSchedule();
+          await patchEstimate({
+            project_start_date: timeline.project_start_date || null,
+            project_duration_days: timeline.project_duration_days || null,
+            weather_days: timeline.weather_days || 0,
+            schedule_notes: timeline.schedule_notes || null,
+          });
           break;
         }
         case 7: {
@@ -481,6 +511,12 @@ export default function NewEstimateWizard() {
           break;
         case 6:
           await savePaymentSchedule();
+          await patchEstimate({
+            project_start_date: timeline.project_start_date || null,
+            project_duration_days: timeline.project_duration_days || null,
+            weather_days: timeline.weather_days || 0,
+            schedule_notes: timeline.schedule_notes || null,
+          });
           break;
         case 7:
           await patchEstimate({ disclaimer_ids: disclaimerIds, exclusions, inclusions });
@@ -534,6 +570,11 @@ export default function NewEstimateWizard() {
           exclusions,
           inclusions,
           document_mode: step1.document_mode || 'estimate',
+          total_override: totalOverride,
+          project_start_date: timeline.project_start_date || null,
+          project_duration_days: timeline.project_duration_days || null,
+          weather_days: timeline.weather_days || 0,
+          schedule_notes: timeline.schedule_notes || null,
         });
       }
     } catch (err) {
@@ -765,8 +806,11 @@ export default function NewEstimateWizard() {
           {currentStep === 5 && (
             <WizardStep5
               subtotal={subtotal}
+              grandTotal={grandTotal}
               data={financials}
               onChange={d => setFinancials(prev => ({ ...prev, ...d }))}
+              totalOverride={totalOverride}
+              onChangeTotalOverride={setTotalOverride}
             />
           )}
           {currentStep === 6 && (
@@ -774,6 +818,9 @@ export default function NewEstimateWizard() {
               milestones={milestones}
               grandTotal={grandTotal}
               onChange={setMilestones}
+              timeline={timeline}
+              onChangeTimeline={(partial) => setTimeline(prev => ({ ...prev, ...partial }))}
+              documentMode={step1.document_mode || 'estimate'}
             />
           )}
           {currentStep === 7 && (

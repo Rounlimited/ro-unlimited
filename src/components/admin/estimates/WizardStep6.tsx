@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, AlertTriangle, Zap } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, Zap, Calendar, Clock, CloudRain, FileText } from 'lucide-react';
 
 interface Milestone {
   _key: string;
@@ -11,10 +11,20 @@ interface Milestone {
   description: string;
 }
 
+interface TimelineData {
+  project_start_date: string;
+  project_duration_days: number;
+  weather_days: number;
+  schedule_notes: string;
+}
+
 interface Props {
   milestones: Milestone[];
   grandTotal: number;
   onChange: (milestones: Milestone[]) => void;
+  timeline: TimelineData;
+  onChangeTimeline: (data: Partial<TimelineData>) => void;
+  documentMode: string;
 }
 
 let keyCounter = 0;
@@ -23,6 +33,12 @@ function nextKey() {
 }
 
 const PRESETS: { label: string; items: { milestone: string; percent: number; description: string }[] }[] = [
+  {
+    label: 'Single Payment',
+    items: [
+      { milestone: 'Full Payment', percent: 100, description: 'Due upon project completion' },
+    ],
+  },
   {
     label: '50 / 50',
     items: [
@@ -49,7 +65,11 @@ const PRESETS: { label: string; items: { milestone: string; percent: number; des
   },
 ];
 
-export default function WizardStep6({ milestones, grandTotal, onChange }: Props) {
+export default function WizardStep6({ milestones, grandTotal, onChange, timeline, onChangeTimeline, documentMode }: Props) {
+  const isContract = documentMode === 'contract';
+  const startDate = timeline.project_start_date ? new Date(timeline.project_start_date) : null;
+  const totalCalDays = (timeline.project_duration_days || 0) + (timeline.weather_days || 0);
+  const completionDate = startDate && totalCalDays > 0 ? new Date(startDate.getTime() + totalCalDays * 86400000) : null;
   const totalPercent = milestones.reduce((s, m) => s + (m.percent || 0), 0);
   const totalAmount = milestones.reduce((s, m) => s + (m.amount || 0), 0);
   const isValid = Math.abs(totalPercent - 100) < 0.01;
@@ -209,6 +229,50 @@ export default function WizardStep6({ milestones, grandTotal, onChange }: Props)
           </div>
         </div>
       )}
+
+      {/* ─── Project Timeline ───────────────────────────────────── */}
+      <div className="pt-4 mt-4 border-t border-white/10">
+        <h3 className="text-[15px] font-semibold text-white mb-1.5">
+          Project Timeline
+          {isContract && <span className="text-red-400 text-[12px] ml-2">Required for proposals</span>}
+        </h3>
+        <p className="text-[13px] text-white/40 mb-4">
+          {isContract ? 'Set the project schedule. Start date and duration are required.' : 'Optionally set a project timeline.'}
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[14px] font-medium text-white/70 mb-1.5">
+              <span className="flex items-center gap-1.5"><Calendar size={14} className="text-white/40" /> Start Date {isContract && <span className="text-red-400">*</span>}</span>
+            </label>
+            <input type="date" value={timeline.project_start_date || ''} onChange={e => onChangeTimeline({ project_start_date: e.target.value })} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-[14px] font-medium text-white/70 mb-1.5">
+              <span className="flex items-center gap-1.5"><Clock size={14} className="text-white/40" /> Duration (days) {isContract && <span className="text-red-400">*</span>}</span>
+            </label>
+            <input type="number" min={1} value={timeline.project_duration_days || ''} onChange={e => onChangeTimeline({ project_duration_days: parseInt(e.target.value) || 0 })} placeholder="e.g. 30" className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-[14px] font-medium text-white/70 mb-1.5">
+              <span className="flex items-center gap-1.5"><CloudRain size={14} className="text-white/40" /> Weather Buffer Days</span>
+            </label>
+            <input type="number" min={0} value={timeline.weather_days || ''} onChange={e => onChangeTimeline({ weather_days: parseInt(e.target.value) || 0 })} placeholder="e.g. 5" className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-[14px] font-medium text-white/70 mb-1.5">Estimated Completion</label>
+            <div className="bg-[#111] border border-white/5 rounded-lg px-3 py-2.5 text-[14px] text-white/50">
+              {completionDate ? completionDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Set start date and duration'}
+            </div>
+          </div>
+        </div>
+        <div className="mt-4">
+          <label className="block text-[14px] font-medium text-white/70 mb-1.5">
+            <span className="flex items-center gap-1.5"><FileText size={14} className="text-white/40" /> Schedule Notes</span>
+          </label>
+          <textarea value={timeline.schedule_notes || ''} onChange={e => onChangeTimeline({ schedule_notes: e.target.value })} placeholder="e.g. Work begins upon permit approval..." rows={2} className={`${inputClass} resize-y`} />
+        </div>
+      </div>
     </div>
   );
 }
