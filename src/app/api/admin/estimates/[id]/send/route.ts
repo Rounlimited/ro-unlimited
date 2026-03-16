@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL } from '@/lib/email';
 import { Resend } from 'resend';
+import { generateEstimatePDF } from '@/lib/estimate-pdf';
 
 type RouteContext = { params: { id: string } };
 
@@ -31,6 +32,21 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
     }
 
+    // Fetch line items, payment schedule, and disclaimers for PDF
+    const [{ data: lineItems }, { data: paymentScheduleData }] = await Promise.all([
+      supabase.from('estimate_line_items').select('*').eq('estimate_id', id).order('phase').order('sort_order'),
+      supabase.from('estimate_payment_schedules').select('*').eq('estimate_id', id).order('sort_order'),
+    ]);
+
+    let selectedDisclaimers: any[] = [];
+    if (estimate.disclaimer_ids?.length) {
+      const { data: allDisclaimers } = await supabase.from('disclaimers').select('*').in('id', estimate.disclaimer_ids);
+      selectedDisclaimers = allDisclaimers || [];
+    }
+
+    // Generate PDF
+    const pdfBuffer = await generateEstimatePDF(estimate, lineItems || [], paymentScheduleData || [], selectedDisclaimers);
+
     // Ensure email accounts are loaded
     await fetchEmailAccounts();
 
@@ -43,15 +59,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       ? new Date(estimate.valid_until).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
       : 'N/A';
 
-    const total = typeof estimate.total === 'number'
-      ? estimate.total.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
-      : '$0.00';
-
     const viewLink = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/admin/estimates/${id}/preview`;
 
     const bodyContent = `
       ${message ? `<p>${message}</p>` : ''}
-      <p>Please find your estimate details below:</p>
+      <p>Please find your estimate attached as a PDF for your review.</p>
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0 24px;width:100%;">
         <tr>
           <td style="padding:8px 0;color:#999;font-size:13px;width:140px;">Estimate #</td>
@@ -63,18 +75,15 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
           <td style="padding:8px 0;color:#fff;font-size:14px;font-weight:600;">${estimate.project_name}</td>
         </tr>` : ''}
         <tr>
-          <td style="padding:8px 0;color:#999;font-size:13px;">Total</td>
-          <td style="padding:8px 0;color:#C9A84C;font-size:18px;font-weight:700;">${total}</td>
-        </tr>
-        <tr>
           <td style="padding:8px 0;color:#999;font-size:13px;">Valid Until</td>
           <td style="padding:8px 0;color:#fff;font-size:14px;">${validUntil}</td>
         </tr>
       </table>
+      <p style="color:#999;font-size:13px;">Open the attached PDF to view the full estimate with itemized costs, payment schedule, and terms.</p>
       <table role="presentation" cellpadding="0" cellspacing="0">
         <tr>
           <td style="background-color:#C9A84C;border-radius:6px;padding:12px 28px;">
-            <a href="${viewLink}" style="color:#000;text-decoration:none;font-size:14px;font-weight:700;display:inline-block;">View Estimate</a>
+            <a href="${viewLink}" style="color:#000;text-decoration:none;font-size:14px;font-weight:700;display:inline-block;">View Estimate Online</a>
           </td>
         </tr>
       </table>
@@ -89,6 +98,12 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       to: to_email,
       subject,
       html,
+      attachments: [
+        {
+          filename: `${estimate.estimate_number.replace(/\s/g, '_')}.pdf`,
+          content: pdfBuffer,
+        },
+      ],
     });
 
     if (sendErr) {
