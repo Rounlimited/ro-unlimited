@@ -28,9 +28,10 @@ interface PdfPreviewModalProps {
   loading: boolean;
   onClose: () => void;
   filename?: string;
+  estimateId?: string;
 }
 
-export default function PdfPreviewModal({ pdfUrl, loading, onClose, filename }: PdfPreviewModalProps) {
+export default function PdfPreviewModal({ pdfUrl, loading, onClose, filename, estimateId }: PdfPreviewModalProps) {
   const [pages, setPages] = useState<string[]>([]);
   const [renderError, setRenderError] = useState(false);
   const [rendering, setRendering] = useState(false);
@@ -76,11 +77,12 @@ export default function PdfPreviewModal({ pdfUrl, loading, onClose, filename }: 
   }, [applyTransform]);
 
   const handleDownload = () => {
-    if (!pdfUrl) return;
-    const a = document.createElement('a');
-    a.href = pdfUrl;
-    a.download = filename || 'estimate.pdf';
-    a.click();
+    if (estimateId) {
+      // Open PDF API URL directly — avoids blob URL crash in PWA/standalone mode
+      window.open(`/api/admin/estimates/${estimateId}/pdf`, '_blank');
+    } else if (pdfUrl) {
+      window.open(pdfUrl, '_blank');
+    }
   };
 
   // Prevent body scroll while modal is open + clean up blob URL on unmount

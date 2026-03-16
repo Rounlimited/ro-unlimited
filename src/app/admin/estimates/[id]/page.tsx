@@ -1217,6 +1217,7 @@ export default function EstimateDetailPage() {
           loading={pdfLoading}
           onClose={() => { setPdfPreviewUrl(null); setPdfLoading(false); }}
           filename={estimate ? `${estimate.estimate_number}.pdf` : 'estimate.pdf'}
+          estimateId={estimateId}
         />
       )}
     </div>

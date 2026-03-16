@@ -236,11 +236,8 @@ export default function EstimatePreviewPage() {
   }, [pages.length, applyTransform]);
 
   const handleDownload = () => {
-    if (!pdfBlobUrl) return;
-    const a = document.createElement('a');
-    a.href = pdfBlobUrl;
-    a.download = estimateNumber ? `${estimateNumber.replace(/\s/g, '_')}.pdf` : 'estimate.pdf';
-    a.click();
+    // Open PDF API URL directly — avoids blob URL crash in PWA/standalone mode
+    window.open(`/api/admin/estimates/${estimateId}/pdf`, '_blank');
   };
 
   const showSpinner = pdfLoading || rendering;
