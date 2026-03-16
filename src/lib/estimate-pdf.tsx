@@ -169,6 +169,29 @@ const s = StyleSheet.create({
 /* ─── Column widths ─────────────────────────────────────────── */
 const colW = { num: 24, qty: 40, unit: 44, price: 70, total: 78 };
 
+/* ─── Construction-logical category ordering ────────────────── */
+const PHASE_ORDER: string[] = [
+  'SITE PREP', 'DEMOLITION', 'EXCAVATION', 'FOUNDATION', 'GRADING',
+  'CONCRETE', 'STRUCTURAL STEEL', 'FRAMING', 'ROOFING', 'EXTERIOR',
+  'WINDOWS & DOORS', 'PLUMBING', 'ELECTRICAL', 'HVAC', 'INSULATION',
+  'DRYWALL', 'PAINTING', 'FLOORING', 'FINISH WORK', 'CABINETRY & MILLWORK',
+  'LANDSCAPING', 'PAVING',
+  'CLEANUP', 'OTHER',
+];
+
+function phaseSort(a: string, b: string): number {
+  const au = a.toUpperCase();
+  const bu = b.toUpperCase();
+  let ai = PHASE_ORDER.indexOf(au);
+  let bi = PHASE_ORDER.indexOf(bu);
+  // Unknown categories go before CLEANUP/OTHER (index 22)
+  if (ai === -1) ai = PHASE_ORDER.length - 2.5;
+  if (bi === -1) bi = PHASE_ORDER.length - 2.5;
+  // If both unknown, fall back to alphabetical
+  if (ai === bi) return au.localeCompare(bu);
+  return ai - bi;
+}
+
 /* ─── PDF Document ──────────────────────────────────────────── */
 
 interface PDFProps { estimate: any; lineItems: any[]; paymentSchedule: any[]; disclaimers: any[]; }
@@ -229,9 +252,12 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
     ? Math.max(0, Math.ceil((new Date(estimate.valid_until).getTime() - new Date(estimate.created_at).getTime()) / 86400000))
     : 30;
 
+  // Sort phases in construction-logical order
+  const sortedPhases = Object.keys(grouped).sort(phaseSort);
+
   const phaseSubtotals: Record<string, number> = {};
-  Object.entries(grouped).forEach(([phase, items]) => {
-    phaseSubtotals[phase] = items.reduce((sum: number, item: any) => sum + item.quantity * item.unit_cost * (1 + (item.markup_percent || 0) / 100), 0);
+  sortedPhases.forEach((phase) => {
+    phaseSubtotals[phase] = grouped[phase].reduce((sum: number, item: any) => sum + item.quantity * item.unit_cost * (1 + (item.markup_percent || 0) / 100), 0);
   });
 
   const milestones = (paymentSchedule || []).map((m: any) => ({
@@ -360,11 +386,11 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
         {/* ═══ END Rule 8 page-1 block ═══ */}
 
         {/* ═══ 4. LINE ITEMS — Rules 1, 2, 10 ═══ */}
-        {Object.keys(grouped).length > 0 && (
+        {sortedPhases.length > 0 && (
           <View style={{ marginBottom: sectionGap }}>
             <Text style={s.sectionLabel}>Itemized Cost Breakdown</Text>
-            {Object.entries(grouped).map(([phase, items]) => {
-              const phaseItemStart = itemCounter;
+            {sortedPhases.map((phase) => {
+              const items = grouped[phase];
               return (
                 <View key={phase} style={{ marginBottom: innerGap }}>
                   {/* Rule 1: Category header + column headers + first 2 rows kept together */}
