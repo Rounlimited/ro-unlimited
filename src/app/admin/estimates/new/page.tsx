@@ -424,21 +424,30 @@ export default function NewEstimateWizard() {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
   };
 
-  const goToStep = (step: number) => {
-    // Can go to completed steps, current step, or one beyond completed
-    if (step <= currentStep || completedSteps.has(step) || completedSteps.has(step - 1)) {
-      setCurrentStep(step);
-    }
-  };
-
-  const handleSaveAndExit = async () => {
-    setSaving(true);
+  const saveCurrentStep = async () => {
+    if (!estimateId) return;
     try {
-      // Save current step state
-      if (estimateId) {
-        if (currentStep === 3) await patchEstimate({ scope_of_work: scopeHtml });
-        if (currentStep === 4) await saveLineItems();
-        if (currentStep === 5) {
+      switch (currentStep) {
+        case 1:
+          await patchEstimate({
+            customer_id: step1.customer_id,
+            project_name: step1.project_name,
+            project_address: step1.project_address || null,
+            project_city: step1.project_city || null,
+            project_state: step1.project_state || 'SC',
+            project_zip: step1.project_zip || null,
+            division: step1.division,
+            estimate_type: step1.estimate_type,
+            contract_type: step1.contract_type,
+          });
+          break;
+        case 3:
+          await patchEstimate({ scope_of_work: scopeHtml });
+          break;
+        case 4:
+          await saveLineItems();
+          break;
+        case 5:
           await patchEstimate({
             overhead_percent: financials.overhead_percent,
             markup_percent: financials.markup_percent,
@@ -446,11 +455,29 @@ export default function NewEstimateWizard() {
             permit_fees: financials.permit_fees,
             contingency_percent: financials.contingency_percent,
           });
-        }
-        if (currentStep === 6) await savePaymentSchedule();
-        if (currentStep === 7) await patchEstimate({ disclaimer_ids: disclaimerIds, exclusions });
+          break;
+        case 6:
+          await savePaymentSchedule();
+          break;
+        case 7:
+          await patchEstimate({ disclaimer_ids: disclaimerIds, exclusions });
+          break;
       }
     } catch {}
+  };
+
+  const goToStep = async (step: number) => {
+    // Can go to completed steps, current step, or one beyond completed
+    if (step <= currentStep || completedSteps.has(step) || completedSteps.has(step - 1)) {
+      // Auto-save current step before jumping
+      await saveCurrentStep();
+      setCurrentStep(step);
+    }
+  };
+
+  const handleSaveAndExit = async () => {
+    setSaving(true);
+    await saveCurrentStep();
     setSaving(false);
     router.push('/admin/estimates');
   };

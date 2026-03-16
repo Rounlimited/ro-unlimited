@@ -400,13 +400,13 @@ export default function EstimatesPage() {
                     )}
                   </div>
                 </Link>
-                {/* Delete button — visible on hover / always on mobile */}
+                {/* Delete button — always visible */}
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(estimate); }}
-                  className="absolute top-3 right-3 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 opacity-0 group-hover:opacity-100 sm:opacity-0 active:opacity-100 transition-opacity hover:bg-red-500/20 z-10"
+                  className="absolute top-3 right-3 p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 active:bg-red-500/30 transition-colors z-10"
                   title="Delete estimate"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={16} />
                 </button>
                 </div>
               );

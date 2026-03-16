@@ -94,13 +94,14 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
   });
 
   const selectCustomer = (c: Customer) => {
+    // Always overwrite address fields when switching customers
     onChange({
       customer_id: c.id,
       customer: c,
-      project_address: data.project_address || c.address || '',
-      project_city: data.project_city || c.city || '',
-      project_state: data.project_state || c.state || 'SC',
-      project_zip: data.project_zip || c.zip || '',
+      project_address: c.address || '',
+      project_city: c.city || '',
+      project_state: c.state || 'SC',
+      project_zip: c.zip || '',
     });
     setSearchQuery('');
     setShowDropdown(false);
