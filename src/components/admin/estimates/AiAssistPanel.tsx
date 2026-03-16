@@ -126,14 +126,14 @@ export default function AiAssistPanel({ open, onClose, onAddItems, context }: Pr
         className="w-full max-w-lg h-full bg-[#0a0a0a] border-l border-white/10 flex flex-col shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
+        {/* Header — sticky so X is always reachable */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0 sticky top-0 z-10 bg-[#0a0a0a]">
           <div className="flex items-center gap-2">
             <Sparkles size={18} className="text-[#C9A84C]" />
             <span className="text-[15px] font-semibold text-white">AI Estimate Assistant</span>
           </div>
-          <button onClick={onClose} className="p-1.5 text-white/30 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
-            <X size={18} />
+          <button onClick={onClose} className="p-2.5 -mr-1 text-white/40 hover:text-white hover:bg-white/10 rounded-xl transition-colors active:bg-white/20">
+            <X size={22} />
           </button>
         </div>
 

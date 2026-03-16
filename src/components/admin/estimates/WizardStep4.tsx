@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   ChevronDown, ChevronRight, Plus, Trash2, Search,
-  ArrowUp, ArrowDown, X, PackageSearch, Loader2, Copy, BookmarkPlus, Sparkles,
+  ArrowUp, ArrowDown, X, PackageSearch, Loader2, Copy, BookmarkPlus, Sparkles, Undo2,
 } from 'lucide-react';
 import AiAssistPanel from './AiAssistPanel';
 
@@ -74,6 +74,9 @@ export default function WizardStep4({ lineItems, onChange, division, documentMod
     }));
     onChange([...lineItems, ...newItems]);
   };
+  const [deletedItem, setDeletedItem] = useState<{ item: LineItem; index: number } | null>(null);
+  const [undoTimer, setUndoTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+
   const [collapsedPhases, setCollapsedPhases] = useState<Set<string>>(new Set());
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryPhase, setLibraryPhase] = useState('');
@@ -173,7 +176,26 @@ export default function WizardStep4({ lineItems, onChange, division, documentMod
   };
 
   const deleteItem = (key: string) => {
+    const idx = lineItems.findIndex(i => i._key === key);
+    const item = lineItems[idx];
+    if (!item) return;
+
+    // Save for undo
+    setDeletedItem({ item, index: idx });
+    if (undoTimer) clearTimeout(undoTimer);
+    const timer = setTimeout(() => setDeletedItem(null), 5000);
+    setUndoTimer(timer);
+
     onChange(lineItems.filter(i => i._key !== key));
+  };
+
+  const undoDelete = () => {
+    if (!deletedItem) return;
+    const arr = [...lineItems];
+    arr.splice(deletedItem.index, 0, deletedItem.item);
+    onChange(arr);
+    setDeletedItem(null);
+    if (undoTimer) clearTimeout(undoTimer);
   };
 
   const duplicateItem = (key: string) => {
@@ -610,6 +632,21 @@ export default function WizardStep4({ lineItems, onChange, division, documentMod
               Adding to: <span className="text-[#C9A84C] font-medium">{libraryPhase}</span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Undo Delete Toast */}
+      {deletedItem && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-5 py-3 bg-[#111] border border-white/10 rounded-xl shadow-2xl animate-in slide-in-from-bottom-4">
+          <span className="text-[14px] text-white/70">
+            Deleted <span className="text-white font-medium">{deletedItem.item.description || 'item'}</span>
+          </span>
+          <button
+            onClick={undoDelete}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-semibold text-[#C9A84C] bg-[#C9A84C]/10 rounded-lg hover:bg-[#C9A84C]/20 transition-colors"
+          >
+            <Undo2 size={14} /> Undo
+          </button>
         </div>
       )}
 
