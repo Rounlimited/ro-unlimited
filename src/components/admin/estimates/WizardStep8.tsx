@@ -58,7 +58,11 @@ export default function WizardStep8({
     setSavingForPreview(true);
     try {
       await onSaveDraft();
-    } catch {}
+      // Small delay to ensure DB write is committed before PDF fetch
+      await new Promise(r => setTimeout(r, 500));
+    } catch (err) {
+      console.error('Save before preview failed:', err);
+    }
     setSavingForPreview(false);
     window.location.href = `/admin/estimates/${estimateId}/preview`;
   };

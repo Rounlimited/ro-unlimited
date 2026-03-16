@@ -86,7 +86,7 @@ export default function EstimatePreviewPage() {
       setPdfLoading(true);
       setPdfError('');
       try {
-        const res = await fetch(`/api/admin/estimates/${estimateId}/pdf`);
+        const res = await fetch(`/api/admin/estimates/${estimateId}/pdf?t=${Date.now()}`);
         if (!res.ok) throw new Error('Failed to generate PDF');
 
         // Extract estimate number from content-disposition header
@@ -237,7 +237,7 @@ export default function EstimatePreviewPage() {
 
   const handleDownload = () => {
     // Open PDF API URL directly — avoids blob URL crash in PWA/standalone mode
-    window.open(`/api/admin/estimates/${estimateId}/pdf`, '_blank');
+    window.open(`/api/admin/estimates/${estimateId}/pdf?t=${Date.now()}`, '_blank');
   };
 
   const showSpinner = pdfLoading || rendering;

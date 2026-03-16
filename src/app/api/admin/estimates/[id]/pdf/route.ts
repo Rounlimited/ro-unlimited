@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { generateEstimatePDF } from '@/lib/estimate-pdf';
 
+export const dynamic = 'force-dynamic';
+
 type RouteContext = { params: { id: string } };
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
@@ -39,12 +41,14 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     // Generate PDF
     const pdfBuffer = await generateEstimatePDF(estimate, lineItems || [], paymentSchedule || [], selectedDisclaimers);
 
-    // Return as PDF binary
+    // Return as PDF binary — no caching so edits always reflect
     return new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="${estimate.estimate_number.replace(/\s/g, '_')}.pdf"`,
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
   } catch (err) {
