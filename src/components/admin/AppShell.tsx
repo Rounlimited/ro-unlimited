@@ -3,7 +3,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { gsap } from 'gsap';
+import { createClient } from '@/lib/supabase/client';
 import NotificationBell from '@/components/admin/NotificationBell';
+
+const BUILD_TIMESTAMP = new Date().toISOString();
 import {
   LayoutDashboard, HardHat, MessageCircle, GripHorizontal,
   ClipboardList, Pencil, Camera, BarChart3, Receipt, CalendarDays,
@@ -635,6 +638,16 @@ function FeatureModal({ appId, onClose }: { appId: string; onClose: () => void }
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  // Fetch user email for dev detection
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      setUserEmail(data?.user?.email || null);
+    });
+  }, []);
+
+  const isDevUser = userEmail ? userEmail !== 'rounlimitedco@gmail.com' : false;
   const [drawerSearch, setDrawerSearch] = useState('');
   const [featureModal, setFeatureModal] = useState<string | null>(null);
   const [showHint, setShowHint] = useState(false);
@@ -775,11 +788,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex-shrink-0 h-[env(safe-area-inset-top)] bg-[#0a0a0a] relative z-10" />
 
       <header data-admin-header className="flex-shrink-0 px-4 py-2.5 flex items-center justify-between bg-[#0f0f0f] border-b border-white/5 relative z-10">
-        <a href="/admin" className="flex items-center gap-2">
+        <button
+          onClick={() => { window.location.href = '/admin'; }}
+          className="flex items-center gap-2 bg-transparent border-none cursor-pointer p-0"
+        >
           <img src="/ro-unlimited-logo.svg" alt="RO Unlimited" className="w-48 h-auto object-contain" />
           <span className="text-[11px] text-white/20 uppercase tracking-wider border-l border-white/10 pl-2">Admin</span>
-        </a>
+        </button>
         <div className="flex items-center gap-2">
+          {isDevUser && (
+            <span className="text-[9px] text-white/15 font-mono tabular-nums mr-1">
+              {BUILD_TIMESTAMP.replace('T', ' ').slice(0, 19)}
+            </span>
+          )}
           <NotificationBell />
         </div>
       </header>
