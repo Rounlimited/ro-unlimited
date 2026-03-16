@@ -320,6 +320,27 @@ export async function POST(req: NextRequest) {
 
     if (parts.length) contextNote = `\n\n## CURRENT CONTEXT\n${parts.join('\n')}`;
 
+    // Pre-detect web search queries and run BEFORE AI call
+    const lastUserMsg = messages[messages.length - 1]?.content || '';
+    const lm = lastUserMsg.toLowerCase();
+    const searchTriggers = [
+      /what(?:'s| is) the (?:latest|current|new|2024|2025|2026)/,
+      /search (?:for|the web|online|google)/,
+      /look up/, /find (?:me |out )/,
+      /current (?:price|cost|rate|code|regulation|law|requirement)/,
+      /(?:price|cost) of .+ (?:in|near|around)/,
+      /(?:south carolina|sc|georgia|ga|north carolina|nc) (?:code|law|regulation|permit|license|requirement)/,
+      /how much (?:does|do|is|are) .+ cost/,
+      /latest .+ (?:code|regulation|update|news|price)/,
+    ];
+    const needsSearch = searchTriggers.some(t => t.test(lm)) || lm.includes('search') || lm.includes('look up');
+    if (needsSearch) {
+      const searchResults = await webSearch(lastUserMsg);
+      if (searchResults && searchResults !== 'No results found.' && searchResults !== 'Search failed.') {
+        contextNote += '\n\n## WEB SEARCH RESULTS for "' + lastUserMsg + '":\n' + searchResults + '\n\nUse these results to answer. Include source URLs.';
+      }
+    }
+
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
