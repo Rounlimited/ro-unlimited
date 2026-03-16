@@ -7,6 +7,7 @@ import AppShell from '@/components/admin/AppShell';
 import PWAInstall from '@/components/admin/PWAInstall';
 import OnboardingProvider, { useOnboarding } from '@/components/admin/OnboardingProvider';
 import WalkthroughTours from '@/components/admin/WalkthroughTours';
+import AiChatBubble from '@/components/admin/AiChatBubble';
 
 function AdminContent({ children }: { children: React.ReactNode }) {
   const { onboarding, updateOnboarding } = useOnboarding();
@@ -24,6 +25,7 @@ function AdminContent({ children }: { children: React.ReactNode }) {
   return (
     <>
       <AppShell>{children}</AppShell>
+      <AiChatBubble />
       <PWAInstall />
       <WalkthroughTours
         activeTour={activeTour}
