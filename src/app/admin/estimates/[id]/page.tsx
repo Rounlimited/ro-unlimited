@@ -575,9 +575,9 @@ export default function EstimateDetailPage() {
                    estimate.document_mode}
                 </span>
               )}
-              {estimate.version > 1 && (
-                <span className="text-[12px] text-white/30 font-medium">
-                  v{estimate.version}
+              {(estimate as any).revision_number > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#D4772C]/10 text-[#D4772C] border border-[#D4772C]/20">
+                  R{(estimate as any).revision_number}
                 </span>
               )}
             </div>
@@ -614,6 +614,18 @@ export default function EstimateDetailPage() {
                 className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-blue-400/70 bg-blue-500/5 border border-blue-500/10 rounded-lg hover:bg-blue-500/10 hover:text-blue-400 transition-all"
               >
                 <FileSignature size={14} /> Convert to Proposal
+              </button>
+            )}
+            {estimate.status !== 'draft' && (
+              <button
+                onClick={async () => {
+                  const res = await fetch(`/api/admin/estimates/${id}/revise`, { method: 'POST' });
+                  const data = await res.json();
+                  if (data?.id) router.push(`/admin/estimates/new?edit=${data.id}&step=1`);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-[#D4772C]/70 bg-[#D4772C]/5 border border-[#D4772C]/10 rounded-lg hover:bg-[#D4772C]/10 hover:text-[#D4772C] transition-all"
+              >
+                <History size={14} /> Revise
               </button>
             )}
             <button

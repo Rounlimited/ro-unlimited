@@ -3,17 +3,17 @@
 import { useState, useEffect } from 'react';
 import {
   ChevronDown, ChevronRight, Plus, Trash2, Search,
-  ArrowUp, ArrowDown, X, PackageSearch, Loader2,
+  ArrowUp, ArrowDown, X, PackageSearch, Loader2, Copy, BookmarkPlus,
 } from 'lucide-react';
 
-const PHASES = [
+const FALLBACK_PHASES = [
   'Demolition', 'Site Prep', 'Foundation', 'Framing', 'Roofing',
   'Electrical', 'Plumbing', 'HVAC', 'Drywall', 'Painting',
   'Flooring', 'Finish Work', 'Cleanup', 'Other',
 ];
 
-const CATEGORIES = ['material', 'labor', 'subcontractor', 'equipment', 'other'];
-const UNITS = ['each', 'sqft', 'lnft', 'hour', 'day', 'lot', 'cubic_yard'];
+const CATEGORIES = ['material', 'labor', 'subcontractor', 'equipment', 'rental', 'other'];
+const FALLBACK_UNITS = ['each', 'sqft', 'lnft', 'hour', 'day', 'lot', 'cuyd'];
 
 interface LineItem {
   _key: string; // local key for React
@@ -60,6 +60,25 @@ export default function WizardStep4({ lineItems, onChange }: Props) {
   const [costItems, setCostItems] = useState<CostItem[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [showPhaseMenu, setShowPhaseMenu] = useState(false);
+  const [dbPhases, setDbPhases] = useState<string[]>([]);
+  const [dbUnits, setDbUnits] = useState<{ name: string; abbreviation: string }[]>([]);
+  const [customPhase, setCustomPhase] = useState('');
+  const [showCustomPhase, setShowCustomPhase] = useState(false);
+
+  // Load phases and units from DB
+  useEffect(() => {
+    fetch('/api/admin/estimate-phases')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setDbPhases(d.map((p: any) => p.name)); })
+      .catch(() => {});
+    fetch('/api/admin/estimate-units')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setDbUnits(d.map((u: any) => ({ name: u.name, abbreviation: u.abbreviation }))); })
+      .catch(() => {});
+  }, []);
+
+  const PHASES = dbPhases.length > 0 ? dbPhases : FALLBACK_PHASES;
+  const UNITS = dbUnits.length > 0 ? dbUnits.map(u => u.abbreviation) : FALLBACK_UNITS;
 
   // Group items by phase
   const grouped: Record<string, LineItem[]> = {};
@@ -134,6 +153,56 @@ export default function WizardStep4({ lineItems, onChange }: Props) {
 
   const deleteItem = (key: string) => {
     onChange(lineItems.filter(i => i._key !== key));
+  };
+
+  const duplicateItem = (key: string) => {
+    const source = lineItems.find(i => i._key === key);
+    if (!source) return;
+    const idx = lineItems.findIndex(i => i._key === key);
+    const copy: LineItem = {
+      ...source,
+      _key: nextKey(),
+      id: undefined,
+      description: source.description ? `${source.description} (copy)` : '',
+      sort_order: lineItems.length,
+    };
+    const arr = [...lineItems];
+    arr.splice(idx + 1, 0, copy);
+    onChange(arr.map((item, i) => ({ ...item, sort_order: i })));
+  };
+
+  const saveItemToLibrary = async (key: string) => {
+    const item = lineItems.find(i => i._key === key);
+    if (!item) return;
+    try {
+      await fetch('/api/admin/saved-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: item.description,
+          description: item.description,
+          phase: item.phase,
+          category: item.category,
+          unit: item.unit,
+          unit_cost: item.unit_cost,
+          markup_percent: item.markup_percent,
+        }),
+      });
+    } catch {}
+  };
+
+  const addCustomPhase = () => {
+    if (!customPhase.trim()) return;
+    addPhase(customPhase.trim());
+    // Also save to DB for future use
+    fetch('/api/admin/estimate-phases', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: customPhase.trim() }),
+    }).catch(() => {});
+    setDbPhases(prev => [...prev.filter(p => p !== 'Other'), customPhase.trim(), 'Other']);
+    setCustomPhase('');
+    setShowCustomPhase(false);
   };
 
   const moveItem = (key: string, direction: 'up' | 'down') => {
@@ -221,6 +290,28 @@ export default function WizardStep4({ lineItems, onChange }: Props) {
                     {p} {grouped[p] ? `(${grouped[p].length})` : ''}
                   </button>
                 ))}
+                <div className="border-t border-white/10 p-2">
+                  {showCustomPhase ? (
+                    <div className="flex gap-1">
+                      <input
+                        value={customPhase}
+                        onChange={e => setCustomPhase(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && addCustomPhase()}
+                        placeholder="Phase name..."
+                        className="flex-1 bg-[#111] border border-white/10 rounded px-2 py-1.5 text-white text-[13px] focus:outline-none focus:border-[#C9A84C]/50"
+                        autoFocus
+                      />
+                      <button onClick={addCustomPhase} className="px-2 py-1.5 text-[#C9A84C] text-[13px] font-medium">Add</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowCustomPhase(true)}
+                      className="w-full text-left px-2 py-1.5 text-[13px] text-[#3b8dd4] hover:bg-[#3b8dd4]/10 rounded transition-colors"
+                    >
+                      + Custom Phase
+                    </button>
+                  )}
+                </div>
               </div>
             </>
           )}
@@ -338,6 +429,12 @@ export default function WizardStep4({ lineItems, onChange }: Props) {
                         <button onClick={() => moveItem(item._key, 'up')} className="p-0.5 text-white/20 hover:text-white transition-colors"><ArrowUp size={14} /></button>
                         <button onClick={() => moveItem(item._key, 'down')} className="p-0.5 text-white/20 hover:text-white transition-colors"><ArrowDown size={14} /></button>
                       </div>
+                      <button onClick={() => duplicateItem(item._key)} className="p-1.5 text-white/20 hover:text-[#3b8dd4] hover:bg-[#3b8dd4]/10 rounded-lg transition-colors" title="Duplicate">
+                        <Copy size={14} />
+                      </button>
+                      <button onClick={() => saveItemToLibrary(item._key)} className="p-1.5 text-white/20 hover:text-[#C9A84C] hover:bg-[#C9A84C]/10 rounded-lg transition-colors" title="Save to Library">
+                        <BookmarkPlus size={14} />
+                      </button>
                       <button onClick={() => deleteItem(item._key)} className="p-1.5 text-red-400/50 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
                         <Trash2 size={15} />
                       </button>
