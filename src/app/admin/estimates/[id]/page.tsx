@@ -10,7 +10,7 @@ import {
   DollarSign, Clock, AlertTriangle, ChevronRight,
   TrendingUp, Percent, Shield, Receipt, CreditCard,
   History, CheckCircle2, XCircle, Eye, Loader2,
-  ExternalLink, Home, Mountain,
+  ExternalLink, Home, Mountain, Link2, Check,
 } from 'lucide-react';
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -224,6 +224,8 @@ export default function EstimateDetailPage() {
   // Action states
   const [deleting, setDeleting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [copyingLink, setCopyingLink] = useState(false);
+  const [detailLinkCopied, setDetailLinkCopied] = useState(false);
 
   // PDF preview state
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
@@ -305,6 +307,20 @@ export default function EstimateDetailPage() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleCopyLink = async () => {
+    setCopyingLink(true);
+    try {
+      const res = await fetch(`/api/admin/estimates/${id}/share-link`, { method: 'POST' });
+      const data = await res.json();
+      if (data?.link) {
+        await navigator.clipboard.writeText(data.link);
+        setDetailLinkCopied(true);
+        setTimeout(() => setDetailLinkCopied(false), 3000);
+      }
+    } catch {}
+    setCopyingLink(false);
   };
 
   const handleDelete = async () => {
@@ -571,6 +587,18 @@ export default function EstimateDetailPage() {
               className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-white/60 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
             >
               {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />} Preview
+            </button>
+            <button
+              onClick={handleCopyLink}
+              disabled={copyingLink}
+              className={`flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium rounded-lg transition-all disabled:opacity-40 ${
+                detailLinkCopied
+                  ? 'text-green-400 bg-green-500/10 border border-green-500/20'
+                  : 'text-[#D4772C] bg-[#D4772C]/10 border border-[#D4772C]/20 hover:bg-[#D4772C]/20'
+              }`}
+            >
+              {copyingLink ? <Loader2 size={14} className="animate-spin" /> : detailLinkCopied ? <Check size={14} /> : <Link2 size={14} />}
+              {copyingLink ? '...' : detailLinkCopied ? 'Copied!' : 'Copy Link'}
             </button>
             <button
               onClick={() => setShowSendModal(true)}
