@@ -332,7 +332,22 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
               <option value="">Select Division</option>
               <option value="residential">Residential</option>
               <option value="commercial">Commercial</option>
-              <option value="grading">Grading</option>
+              <option value="grading">Land Grading & Site Prep</option>
+              <option value="concrete">Concrete</option>
+              <option value="foundation">Foundation</option>
+              <option value="framing">Framing</option>
+              <option value="roofing">Roofing</option>
+              <option value="siding">Siding</option>
+              <option value="electrical">Electrical</option>
+              <option value="plumbing">Plumbing</option>
+              <option value="hvac">HVAC</option>
+              <option value="painting">Painting</option>
+              <option value="flooring">Flooring</option>
+              <option value="demolition">Demolition</option>
+              <option value="drywall">Drywall & Insulation</option>
+              <option value="landscaping">Landscaping</option>
+              <option value="fencing">Fencing</option>
+              <option value="other">Other</option>
             </select>
             <Building2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
           </div>
