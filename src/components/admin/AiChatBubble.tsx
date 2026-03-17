@@ -24,6 +24,7 @@ export default function AiChatBubble() {
   });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState('Thinking...');
   const [unread, setUnread] = useState(0);
 
   // Persist chat to sessionStorage
@@ -57,6 +58,11 @@ export default function AiChatBubble() {
     setMessages(newMessages);
     setInput('');
     setLoading(true);
+    const lm = text.toLowerCase();
+    if (lm.includes('search') || lm.includes('look up')) setLoadingStatus('Searching...');
+    else if (lm.includes('create') || lm.includes('make') || lm.includes('new')) setLoadingStatus('Creating...');
+    else if (lm.includes('list') || lm.includes('show') || lm.includes('how many')) setLoadingStatus('Loading data...');
+    else setLoadingStatus('Thinking...');
 
     try {
       // Auto-fetch project context if on an estimate page
@@ -231,7 +237,7 @@ export default function AiChatBubble() {
           <div className="flex justify-start">
             <div className="bg-[#111] border border-white/5 rounded-2xl rounded-bl-md px-3.5 py-2.5 flex items-center gap-2">
               <Loader2 size={16} className="animate-spin text-[#C9A84C]" />
-              <span className="text-[15px] text-white/40">Thinking...</span>
+              <span className="text-[15px] text-white/40">{loadingStatus}</span>
             </div>
           </div>
         )}
