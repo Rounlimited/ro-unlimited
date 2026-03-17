@@ -249,14 +249,15 @@ When the user asks about a specific project or estimate, context data will be in
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, currentPage, projectContext } = await req.json();
+    const { messages, currentPage, projectContext, useModel } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages required' }, { status: 400 });
     }
 
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
+    const claudeKey = process.env.ANTHROPIC_API_KEY;
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!claudeKey && !groqKey) {
       return NextResponse.json({ error: 'AI not configured' }, { status: 500 });
     }
 
@@ -378,31 +379,54 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT + contextNote },
-          ...messages,
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-      }),
-    });
+    const fullPrompt = SYSTEM_PROMPT + contextNote;
+    const preferClaude = useModel !== 'groq' && !!claudeKey;
+    let content = '';
 
-    if (!res.ok) {
-      const err = await res.text();
-      console.error('[ai-chat] Groq error:', res.status, err);
-      return NextResponse.json({ error: 'AI service error' }, { status: 502 });
+    if (preferClaude) {
+      try {
+        const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': claudeKey!, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 4000,
+            system: fullPrompt,
+            messages: messages.map((m: any) => ({ role: m.role, content: m.content })),
+          }),
+        });
+        if (claudeRes.ok) {
+          const d = await claudeRes.json();
+          content = d.content?.[0]?.text || '';
+        } else {
+          console.error('[ai-chat] Claude error:', claudeRes.status);
+        }
+      } catch (err) {
+        console.error('[ai-chat] Claude failed:', err);
+      }
     }
 
-    const data = await res.json();
-    let content = data.choices?.[0]?.message?.content || '';
+    if (!content && groqKey) {
+      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'system', content: fullPrompt }, ...messages],
+          temperature: 0.7,
+          max_tokens: 4000,
+        }),
+      });
+      if (!groqRes.ok) {
+        const err = await groqRes.text();
+        console.error('[ai-chat] Groq error:', groqRes.status, err);
+        return NextResponse.json({ error: groqRes.status === 429 ? 'Rate limit — wait a few seconds' : 'AI service error' }, { status: 502 });
+      }
+      const d = await groqRes.json();
+      content = d.choices?.[0]?.message?.content || '';
+    }
+
+    if (!content) return NextResponse.json({ error: 'No AI service available' }, { status: 502 });
 
     // Detect web search request
     const searchMatch = content.match(/```search\s*(\{[\s\S]*?\})\s*```/);

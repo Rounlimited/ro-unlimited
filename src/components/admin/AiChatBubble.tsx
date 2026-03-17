@@ -25,6 +25,7 @@ export default function AiChatBubble() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('Thinking...');
+  const [aiModel, setAiModel] = useState<'claude' | 'groq'>('claude');
   const [unread, setUnread] = useState(0);
 
   // Persist chat to sessionStorage
@@ -85,6 +86,7 @@ export default function AiChatBubble() {
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
           currentPage: pathname,
           projectContext,
+          useModel: aiModel,
         }),
       });
 
@@ -177,6 +179,17 @@ export default function AiChatBubble() {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setAiModel(prev => prev === 'claude' ? 'groq' : 'claude')}
+            className={`px-2 py-1 rounded text-[11px] font-semibold transition-colors border ${
+              aiModel === 'claude'
+                ? 'bg-[#C9A84C]/15 text-[#C9A84C] border-[#C9A84C]/30'
+                : 'bg-green-500/15 text-green-400 border-green-500/30'
+            }`}
+            title="Switch AI model"
+          >
+            {aiModel === 'claude' ? 'Claude' : 'Groq'}
+          </button>
           {messages.length > 0 && (
             <button
               onClick={() => { setMessages([]); try { sessionStorage.removeItem('ro_ai_chat'); } catch {} }}
