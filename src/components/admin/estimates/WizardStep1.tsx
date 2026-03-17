@@ -325,8 +325,14 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
           <label className={labelClass}>Division *</label>
           <div className="relative">
             <select
-              value={data.division}
-              onChange={e => onChange({ division: e.target.value })}
+              value={data.division?.startsWith('other:') ? 'other' : data.division}
+              onChange={e => {
+                if (e.target.value === 'other') {
+                  onChange({ division: 'other:' });
+                } else {
+                  onChange({ division: e.target.value });
+                }
+              }}
               className={selectClass}
             >
               <option value="">Select Division</option>
@@ -351,6 +357,16 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
             </select>
             <Building2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
           </div>
+          {(data.division === 'other:' || data.division?.startsWith('other:')) && (
+            <input
+              type="text"
+              value={data.division?.replace('other:', '') || ''}
+              onChange={e => onChange({ division: `other:${e.target.value}` })}
+              placeholder="Enter custom division..."
+              className={selectClass + ' mt-2'}
+              autoFocus
+            />
+          )}
         </div>
         <div>
           <label className={labelClass}>Estimate Type *</label>
