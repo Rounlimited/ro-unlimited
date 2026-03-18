@@ -376,6 +376,12 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
             className={selectClass}
           >
             <option value="">Select Type</option>
+            <option value="new_construction">New Construction</option>
+            <option value="renovation">Renovation</option>
+            <option value="repair">Repair</option>
+            <option value="addition">Addition</option>
+            <option value="remodel">Remodel</option>
+            <option value="commercial">Commercial</option>
             <option value="quick_quote">Quick Quote</option>
             <option value="preliminary">Preliminary</option>
             <option value="detailed">Detailed</option>
