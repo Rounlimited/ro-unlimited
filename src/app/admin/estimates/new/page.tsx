@@ -910,8 +910,8 @@ export default function NewEstimateWizard() {
           )}
         </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/10">
+        {/* Navigation Buttons — z-[95] to sit above AI chat bubble */}
+        <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/10 relative z-[95]">
           <button
             onClick={handleBack}
             disabled={currentStep === 1}

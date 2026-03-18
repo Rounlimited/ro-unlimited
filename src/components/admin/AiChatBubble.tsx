@@ -311,6 +311,9 @@ export default function AiChatBubble() {
   };
 
   if (pathname === '/admin/login') return null;
+  // Hide bubble on estimate wizard to avoid blocking Next button — AI still accessible from menu
+  const onEstimateWizard = pathname?.includes('/estimates/new') || pathname?.match(/\/estimates\/[a-f0-9-]{36}$/);
+  if (!open && onEstimateWizard) return null;
 
   // ── Toast notification ──
   const ToastNotification = () => {
