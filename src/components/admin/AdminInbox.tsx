@@ -132,10 +132,12 @@ export default function AdminInbox() {
     const res = await fetch("/api/admin/email-accounts");
     if (!res.ok) return;
     const data = await res.json();
-    if (data.accounts?.length) {
-      setAccounts(data.accounts);
+    // API returns either { accounts: [...] } or bare array depending on role
+    const list = Array.isArray(data) ? data : (data.accounts || []);
+    if (list.length) {
+      setAccounts(list);
       if (!activeAccount) {
-        const def = data.accounts.find((a: EmailAccount) => a.is_default) || data.accounts[0];
+        const def = list.find((a: EmailAccount) => a.is_default) || list[0];
         setActiveAccount(def);
         setFromAccount(def.email);
       }
