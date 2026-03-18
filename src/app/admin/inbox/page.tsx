@@ -1,5 +1,14 @@
-import AdminInbox from '@/components/admin/AdminInbox';
+"use client";
+
+import AuthGuard from "@/components/admin/AuthGuard";
+import AdminInbox from "@/components/admin/AdminInbox";
 
 export default function InboxPage() {
-  return <AdminInbox />;
+  return (
+    <AuthGuard>
+      <div className="h-screen w-screen bg-[#0a0a0a]">
+        <AdminInbox />
+      </div>
+    </AuthGuard>
+  );
 }
