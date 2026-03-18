@@ -309,15 +309,9 @@ const WRITE_TOOLS = [
   },
 ];
 
-// Add defer_loading to all tools so they're discovered on-demand via tool search
-const DEFERRED_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS].map(t => ({ ...t, defer_loading: true }));
-
-// Tool search tool (regex mode) + all deferred tools
-// Claude sees ~500 tokens initially. Tools load on-demand when needed.
-const TOOLS: any[] = [
-  { type: 'tool_search_tool_regex_20251119', name: 'tool_search_tool_regex' },
-  ...DEFERRED_TOOLS,
-];
+// All tools sent directly (Haiku doesn't support deferred tool loading)
+// Prompt caching handles the cost — tools are cached along with system prompt
+const TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 // ═══════════════════════════════════════════
 // TOOL EXECUTION
