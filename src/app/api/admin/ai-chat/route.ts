@@ -3,254 +3,384 @@ import { createAdminClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-// Web search using DuckDuckGo instant answer + HTML scraping
+// ═══════════════════════════════════════════
+// WEB SEARCH (DuckDuckGo)
+// ═══════════════════════════════════════════
 async function webSearch(query: string): Promise<string> {
   try {
-    // Use DuckDuckGo HTML search (no API key needed)
     const encoded = encodeURIComponent(query);
     const res = await fetch(`https://html.duckduckgo.com/html/?q=${encoded}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
       cache: 'no-store',
     });
-
-    if (!res.ok) return 'Search failed — answer from training data only.';
-
+    if (!res.ok) return 'Search failed.';
     const html = await res.text();
-
-    // Extract search result snippets from DuckDuckGo HTML
     const results: string[] = [];
     const snippetRegex = /<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
     const titleRegex = /<a class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g;
-
-    let match;
     const titles: { url: string; title: string }[] = [];
+    let match;
     while ((match = titleRegex.exec(html)) !== null && titles.length < 6) {
       const url = match[1].replace(/.*uddg=/, '').split('&')[0];
       const title = match[2].replace(/<[^>]*>/g, '').trim();
-      try {
-        titles.push({ url: decodeURIComponent(url), title });
-      } catch {
-        titles.push({ url, title });
-      }
+      try { titles.push({ url: decodeURIComponent(url), title }); } catch { titles.push({ url, title }); }
     }
-
     const snippets: string[] = [];
     while ((match = snippetRegex.exec(html)) !== null && snippets.length < 6) {
-      snippets.push(match[1].replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim());
+      snippets.push(match[1].replace(/<[^>]*>/g, '').trim());
     }
-
-    for (let i = 0; i < Math.min(titles.length, snippets.length); i++) {
-      results.push(`[${i + 1}] ${titles[i].title}\n${snippets[i]}\nSource: ${titles[i].url}\n`);
+    for (let i = 0; i < titles.length; i++) {
+      results.push(`${i + 1}. **${titles[i].title}**\n   ${snippets[i] || ''}\n   Source: ${titles[i].url}`);
     }
-
-    if (results.length === 0) return 'No search results found. Answer from training data.';
-    return results.join('\n');
-  } catch (err) {
-    console.error('[webSearch] error:', err);
-    return 'Search failed — answer from training data only.';
+    return results.length > 0 ? results.join('\n\n') : 'No results found.';
+  } catch {
+    return 'Search failed.';
   }
 }
 
-const SYSTEM_PROMPT = `You are the RO Unlimited AI Assistant — a smart, helpful assistant for a construction company admin portal in Greenville, SC. You help the owner (JR) and his team with everything from navigating the app to answering construction questions to looking up project data.
+// ═══════════════════════════════════════════
+// TOOL DEFINITIONS (Claude native tool_use)
+// ═══════════════════════════════════════════
+const TOOLS = [
+  {
+    name: 'search_customers',
+    description: 'Search customers by name, email, phone, or company. Returns real database records. Use this whenever the user asks about a customer.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: { type: 'string', description: 'Search term — name, email, phone, or company' },
+        limit: { type: 'number', description: 'Max results (default 15)' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'search_estimates',
+    description: 'Search estimates by customer name, project name, estimate number, status, or division. Returns real data with line items and totals. Use this whenever the user asks about a quote, estimate, proposal, or project pricing.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: { type: 'string', description: 'Search term — customer name, project name, estimate number, status' },
+        status: { type: 'string', description: 'Filter by status: draft, sent, viewed, accepted, declined, expired' },
+        limit: { type: 'number', description: 'Max results (default 10)' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'get_estimate_details',
+    description: 'Get full details of a specific estimate including all line items, payment schedule, financials, and status history. Use when the user asks for details about a specific estimate.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        estimate_id: { type: 'string', description: 'The estimate UUID' },
+        estimate_number: { type: 'string', description: 'The estimate number like RO-EST-2026-001' },
+      },
+    },
+  },
+  {
+    name: 'search_employees',
+    description: 'Search employees by name, title, department, or status. Returns real employee records.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: { type: 'string', description: 'Search term — name, title, department' },
+        status: { type: 'string', description: 'Filter: active, suspended, terminated' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'search_vendors',
+    description: 'Search vendors by company name, trade, or contact name. Returns real vendor records.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: { type: 'string', description: 'Search term — company name, trade, contact' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'get_activity_log',
+    description: 'Get recent activity/login history. Shows who did what and when.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        limit: { type: 'number', description: 'Number of entries (default 15)' },
+        action_filter: { type: 'string', description: 'Filter by action type like login, create, update, delete' },
+      },
+    },
+  },
+  {
+    name: 'search_cost_library',
+    description: 'Search the cost library for material, labor, equipment, or subcontractor pricing. Returns real cost items with default costs and markup.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: { type: 'string', description: 'Search term — item name, category, trade' },
+        category: { type: 'string', description: 'Filter: material, labor, equipment, subcontractor' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'web_search',
+    description: 'Search the web for current information — codes, regulations, pricing, specs, news. Use when you need up-to-date information you do not have.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: { type: 'string', description: 'The search query' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'save_memory',
+    description: 'Save a piece of information to persistent memory for future conversations. Use when the user says "remember this" or when you learn important facts about preferences, pricing, projects, or codes.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        content: { type: 'string', description: 'The fact or preference to remember' },
+        category: { type: 'string', description: 'Category: general, pricing, preferences, projects, codes, materials' },
+      },
+      required: ['content', 'category'],
+    },
+  },
+  {
+    name: 'forget_memory',
+    description: 'Delete a previously saved memory. Use when the user says "forget" or "delete" a memory.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        keyword: { type: 'string', description: 'Keyword to match against stored memories for deletion' },
+      },
+      required: ['keyword'],
+    },
+  },
+];
 
-## WHO YOU ARE
-- Name: RO Assistant
-- Company: RO Unlimited Construction & Development
-- Location: Greenville, SC — serving SC, GA, NC
-- Divisions: Residential, Commercial, Grading
-- Website: rounlimited.com
+// ═══════════════════════════════════════════
+// TOOL EXECUTION
+// ═══════════════════════════════════════════
+async function executeTool(name: string, input: any, supabase: ReturnType<typeof createAdminClient>): Promise<string> {
+  switch (name) {
+    case 'search_customers': {
+      const q = input.query?.toLowerCase() || '';
+      const limit = input.limit || 15;
+      const { data } = await supabase
+        .from('customers')
+        .select('id, first_name, last_name, company_name, email, phone, address, city, state, zip, created_at')
+        .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,company_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (!data?.length) return `No customers found matching "${input.query}".`;
+      return JSON.stringify(data, null, 2);
+    }
 
-## HOW TO RESPOND
-1. Be concise — short answers unless detail is asked for
-2. For app questions: give step-by-step with exact page names and paths
-3. For construction: practical answers with code references when relevant
-4. For conversions: show the math
-5. For project questions: use the injected context data
-6. If you don't know: say so, don't make up codes or regulations
-7. Use markdown: **bold** for emphasis, bullet lists for steps
+    case 'search_estimates': {
+      const q = input.query?.toLowerCase() || '';
+      const limit = input.limit || 10;
+      let query = supabase
+        .from('estimates')
+        .select('id, estimate_number, project_name, total, status, division, document_mode, created_at, customer:customers(first_name, last_name, company_name)')
+        .or(`project_name.ilike.%${q}%,estimate_number.ilike.%${q}%`);
+      if (input.status) query = query.eq('status', input.status);
+      const { data } = await query.order('created_at', { ascending: false }).limit(limit);
+      if (!data?.length) {
+        // Try searching by customer name
+        const { data: byCustomer } = await supabase
+          .from('estimates')
+          .select('id, estimate_number, project_name, total, status, division, document_mode, created_at, customer:customers!inner(first_name, last_name, company_name)')
+          .or(`customers.first_name.ilike.%${q}%,customers.last_name.ilike.%${q}%,customers.company_name.ilike.%${q}%`, { referencedTable: 'customers' })
+          .order('created_at', { ascending: false })
+          .limit(limit);
+        if (!byCustomer?.length) return `No estimates found matching "${input.query}".`;
+        return JSON.stringify(byCustomer, null, 2);
+      }
+      return JSON.stringify(data, null, 2);
+    }
 
-## COMPLETE APP NAVIGATION
+    case 'get_estimate_details': {
+      let estimateQuery = supabase
+        .from('estimates')
+        .select('*, customer:customers(first_name, last_name, company_name, email, phone)')
+      if (input.estimate_id) {
+        estimateQuery = estimateQuery.eq('id', input.estimate_id);
+      } else if (input.estimate_number) {
+        estimateQuery = estimateQuery.eq('estimate_number', input.estimate_number);
+      } else {
+        return 'Please provide an estimate_id or estimate_number.';
+      }
+      const { data: estimate } = await estimateQuery.single();
+      if (!estimate) return 'Estimate not found.';
 
-### Dashboard (/admin)
-- Main hub with 3 hero buttons: Email (blue, shows unread count), Estimates (gold, shows draft count), Team (orange, shows active count)
-- System status cards, quick actions (Portfolio, Editor, Settings)
-- Splash animation plays once per session
+      // Get line items
+      const { data: lineItems } = await supabase
+        .from('estimate_line_items')
+        .select('*')
+        .eq('estimate_id', estimate.id)
+        .order('sort_order');
 
-### Bottom Tab Bar
-- Home → /admin
-- Jobs → coming soon
-- Menu → opens drawer with 25+ features
-- Messages → coming soon
+      // Get payment schedule
+      const { data: payments } = await supabase
+        .from('estimate_payment_schedules')
+        .select('*')
+        .eq('estimate_id', estimate.id)
+        .order('sort_order');
 
-### Estimates (/admin/estimates)
-**Creating an estimate:**
-1. Go to /admin/estimates → click "New Estimate"
-2. Step 1: Select document type (Estimate, Proposal, Change Order, Quick Quote), pick customer, set division/type/project name/address
-3. Step 2: Pick a template (9 available) or start blank
-4. Step 3: Write scope of work (rich text editor)
-5. Step 4: Add line items by phase — use "AI Assist" button for AI-generated items, or "Add Phase" for manual
-6. Step 5: Set financials (overhead %, markup %, tax %, permit fees, contingency %). Optional: manual total override
-7. Step 6: Set payment milestones (presets: Single Payment, 50/50, 3-Way, Progress 10/30/30/30). Set project timeline (start date, duration, weather days)
-8. Step 7: Select terms & conditions (14 SC disclaimers), add inclusions and exclusions
-9. Step 8: Review — see pricing warnings, preview PDF, copy link, save draft, or send to customer
+      // Get status history
+      const { data: history } = await supabase
+        .from('estimate_status_history')
+        .select('*')
+        .eq('estimate_id', estimate.id)
+        .order('changed_at', { ascending: false });
 
-**Document types:**
-- Estimate (RO-EST-YYYY-NNNN) — non-binding
-- Proposal (RO-CON-YYYY-NNNN) — binding contract
-- Change Order (RO-CO-YYYY-NNNN) — modification
-- Quick Quote (RO-QQ-YYYY-NNNN) — simplified
+      return JSON.stringify({
+        ...estimate,
+        line_items: lineItems || [],
+        payment_schedule: payments || [],
+        status_history: history || [],
+      }, null, 2);
+    }
 
-**Actions on estimates:**
-- Edit: opens wizard at step 1
-- Preview PDF: renders in modal with pinch-zoom
-- Send: email with PDF attachment
-- Copy Link: shareable URL for texting to customer
-- Duplicate: copies estimate to new draft
-- Revise: creates R1, R2, R3 versions
-- Convert to Proposal: upgrades estimate to binding proposal
-- Delete: permanent removal with confirmation
+    case 'search_employees': {
+      const q = input.query?.toLowerCase() || '';
+      let query = supabase
+        .from('employee_profiles')
+        .select('id, first_name, last_name, title, department, status, phone, email, hire_date, pay_rate, pay_type, employment_type')
+        .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,title.ilike.%${q}%,department.ilike.%${q}%`);
+      if (input.status) query = query.eq('status', input.status);
+      const { data } = await query.order('created_at', { ascending: false }).limit(15);
+      if (!data?.length) return `No employees found matching "${input.query}".`;
+      return JSON.stringify(data, null, 2);
+    }
 
-**Estimate statuses:** draft → sent → viewed → accepted/declined/expired. Any → revised.
+    case 'search_vendors': {
+      const q = input.query?.toLowerCase() || '';
+      const { data } = await supabase
+        .from('vendors')
+        .select('id, company_name, contact_name, trade, type, phone, email, is_preferred, is_active')
+        .or(`company_name.ilike.%${q}%,contact_name.ilike.%${q}%,trade.ilike.%${q}%`)
+        .order('created_at', { ascending: false })
+        .limit(15);
+      if (!data?.length) return `No vendors found matching "${input.query}".`;
+      return JSON.stringify(data, null, 2);
+    }
 
-### Email (/admin/inbox)
-- Multi-account Gmail-style client (build@, jr@, info@, custom accounts)
-- Folders: Inbox, Sent, Drafts, Starred, Trash, Spam
-- Compose: click Compose, select From account, enter To/CC, write message with rich text editor
-- Reply/Forward: buttons in thread view
-- Search across all threads
-- Bulk actions: select multiple → trash, delete, mark read, star
+    case 'get_activity_log': {
+      const limit = input.limit || 15;
+      let query = supabase.from('activity_log').select('*');
+      if (input.action_filter) query = query.ilike('action', `%${input.action_filter}%`);
+      const { data } = await query.order('created_at', { ascending: false }).limit(limit);
+      if (!data?.length) return 'No activity log entries found.';
+      return JSON.stringify(data, null, 2);
+    }
 
-### Employees (/admin/employees)
-- List with status filters (All, Active, Suspended, Terminated)
-- Create: "Add Employee" button → modal with name, phone, title, department, pay info
-- Detail page: 8 tabs (Overview, Email Access, Certs & Docs, Equipment, Performance, Financial, Notes, Activity)
-- Send intake form: generate onboarding link → candidate fills 6-step form → admin reviews/approves
+    case 'search_cost_library': {
+      const q = input.query?.toLowerCase() || '';
+      let query = supabase
+        .from('cost_items')
+        .select('id, name, description, category, trade, unit, default_cost, default_markup_percent, is_active')
+        .or(`name.ilike.%${q}%,description.ilike.%${q}%,trade.ilike.%${q}%`)
+        .eq('is_active', true);
+      if (input.category) query = query.eq('category', input.category);
+      const { data } = await query.order('name').limit(20);
+      if (!data?.length) return `No cost items found matching "${input.query}".`;
+      return JSON.stringify(data, null, 2);
+    }
 
-### Intakes (/admin/intakes)
-- Onboarding forms for new hires
-- Generate link → send to candidate → they fill personal info, employment, certs, docs, agreements, signature
-- Review: Approve (creates employee profile) or Reject
-- Quick-send: zero pre-filled info option
+    case 'web_search': {
+      return await webSearch(input.query);
+    }
 
-### Customers (/admin/customers)
-- Types: Residential, Commercial, Government
-- Create inline during estimate wizard or from customer page
-- Fields: name, company, email, phone, address, source
+    case 'save_memory': {
+      await supabase.from('ai_memories').insert({
+        content: input.content,
+        category: input.category || 'general',
+        source: 'ai',
+      });
+      return `Memory saved: "${input.content}" (category: ${input.category})`;
+    }
 
-### Vendors (/admin/vendors)
-- Types: Suppliers, Subcontractors, Rental
-- Preferred vendor toggle
-- Trade badges (Electrical, Plumbing, HVAC, etc.)
+    case 'forget_memory': {
+      const { data: deleted } = await supabase
+        .from('ai_memories')
+        .delete()
+        .ilike('content', `%${input.keyword}%`)
+        .select('content');
+      if (deleted?.length) return `Deleted ${deleted.length} memory/memories matching "${input.keyword}".`;
+      return `No memories found matching "${input.keyword}".`;
+    }
 
-### Cost Library (/admin/cost-library)
-- Reusable cost items by category (Materials, Labor, Equipment, Subcontractor)
-- Used in estimate wizard Step 4 to quick-add items
+    default:
+      return `Unknown tool: ${name}`;
+  }
+}
 
-### Templates (/admin/templates)
-- 9 seeded + custom templates
-- Pre-fill line items, financials, payment schedule, disclaimers
+// ═══════════════════════════════════════════
+// SYSTEM PROMPT
+// ═══════════════════════════════════════════
+const SYSTEM_PROMPT = `You are RO Assistant — the AI for RO Unlimited Construction & Development (Greenville, SC — serving SC, GA, NC).
 
-### Disclaimers (/admin/disclaimers)
-- 14 SC construction disclaimers
-- Categories: General, Payment, Warranty, Liability, SC Specific
-- 5 auto-included by default
+## CRITICAL RULES
+1. **NEVER fabricate data.** When asked about customers, estimates, employees, vendors, or any business data — ALWAYS use the appropriate tool to fetch real data. Never guess names, numbers, prices, or totals.
+2. **ALWAYS use tools for data queries.** If someone asks "pull up Sherry's quote" — call search_estimates with query "Sherry". Present ONLY what the tool returns.
+3. **Be concise.** Short answers unless detail is asked for.
+4. **Use markdown** for formatting: **bold**, bullet lists, tables for data.
+5. **For construction questions:** practical answers with SC code references.
+6. **If a tool returns no results:** say "I couldn't find any matching records" — never make up data.
 
-### Projects/Portfolio (/admin/projects)
-- Upload project photos, before/after pairs
-- Division-filtered, neon-styled cards
+## APP NAVIGATION
+- Dashboard: /admin
+- Estimates: /admin/estimates (create, edit, preview PDF, send, share link, duplicate, revise)
+- Email: /admin/inbox (multi-account Gmail-style client)
+- Employees: /admin/employees (profiles, certs, equipment, performance)
+- Intakes: /admin/intakes (onboarding forms)
+- Customers: /admin/customers
+- Vendors: /admin/vendors
+- Cost Library: /admin/cost-library
+- Templates: /admin/templates
+- Settings: /admin/settings
 
-### Site Editor (/admin/site-editor)
-- Upload hero video, commercial/residential page videos
-- Video framing tool (zoom/scale)
+## ESTIMATE WORKFLOW
+1. New Estimate → pick document type → select customer → set division/type/name
+2. Pick template or start blank
+3. Write scope of work
+4. Add line items by phase (or AI-generate)
+5. Set financials (overhead, markup, tax, permits, contingency)
+6. Set payment milestones and timeline
+7. Select terms/disclaimers
+8. Review → preview PDF → send or share link
 
-### Settings (/admin/settings)
-- Team management (admin users list, remove users)
-- Invite links (generate admin/developer invite links, 30-day expiry)
-- Email accounts (create custom @rounlimited.com addresses)
-- Developer: quick access links (24-hour single-use)
+Document types: Estimate (RO-EST), Proposal (RO-CON), Change Order (RO-CO), Quick Quote (RO-QQ)
+Statuses: draft → sent → viewed → accepted/declined/expired
 
-### Help (/admin/help)
-- 25+ articles across 6 categories
-- Guided walkthrough tours
-
-### Checklist (/admin/checklist)
-- Launch roadmap: 5 categories of setup tasks
-- Priority badges (Critical, Important, Nice to Have)
-- Progress ring showing completion %
-
-## CONSTRUCTION KNOWLEDGE
-
-### SC Building Codes
-- South Carolina uses IBC and IRC (International Building Code / Residential Code)
-- Current edition: 2021 IBC/IRC (adopted 2023)
-- Permits required for: new construction, additions, structural alterations, electrical, plumbing, mechanical, roofing, demolition
-- Residential builder license: SC LLR, up to $200K
-- General contractor: unlimited projects
+## CONSTRUCTION KNOWLEDGE (SC)
+- Building codes: 2021 IBC/IRC (adopted 2023)
 - Energy code: IECC 2021
-
-### Common Conversions
-- 1 cubic yard = 27 cubic feet
-- 1 cubic yard concrete covers 81 sqft at 4" thick
+- Mechanic's lien: SC Code 29-5-10, file within 90 days
+- 1 cuyd = 27 cuft, covers 81 sqft at 4"
 - 1 roofing square = 100 sqft
-- 1 ton asphalt covers ~80 sqft at 2" thick
-- 1 ton gravel covers ~100 sqft at 2" thick
-- 1 board foot = 1" × 12" × 12"
-- Concrete: 1 cuyd ≈ 2 tons
-- Rebar: #4 = 1/2", #5 = 5/8", #6 = 3/4"
-- Stud spacing: 16" OC (residential), 12" OC (load-bearing)
-- Joist spacing: 16" OC standard
-- Roof pitch: 4/12 = 18.4°, 6/12 = 26.6°, 8/12 = 33.7°, 12/12 = 45°
+- Rebar: #4=1/2", #5=5/8", #6=3/4"
+- Stud spacing: 16" OC residential, 12" OC load-bearing
 
-### SC Lien Law
-- Mechanic's lien: SC Code 29-5-10 et seq.
-- File within 90 days of last work
-- Notice must be served on owner
-- Valid 6 months, must file suit to enforce
-
-### Trade Standards
-- Electrical: NEC 2023 (National Electrical Code)
-- Plumbing: IPC 2021 (International Plumbing Code)
-- HVAC: IMC 2021 (International Mechanical Code)
-- Fire: IFC 2021 (International Fire Code)
-- Energy: IECC 2021
-
-### SC Market Pricing (2025-2026)
-- Concrete slab 4": $6-10/sqft
-- Framing (wood): $8-16/sqft | Metal stud: $12-22/sqft
+## SC MARKET PRICING (2025-2026)
+- Concrete 4": $6-10/sqft | Framing wood: $8-16/sqft
 - Roofing shingles: $4-7/sqft | Metal: $8-14/sqft
-- Plumbing rough-in: $800-1,500/fixture
-- Electrical outlet/switch: $150-300 each
-- HVAC residential: $3,000-5,000/ton
-- Drywall: $3-5/sqft | Painting: $2-4/sqft
-- Flooring LVP: $5-9/sqft | Tile: $8-15/sqft
-- Interior doors: $400-800 each | Trim: $3-6/lnft
-- Demolition selective: $2-5/sqft | Cleanup: $0.15-0.30/sqft
+- Plumbing rough-in: $800-1,500/fixture | HVAC: $3-5K/ton
+- Drywall: $3-5/sqft | Painting: $2-4/sqft | Flooring LVP: $5-9/sqft
 
-## MEMORY SYSTEM
-You have a persistent memory. Memories from previous sessions are loaded below under "SAVED MEMORIES".
-- When the user says "remember this", "save this", "note this", or asks you to remember something, respond normally AND include a JSON block: \`\`\`memory{"content":"...","category":"..."}\`\`\` (categories: general, pricing, preferences, projects, codes, materials)
-- When the user says "forget" or "delete" a memory, include: \`\`\`forget{"content":"keyword to match"}\`\`\`
-- Always confirm what you saved/forgot
-- Use your memories to give personalized, contextual answers
-
-## WEB SEARCH
-You can search the web for current information. When you need to look something up (codes, regulations, pricing, materials, specs, news, or anything you're not confident about):
-- Include a JSON block in your response: \`\`\`search{"query":"your search query"}\`\`\`
-- The system will run the search and give you the results
-- Then answer the user's question using those results
-- ALWAYS search for: current codes/regulations, specific product specs, current pricing, anything with a year/date, anything you're unsure about
-- Include the source URL when citing search results
-
-## PROJECT CONTEXT
-When the user asks about a specific project or estimate, context data will be injected below.
+## TOOLS AVAILABLE
+You have access to tools that query the real database. USE THEM. Do not guess.
 `;
 
+// ═══════════════════════════════════════════
+// MAIN HANDLER
+// ═══════════════════════════════════════════
 export async function POST(req: NextRequest) {
   try {
     const { messages, currentPage, projectContext, useModel } = await req.json();
-
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages required' }, { status: 400 });
     }
@@ -271,13 +401,11 @@ export async function POST(req: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(50);
 
-    // Build context
-    let contextNote = '';
-    const parts: string[] = [];
+    // Build context additions
+    const contextParts: string[] = [];
 
-    // Inject memories
-    if (memories && memories.length > 0) {
-      parts.push('\n## SAVED MEMORIES');
+    if (memories?.length) {
+      contextParts.push('\n## SAVED MEMORIES');
       const grouped: Record<string, string[]> = {};
       memories.forEach((m: any) => {
         const cat = m.category || 'general';
@@ -285,134 +413,114 @@ export async function POST(req: NextRequest) {
         grouped[cat].push(m.content);
       });
       Object.entries(grouped).forEach(([cat, items]) => {
-        parts.push(`**${cat}:**`);
-        items.forEach(i => parts.push(`- ${i}`));
+        contextParts.push(`**${cat}:**`);
+        items.forEach(i => contextParts.push(`- ${i}`));
       });
     }
 
-    if (currentPage) {
-      parts.push(`User is currently on page: ${currentPage}`);
-    }
+    if (currentPage) contextParts.push(`\nUser is currently on page: ${currentPage}`);
 
-    // If project context was fetched, inject it
-    if (projectContext) {
-      if (projectContext.type === 'estimate' && projectContext.data) {
-        const e = projectContext.data;
-        parts.push(`\n## ACTIVE PROJECT CONTEXT`);
-        parts.push(`Estimate: ${e.estimate_number} — ${e.project_name}`);
-        parts.push(`Customer: ${e.customer?.first_name} ${e.customer?.last_name}${e.customer?.company_name ? ` (${e.customer.company_name})` : ''}`);
-        parts.push(`Division: ${e.division} | Type: ${e.document_mode || 'estimate'} | Status: ${e.status}`);
-        parts.push(`Total: $${e.total?.toLocaleString() || '0'}`);
-        if (e.line_items?.length) {
-          parts.push(`Line items: ${e.line_items.length} items across ${[...new Set(e.line_items.map((i: any) => i.phase))].length} phases`);
-          const phaseBreakdown = Object.entries(
-            e.line_items.reduce((acc: any, i: any) => {
-              const p = i.phase || 'Other';
-              acc[p] = (acc[p] || 0) + (i.quantity * i.unit_cost * (1 + (i.markup_percent || 0) / 100));
-              return acc;
-            }, {})
-          ).map(([phase, total]: [string, any]) => `  ${phase}: $${total.toLocaleString()}`).join('\n');
-          parts.push(`Phase breakdown:\n${phaseBreakdown}`);
-        }
-        if (e.project_address) parts.push(`Address: ${e.project_address}, ${e.project_city || ''} ${e.project_state || ''}`);
-        if (e.overhead_percent) parts.push(`Overhead: ${e.overhead_percent}%, Markup: ${e.markup_percent}%, Tax: ${e.tax_percent}%, Contingency: ${e.contingency_percent}%`);
+    if (projectContext?.type === 'estimate' && projectContext.data) {
+      const e = projectContext.data;
+      contextParts.push(`\n## ACTIVE PROJECT CONTEXT`);
+      contextParts.push(`Estimate: ${e.estimate_number} — ${e.project_name}`);
+      contextParts.push(`Customer: ${e.customer?.first_name} ${e.customer?.last_name}${e.customer?.company_name ? ` (${e.customer.company_name})` : ''}`);
+      contextParts.push(`Division: ${e.division} | Type: ${e.document_mode || 'estimate'} | Status: ${e.status}`);
+      contextParts.push(`Total: $${e.total?.toLocaleString() || '0'}`);
+      if (e.line_items?.length) {
+        contextParts.push(`Line items: ${e.line_items.length} items`);
       }
     }
 
-    if (parts.length) contextNote = `\n\n## CURRENT CONTEXT\n${parts.join('\n')}`;
-
-    // Pre-detect web search queries and run BEFORE AI call
-    const lastUserMsg = messages[messages.length - 1]?.content || '';
-    const lm = lastUserMsg.toLowerCase();
-    const searchTriggers = [
-      /what(?:'s| is) the (?:latest|current|new|2024|2025|2026)/,
-      /search (?:for|the web|online|google)/,
-      /look up/, /find (?:me |out )/,
-      /current (?:price|cost|rate|code|regulation|law|requirement)/,
-      /(?:price|cost) of .+ (?:in|near|around)/,
-      /(?:south carolina|sc|georgia|ga|north carolina|nc) (?:code|law|regulation|permit|license|requirement)/,
-      /how much (?:does|do|is|are) .+ cost/,
-      /latest .+ (?:code|regulation|update|news|price)/,
-    ];
-    const needsSearch = searchTriggers.some(t => t.test(lm)) || lm.includes('search') || lm.includes('look up');
-    if (needsSearch) {
-      const searchResults = await webSearch(lastUserMsg);
-      if (searchResults && searchResults !== 'No results found.' && searchResults !== 'Search failed.') {
-        contextNote += '\n\n## WEB SEARCH RESULTS for "' + lastUserMsg + '":\n' + searchResults + '\n\nUse these results to answer. Include source URLs.';
-      }
-    }
-
-    // Pre-detect data queries — fetch from DB before AI call
-    const dataQueryPatterns = [
-      { pattern: /(?:show|list|read|get|how many|what|who) (?:me |the |all |my |our )?customer/i, table: 'customers' },
-      { pattern: /(?:show|list|read|get|how many|what) (?:me |the |all |my |our )?estimate/i, table: 'estimates' },
-      { pattern: /(?:show|list|read|get|how many|what) (?:me |the |all |my |our )?employee/i, table: 'employee_profiles' },
-      { pattern: /(?:show|list|read|get|how many|what) (?:me |the |all |my |our )?vendor/i, table: 'vendors' },
-      { pattern: /(?:show|list|read|get|how many|what) (?:me |the |all |my |our )?intake/i, table: 'employee_intakes' },
-      { pattern: /(?:show|list|read|see|check) (?:me |the |all |my |our )?(?:login|activity|log|history|who.*login|who.*access)/i, table: 'activity_log' },
-      { pattern: /(?:show|list|read|get|how many|what) (?:me |the |all |my |our )?notif/i, table: 'admin_notifications' },
-    ];
-
-    for (const dq of dataQueryPatterns) {
-      if (dq.pattern.test(lastUserMsg)) {
-        const { data: rows } = await supabase
-          .from(dq.table)
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(15);
-
-        if (rows?.length) {
-          const summary = rows.map((r: any, i: number) => {
-            if (dq.table === 'customers') return (i+1) + '. ' + (r.first_name || '') + ' ' + (r.last_name || '') + ' — ' + (r.phone || '') + ' — ' + (r.email || '') + (r.company_name ? ' (' + r.company_name + ')' : '');
-            if (dq.table === 'estimates') return (i+1) + '. ' + (r.estimate_number || '') + ' — ' + (r.project_name || '') + ' — $' + (r.total || 0) + ' — ' + (r.status || '');
-            if (dq.table === 'employee_profiles') return (i+1) + '. ' + (r.first_name || '') + ' ' + (r.last_name || '') + ' — ' + (r.title || '') + ' — ' + (r.status || '');
-            if (dq.table === 'vendors') return (i+1) + '. ' + (r.company_name || '') + ' — ' + (r.trade || '') + ' — ' + (r.contact_name || '');
-            if (dq.table === 'activity_log') return (i+1) + '. ' + (r.action || '') + ' — ' + (r.details || '') + ' — ' + (r.created_at || '');
-            if (dq.table === 'admin_notifications') return (i+1) + '. ' + (r.title || '') + ' — ' + (r.body || '') + ' — ' + (r.read ? 'read' : 'unread');
-            return JSON.stringify(r);
-          }).join('\n');
-          contextNote += '\n\n## LIVE DATA — ' + dq.table.toUpperCase() + ' (most recent ' + rows.length + '):\n' + summary + '\n\nSummarize this data for the user.';
-        } else {
-          contextNote += '\n\n## LIVE DATA — ' + dq.table.toUpperCase() + ': No records found.';
-        }
-        break;
-      }
-    }
-
-    const fullPrompt = SYSTEM_PROMPT + contextNote;
+    const fullPrompt = SYSTEM_PROMPT + (contextParts.length ? '\n' + contextParts.join('\n') : '');
     const preferClaude = useModel !== 'groq' && !!claudeKey;
     let content = '';
 
+    // ── Claude with tool_use ──
     if (preferClaude) {
       try {
-        const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+        const apiMessages = messages.map((m: any) => ({ role: m.role, content: m.content }));
+
+        // First call — Claude may request tool use
+        let claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'x-api-key': claudeKey!, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
             max_tokens: 4000,
             system: fullPrompt,
-            messages: messages.map((m: any) => ({ role: m.role, content: m.content })),
+            messages: apiMessages,
+            tools: TOOLS,
           }),
         });
-        if (claudeRes.ok) {
-          const d = await claudeRes.json();
-          content = d.content?.[0]?.text || '';
+
+        if (!claudeRes.ok) {
+          console.error('[ai-chat] Claude error:', claudeRes.status, await claudeRes.text());
         } else {
-          console.error('[ai-chat] Claude error:', claudeRes.status);
+          let claudeData = await claudeRes.json();
+
+          // Tool use loop — execute tools and feed results back (max 5 rounds)
+          let rounds = 0;
+          while (claudeData.stop_reason === 'tool_use' && rounds < 5) {
+            rounds++;
+            const toolBlocks = claudeData.content.filter((b: any) => b.type === 'tool_use');
+            const toolResults: any[] = [];
+
+            // Include any text blocks from Claude's response
+            const assistantContent = claudeData.content;
+
+            for (const tool of toolBlocks) {
+              const result = await executeTool(tool.name, tool.input, supabase);
+              toolResults.push({
+                type: 'tool_result',
+                tool_use_id: tool.id,
+                content: result,
+              });
+            }
+
+            // Continue conversation with tool results
+            claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: { 'x-api-key': claudeKey!, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 4000,
+                system: fullPrompt,
+                messages: [
+                  ...apiMessages,
+                  { role: 'assistant', content: assistantContent },
+                  { role: 'user', content: toolResults },
+                ],
+                tools: TOOLS,
+              }),
+            });
+
+            if (!claudeRes.ok) {
+              console.error('[ai-chat] Claude tool loop error:', claudeRes.status);
+              break;
+            }
+            claudeData = await claudeRes.json();
+          }
+
+          // Extract final text response
+          const textBlocks = claudeData.content?.filter((b: any) => b.type === 'text') || [];
+          content = textBlocks.map((b: any) => b.text).join('\n');
         }
       } catch (err) {
         console.error('[ai-chat] Claude failed:', err);
       }
     }
 
+    // ── Groq fallback (no tool_use, uses old regex approach) ──
     if (!content && groqKey) {
+      // For Groq, inject a note about not having tools
+      const groqPrompt = fullPrompt + '\n\nNote: You do not have database tools in this mode. Answer from context and general knowledge only. Be clear when you are estimating vs stating facts.';
       const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'system', content: fullPrompt }, ...messages],
+          messages: [{ role: 'system', content: groqPrompt }, ...messages],
           temperature: 0.7,
           max_tokens: 4000,
         }),
@@ -427,80 +535,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (!content) return NextResponse.json({ error: 'No AI service available' }, { status: 502 });
-
-    // Detect web search request
-    const searchMatch = content.match(/```search\s*(\{[\s\S]*?\})\s*```/);
-    if (searchMatch) {
-      try {
-        const searchReq = JSON.parse(searchMatch[1]);
-        if (searchReq.query) {
-          // Run web search via Google Custom Search (free tier) or fallback
-          const searchResults = await webSearch(searchReq.query);
-
-          // Strip the search block from the content
-          content = content.replace(/```search[\s\S]*?```/g, '').trim();
-
-          // Second AI call with search results injected
-          const searchContext = `\n\n## WEB SEARCH RESULTS for "${searchReq.query}":\n${searchResults}\n\nNow answer the user's question using these search results. Include source URLs when citing information.`;
-
-          const res2 = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'llama-3.3-70b-versatile',
-              messages: [
-                { role: 'system', content: SYSTEM_PROMPT + contextNote + searchContext },
-                ...messages,
-              ],
-              temperature: 0.7,
-              max_tokens: 2000,
-            }),
-          });
-
-          if (res2.ok) {
-            const data2 = await res2.json();
-            content = data2.choices?.[0]?.message?.content || content;
-            // Clean any nested search blocks
-            content = content.replace(/```search[\s\S]*?```/g, '').trim();
-          }
-        }
-      } catch (err) {
-        console.error('[ai-chat] search error:', err);
-      }
-    }
-
-    // Detect memory save commands — handle malformed blocks too
-    const memoryMatch = content.match(/`{1,3}memory\s*(\{[\s\S]*?\})\s*`{0,3}/);
-    if (memoryMatch) {
-      try {
-        const mem = JSON.parse(memoryMatch[1]);
-        await supabase.from('ai_memories').insert({
-          content: mem.content,
-          category: mem.category || 'general',
-          source: 'ai',
-        });
-      } catch {}
-    }
-
-    // Detect forget commands
-    const forgetMatch = content.match(/`{1,3}forget\s*(\{[\s\S]*?\})\s*`{0,3}/);
-    if (forgetMatch) {
-      try {
-        const fg = JSON.parse(forgetMatch[1]);
-        if (fg.content) {
-          await supabase.from('ai_memories').delete().ilike('content', `%${fg.content}%`);
-        }
-      } catch {}
-      content = content.replace(/```forget[\s\S]*?```/g, '').trim();
-    }
-
-    // Final cleanup — strip ALL code blocks that are command blocks (memory, forget, search, action)
-    content = content.replace(/`{1,3}(?:memory|forget|search|action)\s*\{[\s\S]*?\}\s*`{0,3}/g, '').trim();
-    // Also strip any remaining triple-backtick blocks that look like commands
-    content = content.replace(/```(?:memory|forget|search|action)[\s\S]*?```/g, '').trim();
 
     return NextResponse.json({ role: 'assistant', content });
   } catch (err: any) {
