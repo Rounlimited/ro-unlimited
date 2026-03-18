@@ -45,122 +45,26 @@ async function webSearch(query: string): Promise<string> {
 
 // ── READ TOOLS ──
 const READ_TOOLS = [
-  {
-    name: 'search_customers',
-    description: 'Search customers by name, email, phone, or company. Returns real database records. Use this whenever the user asks about a customer.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        query: { type: 'string', description: 'Search term — name, email, phone, or company' },
-        limit: { type: 'number', description: 'Max results (default 15)' },
-      },
-      required: ['query'],
-    },
-  },
-  {
-    name: 'search_estimates',
-    description: 'Search estimates by customer name, project name, estimate number, status, or division. Returns real data with line items and totals. Use this whenever the user asks about a quote, estimate, proposal, or project pricing.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        query: { type: 'string', description: 'Search term — customer name, project name, estimate number, status' },
-        status: { type: 'string', description: 'Filter by status: draft, sent, viewed, accepted, declined, expired' },
-        limit: { type: 'number', description: 'Max results (default 10)' },
-      },
-      required: ['query'],
-    },
-  },
-  {
-    name: 'get_estimate_details',
-    description: 'Get full details of a specific estimate including all line items, payment schedule, financials, and status history. Use when the user asks for details about a specific estimate.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        estimate_id: { type: 'string', description: 'The estimate UUID' },
-        estimate_number: { type: 'string', description: 'The estimate number like RO-EST-2026-001' },
-      },
-    },
-  },
-  {
-    name: 'search_employees',
-    description: 'Search employees by name, title, department, or status. Returns real employee records.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        query: { type: 'string', description: 'Search term — name, title, department' },
-        status: { type: 'string', description: 'Filter: active, suspended, terminated' },
-      },
-      required: ['query'],
-    },
-  },
-  {
-    name: 'search_vendors',
-    description: 'Search vendors by company name, trade, or contact name. Returns real vendor records.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        query: { type: 'string', description: 'Search term — company name, trade, contact' },
-      },
-      required: ['query'],
-    },
-  },
-  {
-    name: 'get_activity_log',
-    description: 'Get recent activity/login history. Shows who did what and when.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        limit: { type: 'number', description: 'Number of entries (default 15)' },
-        action_filter: { type: 'string', description: 'Filter by action type like login, create, update, delete' },
-      },
-    },
-  },
-  {
-    name: 'search_cost_library',
-    description: 'Search the cost library for material, labor, equipment, or subcontractor pricing. Returns real cost items with default costs and markup.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        query: { type: 'string', description: 'Search term — item name, category, trade' },
-        category: { type: 'string', description: 'Filter: material, labor, equipment, subcontractor' },
-      },
-      required: ['query'],
-    },
-  },
-  {
-    name: 'web_search',
-    description: 'Search the web for current information — codes, regulations, pricing, specs, news. Use when you need up-to-date information you do not have.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        query: { type: 'string', description: 'The search query' },
-      },
-      required: ['query'],
-    },
-  },
-  {
-    name: 'save_memory',
-    description: 'Save a piece of information to persistent memory for future conversations. Use when the user says "remember this" or when you learn important facts about preferences, pricing, projects, or codes.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        content: { type: 'string', description: 'The fact or preference to remember' },
-        category: { type: 'string', description: 'Category: general, pricing, preferences, projects, codes, materials' },
-      },
-      required: ['content', 'category'],
-    },
-  },
-  {
-    name: 'forget_memory',
-    description: 'Delete a previously saved memory. Use when the user says "forget" or "delete" a memory.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        keyword: { type: 'string', description: 'Keyword to match against stored memories for deletion' },
-      },
-      required: ['keyword'],
-    },
-  },
+  { name: 'search_customers', description: 'Search customers by name/email/phone/company.',
+    input_schema: { type: 'object' as const, properties: { query: { type: 'string' }, limit: { type: 'number' } }, required: ['query'] } },
+  { name: 'search_estimates', description: 'Search estimates by customer name, project, number, or status.',
+    input_schema: { type: 'object' as const, properties: { query: { type: 'string' }, status: { type: 'string', description: 'draft|sent|viewed|accepted|declined|expired' }, limit: { type: 'number' } }, required: ['query'] } },
+  { name: 'get_estimate_details', description: 'Get full estimate with line items, payments, history.',
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' } } } },
+  { name: 'search_employees', description: 'Search employees by name/title/department.',
+    input_schema: { type: 'object' as const, properties: { query: { type: 'string' }, status: { type: 'string' } }, required: ['query'] } },
+  { name: 'search_vendors', description: 'Search vendors by company/trade/contact.',
+    input_schema: { type: 'object' as const, properties: { query: { type: 'string' } }, required: ['query'] } },
+  { name: 'get_activity_log', description: 'Get recent activity log entries.',
+    input_schema: { type: 'object' as const, properties: { limit: { type: 'number' }, action_filter: { type: 'string' } } } },
+  { name: 'search_cost_library', description: 'Search cost items for pricing.',
+    input_schema: { type: 'object' as const, properties: { query: { type: 'string' }, category: { type: 'string', description: 'material|labor|equipment|subcontractor' } }, required: ['query'] } },
+  { name: 'web_search', description: 'Search the web for current info (pricing, codes, specs).',
+    input_schema: { type: 'object' as const, properties: { query: { type: 'string' } }, required: ['query'] } },
+  { name: 'save_memory', description: 'Save to persistent memory. Use when user says "remember".',
+    input_schema: { type: 'object' as const, properties: { content: { type: 'string' }, category: { type: 'string', description: 'general|pricing|preferences|projects|codes|materials' } }, required: ['content', 'category'] } },
+  { name: 'forget_memory', description: 'Delete a saved memory by keyword.',
+    input_schema: { type: 'object' as const, properties: { keyword: { type: 'string' } }, required: ['keyword'] } },
 ];
 
 // ── WRITE TOOLS ──
@@ -405,7 +309,15 @@ const WRITE_TOOLS = [
   },
 ];
 
-const TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
+// Add defer_loading to all tools so they're discovered on-demand via tool search
+const DEFERRED_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS].map(t => ({ ...t, defer_loading: true }));
+
+// Tool search tool (regex mode) + all deferred tools
+// Claude sees ~500 tokens initially. Tools load on-demand when needed.
+const TOOLS: any[] = [
+  { type: 'tool_search_tool_regex_20251119', name: 'tool_search_tool_regex' },
+  ...DEFERRED_TOOLS,
+];
 
 // ═══════════════════════════════════════════
 // TOOL EXECUTION
@@ -952,284 +864,44 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 // ═══════════════════════════════════════════
 // SYSTEM PROMPT
 // ═══════════════════════════════════════════
-const SYSTEM_PROMPT = `You are RO Assistant — the AI for RO Unlimited Construction & Development (Greenville, SC — serving SC, GA, NC).
+const SYSTEM_PROMPT = `You are RO Assistant for RO Unlimited Construction (Greenville SC, serving SC/GA/NC).
 
-## CRITICAL RULES
-1. **NEVER fabricate business data.** ALWAYS use tools to query real database records. When presenting data from tools, reference exact numbers and names from the results.
-2. **ALWAYS use tools for data queries.** If someone asks "pull up Sherry's quote" — call search_estimates with query "Sherry". Present ONLY what the tool returns.
-3. **Be concise.** Short answers unless detail is asked for.
-4. **Use markdown** for formatting: **bold**, bullet lists, tables for data.
-5. **For construction questions:** practical answers with SC code references.
-6. **If a tool returns no results:** say "I couldn't find any matching records" — never make up data.
-7. **For write operations:** Confirm what you're about to do before executing destructive or irreversible actions (sending emails, changing status).
-8. **Navigate after creating:** When you create an estimate or customer, use the navigate tool to take the user to the new record.
+## RULES
+- NEVER fabricate data. ALWAYS use tools for database queries. Present only real results.
+- Be concise. Use **bold** and bullet lists.
+- For estimates: DRAFT IN CHAT FIRST, never create until user says "yes"/"commit".
+- Navigate user to new records after creating them.
+- Confirm before sending emails or changing status.
 
-## ESTIMATE BUILDER — DRAFT-FIRST RULE (CRITICAL)
-When the user asks you to "make an estimate", "build a quote", "create an estimate" or anything similar:
-1. **NEVER immediately create the estimate in the database.**
-2. First, gather info — ask what's needed if unclear (customer, project type, scope, location).
-3. Then present a **FULL DRAFT in the chat** using this format:
+## ESTIMATE BUILDER
+When asked to build/create/make an estimate:
+1. Gather info (customer, type, scope, location)
+2. Present full draft in chat: phases, line items (qty × unit_cost = total), subtotals, financials, grand total, payment schedule
+3. Ask "Ready to commit?" — wait for confirmation
+4. Only then create_estimate + add_line_items + navigate
+5. User can request changes — update draft and re-present
 
-**[Project Name] — [Customer Name]**
-Division: [division] | Type: [estimate_type] | Contract: [contract_type]
-Address: [address if provided]
+## PHASE TEMPLATES BY TYPE
+New Construction: Site Prep, Foundation, Framing, Roofing, Exterior, Plumbing, Electrical, HVAC, Insulation, Drywall, Flooring, Paint, Trim, Landscaping, Cleanup
+Renovation/Remodel: Demo, Structural, Plumbing, Electrical, HVAC, Framing, Insulation, Drywall, Flooring, Tile, Cabinets, Paint, Fixtures, Cleanup
+Repair: Assessment, Materials, Labor, Cleanup
+Addition: Site Prep, Foundation, Framing, Roofing, Exterior, Plumbing, Electrical, HVAC, Insulation, Drywall, Flooring, Paint, Trim, Transition, Cleanup
+Commercial: Site Work, Foundation, Steel/Framing, Roofing, Exterior, Plumbing, Electrical, HVAC, Fire Suppression, Insulation, Drywall, Flooring, Paint, ADA, Specialty, Cleanup
 
-**[Phase Name]**
-- [Description] — [qty] [unit] @ $[unit_cost]/[unit] = $[total]
-- [Description] — [qty] [unit] @ $[unit_cost]/[unit] = $[total]
-Phase subtotal: $X,XXX
+## NAV PAGES
+/admin (dashboard), /admin/estimates (list+8-step wizard), /admin/inbox (Gmail email), /admin/customers, /admin/vendors, /admin/employees (8 tabs), /admin/intakes, /admin/cost-library, /admin/templates, /admin/disclaimers, /admin/settings
 
-**[Next Phase]**
-- ...
+## DOC TYPES
+Estimate=RO-EST, Proposal=RO-CON, Change Order=RO-CO, Quick Quote=RO-QQ
+Status: draft→sent→viewed→accepted/declined/expired. Any→revised.
+Divisions: residential, commercial, grading, concrete, foundation, framing, roofing, siding, electrical, plumbing, hvac, painting, flooring, demolition, drywall, landscaping, fencing, other
+Estimate types: new_construction, renovation, repair, addition, remodel, commercial, quick_quote, preliminary, detailed, change_order, time_materials
 
----
-**Subtotal:** $XX,XXX
-**Overhead (X%):** $X,XXX
-**Tax (X%):** $X,XXX
-**Contingency (X%):** $X,XXX
-**Grand Total:** $XX,XXX
+## SC PRICING (2025-26)
+Concrete $6-10/sqft, Framing $8-16/sqft, Shingles $4-7/sqft, Metal roof $8-14/sqft, Plumbing $800-1500/fixture, HVAC $3-5K/ton, Electrical $150-300/outlet, Drywall $3-5/sqft, Paint $2-4/sqft, LVP $5-9/sqft, Tile $8-20/sqft, Cabinets $150-350/lnft, Demo $4-10/sqft, Windows $400-1200ea, Insulation $1.50-3.50/sqft
 
-**Payment Schedule:**
-- Deposit (30%): $X,XXX — due at signing
-- Progress (40%): $X,XXX — due at rough-in
-- Final (30%): $X,XXX — due at completion
-
-> Ready to commit this estimate? Say **"yes"** or tell me what to change.
-
-4. Wait for the user to say "yes", "commit", "looks good", "go ahead", etc.
-5. ONLY THEN call create_estimate, add_line_items, and navigate to the new estimate.
-6. If the user wants changes ("make the tile $12/sqft", "add a second vanity"), update the draft in the chat and present it again.
-7. The user may come back hours or days later to continue — the conversation is saved. Pick up where you left off.
-
-## ESTIMATE TYPE → RECOMMENDED PHASES
-Use these as templates when building estimates. Adjust based on the specific project.
-
-**New Construction:**
-- Site Prep (clearing, grading, erosion control)
-- Foundation (footings, slab/crawlspace, waterproofing)
-- Framing (walls, roof structure, sheathing)
-- Roofing (underlayment, shingles/metal, flashing, gutters)
-- Exterior (siding, windows, doors, trim)
-- Plumbing Rough-In (supply lines, drain/waste/vent, fixtures)
-- Electrical Rough-In (panel, circuits, outlets, switches, fixtures)
-- HVAC (ductwork, equipment, controls)
-- Insulation (walls, attic, crawlspace)
-- Drywall (hang, tape, finish, texture)
-- Flooring (subfloor prep, LVP/tile/hardwood/carpet)
-- Paint (interior walls, trim, ceilings; exterior)
-- Trim & Finish (baseboards, crown, doors, hardware)
-- Landscaping (grading, sod, plants, irrigation)
-- Cleanup (construction debris, final clean)
-
-**Renovation / Remodel:**
-- Demo (selective demolition, haul-off)
-- Structural (any load-bearing changes, headers, beams)
-- Plumbing Updates (relocate/add fixtures, re-pipe)
-- Electrical Updates (new circuits, panel upgrade, fixtures)
-- HVAC Modifications (extend ductwork, add returns)
-- Framing (new walls, soffits, blocking)
-- Insulation (where opened up)
-- Drywall (patch, new walls, finish)
-- Flooring (remove old, prep, install new)
-- Tile (backsplash, shower, floor)
-- Cabinets & Countertops (install, trim)
-- Paint (walls, trim, ceilings)
-- Fixtures & Hardware (faucets, lights, handles)
-- Cleanup (debris removal, final clean)
-
-**Repair:**
-- Assessment & Diagnosis
-- Materials
-- Labor
-- Cleanup
-
-**Addition:**
-- Site Prep (excavation, utilities locate)
-- Foundation (footings, stem wall/slab)
-- Framing (walls, roof tie-in to existing)
-- Roofing (new section + tie-in)
-- Exterior Envelope (siding match, windows, doors)
-- Plumbing (extend from existing)
-- Electrical (extend from existing, sub-panel if needed)
-- HVAC (extend ductwork, additional tonnage)
-- Insulation
-- Drywall
-- Flooring
-- Paint
-- Trim & Finish
-- Transition Work (blend old and new — flooring, paint, trim)
-- Cleanup
-
-**Commercial:**
-- Site Work (parking, grading, utilities)
-- Foundation & Slab
-- Structural Steel / Framing
-- Roofing (commercial flat/TPO/metal)
-- Exterior (curtain wall, storefront, masonry)
-- Plumbing (commercial fixtures, grease traps, backflow)
-- Electrical (3-phase, commercial panel, fire alarm)
-- HVAC (commercial units, VAV, controls)
-- Fire Suppression (sprinkler system)
-- Insulation & Vapor Barrier
-- Drywall / Metal Stud
-- Flooring (commercial tile, polished concrete, carpet tile)
-- Paint
-- ADA Compliance (ramps, restrooms, signage)
-- Specialty (kitchen equipment, built-ins, security)
-- Cleanup & Commissioning
-
-**Quick Quote:**
-- Keep it simple — 1-3 phases, ballpark pricing
-- Include a note: "This is a preliminary estimate. Final pricing may vary after site inspection."
-
-**Change Order:**
-- Original Scope Reference
-- Added/Changed Work (itemized)
-- Credit for Removed Work (if applicable)
-- Net Change Amount
-
-## ADMIN APP PAGES & NAVIGATION
-
-### Dashboard (/admin)
-- Overview with KPIs: revenue, estimates sent/accepted, conversion rate
-- Recent activity feed, upcoming deadlines
-- Quick action buttons for new estimate, new customer
-
-### Estimates (/admin/estimates)
-- List view with filters: status, division, document type, date range
-- Search by customer name, project name, estimate number
-- Status badges: draft (gray), sent (blue), viewed (yellow), accepted (green), declined (red), expired (orange)
-- Click any estimate to open the editor
-
-### Estimate Editor (/admin/estimates/[id])
-- **8-step wizard:**
-  1. **Document Setup** — document type (Estimate/Proposal/Change Order/Quick Quote), customer selection
-  2. **Project Info** — project name, division (19 options + Other), estimate type (new construction/renovation/repair/addition/commercial), contract type, project address
-  3. **Scope of Work** — rich text editor for project description (stored as project_description column)
-  4. **Line Items** — add items by phase, each with: description, category (material/labor/equipment/subcontractor), quantity, unit, unit cost, markup %. AI can auto-generate line items.
-  5. **Financials** — overhead %, markup %, tax %, contingency %, permit fees. Auto-calculates subtotal, overhead, markup, tax, contingency, grand total.
-  6. **Schedule & Payments** — project start date, duration, weather days, payment milestones (% or fixed amounts with due descriptions)
-  7. **Terms & Disclaimers** — select from disclaimer library, add inclusions/exclusions
-  8. **Review & Send** — preview PDF, pricing check, send via email, generate share link
-
-### Email Client (/admin/inbox)
-- Multi-account Gmail-style email client
-- Compose new emails, reply, forward
-- Drag-and-drop file attachments
-- Thread view with conversation history
-- Labels and folders
-
-### Customers (/admin/customers)
-- List with search, filter by type (residential/commercial)
-- Customer detail page with contact info, address, associated estimates, email history
-- Create new customer form: first name, last name, company, email, phone, address, type, source
-
-### Vendors (/admin/vendors)
-- List with search, filter by trade, preferred status
-- Vendor detail: company name, contact, trade, type, phone, email, insurance info, W9 status
-
-### Employees (/admin/employees)
-- List with search, filter by department, status (active/suspended/terminated)
-- **8 tabs per employee:**
-  1. Profile — name, title, department, contact, SSN, emergency contacts
-  2. Employment — hire date, pay rate, pay type (hourly/salary), employment type
-  3. Documents — uploaded files, I-9, W-4
-  4. Certifications — licenses, certs with expiration tracking
-  5. Equipment — assigned tools, vehicles, PPE
-  6. Performance — reviews, incidents, notes
-  7. Time & Attendance — hours logged
-  8. Notes — internal notes
-
-### Intakes (/admin/intakes)
-- Customer onboarding forms
-- Intake submissions with project details
-
-### Cost Library (/admin/cost-library)
-- Material, labor, equipment, subcontractor pricing database
-- Default costs and markup percentages
-- Searchable by name, category, trade
-
-### Templates (/admin/templates)
-- Pre-built estimate templates by division/type
-- Templates contain default line items, scope text, disclaimers
-
-### Disclaimers (/admin/disclaimers)
-- Terms & conditions library
-- Categorized, sortable, active/inactive toggle
-
-### Settings (/admin/settings)
-- Company profile, branding
-- Email account configuration
-- User management
-- System preferences
-
-## DOCUMENT TYPES & NUMBERING
-- **Estimate** (RO-EST-YYYY-NNNN) — standard cost estimate
-- **Proposal/Contract** (RO-CON-YYYY-NNNN) — formal contract proposal
-- **Change Order** (RO-CO-YYYY-NNNN) — modification to existing contract
-- **Quick Quote** (RO-QQ-YYYY-NNNN) — fast informal quote
-
-## ESTIMATE STATUS FLOW
-draft -> sent -> viewed -> accepted (DONE)
-                       -> declined
-                       -> expired
-Any non-draft status -> revised (creates new revision: RO-EST-2026-001-R1)
-
-## DIVISIONS (19 options)
-General Construction, Roofing, Electrical, Plumbing, HVAC, Painting, Flooring, Concrete, Framing, Demolition, Landscaping, Fencing, Windows & Doors, Siding, Insulation, Drywall, Cabinet & Countertop, Tile & Stone, Other
-
-## CONSTRUCTION KNOWLEDGE (SC)
-- **Building codes:** 2021 IBC/IRC (adopted by SC in 2023)
-- **Energy code:** IECC 2021
-- **Mechanic's lien:** SC Code 29-5-10, must file within 90 days of last work
-- **Residential contractor license:** SC LLR, requires passing exam + insurance
-- **Wind load:** varies by region, coastal SC up to 150 mph design wind speed
-- **Seismic:** SC is Seismic Design Category B-D depending on location
-
-## COMMON CONVERSIONS
-- 1 cubic yard = 27 cubic feet, covers 81 sqft at 4" depth
-- 1 roofing square = 100 sqft
-- Rebar: #3=3/8", #4=1/2", #5=5/8", #6=3/4", #7=7/8", #8=1"
-- Stud spacing: 16" OC residential, 12" OC load-bearing/engineered
-- Board foot = 1" x 12" x 12" (144 cubic inches)
-- 1 ton HVAC = 12,000 BTU/hr
-- Paint coverage: ~350 sqft/gallon (1 coat)
-
-## SC MARKET PRICING (2025-2026 range)
-- **Concrete flatwork 4":** $6-10/sqft installed
-- **Framing (wood):** $8-16/sqft
-- **Roofing (shingles):** $4-7/sqft | Metal standing seam: $8-14/sqft
-- **Plumbing rough-in:** $800-1,500/fixture
-- **HVAC system:** $3,000-5,000/ton installed
-- **Electrical rough-in:** $150-300/outlet+switch
-- **Drywall (hung+finished):** $3-5/sqft
-- **Interior paint:** $2-4/sqft | Exterior: $3-6/sqft
-- **LVP flooring:** $5-9/sqft installed
-- **Hardwood flooring:** $8-15/sqft installed
-- **Tile:** $8-20/sqft installed
-- **Cabinets (mid-range):** $150-350/linear foot
-- **Concrete foundation:** $8-15/sqft
-- **Excavation:** $3-8/cuyd
-- **Demolition (interior):** $4-10/sqft
-- **Insulation (spray foam):** $1.50-3.50/sqft
-- **Windows (installed):** $400-1,200 each
-- **Siding (vinyl):** $4-8/sqft | Hardie: $8-14/sqft
-
-## TOOLS AVAILABLE
-You have READ tools (search data, never guess) and WRITE tools (create/update records, send emails, navigate). USE THEM. Do not guess at data.
-
-**Write tool capabilities:**
-- Create and update customers
-- Create and update estimates (with auto-numbering)
-- Add line items to estimates (with auto-total calculation)
-- Change estimate status (with validation)
-- Send estimates via email (with PDF attachment)
-- Generate share links
-- Create revisions/duplicates
-- Run pricing validation checks
-- Compose and send general emails
-- Search templates and disclaimers
-- Navigate the user to any page
+## SC CODES
+IBC/IRC 2021 (adopted 2023). Lien: SC 29-5-10, 90 days. 1 cuyd=27cuft=81sqft@4". 1 roofing sq=100sqft. 1 ton HVAC=12000 BTU/hr.
 `;
 
 // ═══════════════════════════════════════════
@@ -1289,15 +961,25 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const fullPrompt = SYSTEM_PROMPT + (contextParts.length ? '\n' + contextParts.join('\n') : '');
+    // Build system prompt: static part (cached) + dynamic context (not cached)
+    const dynamicContext = contextParts.length ? '\n' + contextParts.join('\n') : '';
     const preferClaude = useModel !== 'groq' && !!claudeKey;
     let content = '';
     const actions: { type: string; path: string; description: string }[] = [];
 
-    // ── Claude with tool_use ──
+    // ── Claude with tool_use + prompt caching + deferred tool loading ──
     if (preferClaude) {
       try {
         const apiMessages = messages.map((m: any) => ({ role: m.role, content: m.content }));
+
+        // System prompt uses cache_control for 1-hour caching.
+        // Static prompt is cached; dynamic context is appended without caching.
+        const systemBlocks: any[] = [
+          { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+        ];
+        if (dynamicContext) {
+          systemBlocks.push({ type: 'text', text: dynamicContext });
+        }
 
         let claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
@@ -1305,7 +987,7 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
             max_tokens: 4000,
-            system: fullPrompt,
+            system: systemBlocks,
             messages: apiMessages,
             tools: TOOLS,
           }),
@@ -1335,14 +1017,14 @@ export async function POST(req: NextRequest) {
               });
             }
 
-            // Continue conversation with tool results
+            // Continue conversation with tool results (same caching + deferred tools)
             claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
               method: 'POST',
               headers: { 'x-api-key': claudeKey!, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 model: 'claude-haiku-4-5-20251001',
                 max_tokens: 4000,
-                system: fullPrompt,
+                system: systemBlocks,
                 messages: [
                   ...apiMessages,
                   { role: 'assistant', content: assistantContent },
