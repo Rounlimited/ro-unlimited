@@ -74,6 +74,33 @@ export default function WizardStep8({
     window.location.href = `/admin/estimates/${estimateId}/preview`;
   };
 
+  // iOS-safe clipboard copy — falls back to execCommand for Safari/iOS Chrome
+  const copyToClipboard = (text: string): boolean => {
+    // Try modern API first
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+      // Also do fallback because iOS may silently fail the above
+    }
+    // Fallback: textarea + execCommand (works on iOS)
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '-9999px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleCopyLink = async () => {
     setCopyingLink(true);
     try {
@@ -83,7 +110,7 @@ export default function WizardStep8({
       const res = await fetch(`/api/admin/estimates/${estimateId}/share-link`, { method: 'POST' });
       const data = await res.json();
       if (data?.link) {
-        await navigator.clipboard.writeText(data.link);
+        copyToClipboard(data.link);
         setLinkCopied(true);
         setTimeout(() => setLinkCopied(false), 3000);
       }
