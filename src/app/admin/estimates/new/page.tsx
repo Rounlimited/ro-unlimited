@@ -923,7 +923,12 @@ export default function NewEstimateWizard() {
 
           {currentStep < 8 ? (
             <div className="flex flex-col items-end gap-1">
-              {currentStep === 1 && !canProceed(1) && (
+              {error && (
+                <span className="text-[12px] text-red-400 bg-red-500/10 px-2 py-1 rounded max-w-[250px] text-right">
+                  {error}
+                </span>
+              )}
+              {currentStep === 1 && !canProceed(1) && !error && (
                 <span className="text-[12px] text-red-400/70">
                   Missing: {[
                     !step1.customer_id && 'Customer',
