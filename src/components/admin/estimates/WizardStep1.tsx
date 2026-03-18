@@ -172,7 +172,7 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
       </div>
 
       {/* Customer Selection */}
-      <div>
+      <div data-field="customer_id">
         <label className={labelClass}>Customer *</label>
         {selectedCustomer ? (
           <div className="flex items-center gap-3 bg-[#1a1a1a] border border-[#C9A84C]/30 rounded-lg p-3">
@@ -321,7 +321,7 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
 
       {/* Project Type & Estimate Type */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div>
+        <div data-field="division">
           <label className={labelClass}>Division *</label>
           <div className="relative">
             <select
@@ -368,7 +368,7 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
             />
           )}
         </div>
-        <div>
+        <div data-field="estimate_type">
           <label className={labelClass}>Estimate Type *</label>
           <select
             value={data.estimate_type}
@@ -399,7 +399,7 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
       </div>
 
       {/* Project Name */}
-      <div>
+      <div data-field="project_name">
         <label className={labelClass}>Project Name *</label>
         <input
           value={data.project_name}

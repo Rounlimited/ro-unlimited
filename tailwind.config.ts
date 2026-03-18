@@ -41,6 +41,11 @@ const config: Config = {
           '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
         },
         progressFill: { '0%': { width: '0%' }, '100%': { width: '100%' } },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-4px)' },
+          '20%, 40%, 60%, 80%': { transform: 'translateX(4px)' },
+        },
       },
       animation: {
         'crane-swing': 'craneSwing 4s ease-in-out infinite',
@@ -48,6 +53,7 @@ const config: Config = {
         'wall-rise': 'wallRise 1s cubic-bezier(0.22,1,0.36,1) forwards',
         'bolt-in': 'boltIn 0.6s cubic-bezier(0.68,-0.55,0.265,1.55) forwards',
         'progress-fill': 'progressFill 2s ease-out forwards',
+        'shake': 'shake 0.5s ease-in-out',
       },
     },
   },

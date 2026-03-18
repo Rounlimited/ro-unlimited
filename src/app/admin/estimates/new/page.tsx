@@ -396,8 +396,58 @@ export default function NewEstimateWizard() {
     }
   };
 
+  /** Returns the first missing required field name for scroll targeting */
+  const getFirstMissingField = (step: number): string | null => {
+    if (step === 1) {
+      if (!step1.customer_id) return 'customer_id';
+      if (!step1.division) return 'division';
+      if (!step1.estimate_type) return 'estimate_type';
+      if (!step1.project_name) return 'project_name';
+    }
+    return null;
+  };
+
+  /** Scroll to and highlight the first missing required field */
+  const highlightMissingField = (fieldName: string) => {
+    const el = document.querySelector(`[data-field="${fieldName}"]`);
+    if (!el) return;
+
+    // Scroll into view smoothly
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Find the input/select inside and highlight it
+    const input = el.querySelector('input, select') as HTMLElement | null;
+    const target = input || el;
+
+    // Add red border + shake
+    target.classList.add('ring-2', 'ring-red-500', 'ring-offset-1', 'ring-offset-transparent');
+    el.classList.add('animate-shake');
+
+    // Also flash the label
+    const label = el.querySelector('label');
+    if (label) {
+      label.classList.add('text-red-400');
+      setTimeout(() => label.classList.remove('text-red-400'), 3000);
+    }
+
+    // Focus the input if it exists
+    if (input && 'focus' in input) {
+      setTimeout(() => (input as HTMLElement).focus(), 400);
+    }
+
+    // Remove highlight after 3 seconds
+    setTimeout(() => {
+      target.classList.remove('ring-2', 'ring-red-500', 'ring-offset-1', 'ring-offset-transparent');
+      el.classList.remove('animate-shake');
+    }, 3000);
+  };
+
   const handleNext = async () => {
-    if (!canProceed(currentStep)) return;
+    if (!canProceed(currentStep)) {
+      const missing = getFirstMissingField(currentStep);
+      if (missing) highlightMissingField(missing);
+      return;
+    }
     setSaving(true);
     setError('');
 
