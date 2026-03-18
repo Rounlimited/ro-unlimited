@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff } from 'lucide-react';
 
 interface Message { role: 'user' | 'assistant'; content: string; }
 interface Conversation { id: string; title: string; summary: string | null; token_estimate: number; compacted: boolean; created_at: string; updated_at: string; }
@@ -31,6 +31,33 @@ export default function AiChatBubble() {
   const [showHistory, setShowHistory] = useState(false);
   const [tokenEstimate, setTokenEstimate] = useState(0);
   const [compacting, setCompacting] = useState(false);
+
+  // Voice input
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  const toggleVoice = () => {
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) { setToast('Voice input not supported in this browser'); return; }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results).map((r: any) => r[0].transcript).join('');
+      setInput(transcript);
+    };
+    recognition.onend = () => { setListening(false); };
+    recognition.onerror = () => { setListening(false); };
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
+  };
 
   // Floating window drag state
   const [floatPos, setFloatPos] = useState<{ x: number; y: number }>(() => {
@@ -544,10 +571,17 @@ export default function AiChatBubble() {
           <div className="flex gap-2">
             <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-              placeholder="Ask anything..." disabled={loading}
-              className={`flex-1 bg-[#1a1a1a] border border-white/10 rounded-xl px-3 text-white placeholder-white/25 focus:outline-none focus:border-[#C9A84C]/50 transition-colors ${
-                isFloating ? 'py-2 text-[13px]' : isFullscreen ? 'py-3 text-[16px] px-4' : 'py-3 text-[15px] px-4'
-              }`} />
+              placeholder={listening ? 'Listening...' : 'Ask anything...'} disabled={loading}
+              className={`flex-1 bg-[#1a1a1a] border rounded-xl px-3 text-white placeholder-white/25 focus:outline-none transition-colors ${
+                listening ? 'border-red-500/50 bg-red-500/5' : 'border-white/10 focus:border-[#C9A84C]/50'
+              } ${isFloating ? 'py-2 text-[13px]' : isFullscreen ? 'py-3 text-[16px] px-4' : 'py-3 text-[15px] px-4'}`} />
+            <button onClick={toggleVoice} disabled={loading}
+              className={`rounded-xl transition-colors flex-shrink-0 ${
+                listening ? 'bg-red-500 text-white animate-pulse' : 'bg-white/5 text-white/40 hover:text-[#C9A84C] hover:bg-white/10'
+              } ${isFloating ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}
+              title={listening ? 'Stop listening' : 'Voice input'}>
+              {listening ? <MicOff size={isFloating ? 12 : 16} /> : <Mic size={isFloating ? 12 : 16} />}
+            </button>
             <button onClick={sendMessage} disabled={loading || !input.trim()}
               className={`bg-[#C9A84C] text-black rounded-xl hover:bg-[#C9A84C]/90 transition-colors disabled:opacity-30 flex-shrink-0 ${
                 isFloating ? 'px-2.5 py-2' : 'px-3.5 py-2.5'
