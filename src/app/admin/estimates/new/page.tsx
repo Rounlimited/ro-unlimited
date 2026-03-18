@@ -922,23 +922,35 @@ export default function NewEstimateWizard() {
           </button>
 
           {currentStep < 8 ? (
-            <button
-              onClick={handleNext}
-              disabled={saving || !canProceed(currentStep)}
-              className="flex items-center gap-2 px-6 py-3 bg-[#C9A84C] text-black text-[15px] font-semibold rounded-xl hover:bg-[#C9A84C]/90 transition-colors disabled:opacity-40"
-            >
-              {saving ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  Next
-                  <ChevronRight size={18} />
-                </>
+            <div className="flex flex-col items-end gap-1">
+              {currentStep === 1 && !canProceed(1) && (
+                <span className="text-[12px] text-red-400/70">
+                  Missing: {[
+                    !step1.customer_id && 'Customer',
+                    !step1.division && 'Division',
+                    !step1.estimate_type && 'Estimate Type',
+                    !step1.project_name && 'Project Name',
+                  ].filter(Boolean).join(', ')}
+                </span>
               )}
-            </button>
+              <button
+                onClick={handleNext}
+                disabled={saving || !canProceed(currentStep)}
+                className="flex items-center gap-2 px-6 py-3 bg-[#C9A84C] text-black text-[15px] font-semibold rounded-xl hover:bg-[#C9A84C]/90 transition-colors disabled:opacity-40"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Next
+                    <ChevronRight size={18} />
+                  </>
+                )}
+              </button>
+            </div>
           ) : (
             <div /> // Step 8 has its own action buttons
           )}
