@@ -311,9 +311,7 @@ export default function AiChatBubble() {
   };
 
   if (pathname === '/admin/login') return null;
-  // Hide bubble on estimate wizard to avoid blocking Next button — AI still accessible from menu
-  const onEstimateWizard = pathname?.includes('/estimates/new') || pathname?.match(/\/estimates\/[a-f0-9-]{36}$/);
-  if (!open && onEstimateWizard) return null;
+  const onEstimateWizard = !!(pathname?.includes('/estimates/new') || pathname?.match(/\/estimates\/[a-f0-9-]{36}$/));
 
   // ── Toast notification ──
   const ToastNotification = () => {
@@ -326,16 +324,28 @@ export default function AiChatBubble() {
     );
   };
 
-  // ── Bubble (closed) ──
+  // ── Pull-tab (closed) — always docked to right edge ──
   if (!open) {
     return (
       <>
         <ToastNotification />
         <button onClick={() => { setOpen(true); setDisplayMode('full'); }}
-          className="fixed bottom-20 right-4 z-[90] w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-90 hover:scale-105"
-          style={{ background: 'linear-gradient(135deg, #C9A84C, #D4772C)', boxShadow: '0 4px 24px rgba(201,168,76,0.4)' }}>
-          <Sparkles size={24} className="text-black" />
-          {unread > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center">{unread}</span>}
+          className="fixed bottom-28 right-0 z-[90] group transition-all active:scale-95"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
+          <div className="flex items-center">
+            {/* Pull tab */}
+            <div className="w-8 h-16 rounded-l-xl flex items-center justify-center relative overflow-hidden"
+              style={{ background: 'linear-gradient(180deg, #2a6aaa, #3b8dd4)', boxShadow: '-3px 0 16px rgba(59,141,212,0.4)' }}>
+              <Sparkles size={16} className="text-black group-hover:scale-110 transition-transform" />
+              {/* Subtle pulse animation */}
+              <div className="absolute inset-0 bg-white/10 animate-pulse" style={{ animationDuration: '3s' }} />
+            </div>
+          </div>
+          {unread > 0 && (
+            <span className="absolute -top-2 -left-2 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg">
+              {unread}
+            </span>
+          )}
         </button>
       </>
     );
