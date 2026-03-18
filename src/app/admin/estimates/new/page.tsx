@@ -935,8 +935,12 @@ export default function NewEstimateWizard() {
               )}
               <button
                 onClick={handleNext}
-                disabled={saving || !canProceed(currentStep)}
-                className="flex items-center gap-2 px-6 py-3 bg-[#C9A84C] text-black text-[15px] font-semibold rounded-xl hover:bg-[#C9A84C]/90 transition-colors disabled:opacity-40"
+                disabled={saving}
+                className={`flex items-center gap-2 px-6 py-3 text-[15px] font-semibold rounded-xl transition-colors disabled:opacity-40 ${
+                  canProceed(currentStep)
+                    ? 'bg-[#C9A84C] text-black hover:bg-[#C9A84C]/90'
+                    : 'bg-[#C9A84C]/50 text-black/60'
+                }`}
               >
                 {saving ? (
                   <>
