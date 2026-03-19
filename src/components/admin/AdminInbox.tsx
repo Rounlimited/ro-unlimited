@@ -658,6 +658,26 @@ export default function AdminInbox() {
           <button className="w-full flex items-center gap-4 px-4 py-3.5 rounded-full text-[16px] font-medium text-white/50 hover:bg-white/5">
             <Users size={22} /> <span className="flex-1 text-left">Contacts</span>
           </button>
+          {folder === "trash" && (folderCounts.trash || 0) > 0 && (
+            <>
+              <div className="h-px bg-white/5 my-3 mx-4" />
+              <button onClick={async () => {
+                if (!confirm('Permanently delete all emails in trash?')) return;
+                const trashThreads = threads.map(t => t.thread_id);
+                if (trashThreads.length) {
+                  await fetch("/api/email/threads", {
+                    method: "DELETE", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ thread_ids: trashThreads, account: activeAccount?.email }),
+                  });
+                  showToast("Trash emptied");
+                  setSidebarOpen(false);
+                  fetchThreads();
+                }
+              }} className="w-full flex items-center gap-4 px-4 py-3.5 rounded-full text-[16px] font-medium text-red-400 hover:bg-red-500/10">
+                <Trash2 size={22} /> <span className="flex-1 text-left">Empty Trash</span>
+              </button>
+            </>
+          )}
         </nav>
       </div>
       <style>{`@keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }`}</style>
@@ -677,7 +697,17 @@ export default function AdminInbox() {
           <button onClick={exitSelectMode} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
             <X size={22} />
           </button>
-          <span className="text-[16px] font-semibold text-white flex-1">{selectedIds.size} selected</span>
+          <span className="text-[16px] font-semibold text-white">{selectedIds.size} selected</span>
+          <button onClick={() => {
+            if (selectedIds.size === filtered.length) {
+              setSelectedIds(new Set());
+            } else {
+              setSelectedIds(new Set(filtered.map(t => t.thread_id)));
+            }
+          }} className="px-2.5 py-1 rounded-lg text-[12px] font-medium text-white/40 border border-white/10 hover:text-white hover:bg-white/5 ml-1" title="Select all">
+            {selectedIds.size === filtered.length ? 'None' : 'All'}
+          </button>
+          <div className="flex-1" />
           <button onClick={() => batchAction("mark_read")} className="p-2 rounded-full text-white/40 hover:text-[#3b8dd4] hover:bg-white/5" title="Mark read">
             <MailOpen size={20} />
           </button>
@@ -744,17 +774,19 @@ export default function AdminInbox() {
               onClick={() => handleThreadClick(thread)}
               className={`w-full flex items-start gap-3 px-5 py-4 text-left transition-colors active:bg-white/[0.03] ${thread.unread_count > 0 ? "bg-[#C9A84C]/[0.02]" : ""} ${isSelected ? "bg-[#C9A84C]/[0.08]" : ""}`}>
               {/* Avatar or checkbox in select mode */}
-              {selectMode ? (
-                <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 mt-0.5 border-2 transition-colors"
-                  style={isSelected ? { borderColor: "#C9A84C", backgroundColor: "#C9A84C20" } : { borderColor: "rgba(255,255,255,0.15)", backgroundColor: "transparent" }}>
-                  {isSelected ? <Check size={20} className="text-[#C9A84C]" /> : <span className="w-5 h-5" />}
-                </div>
-              ) : (
-                <div className="w-11 h-11 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0 mt-0.5"
-                  style={{ backgroundColor: avatarColor(senderEmail) + "25", color: avatarColor(senderEmail) }}>
-                  {getInitial(senderName)}
-                </div>
-              )}
+              {/* Avatar — tap to enter select mode / toggle selection */}
+              <div onClick={e => { e.stopPropagation(); if (selectMode) { setSelectedIds(prev => { const n = new Set(prev); n.has(thread.thread_id) ? n.delete(thread.thread_id) : n.add(thread.thread_id); return n; }); } else { enterSelectMode(thread.thread_id); } }}
+                className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 mt-0.5 transition-all"
+                style={isSelected
+                  ? { border: '2px solid #C9A84C', backgroundColor: '#C9A84C20' }
+                  : selectMode
+                    ? { border: '2px solid rgba(255,255,255,0.15)', backgroundColor: 'transparent' }
+                    : { backgroundColor: avatarColor(senderEmail) + '25', color: avatarColor(senderEmail) }
+                }>
+                {isSelected ? <Check size={20} className="text-[#C9A84C]" />
+                  : selectMode ? <span className="w-5 h-5" />
+                  : <span className="text-[15px] font-bold">{getInitial(senderName)}</span>}
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className={`text-[16px] truncate ${thread.unread_count > 0 ? "font-bold text-white" : "font-medium text-white/60"}`}>

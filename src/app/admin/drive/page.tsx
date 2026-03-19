@@ -89,8 +89,8 @@ export default function DrivePage() {
 
   useEffect(() => { if (userEmail) fetchFiles(); }, [userEmail, search]);
 
-  // Get unique folders
-  const folders = [...new Set(files.map(f => f.folder))].sort();
+  // Get unique folders (from files + custom created folders)
+  const folders = [...new Set([...files.map(f => f.folder), ...customFolders])].sort();
   const folderFiles = files.filter(f => currentFolder === 'all' ? true : f.folder === currentFolder);
 
   // Upload
@@ -171,12 +171,16 @@ export default function DrivePage() {
     fetchFiles();
   };
 
-  // Create folder
+  // Create folder — add to a local list so it shows immediately even when empty
+  const [customFolders, setCustomFolders] = useState<string[]>([]);
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) return;
-    setCurrentFolder(newFolderName.trim().toLowerCase().replace(/\s+/g, '-'));
+    const name = newFolderName.trim().toLowerCase().replace(/\s+/g, '-');
+    setCustomFolders(prev => prev.includes(name) ? prev : [...prev, name]);
+    setCurrentFolder(name);
     setShowNewFolder(false);
     setNewFolderName('');
+    setToast(`Folder "${name}" created`);
   };
 
   const showToastMsg = (msg: string) => {
