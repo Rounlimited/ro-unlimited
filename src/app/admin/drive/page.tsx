@@ -314,7 +314,8 @@ export default function DrivePage() {
           } else { uploaded++; }
         }
       } catch (err) {
-        setToast(`Upload failed: ${file.name}`);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        setToast(`Upload failed: ${file.name} — ${errMsg}`);
       }
     }
     setUploading(false);
