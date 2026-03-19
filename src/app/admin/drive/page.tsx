@@ -74,10 +74,35 @@ export default function DrivePage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const docsInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
+
+  // Persist upload handler in a ref so it survives re-renders
+  const handleUploadRef = useRef<(files: FileList) => void>();
 
   useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); } }, [toast]);
   useEffect(() => { localStorage.setItem('ro_drive_view', viewMode); }, [viewMode]);
+
+  // Attach change listeners via DOM (survives Android app-switch re-mounts)
+  useEffect(() => {
+    const mediaInput = document.getElementById('ro-drive-media-input') as HTMLInputElement;
+    const docsInput = document.getElementById('ro-drive-docs-input') as HTMLInputElement;
+
+    const handler = (e: Event) => {
+      const input = e.target as HTMLInputElement;
+      if (input.files?.length && handleUploadRef.current) {
+        handleUploadRef.current(input.files);
+        input.value = '';
+      }
+    };
+
+    mediaInput?.addEventListener('change', handler);
+    docsInput?.addEventListener('change', handler);
+    return () => {
+      mediaInput?.removeEventListener('change', handler);
+      docsInput?.removeEventListener('change', handler);
+    };
+  }, []);
 
   // Get user email
   useEffect(() => {
@@ -199,8 +224,7 @@ export default function DrivePage() {
   };
 
   // ── Upload ──
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = e.target.files;
+  const doUpload = async (fileList: FileList) => {
     if (!fileList?.length || !userEmail) return;
     setUploading(true);
     let uploaded = 0;
@@ -219,7 +243,15 @@ export default function DrivePage() {
     setUploading(false);
     setUploadProgress('');
     if (uploaded > 0) { setToast(`${uploaded} file${uploaded > 1 ? 's' : ''} uploaded`); fetchFiles(); }
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Keep the ref updated so the DOM listener always calls the latest version
+  handleUploadRef.current = doUpload;
+
+  // Legacy handler for React onChange (backup)
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.length) doUpload(e.target.files);
+    e.target.value = '';
   };
 
   // ── Get file URL from Telegram ──
@@ -326,10 +358,10 @@ export default function DrivePage() {
 
   return (
     <AuthGuard>
-      {/* Hidden file inputs — at top level so they survive re-renders */}
-      <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,audio/*" onChange={handleUpload}
+      {/* File inputs — IDs for DOM listeners that survive Android app-switch */}
+      <input id="ro-drive-media-input" ref={fileInputRef} type="file" multiple accept="image/*,video/*,audio/*" onChange={handleUpload}
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
-      <input id="fileDocsInput" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.ppt,.pptx,.eps,.ai,.psd,.svg" onChange={handleUpload}
+      <input id="ro-drive-docs-input" ref={docsInputRef} type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.ppt,.pptx,.eps,.ai,.psd,.svg" onChange={handleUpload}
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
       <div className="min-h-screen bg-[#0a0a0a]">
         {/* ── Header ── */}
@@ -522,11 +554,11 @@ export default function DrivePage() {
               className="w-12 h-12 bg-[#1a1a1a] border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
               <FolderPlus size={20} />
             </button>
-            <button onClick={() => document.getElementById('fileDocsInput')?.click()} disabled={uploading}
+            <button onClick={() => document.getElementById('ro-drive-docs-input')?.click()} disabled={uploading}
               className={`flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors ${uploading ? 'opacity-50' : ''}`}>
               <FileIcon size={16} /> Files
             </button>
-            <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+            <button onClick={() => document.getElementById('ro-drive-media-input')?.click()} disabled={uploading}
               className={`flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors ${uploading ? 'opacity-50' : ''}`}>
               <Image size={18} /> Media
             </button>
