@@ -414,7 +414,10 @@ export default function DrivePage() {
                             <p className="text-[15px] text-white font-medium truncate capitalize">{sf.name.replace(/-/g, ' ')}</p>
                             <p className="text-[12px] text-white/25">{sf.fileCount} item{sf.fileCount !== 1 ? 's' : ''} &middot; {formatSize(sf.totalSize)}</p>
                           </div>
-                          <ChevronRight size={18} className="text-white/10 shrink-0" />
+                          <button onClick={e => openFolderMenu(sf.path, sf.name, e)}
+                            className="p-1.5 rounded-full text-white/25 hover:text-white/50 hover:bg-white/5 shrink-0">
+                            <MoreVertical size={18} />
+                          </button>
                         </button>
                       ))}
                     </div>
@@ -482,9 +485,14 @@ export default function DrivePage() {
               className="w-12 h-12 bg-[#1a1a1a] border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
               <FolderPlus size={20} />
             </button>
+            <label className={`relative flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors cursor-pointer overflow-hidden ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+              <FileIcon size={16} /> Files
+              <input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.ppt,.pptx" onChange={handleUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" style={{ fontSize: '100px' }} />
+            </label>
             <label className={`relative flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors cursor-pointer overflow-hidden ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-              <Upload size={18} /> Upload
-              <input ref={fileInputRef} type="file" multiple onChange={handleUpload}
+              <Upload size={18} /> Media
+              <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,audio/*" onChange={handleUpload}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" style={{ fontSize: '100px' }} />
             </label>
           </div>
