@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   Upload, FolderPlus, Search, Trash2, Download, File, Image, Film,
   FileText, Music, Archive, MoreVertical, X, Loader2, ChevronLeft,
-  HardDrive, FolderOpen, Eye, Pencil, FolderInput,
+  HardDrive, FolderOpen, Eye, Pencil, FolderInput, Share2, Link2, Copy, Check,
 } from 'lucide-react';
 
 interface UserFile {
@@ -290,6 +290,38 @@ export default function DrivePage() {
                         <button onClick={() => handleDownload(file)}
                           className="w-full flex items-center gap-2 px-4 py-2.5 text-[14px] text-white/70 hover:bg-white/5">
                           <Download size={16} /> Download
+                        </button>
+                        <button onClick={async () => {
+                          const res = await fetch('/api/admin/drive', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'share', file_id: file.id, permission: 'read', user_email: userEmail }),
+                          });
+                          const data = await res.json();
+                          if (data.link) {
+                            try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
+                            try { await navigator.clipboard.writeText(data.link); } catch {}
+                            setToast('View-only link copied!');
+                          }
+                          setMenuOpen(null);
+                        }}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-[14px] text-[#3b8dd4] hover:bg-[#3b8dd4]/10">
+                          <Eye size={16} /> Share (View Only)
+                        </button>
+                        <button onClick={async () => {
+                          const res = await fetch('/api/admin/drive', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'share', file_id: file.id, permission: 'readwrite', user_email: userEmail }),
+                          });
+                          const data = await res.json();
+                          if (data.link) {
+                            try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
+                            try { await navigator.clipboard.writeText(data.link); } catch {}
+                            setToast('Full access link copied!');
+                          }
+                          setMenuOpen(null);
+                        }}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-[14px] text-[#C9A84C] hover:bg-[#C9A84C]/10">
+                          <Share2 size={16} /> Share (Full Access)
                         </button>
                         <button onClick={() => {
                           const folder = prompt('Move to folder:', file.folder);

@@ -89,8 +89,48 @@ export async function POST(req: NextRequest) {
     }
 
     if (body.action === 'create_folder') {
-      // Folders are virtual — just a string in the folder column
       return NextResponse.json({ success: true, folder: body.folder });
+    }
+
+    if (body.action === 'share') {
+      const { file_id, permission, user_email } = body;
+      if (!file_id || !user_email) return NextResponse.json({ error: 'file_id and user_email required' }, { status: 400 });
+      const crypto = await import('crypto');
+      const token = crypto.randomBytes(24).toString('hex');
+      const expires = new Date();
+      expires.setDate(expires.getDate() + 30); // 30-day expiry
+
+      const { data, error } = await supabase.from('file_shares').insert({
+        file_id,
+        token,
+        permission: permission || 'read',
+        created_by: user_email,
+        expires_at: expires.toISOString(),
+      }).select().single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+      return NextResponse.json({
+        share: data,
+        link: `${baseUrl}/shared/${token}`,
+      });
+    }
+
+    if (body.action === 'list_shares') {
+      const { file_id } = body;
+      if (!file_id) return NextResponse.json({ error: 'file_id required' }, { status: 400 });
+      const { data } = await supabase.from('file_shares').select('*').eq('file_id', file_id).order('created_at', { ascending: false });
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+      return NextResponse.json({
+        shares: (data || []).map(s => ({ ...s, link: `${baseUrl}/shared/${s.token}` })),
+      });
+    }
+
+    if (body.action === 'delete_share') {
+      const { share_id } = body;
+      if (!share_id) return NextResponse.json({ error: 'share_id required' }, { status: 400 });
+      await supabase.from('file_shares').delete().eq('id', share_id);
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
