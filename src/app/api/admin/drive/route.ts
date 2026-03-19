@@ -277,4 +277,4 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ file: record });
 }
-// storage.rounlimited.com
+// upload.rounlimited.com — direct HTTPS, no Cloudflare limit
