@@ -101,6 +101,22 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient();
 
+    // Check if to_email matches a configured email account — spam if not
+    const { data: knownAccounts } = await supabase
+      .from('email_accounts')
+      .select('email')
+      .eq('active', true);
+    const knownEmails = (knownAccounts || []).map(a => a.email.toLowerCase());
+    const isKnownRecipient = knownEmails.length === 0 || knownEmails.includes(to_email);
+
+    // Auto-purge spam older than 90 days
+    if (isKnownRecipient === false) {
+      try {
+        const cutoff = new Date(Date.now() - 90 * 86400000).toISOString();
+        await supabase.from('email_messages').delete().eq('folder', 'spam').lt('created_at', cutoff);
+      } catch { /* non-critical */ }
+    }
+
     // Try to find existing thread via In-Reply-To
     let threadId: string | undefined;
     if (in_reply_to) {
@@ -130,6 +146,8 @@ export async function POST(req: NextRequest) {
       body_html: body_html ?? undefined,
       body_text: body_text ?? undefined,
       has_attachments: attachmentsMeta.length > 0,
+      folder: isKnownRecipient ? 'inbox' : 'spam',
+      read: isKnownRecipient ? false : true,
     });
 
     // Process attachments — download from Resend, upload to Sanity, save to DB
@@ -169,8 +187,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Send push notification for new email
-    try {
+    // Send push notification for new email (skip spam)
+    if (isKnownRecipient) try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
       await fetch(`${siteUrl}/api/admin/push-send`, {
         method: 'POST',
