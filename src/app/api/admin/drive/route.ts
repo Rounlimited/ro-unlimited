@@ -103,6 +103,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, folder: data });
     }
 
+    if (body.action === 'share_folder') {
+      const { folder_path, permission, user_email } = body;
+      if (!folder_path || !user_email) return NextResponse.json({ error: 'folder_path and user_email required' }, { status: 400 });
+      const crypto = await import('crypto');
+      const token = crypto.randomBytes(24).toString('hex');
+      const expires = new Date();
+      expires.setDate(expires.getDate() + 30);
+      const { data, error } = await supabase.from('folder_shares').insert({
+        folder_path, user_email, token,
+        permission: permission || 'read',
+        expires_at: expires.toISOString(),
+      }).select().single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+      return NextResponse.json({ share: data, link: `${baseUrl}/shared/folder/${token}` });
+    }
+
     if (body.action === 'delete_folder') {
       const { path, user_email } = body;
       if (!path || !user_email) return NextResponse.json({ error: 'path and user_email required' }, { status: 400 });

@@ -638,9 +638,41 @@ export default function DrivePage() {
                 <p className="text-[15px] text-white font-medium capitalize">{menuTarget.replace(/-/g, ' ')}</p>
                 <p className="text-[12px] text-white/30">Folder</p>
               </div>
-              <button onClick={() => navigateToFolder(menuOpen!)}
+              <button onClick={() => { navigateToFolder(menuOpen!); setMenuOpen(null); }}
                 className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-white/70 hover:bg-white/5">
                 <FolderOpen size={20} /> Open
+              </button>
+              <button onClick={async () => {
+                const res = await fetch('/api/admin/drive', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'share_folder', folder_path: menuOpen, permission: 'read', user_email: userEmail }),
+                });
+                const data = await res.json();
+                if (data.link) {
+                  try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
+                  try { await navigator.clipboard.writeText(data.link); } catch {}
+                  setToast('View-only folder link copied!');
+                }
+                setMenuOpen(null);
+              }}
+                className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-[#3b8dd4] hover:bg-[#3b8dd4]/10">
+                <Eye size={20} /> Share Folder (View Only)
+              </button>
+              <button onClick={async () => {
+                const res = await fetch('/api/admin/drive', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'share_folder', folder_path: menuOpen, permission: 'readwrite', user_email: userEmail }),
+                });
+                const data = await res.json();
+                if (data.link) {
+                  try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
+                  try { await navigator.clipboard.writeText(data.link); } catch {}
+                  setToast('Full access folder link copied!');
+                }
+                setMenuOpen(null);
+              }}
+                className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-[#C9A84C] hover:bg-[#C9A84C]/10">
+                <Share2 size={20} /> Share Folder (Full Access)
               </button>
               <button onClick={() => handleDeleteFolder(menuOpen!, menuTarget)}
                 className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-red-400 hover:bg-red-500/10">
