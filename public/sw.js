@@ -25,10 +25,20 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: network-first for API/navigation, cache-first for static assets
+// Fetch handler
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // Handle Share Target — intercept POST to /admin/drive/upload
+  if (request.method === 'POST' && url.pathname === '/admin/drive/upload') {
+    event.respondWith((async () => {
+      const cache = await caches.open('ro-share-target');
+      await cache.put('shared-files', request.clone());
+      return Response.redirect('/admin/drive/upload', 303);
+    })());
+    return;
+  }
 
   // Skip non-GET and external requests
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
