@@ -58,6 +58,17 @@ export async function POST(req: NextRequest) {
     const expired = results.filter((r) => r.status === 'fulfilled' && r.value === 'expired').length;
     const failed = results.filter((r) => r.status === 'rejected').length;
 
+    // Log push notification delivery to activity table
+    try {
+      await supabase.from('user_activity').insert({
+        user_id: null,
+        user_email: 'system',
+        action: 'push_sent',
+        page: null,
+        details: { title, body, url, tag, sent, expired, failed, total: subs.length },
+      });
+    } catch { /* non-critical */ }
+
     return NextResponse.json({ sent, expired, failed });
   } catch (err) {
     console.error('[Push] Send error:', err);

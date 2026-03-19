@@ -8,6 +8,7 @@ import PWAInstall from '@/components/admin/PWAInstall';
 import OnboardingProvider, { useOnboarding } from '@/components/admin/OnboardingProvider';
 import WalkthroughTours from '@/components/admin/WalkthroughTours';
 import AiChatBubble from '@/components/admin/AiChatBubble';
+import ActivityTracker from '@/components/admin/ActivityTracker';
 
 function AdminContent({ children }: { children: React.ReactNode }) {
   const { onboarding, updateOnboarding } = useOnboarding();
@@ -26,6 +27,7 @@ function AdminContent({ children }: { children: React.ReactNode }) {
     <>
       <AppShell>{children}</AppShell>
       <AiChatBubble />
+      <ActivityTracker />
       <PWAInstall />
       <WalkthroughTours
         activeTour={activeTour}
