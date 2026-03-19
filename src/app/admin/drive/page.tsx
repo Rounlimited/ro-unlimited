@@ -74,7 +74,6 @@ export default function DrivePage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const docsInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
   // Persist upload handler in a ref so it survives re-renders
@@ -83,25 +82,18 @@ export default function DrivePage() {
   useEffect(() => { if (toast) { const delay = toast.toLowerCase().includes('fail') || toast.toLowerCase().includes('error') ? 8000 : 3000; const t = setTimeout(() => setToast(null), delay); return () => clearTimeout(t); } }, [toast]);
   useEffect(() => { localStorage.setItem('ro_drive_view', viewMode); }, [viewMode]);
 
-  // Attach change listeners via DOM (survives Android app-switch re-mounts)
+  // Attach change listener via DOM (survives Android app-switch re-mounts)
   useEffect(() => {
-    const mediaInput = document.getElementById('ro-drive-media-input') as HTMLInputElement;
-    const docsInput = document.getElementById('ro-drive-docs-input') as HTMLInputElement;
-
+    const input = document.getElementById('ro-drive-upload-input') as HTMLInputElement;
     const handler = (e: Event) => {
-      const input = e.target as HTMLInputElement;
-      if (input.files?.length && handleUploadRef.current) {
-        handleUploadRef.current(input.files);
-        input.value = '';
+      const el = e.target as HTMLInputElement;
+      if (el.files?.length && handleUploadRef.current) {
+        handleUploadRef.current(el.files);
+        el.value = '';
       }
     };
-
-    mediaInput?.addEventListener('change', handler);
-    docsInput?.addEventListener('change', handler);
-    return () => {
-      mediaInput?.removeEventListener('change', handler);
-      docsInput?.removeEventListener('change', handler);
-    };
+    input?.addEventListener('change', handler);
+    return () => { input?.removeEventListener('change', handler); };
   }, []);
 
   // Get user email
@@ -436,10 +428,8 @@ export default function DrivePage() {
 
   return (
     <AuthGuard>
-      {/* File inputs — IDs for DOM listeners that survive Android app-switch */}
-      <input id="ro-drive-media-input" ref={fileInputRef} type="file" multiple accept="image/*,video/*" onChange={handleUpload}
-        className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
-      <input id="ro-drive-docs-input" ref={docsInputRef} type="file" multiple accept="image/*,video/*,audio/*,application/*,text/*" onChange={handleUpload}
+      {/* Single file input — no accept filter, lets Android show its default picker */}
+      <input id="ro-drive-upload-input" ref={fileInputRef} type="file" multiple onChange={handleUpload}
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
       <div className="min-h-screen bg-[#0a0a0a]">
         {/* ── Header ── */}
@@ -636,13 +626,9 @@ export default function DrivePage() {
               className="w-12 h-12 bg-[#1a1a1a] border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
               <FolderPlus size={20} />
             </button>
-            <button onClick={() => document.getElementById('ro-drive-docs-input')?.click()} disabled={uploading}
-              className={`flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors ${uploading ? 'opacity-50' : ''}`}>
-              <Upload size={16} /> All Files
-            </button>
-            <button onClick={() => document.getElementById('ro-drive-media-input')?.click()} disabled={uploading}
-              className={`flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors ${uploading ? 'opacity-50' : ''}`}>
-              <Image size={18} /> Photos
+            <button onClick={() => document.getElementById('ro-drive-upload-input')?.click()} disabled={uploading}
+              className={`flex items-center gap-2 px-6 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors ${uploading ? 'opacity-50' : ''}`}>
+              <Upload size={18} /> Upload
             </button>
           </div>
         </div>
