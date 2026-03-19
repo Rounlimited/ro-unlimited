@@ -235,6 +235,7 @@ export default function AdminInbox() {
   // ── Dropdown menu state ──
   const [threadMenuOpen, setThreadMenuOpen] = useState(false);
   const [msgMenuOpenId, setMsgMenuOpenId] = useState<string | null>(null);
+  const [expandedMsgId, setExpandedMsgId] = useState<string | null>(null);
   const threadMenuRef = useRef<HTMLDivElement>(null);
   const msgMenuRef = useRef<HTMLDivElement>(null);
 
@@ -677,7 +678,45 @@ export default function AdminInbox() {
                     <span className="text-[16px] font-semibold text-white">{msg.from_email.split("@")[0]}</span>
                     <span className="text-[13px] text-white/30">{new Date(msg.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
                   </div>
-                  <p className="text-[13px] text-white/30">to {msg.direction === "outbound" ? msg.to_email : "me"} <ChevronDown size={10} className="inline" /></p>
+                  <button
+                    onClick={() => setExpandedMsgId(expandedMsgId === msg.id ? null : msg.id)}
+                    className="flex items-center gap-1 text-[13px] text-white/30 hover:text-white/50 transition-colors"
+                  >
+                    to {msg.direction === "outbound" ? msg.to_email : "me"}
+                    <ChevronDown size={10} className={`inline transition-transform ${expandedMsgId === msg.id ? "rotate-180" : ""}`} />
+                  </button>
+                  {expandedMsgId === msg.id && (
+                    <div className="mt-2 p-3 rounded-xl bg-white/[0.03] border border-white/5 text-[12px] space-y-1.5">
+                      <div className="flex gap-2">
+                        <span className="text-white/30 w-12 shrink-0">From</span>
+                        <span className="text-white/60">{msg.from_email}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="text-white/30 w-12 shrink-0">To</span>
+                        <span className="text-white/60">{msg.to_email}</span>
+                      </div>
+                      {msg.cc_emails?.length > 0 && (
+                        <div className="flex gap-2">
+                          <span className="text-white/30 w-12 shrink-0">CC</span>
+                          <span className="text-white/60">{msg.cc_emails.join(", ")}</span>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <span className="text-white/30 w-12 shrink-0">Date</span>
+                        <span className="text-white/60">
+                          {new Date(msg.created_at).toLocaleString("en-US", {
+                            timeZone: "America/New_York",
+                            weekday: "short", month: "short", day: "numeric", year: "numeric",
+                            hour: "numeric", minute: "2-digit", hour12: true,
+                          })} ET
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="text-white/30 w-12 shrink-0">Subject</span>
+                        <span className="text-white/60">{msg.subject}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <button onClick={() => startCompose("reply", msg)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5"><Reply size={20} /></button>
                 {/* Per-message three-dot menu */}
