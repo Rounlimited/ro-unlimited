@@ -9,6 +9,7 @@ import OnboardingProvider, { useOnboarding } from '@/components/admin/Onboarding
 import WalkthroughTours from '@/components/admin/WalkthroughTours';
 import AiChatBubble from '@/components/admin/AiChatBubble';
 import ActivityTracker from '@/components/admin/ActivityTracker';
+import UserPreferencesProvider from '@/components/admin/UserPreferencesProvider';
 
 function AdminContent({ children }: { children: React.ReactNode }) {
   const { onboarding, updateOnboarding } = useOnboarding();
@@ -60,9 +61,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AuthGuard>
-      <OnboardingProvider>
-        <AdminContent>{children}</AdminContent>
-      </OnboardingProvider>
+      <UserPreferencesProvider>
+        <OnboardingProvider>
+          <AdminContent>{children}</AdminContent>
+        </OnboardingProvider>
+      </UserPreferencesProvider>
     </AuthGuard>
   );
 }

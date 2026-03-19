@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { createClient } from '@/lib/supabase/client';
-import { UserPlus, Trash2, Copy, Check, Shield, User, Loader2, X, Clock, ShieldCheck, Link2, Share2, Zap, Mail, Plus, Edit3 } from 'lucide-react';
+import { UserPlus, Trash2, Copy, Check, Shield, User, Loader2, X, Clock, ShieldCheck, Link2, Share2, Zap, Mail, Plus, Edit3, Sun, Moon, Monitor } from 'lucide-react';
+import { usePreferences } from '@/components/admin/UserPreferencesProvider';
 
 interface AdminUser {
   id: string;
@@ -14,7 +15,19 @@ interface AdminUser {
   createdAt: string;
 }
 
+function ToggleSwitch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button onClick={() => onChange(!on)} className="flex items-center justify-between w-full py-3">
+      <span className="text-[14px] text-white/70">{label}</span>
+      <div className={`w-11 h-6 rounded-full relative transition-colors ${on ? 'bg-[#C9A84C]' : 'bg-white/10'}`}>
+        <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+      </div>
+    </button>
+  );
+}
+
 export default function SettingsPage() {
+  const { preferences, updatePreference } = usePreferences();
   const [currentUser, setCurrentUser] = useState<{ email: string; role: string; email_str: string } | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -452,6 +465,75 @@ export default function SettingsPage() {
             )}
           </div>
         </section>
+
+        {/* ── Preferences ── */}
+        {preferences && (
+          <section className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden mb-6 mt-6">
+            <div className="px-5 py-4 border-b border-white/5 flex items-center gap-2">
+              <Monitor size={16} className="text-[#C9A84C]" />
+              <h2 className="text-[15px] font-semibold">Preferences</h2>
+            </div>
+            <div className="px-5 py-3 space-y-1">
+              {/* Theme */}
+              <div className="py-3">
+                <span className="text-[14px] text-white/70 block mb-3">Theme</span>
+                <div className="flex gap-2">
+                  {([
+                    { value: 'dark' as const, label: 'Dark', icon: Moon },
+                    { value: 'light' as const, label: 'Light', icon: Sun },
+                  ]).map(opt => (
+                    <button key={opt.value}
+                      onClick={() => updatePreference({ theme: opt.value })}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-medium border transition-all ${
+                        preferences.theme === opt.value
+                          ? 'bg-[#C9A84C]/10 border-[#C9A84C]/30 text-[#C9A84C]'
+                          : 'bg-white/[0.03] border-white/10 text-white/40 hover:border-white/20'
+                      }`}>
+                      <opt.icon size={14} />
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Font Size */}
+              <div className="py-3 border-t border-white/5">
+                <span className="text-[14px] text-white/70 block mb-3">Font Size</span>
+                <div className="flex gap-2">
+                  {([
+                    { value: 'small' as const, label: 'Small' },
+                    { value: 'normal' as const, label: 'Normal' },
+                    { value: 'large' as const, label: 'Large' },
+                  ]).map(opt => (
+                    <button key={opt.value}
+                      onClick={() => updatePreference({ font_size: opt.value })}
+                      className={`flex-1 py-2.5 rounded-xl text-[13px] font-medium border transition-all ${
+                        preferences.font_size === opt.value
+                          ? 'bg-[#C9A84C]/10 border-[#C9A84C]/30 text-[#C9A84C]'
+                          : 'bg-white/[0.03] border-white/10 text-white/40 hover:border-white/20'
+                      }`}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="border-t border-white/5">
+                <ToggleSwitch label="Animations" on={preferences.animations_enabled} onChange={v => updatePreference({ animations_enabled: v })} />
+              </div>
+              <div className="border-t border-white/5">
+                <ToggleSwitch label="Compact Mode" on={preferences.compact_mode} onChange={v => updatePreference({ compact_mode: v })} />
+              </div>
+              <div className="border-t border-white/5">
+                <ToggleSwitch label="Push Notifications" on={preferences.push_notifications} onChange={v => updatePreference({ push_notifications: v })} />
+              </div>
+              <div className="border-t border-white/5">
+                <ToggleSwitch label="Email Notifications" on={preferences.email_notifications} onChange={v => updatePreference({ email_notifications: v })} />
+              </div>
+            </div>
+          </section>
+        )}
 
         {isNexa && (
           <div className="mt-6 border border-purple-500/20 rounded-2xl overflow-hidden">
