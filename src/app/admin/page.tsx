@@ -87,16 +87,21 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    const alreadyPlayed = (window as any).__roAdminSplashPlayed;
+    // Use sessionStorage so it persists across in-app navigation but resets on app close
+    const alreadyPlayed = sessionStorage.getItem('ro_splash_played') === '1';
     const ctx = gsap.context(() => {
       const headerEl = document.querySelector('[data-admin-header]');
 
-      // Skip splash if already played this session
+      // Skip splash if already played this session — no animation, instant show
       if (alreadyPlayed) {
-        if (splashRef.current) { splashRef.current.style.display = 'none'; }
+        if (splashRef.current) splashRef.current.style.display = 'none';
+        if (headerEl) gsap.set(headerEl, { opacity: 1, y: 0 });
+        gsap.set([row1Ref.current, row2Ref.current, row3Ref.current], { opacity: 1, y: 0 });
+        gsap.set(activityRef.current, { opacity: 1, y: 0 });
+        gsap.set([card1Ref.current, card2Ref.current, card3Ref.current], { opacity: 1, x: 0 });
         return;
       }
-      (window as any).__roAdminSplashPlayed = true;
+      sessionStorage.setItem('ro_splash_played', '1');
 
       // ── Initial hide state ──
       gsap.set([row1Ref.current, row2Ref.current, row3Ref.current], { opacity: 0, y: 20 });
@@ -117,43 +122,43 @@ export default function AdminDashboard() {
       // ── PHASE 1: RO materializes + blueprint draws simultaneously ──
       tl.to(splashRoRef.current, {
         opacity: 0.9, scale: 1,
-        duration: 0.5, ease: 'power2.out',
+        duration: 0.35, ease: 'power2.out',
       })
-      .to(gridRef.current, { opacity: 1, duration: 0.25, ease: 'power1.out' }, 0.15)
-      .to(hLine1Ref.current, { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' }, 0.2)
-      .to(hLine2Ref.current, { scaleX: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' }, 0.25)
-      .to(vLine1Ref.current, { scaleY: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' }, 0.25)
-      .to(vLine2Ref.current, { scaleY: 1, opacity: 1, duration: 0.3, ease: 'power2.inOut' }, 0.3)
+      .to(gridRef.current, { opacity: 1, duration: 0.15, ease: 'power1.out' }, 0.1)
+      .to(hLine1Ref.current, { scaleX: 1, opacity: 1, duration: 0.2, ease: 'power2.inOut' }, 0.12)
+      .to(hLine2Ref.current, { scaleX: 1, opacity: 1, duration: 0.2, ease: 'power2.inOut' }, 0.15)
+      .to(vLine1Ref.current, { scaleY: 1, opacity: 1, duration: 0.2, ease: 'power2.inOut' }, 0.15)
+      .to(vLine2Ref.current, { scaleY: 1, opacity: 1, duration: 0.2, ease: 'power2.inOut' }, 0.18)
       .to([cornerTLRef.current, cornerBRRef.current, cornerTRRef.current, cornerBLRef.current], {
-        opacity: 1, scale: 1, duration: 0.2, ease: 'back.out(2)', stagger: 0.04,
-      }, 0.35)
+        opacity: 1, scale: 1, duration: 0.15, ease: 'back.out(2)', stagger: 0.03,
+      }, 0.22)
       .to(scanRef.current, {
-        opacity: 0.7, scaleX: 1, duration: 0.25, ease: 'power1.in',
-        onComplete: () => { gsap.to(scanRef.current, { opacity: 0, duration: 0.15 }); }
-      }, 0.4)
-      .to(coordRef.current, { opacity: 1, duration: 0.1, ease: 'none' }, 0.5)
+        opacity: 0.7, scaleX: 1, duration: 0.18, ease: 'power1.in',
+        onComplete: () => { gsap.to(scanRef.current, { opacity: 0, duration: 0.1 }); }
+      }, 0.28)
+      .to(coordRef.current, { opacity: 1, duration: 0.08, ease: 'none' }, 0.35)
 
       // ── PHASE 2: Quick RO pulse then dissolve ──
       .to(splashRoRef.current, {
-        scale: 1.03, duration: 0.4, ease: 'sine.inOut',
+        scale: 1.03, duration: 0.25, ease: 'sine.inOut',
         yoyo: true, repeat: 0,
-      }, 0.55)
+      }, 0.38)
 
       // ── PHASE 3: Fast dissolve + dashboard assembles ──
       .to(splashRef.current, {
-        opacity: 0, duration: 0.4, ease: 'power2.inOut',
+        opacity: 0, duration: 0.3, ease: 'power2.inOut',
         onComplete: () => {
           if (splashRef.current) splashRef.current.style.display = 'none';
         },
-      }, 1.0)
-      .to(headerEl,            { opacity: 1, y: 0, duration: 0.35, ease: 'power3.out' }, 1.1)
-      .to(row1Ref.current,     { opacity: 1, y: 0, duration: 0.3,  ease: 'power3.out' }, 1.15)
-      .to(row2Ref.current,     { opacity: 1, y: 0, duration: 0.3,  ease: 'power3.out' }, 1.2)
-      .to(row3Ref.current,     { opacity: 1, y: 0, duration: 0.3,  ease: 'power3.out' }, 1.25)
-      .to(activityRef.current, { opacity: 1, y: 0, duration: 0.3,  ease: 'power3.out' }, 1.3)
-      .to(card1Ref.current,    { opacity: 1, x: 0, duration: 0.3,  ease: 'power3.out' }, 1.3)
-      .to(card2Ref.current,    { opacity: 1, x: 0, duration: 0.3,  ease: 'power3.out' }, 1.35)
-      .to(card3Ref.current,    { opacity: 1, x: 0, duration: 0.3,  ease: 'power3.out' }, 1.4);
+      }, 0.65)
+      .to(headerEl,            { opacity: 1, y: 0, duration: 0.25, ease: 'power3.out' }, 0.72)
+      .to(row1Ref.current,     { opacity: 1, y: 0, duration: 0.22, ease: 'power3.out' }, 0.76)
+      .to(row2Ref.current,     { opacity: 1, y: 0, duration: 0.22, ease: 'power3.out' }, 0.8)
+      .to(row3Ref.current,     { opacity: 1, y: 0, duration: 0.22, ease: 'power3.out' }, 0.84)
+      .to(activityRef.current, { opacity: 1, y: 0, duration: 0.22, ease: 'power3.out' }, 0.88)
+      .to(card1Ref.current,    { opacity: 1, x: 0, duration: 0.22, ease: 'power3.out' }, 0.88)
+      .to(card2Ref.current,    { opacity: 1, x: 0, duration: 0.22, ease: 'power3.out' }, 0.92)
+      .to(card3Ref.current,    { opacity: 1, x: 0, duration: 0.22, ease: 'power3.out' }, 0.96);
     });
 
     return () => ctx.revert();

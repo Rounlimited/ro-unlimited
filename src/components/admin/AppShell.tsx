@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { gsap } from 'gsap';
 import { createClient } from '@/lib/supabase/client';
@@ -776,9 +776,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
   };
 
-  const filtered = drawerSearch
+  const filtered = useMemo(() => drawerSearch
     ? APP_ICONS.filter(a => a.label.toLowerCase().includes(drawerSearch.toLowerCase()))
-    : APP_ICONS;
+    : APP_ICONS, [drawerSearch]);
 
   const touchStartY = useRef(0);
   const handleDrawerTouchStart = (e: React.TouchEvent) => { touchStartY.current = e.touches[0].clientY; };
