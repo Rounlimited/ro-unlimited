@@ -265,7 +265,7 @@ export default function DrivePage() {
       setUploadProgress(`Preparing ${file.name} (${sizeMB} MB)...`);
 
       try {
-        if (UPLOAD_BASE && file.size > 4 * 1024 * 1024) {
+        if (UPLOAD_BASE && file.size > 512 * 1024) { // >512KB goes direct to Oracle, skip Vercel
           // Large file: direct to Oracle/Telegram with progress
           const tgForm = new FormData();
           tgForm.append('chat_id', CHAT_ID);
@@ -645,8 +645,7 @@ export default function DrivePage() {
                 const ctx = new AudioContext();
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
-                gain.gain.value = 0.3; // audible beep to test keepalive
-                osc.frequency.value = 440; // A note
+                gain.gain.value = 0.001; // silent keepalive
                 osc.connect(gain);
                 gain.connect(ctx.destination);
                 osc.start();
