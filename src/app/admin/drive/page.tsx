@@ -53,7 +53,10 @@ export default function DrivePage() {
   const [uploadProgress, setUploadProgress] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [search, setSearch] = useState('');
-  const [currentPath, setCurrentPath] = useState('/');
+  const [currentPath, setCurrentPath] = useState(() => {
+    if (typeof window !== 'undefined') return sessionStorage.getItem('ro_drive_path') || '/';
+    return '/';
+  });
   const [totalBytes, setTotalBytes] = useState(0);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [menuType, setMenuType] = useState<'file' | 'folder'>('file');
@@ -177,6 +180,9 @@ export default function DrivePage() {
       path: '/' + pathSegments.slice(0, i + 1).join('/'),
     })),
   ];
+
+  // Persist current path to sessionStorage
+  useEffect(() => { sessionStorage.setItem('ro_drive_path', currentPath); }, [currentPath]);
 
   // ── Navigation ──
   const navigateToFolder = (path: string) => {
