@@ -42,6 +42,9 @@ function applyTheme(theme: string) {
     root.classList.add('dark-theme');
     root.classList.remove('light-theme');
   }
+  // Update iOS status bar color
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'light' ? '#f0f0f1' : '#1B2A4A');
 }
 
 function applyFontSize(size: string) {
