@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v1';
+const CACHE_NAME = 'ro-admin-v2';
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',
@@ -36,14 +36,28 @@ self.addEventListener('fetch', (event) => {
   // API calls: network only (no caching)
   if (url.pathname.startsWith('/api/')) return;
 
-  // Static assets (icons, images, fonts): cache-first
-  if (url.pathname.match(/\.(png|jpg|svg|woff2?|ttf|ico|css|js)$/)) {
+  // Static assets (icons, images, fonts — NOT js/css): cache-first
+  if (url.pathname.match(/\.(png|jpg|svg|woff2?|ttf|ico)$/)) {
     event.respondWith(
       caches.match(request).then((cached) => cached || fetch(request).then((res) => {
         const clone = res.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         return res;
       }))
+    );
+    return;
+  }
+
+  // JS/CSS: network-first (critical for deploy updates)
+  if (url.pathname.match(/\.(js|css)$/)) {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return res;
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }
