@@ -66,6 +66,9 @@ export default function DrivePage() {
   });
   const [toast, setToast] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [previewFile, setPreviewFile] = useState<UserFile | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [previewLoading, setPreviewLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
@@ -200,14 +203,30 @@ export default function DrivePage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // ── Download ──
-  const handleDownload = async (file: UserFile) => {
+  // ── Get file URL from Telegram ──
+  const getFileUrl = async (fileId: string): Promise<string> => {
     const res = await fetch('/api/admin/drive', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'get_download_url', id: file.id }),
+      body: JSON.stringify({ action: 'get_download_url', id: fileId }),
     });
     const data = await res.json();
-    if (data.url) window.open(data.url, '_blank');
+    return data.url || '';
+  };
+
+  // ── Open file preview ──
+  const openPreview = async (file: UserFile) => {
+    setPreviewFile(file);
+    setPreviewLoading(true);
+    setPreviewUrl('');
+    const url = await getFileUrl(file.id);
+    setPreviewUrl(url);
+    setPreviewLoading(false);
+  };
+
+  // ── Download file ──
+  const handleDownload = async (file: UserFile) => {
+    const url = previewUrl || await getFileUrl(file.id);
+    if (url) window.open(url, '_blank');
     else setToast('Failed to get download link');
   };
 
@@ -354,7 +373,7 @@ export default function DrivePage() {
                 <div className="text-center py-16"><p className="text-white/20 text-[16px]">No files found</p></div>
               ) : (
                 <div className="space-y-1">
-                  {files.map(file => <FileListItem key={file.id} file={file} onDownload={handleDownload} onMenu={openFileMenu} menuOpen={menuOpen} />)}
+                  {files.map(file => <FileListItem key={file.id} file={file} onTap={openPreview} onMenu={openFileMenu} menuOpen={menuOpen} />)}
                 </div>
               )}
             </>
@@ -413,7 +432,7 @@ export default function DrivePage() {
                         const Icon = getFileIcon(file.mime_type);
                         const color = getFileColor(file.mime_type);
                         return (
-                          <button key={file.id} onClick={() => handleDownload(file)}
+                          <button key={file.id} onClick={() => openPreview(file)}
                             className="relative bg-[#141414] border border-white/5 rounded-2xl p-4 text-left hover:border-white/10 transition-all active:scale-[0.98] group">
                             <div className="flex items-start justify-between mb-3">
                               <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: color + '12' }}>
@@ -432,7 +451,7 @@ export default function DrivePage() {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {files.map(file => <FileListItem key={file.id} file={file} onDownload={handleDownload} onMenu={openFileMenu} menuOpen={menuOpen} />)}
+                      {files.map(file => <FileListItem key={file.id} file={file} onTap={openPreview} onMenu={openFileMenu} menuOpen={menuOpen} />)}
                     </div>
                   )}
                 </div>
@@ -470,7 +489,93 @@ export default function DrivePage() {
           </div>
         </div>
 
-        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUpload} accept="*/*" />
+        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUpload} />
+
+        {/* ── File Preview/Info Screen ── */}
+        {previewFile && (
+          <div className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col">
+            {/* Preview header */}
+            <div className="flex items-center gap-2 px-3 py-3 border-b border-white/5">
+              <button onClick={() => { setPreviewFile(null); setPreviewUrl(''); }} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
+                <ChevronLeft size={24} />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] text-white font-medium truncate">{previewFile.original_filename}</p>
+                <p className="text-[12px] text-white/30">{formatSize(previewFile.file_size)}</p>
+              </div>
+              <button onClick={() => { openFileMenu(previewFile.id); }}
+                className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
+                <MoreVertical size={20} />
+              </button>
+            </div>
+
+            {/* Preview content */}
+            <div className="flex-1 overflow-auto flex items-center justify-center bg-black/30 p-4">
+              {previewLoading ? (
+                <Loader2 size={32} className="text-[#3b8dd4] animate-spin" />
+              ) : previewUrl ? (
+                <>
+                  {previewFile.mime_type?.startsWith('image/') && (
+                    <img src={previewUrl} alt={previewFile.original_filename}
+                      className="max-w-full max-h-full rounded-lg object-contain" />
+                  )}
+                  {previewFile.mime_type?.startsWith('video/') && (
+                    <video src={previewUrl} controls autoPlay playsInline
+                      className="max-w-full max-h-full rounded-lg" />
+                  )}
+                  {previewFile.mime_type?.startsWith('audio/') && (
+                    <div className="w-full max-w-md">
+                      <div className="w-20 h-20 rounded-2xl bg-[#8B5CF6]/15 flex items-center justify-center mx-auto mb-6">
+                        <Music size={36} className="text-[#8B5CF6]" />
+                      </div>
+                      <audio src={previewUrl} controls className="w-full" />
+                    </div>
+                  )}
+                  {previewFile.mime_type?.includes('pdf') && (
+                    <iframe src={previewUrl} className="w-full h-full rounded-lg border border-white/10" />
+                  )}
+                  {!previewFile.mime_type?.startsWith('image/') && !previewFile.mime_type?.startsWith('video/') && !previewFile.mime_type?.startsWith('audio/') && !previewFile.mime_type?.includes('pdf') && (
+                    <div className="text-center">
+                      <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                        style={{ backgroundColor: getFileColor(previewFile.mime_type) + '15' }}>
+                        {(() => { const I = getFileIcon(previewFile.mime_type); return <I size={36} style={{ color: getFileColor(previewFile.mime_type) }} />; })()}
+                      </div>
+                      <p className="text-white/40 text-[15px]">Preview not available for this file type</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-white/30">Could not load preview</p>
+              )}
+            </div>
+
+            {/* File info + actions */}
+            <div className="border-t border-white/5 bg-[#0a0a0a]">
+              <div className="px-5 py-3">
+                <div className="grid grid-cols-2 gap-y-2 text-[13px] mb-3">
+                  <span className="text-white/30">Type</span>
+                  <span className="text-white/60">{previewFile.mime_type || 'Unknown'}</span>
+                  <span className="text-white/30">Size</span>
+                  <span className="text-white/60">{formatSize(previewFile.file_size)}</span>
+                  <span className="text-white/30">Uploaded</span>
+                  <span className="text-white/60">{new Date(previewFile.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+                  <span className="text-white/30">Location</span>
+                  <span className="text-white/60">{previewFile.folder || '/'}</span>
+                </div>
+              </div>
+              <div className="flex gap-2 px-4 pb-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+                <button onClick={() => handleDownload(previewFile)}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#3b8dd4] text-white font-semibold text-[15px] rounded-xl hover:bg-[#3b8dd4]/90 transition-colors">
+                  <Download size={18} /> Download
+                </button>
+                <button onClick={() => handleShare(previewFile.id, 'read')}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 text-white/70 font-medium text-[15px] rounded-xl hover:bg-white/10 transition-colors">
+                  <Share2 size={18} /> Share
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── File context menu ── */}
         {menuOpen && menuType === 'file' && (
@@ -580,7 +685,7 @@ export default function DrivePage() {
 }
 
 // ── File list item (reusable for list view + search results) ──
-function FileListItem({ file, onDownload, onMenu, menuOpen }: { file: UserFile; onDownload: (f: UserFile) => void; onMenu: (id: string) => void; menuOpen: string | null }) {
+function FileListItem({ file, onTap, onMenu, menuOpen }: { file: UserFile; onTap: (f: UserFile) => void; onMenu: (id: string) => void; menuOpen: string | null }) {
   const Icon = getFileIcon(file.mime_type);
   const color = getFileColor(file.mime_type);
   return (
@@ -588,7 +693,7 @@ function FileListItem({ file, onDownload, onMenu, menuOpen }: { file: UserFile; 
       <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: color + '12' }}>
         <Icon size={20} style={{ color }} />
       </div>
-      <button onClick={() => onDownload(file)} className="flex-1 min-w-0 text-left">
+      <button onClick={() => onTap(file)} className="flex-1 min-w-0 text-left">
         <p className="text-[15px] text-white font-medium truncate">{file.original_filename}</p>
         <p className="text-[12px] text-white/25">{formatSize(file.file_size)} &middot; {new Date(file.created_at).toLocaleDateString()}</p>
       </button>
