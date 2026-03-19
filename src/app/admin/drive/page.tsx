@@ -1,29 +1,24 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import AuthGuard from '@/components/admin/AuthGuard';
 import Link from 'next/link';
 import {
-  Upload, FolderPlus, Search, Trash2, Download, File, Image, Film,
-  FileText, Music, Archive, MoreVertical, X, Loader2, ChevronLeft,
-  HardDrive, FolderOpen, Eye, Pencil, FolderInput, Share2, Link2, Copy, Check,
+  Upload, FolderPlus, Search, Trash2, Download, File as FileIcon, Image, Film,
+  FileText, Music, Archive, MoreVertical, X, Loader2, ChevronLeft, ChevronRight,
+  HardDrive, FolderOpen, Folder, Eye, Share2, FolderInput, Grid3X3, List,
+  Home, Plus, Check, Copy,
 } from 'lucide-react';
 
 interface UserFile {
-  id: string;
-  user_email: string;
-  filename: string;
-  original_filename: string;
-  mime_type: string;
-  file_size: number;
-  folder: string;
-  entity_type: string | null;
-  entity_id: string | null;
-  created_at: string;
+  id: string; user_email: string; filename: string; original_filename: string;
+  mime_type: string; file_size: number; folder: string;
+  entity_type: string | null; entity_id: string | null; created_at: string;
 }
 
 function formatSize(bytes: number): string {
+  if (!bytes) return '0 B';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -31,13 +26,13 @@ function formatSize(bytes: number): string {
 }
 
 function getFileIcon(mime: string) {
-  if (!mime) return File;
+  if (!mime) return FileIcon;
   if (mime.startsWith('image/')) return Image;
   if (mime.startsWith('video/')) return Film;
   if (mime.startsWith('audio/')) return Music;
   if (mime.includes('pdf') || mime.includes('document') || mime.includes('text')) return FileText;
   if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar')) return Archive;
-  return File;
+  return FileIcon;
 }
 
 function getFileColor(mime: string): string {
@@ -52,21 +47,30 @@ function getFileColor(mime: string): string {
 }
 
 export default function DrivePage() {
-  const [files, setFiles] = useState<UserFile[]>([]);
+  const [allFiles, setAllFiles] = useState<UserFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [search, setSearch] = useState('');
-  const [currentFolder, setCurrentFolder] = useState('general');
+  const [currentPath, setCurrentPath] = useState('/');
   const [totalBytes, setTotalBytes] = useState(0);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [menuType, setMenuType] = useState<'file' | 'folder'>('file');
+  const [menuTarget, setMenuTarget] = useState<string>('');
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    if (typeof window !== 'undefined') return (localStorage.getItem('ro_drive_view') as any) || 'grid';
+    return 'grid';
+  });
   const [toast, setToast] = useState<string | null>(null);
-  const [customFolders, setCustomFolders] = useState<string[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
+
+  useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); } }, [toast]);
+  useEffect(() => { localStorage.setItem('ro_drive_view', viewMode); }, [viewMode]);
 
   // Get user email
   useEffect(() => {
@@ -75,294 +79,439 @@ export default function DrivePage() {
     });
   }, []);
 
-  // Fetch files
-  const fetchFiles = async () => {
+  // Fetch ALL files for this user (we filter client-side for folder navigation)
+  const fetchFiles = useCallback(async () => {
     if (!userEmail) return;
     setLoading(true);
-    const params = new URLSearchParams({ user: userEmail });
-    if (search) params.set('search', search);
-    const res = await fetch(`/api/admin/drive?${params}`);
+    const res = await fetch(`/api/admin/drive?user=${encodeURIComponent(userEmail)}`);
     const data = await res.json();
-    setFiles(data.files || []);
+    setAllFiles(data.files || []);
     setTotalBytes(data.totalBytes || 0);
     setLoading(false);
+  }, [userEmail]);
+
+  useEffect(() => { fetchFiles(); }, [fetchFiles]);
+
+  // ── Derive current folder contents ──
+  const getFolderContents = () => {
+    const normalizedPath = currentPath.endsWith('/') ? currentPath : currentPath + '/';
+
+    // Files directly in this folder
+    const filesHere = allFiles.filter(f => {
+      const filePath = f.folder || '/';
+      return filePath === currentPath || filePath === currentPath.replace(/\/$/, '');
+    });
+
+    // Subfolders: find unique next-level folder names from files deeper in the tree
+    const subfolderSet = new Set<string>();
+    allFiles.forEach(f => {
+      const filePath = (f.folder || '/') + '/';
+      if (filePath.startsWith(normalizedPath) && filePath !== normalizedPath) {
+        const remainder = filePath.slice(normalizedPath.length);
+        const nextSegment = remainder.split('/')[0];
+        if (nextSegment) subfolderSet.add(nextSegment);
+      }
+    });
+
+    // Also check for "virtual" folders (folders with no files directly in them but with deeper files)
+    const subfolders = [...subfolderSet].sort().map(name => {
+      const folderPath = normalizedPath + name;
+      // Count files in this folder and all subfolders
+      const count = allFiles.filter(f => (f.folder || '/').startsWith(folderPath)).length;
+      const size = allFiles.filter(f => (f.folder || '/').startsWith(folderPath)).reduce((s, f) => s + (f.file_size || 0), 0);
+      return { name, path: folderPath, fileCount: count, totalSize: size };
+    });
+
+    // Search filter
+    if (search) {
+      const s = search.toLowerCase();
+      const searchFiles = allFiles.filter(f => f.original_filename.toLowerCase().includes(s));
+      return { subfolders: [], files: searchFiles };
+    }
+
+    return { subfolders, files: filesHere };
   };
 
-  useEffect(() => { if (userEmail) fetchFiles(); }, [userEmail, search]);
+  const { subfolders, files } = getFolderContents();
 
-  // Get unique folders (from files + custom created folders)
-  const folders = [...new Set([...files.map(f => f.folder), ...customFolders])].sort();
-  const folderFiles = files.filter(f => currentFolder === 'all' ? true : f.folder === currentFolder);
+  // ── Breadcrumb segments ──
+  const pathSegments = currentPath.split('/').filter(Boolean);
+  const breadcrumbs = [
+    { name: 'RO Drive', path: '/' },
+    ...pathSegments.map((seg, i) => ({
+      name: seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' '),
+      path: '/' + pathSegments.slice(0, i + 1).join('/'),
+    })),
+  ];
 
-  // Upload
+  // ── Navigation ──
+  const navigateToFolder = (path: string) => {
+    setCurrentPath(path);
+    setSearch('');
+    setShowSearch(false);
+    setMenuOpen(null);
+  };
+
+  const goBack = () => {
+    if (currentPath === '/') return;
+    const parent = '/' + pathSegments.slice(0, -1).join('/');
+    setCurrentPath(parent || '/');
+  };
+
+  // ── Upload ──
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (!fileList?.length || !userEmail) return;
-
     setUploading(true);
     let uploaded = 0;
-
     for (const file of Array.from(fileList)) {
       setUploadProgress(`Uploading ${file.name}...`);
       const formData = new FormData();
       formData.append('file', file);
       formData.append('user_email', userEmail);
-      formData.append('folder', currentFolder === 'all' ? 'general' : currentFolder);
-
+      formData.append('folder', currentPath);
       const res = await fetch('/api/admin/drive', { method: 'POST', body: formData });
       const data = await res.json();
-
       if (data.error) {
-        if (data.setup_required) {
-          setToast('Setup needed: Send any message to @Nexavisiongroup_bot on Telegram first');
-        } else {
-          setToast(`Failed: ${data.error}`);
-        }
-      } else {
-        uploaded++;
-      }
+        setToast(data.setup_required ? 'Send a message to @Nexavisiongroup_bot on Telegram first' : `Failed: ${data.error}`);
+      } else { uploaded++; }
     }
-
     setUploading(false);
     setUploadProgress('');
-    if (uploaded > 0) {
-      setToast(`${uploaded} file${uploaded > 1 ? 's' : ''} uploaded`);
-      fetchFiles();
-    }
+    if (uploaded > 0) { setToast(`${uploaded} file${uploaded > 1 ? 's' : ''} uploaded`); fetchFiles(); }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Download
+  // ── Download ──
   const handleDownload = async (file: UserFile) => {
     const res = await fetch('/api/admin/drive', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'get_download_url', id: file.id }),
     });
     const data = await res.json();
-    if (data.url) {
-      window.open(data.url, '_blank');
-    } else {
-      setToast('Failed to get download link');
-    }
+    if (data.url) window.open(data.url, '_blank');
+    else setToast('Failed to get download link');
   };
 
-  // Delete
-  const handleDelete = async (file: UserFile) => {
+  // ── Delete file ──
+  const handleDeleteFile = async (file: UserFile) => {
     if (!confirm(`Delete ${file.original_filename}?`)) return;
     await fetch('/api/admin/drive', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'delete', id: file.id }),
     });
-    setToast('File deleted');
-    setMenuOpen(null);
-    fetchFiles();
+    setToast('File deleted'); setMenuOpen(null); fetchFiles();
   };
 
-  // Move
-  const handleMove = async (file: UserFile, folder: string) => {
-    await fetch('/api/admin/drive', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'move', id: file.id, folder }),
+  // ── Delete folder (all files in it) ──
+  const handleDeleteFolder = async (folderPath: string, folderName: string) => {
+    const filesInFolder = allFiles.filter(f => (f.folder || '/').startsWith(folderPath));
+    if (!confirm(`Delete folder "${folderName}" and ${filesInFolder.length} file${filesInFolder.length !== 1 ? 's' : ''} inside?`)) return;
+    for (const f of filesInFolder) {
+      await fetch('/api/admin/drive', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id: f.id }),
+      });
+    }
+    setToast(`Folder "${folderName}" deleted`); setMenuOpen(null); fetchFiles();
+  };
+
+  // ── Share file ──
+  const handleShare = async (fileId: string, permission: 'read' | 'readwrite') => {
+    const res = await fetch('/api/admin/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'share', file_id: fileId, permission, user_email: userEmail }),
     });
-    setToast(`Moved to ${folder}`);
+    const data = await res.json();
+    if (data.link) {
+      try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
+      try { await navigator.clipboard.writeText(data.link); } catch {}
+      setToast(permission === 'read' ? 'View-only link copied!' : 'Full access link copied!');
+    }
     setMenuOpen(null);
-    fetchFiles();
   };
 
-  // Create folder
+  // ── Create folder ──
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) return;
     const name = newFolderName.trim().toLowerCase().replace(/\s+/g, '-');
-    setCustomFolders(prev => prev.includes(name) ? prev : [...prev, name]);
-    setCurrentFolder(name);
+    // Create a "ghost" file to make the folder exist, or just navigate
+    const newPath = (currentPath === '/' ? '/' : currentPath + '/') + name;
     setShowNewFolder(false);
     setNewFolderName('');
     setToast(`Folder "${name}" created`);
+    navigateToFolder(newPath);
   };
 
-  const showToastMsg = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+  // ── Open file/folder menu ──
+  const openFileMenu = (id: string) => { setMenuOpen(id); setMenuType('file'); };
+  const openFolderMenu = (path: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMenuOpen(path);
+    setMenuType('folder');
+    setMenuTarget(name);
   };
-
-  useEffect(() => {
-    if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); }
-  }, [toast]);
 
   return (
     <AuthGuard>
       <div className="min-h-screen bg-[#0a0a0a]">
-        {/* Header */}
+        {/* ── Header ── */}
         <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <Link href="/admin" className="p-1.5 rounded-full text-white/40 hover:text-white hover:bg-white/5">
-              <ChevronLeft size={24} />
-            </Link>
-            <HardDrive size={22} className="text-[#3b8dd4]" />
-            <h1 className="text-[18px] font-bold text-white flex-1">RO Drive</h1>
-            <div className="text-[12px] text-white/30 font-mono">
-              {formatSize(totalBytes)} used
-            </div>
-          </div>
-
-          {/* Search */}
-          <div className="px-4 pb-3">
-            <div className="flex items-center gap-2.5 px-4 py-2.5 bg-[#1a1a1a] rounded-full border border-white/5">
-              <Search size={18} className="text-white/30" />
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search files..."
-                className="flex-1 bg-transparent text-[15px] text-white placeholder:text-white/25 focus:outline-none" />
-            </div>
-          </div>
-
-          {/* Folder tabs */}
-          <div className="px-4 pb-2 flex gap-2 overflow-x-auto no-scrollbar">
-            <button onClick={() => setCurrentFolder('all')}
-              className={`px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
-                currentFolder === 'all' ? 'bg-[#3b8dd4]/15 text-[#3b8dd4] border border-[#3b8dd4]/30' : 'text-white/40 border border-white/10 hover:bg-white/5'
-              }`}>
-              All Files
-            </button>
-            {folders.map(f => (
-              <button key={f} onClick={() => setCurrentFolder(f)}
-                className={`px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors capitalize ${
-                  currentFolder === f ? 'bg-[#3b8dd4]/15 text-[#3b8dd4] border border-[#3b8dd4]/30' : 'text-white/40 border border-white/10 hover:bg-white/5'
-                }`}>
-                {f}
+          <div className="flex items-center gap-2 px-4 py-3">
+            {currentPath === '/' ? (
+              <Link href="/admin" className="p-1.5 rounded-full text-white/40 hover:text-white hover:bg-white/5">
+                <ChevronLeft size={24} />
+              </Link>
+            ) : (
+              <button onClick={goBack} className="p-1.5 rounded-full text-white/40 hover:text-white hover:bg-white/5">
+                <ChevronLeft size={24} />
               </button>
-            ))}
-            <button onClick={() => setShowNewFolder(true)}
-              className="px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap text-white/20 border border-dashed border-white/10 hover:border-[#C9A84C]/30 hover:text-[#C9A84C] transition-colors">
-              <FolderPlus size={14} className="inline mr-1" /> New
-            </button>
+            )}
+
+            {showSearch ? (
+              <div className="flex-1 flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-[#1a1a1a] rounded-full border border-white/10">
+                  <Search size={16} className="text-white/30" />
+                  <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search all files..."
+                    autoFocus className="flex-1 bg-transparent text-[14px] text-white placeholder:text-white/25 focus:outline-none" />
+                </div>
+                <button onClick={() => { setShowSearch(false); setSearch(''); }} className="p-1.5 text-white/40 hover:text-white">
+                  <X size={20} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <HardDrive size={20} className="text-[#3b8dd4] shrink-0" />
+                <div className="flex-1 min-w-0">
+                  {/* Breadcrumb */}
+                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                    {breadcrumbs.map((bc, i) => (
+                      <div key={bc.path} className="flex items-center shrink-0">
+                        {i > 0 && <ChevronRight size={14} className="text-white/15 mx-0.5" />}
+                        <button onClick={() => navigateToFolder(bc.path)}
+                          className={`text-[14px] font-medium whitespace-nowrap ${i === breadcrumbs.length - 1 ? 'text-white' : 'text-white/40 hover:text-white/70'}`}>
+                          {bc.name}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-white/20 mt-0.5">{formatSize(totalBytes)} used</p>
+                </div>
+                <button onClick={() => setShowSearch(true)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
+                  <Search size={20} />
+                </button>
+                <button onClick={() => setViewMode(v => v === 'grid' ? 'list' : 'grid')} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
+                  {viewMode === 'grid' ? <List size={20} /> : <Grid3X3 size={20} />}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* File List */}
-        <div className="pb-24">
+        {/* ── Content ── */}
+        <div className="pb-28 px-4 pt-3">
           {loading ? (
-            <div className="flex justify-center py-16">
-              <Loader2 size={28} className="text-[#3b8dd4] animate-spin" />
-            </div>
-          ) : folderFiles.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center px-6">
-              <FolderOpen size={48} className="text-white/10 mb-4" />
-              <p className="text-white/30 text-[16px] mb-2">
-                {search ? 'No files match your search' : 'No files yet'}
-              </p>
-              <p className="text-white/15 text-[14px]">
-                Tap the upload button to add files
-              </p>
-            </div>
+            <div className="flex justify-center py-20"><Loader2 size={28} className="text-[#3b8dd4] animate-spin" /></div>
+          ) : search ? (
+            // Search results
+            <>
+              <p className="text-[13px] text-white/30 mb-3">{files.length} result{files.length !== 1 ? 's' : ''} for &ldquo;{search}&rdquo;</p>
+              {files.length === 0 ? (
+                <div className="text-center py-16"><p className="text-white/20 text-[16px]">No files found</p></div>
+              ) : (
+                <div className="space-y-1">
+                  {files.map(file => <FileListItem key={file.id} file={file} onDownload={handleDownload} onMenu={openFileMenu} menuOpen={menuOpen} />)}
+                </div>
+              )}
+            </>
           ) : (
-            <div className="divide-y divide-white/[0.03]">
-              {folderFiles.map(file => {
-                const Icon = getFileIcon(file.mime_type);
-                const color = getFileColor(file.mime_type);
-                return (
-                  <div key={file.id} className="flex items-center gap-3 px-4 py-3.5 active:bg-white/[0.02] relative">
-                    {/* File icon */}
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: color + '15' }}>
-                      <Icon size={20} style={{ color }} />
+            <>
+              {/* Folders */}
+              {subfolders.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-[12px] text-white/25 uppercase tracking-wider font-semibold mb-2 px-1">Folders</p>
+                  {viewMode === 'grid' ? (
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {subfolders.map(sf => (
+                        <button key={sf.path} onClick={() => navigateToFolder(sf.path)}
+                          className="relative bg-[#141414] border border-white/5 rounded-2xl p-4 text-left hover:border-[#3b8dd4]/20 hover:bg-[#3b8dd4]/[0.03] transition-all active:scale-[0.98] group">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="w-11 h-11 rounded-xl bg-[#3b8dd4]/10 flex items-center justify-center">
+                              <Folder size={22} className="text-[#3b8dd4]" />
+                            </div>
+                            <button onClick={e => openFolderMenu(sf.path, sf.name, e)}
+                              className="p-1 rounded-full text-white/10 hover:text-white/40 hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreVertical size={16} />
+                            </button>
+                          </div>
+                          <p className="text-[15px] text-white font-medium truncate capitalize">{sf.name.replace(/-/g, ' ')}</p>
+                          <p className="text-[12px] text-white/25 mt-0.5">{sf.fileCount} item{sf.fileCount !== 1 ? 's' : ''} &middot; {formatSize(sf.totalSize)}</p>
+                        </button>
+                      ))}
                     </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {subfolders.map(sf => (
+                        <button key={sf.path} onClick={() => navigateToFolder(sf.path)}
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.03] transition-colors active:bg-white/[0.05] group">
+                          <div className="w-10 h-10 rounded-xl bg-[#3b8dd4]/10 flex items-center justify-center shrink-0">
+                            <Folder size={20} className="text-[#3b8dd4]" />
+                          </div>
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className="text-[15px] text-white font-medium truncate capitalize">{sf.name.replace(/-/g, ' ')}</p>
+                            <p className="text-[12px] text-white/25">{sf.fileCount} item{sf.fileCount !== 1 ? 's' : ''} &middot; {formatSize(sf.totalSize)}</p>
+                          </div>
+                          <ChevronRight size={18} className="text-white/10 shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
-                    {/* File info */}
-                    <button onClick={() => handleDownload(file)} className="flex-1 min-w-0 text-left">
-                      <p className="text-[15px] text-white font-medium truncate">{file.original_filename}</p>
-                      <p className="text-[12px] text-white/25 mt-0.5">
-                        {formatSize(file.file_size)} &middot; {new Date(file.created_at).toLocaleDateString()}
-                        {currentFolder === 'all' && <span className="ml-1 capitalize"> &middot; {file.folder}</span>}
-                      </p>
-                    </button>
+              {/* Files */}
+              {files.length > 0 && (
+                <div>
+                  <p className="text-[12px] text-white/25 uppercase tracking-wider font-semibold mb-2 px-1">Files</p>
+                  {viewMode === 'grid' ? (
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {files.map(file => {
+                        const Icon = getFileIcon(file.mime_type);
+                        const color = getFileColor(file.mime_type);
+                        return (
+                          <button key={file.id} onClick={() => handleDownload(file)}
+                            className="relative bg-[#141414] border border-white/5 rounded-2xl p-4 text-left hover:border-white/10 transition-all active:scale-[0.98] group">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: color + '12' }}>
+                                <Icon size={22} style={{ color }} />
+                              </div>
+                              <button onClick={e => { e.stopPropagation(); openFileMenu(file.id); }}
+                                className="p-1 rounded-full text-white/10 hover:text-white/40 hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreVertical size={16} />
+                              </button>
+                            </div>
+                            <p className="text-[14px] text-white font-medium truncate">{file.original_filename}</p>
+                            <p className="text-[11px] text-white/25 mt-0.5">{formatSize(file.file_size)}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {files.map(file => <FileListItem key={file.id} file={file} onDownload={handleDownload} onMenu={openFileMenu} menuOpen={menuOpen} />)}
+                    </div>
+                  )}
+                </div>
+              )}
 
-                    {/* Menu */}
-                    <button onClick={() => setMenuOpen(menuOpen === file.id ? null : file.id)}
-                      className="p-2 rounded-full text-white/20 hover:text-white/50 hover:bg-white/5 shrink-0">
-                      <MoreVertical size={18} />
-                    </button>
-
-                    {/* Dropdown */}
-                    {menuOpen === file.id && (
-                      <div className="absolute right-4 top-12 z-20 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[160px]">
-                        <button onClick={() => handleDownload(file)}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-[14px] text-white/70 hover:bg-white/5">
-                          <Download size={16} /> Download
-                        </button>
-                        <button onClick={async () => {
-                          const res = await fetch('/api/admin/drive', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'share', file_id: file.id, permission: 'read', user_email: userEmail }),
-                          });
-                          const data = await res.json();
-                          if (data.link) {
-                            try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
-                            try { await navigator.clipboard.writeText(data.link); } catch {}
-                            setToast('View-only link copied!');
-                          }
-                          setMenuOpen(null);
-                        }}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-[14px] text-[#3b8dd4] hover:bg-[#3b8dd4]/10">
-                          <Eye size={16} /> Share (View Only)
-                        </button>
-                        <button onClick={async () => {
-                          const res = await fetch('/api/admin/drive', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ action: 'share', file_id: file.id, permission: 'readwrite', user_email: userEmail }),
-                          });
-                          const data = await res.json();
-                          if (data.link) {
-                            try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
-                            try { await navigator.clipboard.writeText(data.link); } catch {}
-                            setToast('Full access link copied!');
-                          }
-                          setMenuOpen(null);
-                        }}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-[14px] text-[#C9A84C] hover:bg-[#C9A84C]/10">
-                          <Share2 size={16} /> Share (Full Access)
-                        </button>
-                        <button onClick={() => {
-                          const folder = prompt('Move to folder:', file.folder);
-                          if (folder) handleMove(file, folder);
-                        }}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-[14px] text-white/70 hover:bg-white/5">
-                          <FolderInput size={16} /> Move
-                        </button>
-                        <button onClick={() => handleDelete(file)}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-[14px] text-red-400 hover:bg-red-500/10">
-                          <Trash2 size={16} /> Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+              {/* Empty state */}
+              {subfolders.length === 0 && files.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <FolderOpen size={52} className="text-white/8 mb-4" />
+                  <p className="text-white/25 text-[17px] font-medium mb-1">Empty folder</p>
+                  <p className="text-white/15 text-[14px]">Upload files or create a subfolder</p>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* Upload FAB */}
-        <div className="fixed bottom-20 right-5 z-30 flex flex-col items-end gap-3"
+        {/* ── FAB buttons ── */}
+        <div className="fixed bottom-20 right-4 z-30 flex flex-col items-end gap-2.5"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
           {uploading && (
             <div className="flex items-center gap-2 px-4 py-2.5 bg-[#1a1a1a] border border-[#3b8dd4]/30 rounded-full text-[13px] text-[#3b8dd4]">
-              <Loader2 size={14} className="animate-spin" />
-              {uploadProgress}
+              <Loader2 size={14} className="animate-spin" /> {uploadProgress}
             </div>
           )}
-          <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-            className="flex items-center gap-2 px-6 py-4 bg-[#1a1a1a] border border-[#3b8dd4]/20 rounded-2xl shadow-lg text-[#3b8dd4] font-bold text-[15px] hover:bg-[#222] transition-colors disabled:opacity-50">
-            <Upload size={20} /> Upload
-          </button>
+          <div className="flex gap-2.5">
+            <button onClick={() => setShowNewFolder(true)}
+              className="w-12 h-12 bg-[#1a1a1a] border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
+              <FolderPlus size={20} />
+            </button>
+            <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+              className="flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors disabled:opacity-50">
+              <Upload size={18} /> Upload
+            </button>
+          </div>
         </div>
 
-        {/* Hidden file input (multiple) */}
-        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUpload}
-          accept="*/*" />
+        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUpload} accept="*/*" />
 
-        {/* New folder modal */}
+        {/* ── File context menu ── */}
+        {menuOpen && menuType === 'file' && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(null)} />
+            <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#1a1a1a] border-t border-white/10 rounded-t-2xl shadow-2xl pb-safe"
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}>
+              <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mt-3 mb-2" />
+              {(() => {
+                const file = allFiles.find(f => f.id === menuOpen);
+                if (!file) return null;
+                return (
+                  <>
+                    <div className="px-5 py-2 mb-1">
+                      <p className="text-[15px] text-white font-medium truncate">{file.original_filename}</p>
+                      <p className="text-[12px] text-white/30">{formatSize(file.file_size)}</p>
+                    </div>
+                    <button onClick={() => { handleDownload(file); setMenuOpen(null); }}
+                      className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-white/70 hover:bg-white/5">
+                      <Download size={20} /> Download
+                    </button>
+                    <button onClick={() => handleShare(file.id, 'read')}
+                      className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-[#3b8dd4] hover:bg-[#3b8dd4]/10">
+                      <Eye size={20} /> Share (View Only)
+                    </button>
+                    <button onClick={() => handleShare(file.id, 'readwrite')}
+                      className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-[#C9A84C] hover:bg-[#C9A84C]/10">
+                      <Share2 size={20} /> Share (Full Access)
+                    </button>
+                    <button onClick={() => {
+                      const folder = prompt('Move to folder path:', file.folder);
+                      if (folder) {
+                        fetch('/api/admin/drive', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'move', id: file.id, folder }) })
+                          .then(() => { setToast('File moved'); setMenuOpen(null); fetchFiles(); });
+                      }
+                    }}
+                      className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-white/70 hover:bg-white/5">
+                      <FolderInput size={20} /> Move
+                    </button>
+                    <button onClick={() => handleDeleteFile(file)}
+                      className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-red-400 hover:bg-red-500/10">
+                      <Trash2 size={20} /> Delete
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          </>
+        )}
+
+        {/* ── Folder context menu ── */}
+        {menuOpen && menuType === 'folder' && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(null)} />
+            <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#1a1a1a] border-t border-white/10 rounded-t-2xl shadow-2xl pb-safe"
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}>
+              <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mt-3 mb-2" />
+              <div className="px-5 py-2 mb-1">
+                <p className="text-[15px] text-white font-medium capitalize">{menuTarget.replace(/-/g, ' ')}</p>
+                <p className="text-[12px] text-white/30">Folder</p>
+              </div>
+              <button onClick={() => navigateToFolder(menuOpen!)}
+                className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-white/70 hover:bg-white/5">
+                <FolderOpen size={20} /> Open
+              </button>
+              <button onClick={() => handleDeleteFolder(menuOpen!, menuTarget)}
+                className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-red-400 hover:bg-red-500/10">
+                <Trash2 size={20} /> Delete Folder
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── New folder modal ── */}
         {showNewFolder && (
           <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowNewFolder(false)}>
             <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5 w-full max-w-sm" onClick={e => e.stopPropagation()}>
@@ -387,14 +536,31 @@ export default function DrivePage() {
 
         {/* Toast */}
         {toast && (
-          <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 bg-[#1a1a1a] border border-[#3b8dd4]/30 rounded-full text-[15px] text-[#3b8dd4] shadow-lg">
+          <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 bg-[#1a1a1a] border border-[#3b8dd4]/30 rounded-full text-[15px] text-[#3b8dd4] shadow-lg whitespace-nowrap">
             {toast}
           </div>
         )}
-
-        {/* Click-outside to close menus */}
-        {menuOpen && <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(null)} />}
       </div>
     </AuthGuard>
+  );
+}
+
+// ── File list item (reusable for list view + search results) ──
+function FileListItem({ file, onDownload, onMenu, menuOpen }: { file: UserFile; onDownload: (f: UserFile) => void; onMenu: (id: string) => void; menuOpen: string | null }) {
+  const Icon = getFileIcon(file.mime_type);
+  const color = getFileColor(file.mime_type);
+  return (
+    <div className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.03] transition-colors active:bg-white/[0.05]">
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: color + '12' }}>
+        <Icon size={20} style={{ color }} />
+      </div>
+      <button onClick={() => onDownload(file)} className="flex-1 min-w-0 text-left">
+        <p className="text-[15px] text-white font-medium truncate">{file.original_filename}</p>
+        <p className="text-[12px] text-white/25">{formatSize(file.file_size)} &middot; {new Date(file.created_at).toLocaleDateString()}</p>
+      </button>
+      <button onClick={() => onMenu(file.id)} className="p-2 rounded-full text-white/15 hover:text-white/40 hover:bg-white/5 shrink-0">
+        <MoreVertical size={18} />
+      </button>
+    </div>
   );
 }
