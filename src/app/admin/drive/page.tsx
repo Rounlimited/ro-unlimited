@@ -639,18 +639,11 @@ export default function DrivePage() {
               className="w-12 h-12 bg-[#1a1a1a] border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
               <FolderPlus size={20} />
             </button>
-            <button onClick={() => {
-              // Open dedicated upload page in a new Chrome tab
-              // Chrome won't get killed by Samsung like a WebView
-              const params = new URLSearchParams({
-                user: userEmail,
-                folder: currentPath,
-              });
-              window.open(`/admin/drive/upload-files?${params}`, '_blank');
-            }} disabled={uploading}
-              className={`flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors ${uploading ? 'opacity-50' : ''}`}>
+            <a href={`/admin/drive/upload-files?user=${encodeURIComponent(userEmail)}&folder=${encodeURIComponent(currentPath)}`}
+              target="_blank" rel="noopener noreferrer"
+              className={`flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors no-underline ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
               <FileIcon size={16} /> Files
-            </button>
+            </a>
             <button onClick={() => document.getElementById('ro-drive-media-input')?.click()} disabled={uploading}
               className={`flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors ${uploading ? 'opacity-50' : ''}`}>
               <Image size={18} /> Photos
