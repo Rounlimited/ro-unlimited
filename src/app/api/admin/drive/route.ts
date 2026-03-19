@@ -91,8 +91,11 @@ export async function POST(req: NextRequest) {
       const tgData = await tgRes.json();
       if (!tgData.ok) return NextResponse.json({ error: 'Failed to get file from Telegram' }, { status: 500 });
 
-      const downloadUrl = `${TELEGRAM_API_BASE}/file/bot${TELEGRAM_TOKEN}/${tgData.result.file_path}`;
-      return NextResponse.json({ url: downloadUrl });
+      // Proxy through our own API to avoid mixed content (http→https) issues
+      const internalUrl = `${TELEGRAM_API_BASE}/file/bot${TELEGRAM_TOKEN}/${tgData.result.file_path}`;
+      // Return our proxy URL instead of direct Telegram URL
+      const proxyUrl = `/api/admin/drive/file?url=${encodeURIComponent(internalUrl)}`;
+      return NextResponse.json({ url: proxyUrl });
     }
 
     if (body.action === 'create_folder') {
