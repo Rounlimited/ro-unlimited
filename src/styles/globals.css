@@ -50,10 +50,11 @@
     --admin-input-bg: rgba(0,0,0,0.04);
   }
 
-  /* Font size preferences */
-  .font-small .admin-mode { font-size: 13px; }
-  .font-normal .admin-mode { font-size: 15px; }
-  .font-large .admin-mode { font-size: 17px; }
+  /* Font size preferences — scale all text via zoom on admin container.
+     Tailwind uses px-based text sizes, so we scale the whole admin view. */
+  html.font-small body.admin-mode { zoom: 0.9; -moz-transform: scale(0.9); -moz-transform-origin: top left; }
+  html.font-normal body.admin-mode { zoom: 1; }
+  html.font-large body.admin-mode { zoom: 1.1; -moz-transform: scale(1.1); -moz-transform-origin: top left; }
   body {
     @apply bg-ro-black text-ro-white font-body;
     -webkit-font-smoothing: antialiased;

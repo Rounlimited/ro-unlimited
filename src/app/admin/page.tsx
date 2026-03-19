@@ -17,8 +17,7 @@ export default function AdminDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [estimateCount, setEstimateCount] = useState({ drafts: 0, sent: 0 });
   const [recentActivity, setRecentActivity] = useState<{ action: string; details: string; created_at: string }[]>([]);
-  const [briefing, setBriefing] = useState<{ type: string; icon: string; text: string; link?: string }[]>([]);
-  const [briefingLoading, setBriefingLoading] = useState(true);
+  // briefing moved to NotificationBell
   const emailBtnRef = useRef<HTMLAnchorElement>(null);
 
   // Splash refs
@@ -67,11 +66,7 @@ export default function AdminDashboard() {
         }
       })
       .catch(() => {});
-    // Fetch daily briefing
-    fetch('/api/admin/briefing')
-      .then(r => r.json())
-      .then(d => { setBriefing(d.briefing || []); setBriefingLoading(false); })
-      .catch(() => setBriefingLoading(false));
+    // briefing moved to NotificationBell
     // Poll for new mail every 30s
     const interval = setInterval(() => {
       fetch('/api/email/threads?folder=inbox')
@@ -278,7 +273,7 @@ export default function AdminDashboard() {
       {/* ════════════════════════════════════
           DASHBOARD
       ════════════════════════════════════ */}
-      <div className="flex flex-col h-full px-3 py-3 gap-3 relative">
+      <div className="flex flex-col h-full px-3 py-3 gap-3 relative overflow-y-auto scrollbar-hide">
 
         {/* Dim RO watermark */}
         <img src="/ro-icon.svg" alt="" aria-hidden="true"
@@ -315,34 +310,6 @@ export default function AdminDashboard() {
         </div>
 
         {/* Daily Briefing */}
-        {!briefingLoading && briefing.length > 0 && (
-          <div className="relative z-10 bg-[#111]/80 border border-white/5 rounded-xl p-3 space-y-1.5">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[11px] font-bold text-[#C9A84C] uppercase tracking-wider">Today&apos;s Briefing</span>
-              <div className="flex-1 h-px bg-white/5" />
-            </div>
-            {briefing.map((item, i) => {
-              const inner = (
-                <div className={`flex items-start gap-2.5 px-2.5 py-2 rounded-lg transition-colors ${
-                  item.type === 'alert' ? 'bg-[#D4772C]/5 border border-[#D4772C]/10' :
-                  item.type === 'action' ? 'bg-[#3b8dd4]/5 border border-[#3b8dd4]/10' :
-                  'bg-white/[0.02] border border-transparent'
-                } ${item.link ? 'hover:bg-white/5 cursor-pointer' : ''}`}>
-                  <span className="text-[16px] mt-0.5 shrink-0">{item.icon}</span>
-                  <span className="text-[14px] text-white/70 leading-snug" dangerouslySetInnerHTML={{
-                    __html: item.text.replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-                  }} />
-                </div>
-              );
-              return item.link ? (
-                <Link key={i} href={item.link} className="block">{inner}</Link>
-              ) : (
-                <div key={i}>{inner}</div>
-              );
-            })}
-          </div>
-        )}
-
         {/* Row 2: Checklist CTA */}
         <Link ref={row2Ref} href="/admin/checklist" data-tour="checklist-cta" data-tour-checklist
           className="block bg-gradient-to-r from-[#C9A84C]/10 to-transparent border border-[#C9A84C]/20 rounded-xl px-3 py-2.5 group relative z-10">

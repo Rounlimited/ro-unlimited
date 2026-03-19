@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, FileText, UserPlus, Mail, Check, ChevronRight } from 'lucide-react';
+import { Bell, FileText, UserPlus, Mail, Check, ChevronRight, AlertCircle, Zap } from 'lucide-react';
 
 interface Notification {
   id: string;
@@ -12,6 +12,13 @@ interface Notification {
   url: string | null;
   read: boolean;
   created_at: string;
+}
+
+interface BriefingItem {
+  type: string;
+  icon: string;
+  text: string;
+  link?: string;
 }
 
 function timeAgo(d: string) {
@@ -36,6 +43,7 @@ function getIcon(type: string) {
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [briefing, setBriefing] = useState<BriefingItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -51,11 +59,18 @@ export default function NotificationBell() {
     } catch {}
   }, []);
 
+  // Fetch briefing once
+  useEffect(() => {
+    fetch('/api/admin/briefing')
+      .then(r => r.json())
+      .then(d => setBriefing(d.briefing || []))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     fetchNotifications();
     let interval = setInterval(fetchNotifications, 30000);
 
-    // Pause polling when tab is hidden, resume when visible
     const handleVisibility = () => {
       if (document.hidden) {
         clearInterval(interval);
@@ -86,17 +101,18 @@ export default function NotificationBell() {
     setOpen(false);
   };
 
+  const totalBadge = unreadCount + (briefing.length > 0 ? 1 : 0);
+
   const dropdown = open && mounted ? createPortal(
     <>
-      {/* Full-screen backdrop */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'rgba(0,0,0,0.4)' }} onClick={() => setOpen(false)} />
-      {/* Dropdown */}
       <div style={{
-        position: 'fixed', top: 52, right: 12, width: 320, maxHeight: '70vh',
+        position: 'fixed', top: 52, right: 12, width: 340, maxHeight: '75vh',
         overflowY: 'auto', zIndex: 99999, background: '#111',
         border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16,
         boxShadow: '0 16px 48px rgba(0,0,0,0.9)',
       }}>
+        {/* Header */}
         <div style={{ position: 'sticky', top: 0, background: '#111', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>Notifications</p>
           {notifications.length > 0 && (
@@ -104,13 +120,53 @@ export default function NotificationBell() {
           )}
         </div>
 
-        {notifications.length === 0 ? (
+        {/* Briefing Section */}
+        {briefing.length > 0 && (
+          <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <Zap size={11} style={{ color: '#C9A84C' }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(201,168,76,0.6)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Today&apos;s Briefing</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {briefing.map((item, i) => {
+                const el = (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 10,
+                    background: item.type === 'alert' ? 'rgba(212,119,44,0.06)' : item.type === 'action' ? 'rgba(59,141,212,0.06)' : 'rgba(255,255,255,0.02)',
+                    border: item.type === 'alert' ? '1px solid rgba(212,119,44,0.1)' : item.type === 'action' ? '1px solid rgba(59,141,212,0.1)' : '1px solid transparent',
+                    cursor: item.link ? 'pointer' : 'default',
+                  }}
+                  onClick={() => { if (item.link) { window.location.href = item.link; setOpen(false); } }}
+                  >
+                    <span style={{ fontSize: 14, marginTop: 1, flexShrink: 0 }}>{item.icon}</span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.4 }}
+                      dangerouslySetInnerHTML={{
+                        __html: item.text.replace(/\*\*(.+?)\*\*/g, '<strong style="color:white;font-weight:600">$1</strong>')
+                      }}
+                    />
+                    {item.link && <ChevronRight size={12} style={{ color: 'rgba(255,255,255,0.15)', flexShrink: 0, marginTop: 2 }} />}
+                  </div>
+                );
+                return el;
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Notifications */}
+        {notifications.length === 0 && briefing.length === 0 ? (
           <div style={{ padding: '32px 16px', textAlign: 'center' }}>
             <Bell size={24} style={{ color: 'rgba(255,255,255,0.1)', margin: '0 auto 8px' }} />
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.2)' }}>No notifications yet</p>
           </div>
-        ) : (
+        ) : notifications.length > 0 ? (
           <div>
+            {briefing.length > 0 && (
+              <div style={{ padding: '8px 16px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Recent</span>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.03)' }} />
+              </div>
+            )}
             {notifications.map(notif => (
               <button key={notif.id} onClick={() => handleClick(notif)}
                 style={{
@@ -130,10 +186,7 @@ export default function NotificationBell() {
               </button>
             ))}
           </div>
-        )}
-        <a href="/admin/intakes" style={{ display: 'block', padding: '12px 16px', textAlign: 'center', fontSize: 12, color: 'rgba(201,168,76,0.6)', borderTop: '1px solid rgba(255,255,255,0.05)', textDecoration: 'none' }}>
-          View All Intakes
-        </a>
+        ) : null}
       </div>
     </>,
     document.body
@@ -146,12 +199,12 @@ export default function NotificationBell() {
         onClick={() => { setOpen(!open); if (!open && unreadCount > 0) markAllRead(); }}
         className="relative w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
       >
-        <Bell size={16} className={unreadCount > 0 ? 'text-[#C9A84C]' : 'text-white/30'} />
-        {unreadCount > 0 && (
+        <Bell size={16} className={totalBadge > 0 ? 'text-[#C9A84C]' : 'text-white/30'} />
+        {totalBadge > 0 && (
           <>
             <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-1"
               style={{ boxShadow: '0 2px 6px rgba(239,68,68,0.4)' }}>
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {totalBadge > 9 ? '9+' : totalBadge}
             </span>
             <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 animate-ping opacity-30" />
           </>
