@@ -328,7 +328,7 @@ export default function DrivePage() {
 
         {/* Hidden file input (multiple) */}
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUpload}
-          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar" />
+          accept="*/*" />
 
         {/* New folder modal */}
         {showNewFolder && (
