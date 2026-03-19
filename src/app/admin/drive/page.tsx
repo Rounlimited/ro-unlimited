@@ -393,7 +393,7 @@ export default function DrivePage() {
                               <Folder size={22} className="text-[#3b8dd4]" />
                             </div>
                             <button onClick={e => openFolderMenu(sf.path, sf.name, e)}
-                              className="p-1 rounded-full text-white/10 hover:text-white/40 hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              className="p-1.5 rounded-full text-white/25 hover:text-white/50 hover:bg-white/5 transition-colors">
                               <MoreVertical size={16} />
                             </button>
                           </div>
@@ -439,7 +439,7 @@ export default function DrivePage() {
                                 <Icon size={22} style={{ color }} />
                               </div>
                               <button onClick={e => { e.stopPropagation(); openFileMenu(file.id); }}
-                                className="p-1 rounded-full text-white/10 hover:text-white/40 hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                className="p-1.5 rounded-full text-white/25 hover:text-white/50 hover:bg-white/5 transition-colors">
                                 <MoreVertical size={16} />
                               </button>
                             </div>
