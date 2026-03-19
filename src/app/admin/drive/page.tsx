@@ -482,14 +482,12 @@ export default function DrivePage() {
               className="w-12 h-12 bg-[#1a1a1a] border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
               <FolderPlus size={20} />
             </button>
-            <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-              className="flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors disabled:opacity-50">
+            <label className={`flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
               <Upload size={18} /> Upload
-            </button>
+              <input ref={fileInputRef} type="file" multiple className="sr-only" onChange={handleUpload} />
+            </label>
           </div>
         </div>
-
-        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUpload} />
 
         {/* ── File Preview/Info Screen ── */}
         {previewFile && (
