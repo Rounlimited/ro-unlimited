@@ -454,8 +454,27 @@ export default function SettingsPage() {
         </section>
 
         {isNexa && (
-          <div className="text-center py-4">
-            <span className="text-[10px] text-purple-400/30 uppercase tracking-widest">NexaVision Developer Mode</span>
+          <div className="mt-6 border border-purple-500/20 rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 bg-purple-500/5 border-b border-purple-500/10 flex items-center gap-2">
+              <ShieldCheck size={14} className="text-purple-400" />
+              <span className="text-[13px] font-semibold text-purple-400">Developer Tools</span>
+              <span className="text-[10px] text-purple-400/40 uppercase tracking-widest ml-auto">NexaVision</span>
+            </div>
+            <div className="p-3 space-y-2">
+              <button
+                onClick={() => window.location.href = '/admin/activity'}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/10 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all text-left"
+              >
+                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <Shield size={15} className="text-purple-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[14px] text-white/80 font-medium">User Activity</p>
+                  <p className="text-[12px] text-white/30">Page views, app opens, push delivery, device info</p>
+                </div>
+                <span className="text-white/20 text-[18px]">›</span>
+              </button>
+            </div>
           </div>
         )}
       </div>

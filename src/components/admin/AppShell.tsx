@@ -640,15 +640,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
-  // Fetch user email for dev detection
+  // Fetch user email + role for dev detection
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
       setUserEmail(data?.user?.email || null);
+      setUserRole(data?.user?.user_metadata?.role || null);
     });
   }, []);
 
   const isDevUser = userEmail ? userEmail !== 'rounlimitedco@gmail.com' : false;
+  const isSuperAdmin = userRole === 'super_admin';
   const [drawerSearch, setDrawerSearch] = useState('');
   const [featureModal, setFeatureModal] = useState<string | null>(null);
   const [showHint, setShowHint] = useState(false);
