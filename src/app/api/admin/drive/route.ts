@@ -59,9 +59,26 @@ export async function POST(req: NextRequest) {
   const supabase = createAdminClient();
   const contentType = req.headers.get('content-type') || '';
 
-  // Handle JSON actions (delete, move, rename)
+  // Handle JSON actions
   if (contentType.includes('application/json')) {
     const body = await req.json();
+
+    // Save metadata only (file already uploaded directly to Telegram from client)
+    if (body.action === 'save_metadata') {
+      const { data, error } = await supabase.from('user_files').insert({
+        user_email: body.user_email,
+        filename: body.filename,
+        original_filename: body.original_filename,
+        mime_type: body.mime_type,
+        file_size: body.file_size,
+        telegram_file_id: body.telegram_file_id,
+        folder: body.folder || '/',
+        entity_type: body.entity_type || null,
+        entity_id: body.entity_id || null,
+      }).select().single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ file: data });
+    }
 
     if (body.action === 'delete') {
       const { error } = await supabase.from('user_files').delete().eq('id', body.id);

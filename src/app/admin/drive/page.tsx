@@ -223,22 +223,69 @@ export default function DrivePage() {
     setCurrentPath(parent || '/');
   };
 
-  // ── Upload ──
+  // ── Upload — direct to Oracle/Telegram, bypasses Vercel 4.5MB limit ──
   const doUpload = async (fileList: FileList) => {
     if (!fileList?.length || !userEmail) return;
     setUploading(true);
     let uploaded = 0;
+    const UPLOAD_BASE = process.env.NEXT_PUBLIC_TELEGRAM_UPLOAD_URL || '';
+    const BOT_TOKEN = '8749047502:AAGIy6qsa_6R81FW88XX1REn3MBTc8NJ7dc';
+    const CHAT_ID = '8195603202';
+
     for (const file of Array.from(fileList)) {
-      setUploadProgress(`Uploading ${file.name}...`);
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('user_email', userEmail);
-      formData.append('folder', currentPath);
-      const res = await fetch('/api/admin/drive', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (data.error) {
-        setToast(data.setup_required ? 'Send a message to @Nexavisiongroup_bot on Telegram first' : `Failed: ${data.error}`);
-      } else { uploaded++; }
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      setUploadProgress(`Uploading ${file.name} (${sizeMB}MB)...`);
+
+      try {
+        if (UPLOAD_BASE && file.size > 4 * 1024 * 1024) {
+          // Large file: upload directly to Oracle/Telegram (no Vercel proxy)
+          const tgForm = new FormData();
+          tgForm.append('chat_id', CHAT_ID);
+          tgForm.append('document', file, file.name);
+          tgForm.append('caption', `${userEmail} | ${currentPath} | ${file.name}`);
+
+          const tgRes = await fetch(`${UPLOAD_BASE}/bot${BOT_TOKEN}/sendDocument`, {
+            method: 'POST',
+            body: tgForm,
+          });
+          const tgData = await tgRes.json();
+
+          if (tgData.ok) {
+            // Save metadata to Supabase via our API
+            const doc = tgData.result.document;
+            await fetch('/api/admin/drive', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'save_metadata',
+                user_email: userEmail,
+                filename: doc.file_name || file.name,
+                original_filename: file.name,
+                mime_type: doc.mime_type || file.type,
+                file_size: doc.file_size || file.size,
+                telegram_file_id: doc.file_id,
+                folder: currentPath,
+              }),
+            });
+            uploaded++;
+          } else {
+            setToast(`Failed: ${tgData.description || 'Upload error'}`);
+          }
+        } else {
+          // Small file: upload through Vercel API (under 4.5MB)
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('user_email', userEmail);
+          formData.append('folder', currentPath);
+          const res = await fetch('/api/admin/drive', { method: 'POST', body: formData });
+          const data = await res.json();
+          if (data.error) {
+            setToast(`Failed: ${data.error}`);
+          } else { uploaded++; }
+        }
+      } catch (err) {
+        setToast(`Upload failed: ${file.name}`);
+      }
     }
     setUploading(false);
     setUploadProgress('');
@@ -359,9 +406,9 @@ export default function DrivePage() {
   return (
     <AuthGuard>
       {/* File inputs — IDs for DOM listeners that survive Android app-switch */}
-      <input id="ro-drive-media-input" ref={fileInputRef} type="file" multiple accept="image/*,video/*,audio/*" onChange={handleUpload}
+      <input id="ro-drive-media-input" ref={fileInputRef} type="file" multiple accept="image/*,video/*" onChange={handleUpload}
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
-      <input id="ro-drive-docs-input" ref={docsInputRef} type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.ppt,.pptx,.eps,.ai,.psd,.svg" onChange={handleUpload}
+      <input id="ro-drive-docs-input" ref={docsInputRef} type="file" multiple onChange={handleUpload}
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
       <div className="min-h-screen bg-[#0a0a0a]">
         {/* ── Header ── */}

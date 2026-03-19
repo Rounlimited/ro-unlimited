@@ -2,6 +2,12 @@
   "functions": {
     "src/app/api/admin/upload/route.ts": {
       "maxDuration": 60
+    },
+    "src/app/api/admin/drive/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/admin/drive/file/route.ts": {
+      "maxDuration": 300
     }
   },
   "crons": [
