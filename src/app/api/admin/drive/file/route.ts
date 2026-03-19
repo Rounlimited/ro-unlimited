@@ -8,8 +8,12 @@ export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url');
   if (!url) return new NextResponse('Missing url', { status: 400 });
 
-  const TELEGRAM_API_BASE = process.env.TELEGRAM_API_URL || 'https://api.telegram.org';
-  if (!url.startsWith(TELEGRAM_API_BASE) && !url.startsWith('https://api.telegram.org')) {
+  const allowed = [
+    process.env.TELEGRAM_API_URL,
+    process.env.TELEGRAM_FILE_SERVER,
+    'https://api.telegram.org',
+  ].filter(Boolean);
+  if (!allowed.some(base => url.startsWith(base!))) {
     return new NextResponse('Invalid URL', { status: 403 });
   }
 

@@ -91,10 +91,26 @@ export async function POST(req: NextRequest) {
       const tgData = await tgRes.json();
       if (!tgData.ok) return NextResponse.json({ error: 'Failed to get file from Telegram' }, { status: 500 });
 
-      // Proxy through our own API to avoid mixed content (http→https) issues
-      const internalUrl = `${TELEGRAM_API_BASE}/file/bot${TELEGRAM_TOKEN}/${tgData.result.file_path}`;
-      // Return our proxy URL instead of direct Telegram URL
-      const proxyUrl = `/api/admin/drive/file?url=${encodeURIComponent(internalUrl)}`;
+      // Self-hosted API returns absolute paths like /var/lib/telegram-bot-api/.../documents/file_1.jpg
+      // Nginx serves files from the bot directory on port 8082
+      const filePath = tgData.result.file_path;
+      const FILE_SERVER = process.env.TELEGRAM_FILE_SERVER || TELEGRAM_API_BASE;
+      let fileUrl: string;
+
+      if (filePath.startsWith('/var/lib/telegram-bot-api/')) {
+        // Extract relative path after the bot token directory
+        const parts = filePath.split('/documents/');
+        const relativePath = parts.length > 1 ? `documents/${parts[1]}` : filePath.split('/').slice(-2).join('/');
+        fileUrl = `${FILE_SERVER}/files/${relativePath}`;
+      } else if (filePath.startsWith('documents/') || filePath.startsWith('photos/') || filePath.startsWith('videos/')) {
+        fileUrl = `${FILE_SERVER}/files/${filePath}`;
+      } else {
+        // Public API format
+        fileUrl = `${TELEGRAM_API_BASE}/file/bot${TELEGRAM_TOKEN}/${filePath}`;
+      }
+
+      // Proxy through our API to handle HTTP→HTTPS
+      const proxyUrl = `/api/admin/drive/file?url=${encodeURIComponent(fileUrl)}`;
       return NextResponse.json({ url: proxyUrl });
     }
 
