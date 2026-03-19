@@ -102,10 +102,14 @@ export default function DrivePage() {
     };
   }, []);
 
-  // Get user email
+  // Get user email and save to native bridge
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user?.email) setUserEmail(data.user.email);
+      if (data.user?.email) {
+        setUserEmail(data.user.email);
+        // Save to native app so UploadActivity knows who's uploading
+        try { (window as any).RONative?.saveEmail?.(data.user.email); } catch {}
+      }
     });
   }, []);
 
@@ -639,11 +643,23 @@ export default function DrivePage() {
               className="w-12 h-12 bg-[#1a1a1a] border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
               <FolderPlus size={20} />
             </button>
-            <a href={`/admin/drive/upload-files?user=${encodeURIComponent(userEmail)}&folder=${encodeURIComponent(currentPath)}`}
-              target="_blank" rel="noopener noreferrer"
-              className={`flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors no-underline ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+            <button onClick={() => {
+              // If running in native app, call the native bridge
+              if ((window as any).RONative?.isNativeApp?.()) {
+                (window as any).RONative.openUploader(userEmail, currentPath);
+              } else {
+                // PWA fallback — open in Chrome tab
+                const params = new URLSearchParams({ user: userEmail, folder: currentPath });
+                const a = document.createElement('a');
+                a.href = `/admin/drive/upload-files?${params}`;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.click();
+              }
+            }} disabled={uploading}
+              className={`flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors ${uploading ? 'opacity-50' : ''}`}>
               <FileIcon size={16} /> Files
-            </a>
+            </button>
             <button onClick={() => document.getElementById('ro-drive-media-input')?.click()} disabled={uploading}
               className={`flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors ${uploading ? 'opacity-50' : ''}`}>
               <Image size={18} /> Photos
