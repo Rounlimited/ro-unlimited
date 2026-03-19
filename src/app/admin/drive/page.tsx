@@ -626,9 +626,34 @@ export default function DrivePage() {
               className="w-12 h-12 bg-[#1a1a1a] border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
               <FolderPlus size={20} />
             </button>
+            <button onClick={async () => {
+              // Try File System Access API first (stays in browser, no app switch)
+              try {
+                if ('showOpenFilePicker' in window) {
+                  const handles = await (window as any).showOpenFilePicker({ multiple: true });
+                  const files: File[] = [];
+                  for (const handle of handles) {
+                    files.push(await handle.getFile());
+                  }
+                  if (files.length && handleUploadRef.current) {
+                    const dt = new DataTransfer();
+                    files.forEach(f => dt.items.add(f));
+                    handleUploadRef.current(dt.files);
+                  }
+                  return;
+                }
+              } catch (e: any) {
+                if (e.name === 'AbortError') return; // user cancelled
+              }
+              // Fallback to input click
+              document.getElementById('ro-drive-upload-input')?.click();
+            }} disabled={uploading}
+              className={`flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors ${uploading ? 'opacity-50' : ''}`}>
+              <FileIcon size={16} /> Files
+            </button>
             <button onClick={() => document.getElementById('ro-drive-upload-input')?.click()} disabled={uploading}
-              className={`flex items-center gap-2 px-6 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors ${uploading ? 'opacity-50' : ''}`}>
-              <Upload size={18} /> Upload
+              className={`flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors ${uploading ? 'opacity-50' : ''}`}>
+              <Image size={18} /> Photos
             </button>
           </div>
         </div>
