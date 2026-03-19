@@ -1,0 +1,173 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/server';
+
+const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
+// We use a private channel/chat to store files — bot sends to itself
+// First message to the bot creates the chat_id
+const STORAGE_CHAT_ID = process.env.TELEGRAM_STORAGE_CHAT_ID || '';
+
+export const dynamic = 'force-dynamic';
+
+// GET — list files for user
+export async function GET(req: NextRequest) {
+  const supabase = createAdminClient();
+  const { searchParams } = new URL(req.url);
+  const userEmail = searchParams.get('user');
+  const folder = searchParams.get('folder');
+  const entityType = searchParams.get('entity_type');
+  const entityId = searchParams.get('entity_id');
+  const search = searchParams.get('search');
+
+  let query = supabase
+    .from('user_files')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (userEmail) query = query.eq('user_email', userEmail);
+  if (folder) query = query.eq('folder', folder);
+  if (entityType) query = query.eq('entity_type', entityType);
+  if (entityId) query = query.eq('entity_id', entityId);
+
+  const { data, error } = await query.limit(100);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  let files = data || [];
+  if (search) {
+    const s = search.toLowerCase();
+    files = files.filter(f => f.original_filename.toLowerCase().includes(s) || f.folder?.toLowerCase().includes(s));
+  }
+
+  // Calculate storage used
+  const totalBytes = files.reduce((sum, f) => sum + (f.file_size || 0), 0);
+
+  return NextResponse.json({ files, totalBytes });
+}
+
+// POST — upload file or manage files
+export async function POST(req: NextRequest) {
+  if (!TELEGRAM_TOKEN) {
+    return NextResponse.json({ error: 'Telegram not configured' }, { status: 500 });
+  }
+
+  const supabase = createAdminClient();
+  const contentType = req.headers.get('content-type') || '';
+
+  // Handle JSON actions (delete, move, rename)
+  if (contentType.includes('application/json')) {
+    const body = await req.json();
+
+    if (body.action === 'delete') {
+      const { error } = await supabase.from('user_files').delete().eq('id', body.id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    if (body.action === 'move') {
+      const { error } = await supabase.from('user_files').update({ folder: body.folder }).eq('id', body.id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    if (body.action === 'rename') {
+      const { error } = await supabase.from('user_files').update({ original_filename: body.filename }).eq('id', body.id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    if (body.action === 'get_download_url') {
+      // Get temporary download URL from Telegram
+      const { data: file } = await supabase.from('user_files').select('telegram_file_id').eq('id', body.id).single();
+      if (!file) return NextResponse.json({ error: 'File not found' }, { status: 404 });
+
+      const tgRes = await fetch(`${TELEGRAM_API}/getFile?file_id=${file.telegram_file_id}`);
+      const tgData = await tgRes.json();
+      if (!tgData.ok) return NextResponse.json({ error: 'Failed to get file from Telegram' }, { status: 500 });
+
+      const downloadUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${tgData.result.file_path}`;
+      return NextResponse.json({ url: downloadUrl });
+    }
+
+    if (body.action === 'create_folder') {
+      // Folders are virtual — just a string in the folder column
+      return NextResponse.json({ success: true, folder: body.folder });
+    }
+
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+  }
+
+  // Handle multipart file upload
+  const formData = await req.formData();
+  const file = formData.get('file') as File;
+  const userEmail = formData.get('user_email') as string;
+  const folder = (formData.get('folder') as string) || 'general';
+  const entityType = formData.get('entity_type') as string || null;
+  const entityId = formData.get('entity_id') as string || null;
+
+  if (!file || !userEmail) {
+    return NextResponse.json({ error: 'file and user_email required' }, { status: 400 });
+  }
+
+  // Check file size (50MB limit for Telegram Bot API)
+  if (file.size > 50 * 1024 * 1024) {
+    return NextResponse.json({ error: 'File too large. Maximum 50MB.' }, { status: 413 });
+  }
+
+  // Determine storage chat — use bot's own saved messages or a channel
+  let chatId = STORAGE_CHAT_ID;
+  if (!chatId) {
+    // Get bot's own chat_id by sending to the bot's ID
+    // We need a chat to send to — use the bot's updates to find one, or create via getUpdates
+    const updatesRes = await fetch(`${TELEGRAM_API}/getUpdates?limit=1`);
+    const updates = await updatesRes.json();
+    if (updates.ok && updates.result?.length > 0) {
+      chatId = String(updates.result[0].message?.chat?.id || '');
+    }
+    if (!chatId) {
+      return NextResponse.json({
+        error: 'Telegram storage not initialized. Send any message to the bot first to activate it.',
+        setup_required: true
+      }, { status: 503 });
+    }
+  }
+
+  // Upload to Telegram
+  const tgForm = new FormData();
+  tgForm.append('chat_id', chatId);
+  tgForm.append('document', file, file.name);
+  tgForm.append('caption', `${userEmail} | ${folder} | ${file.name}`);
+
+  const tgRes = await fetch(`${TELEGRAM_API}/sendDocument`, {
+    method: 'POST',
+    body: tgForm,
+  });
+
+  const tgData = await tgRes.json();
+  if (!tgData.ok) {
+    return NextResponse.json({ error: `Telegram upload failed: ${tgData.description}` }, { status: 500 });
+  }
+
+  const doc = tgData.result.document;
+  const telegramFileId = doc.file_id;
+
+  // Save metadata to Supabase
+  const { data: record, error } = await supabase
+    .from('user_files')
+    .insert({
+      user_email: userEmail,
+      filename: doc.file_name || file.name,
+      original_filename: file.name,
+      mime_type: doc.mime_type || file.type,
+      file_size: doc.file_size || file.size,
+      telegram_file_id: telegramFileId,
+      folder,
+      entity_type: entityType,
+      entity_id: entityId,
+    })
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ file: record });
+}
