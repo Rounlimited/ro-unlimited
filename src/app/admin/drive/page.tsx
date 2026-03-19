@@ -80,7 +80,7 @@ export default function DrivePage() {
   // Persist upload handler in a ref so it survives re-renders
   const handleUploadRef = useRef<(files: FileList) => void>();
 
-  useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); } }, [toast]);
+  useEffect(() => { if (toast) { const delay = toast.toLowerCase().includes('fail') || toast.toLowerCase().includes('error') ? 8000 : 3000; const t = setTimeout(() => setToast(null), delay); return () => clearTimeout(t); } }, [toast]);
   useEffect(() => { localStorage.setItem('ro_drive_view', viewMode); }, [viewMode]);
 
   // Attach change listeners via DOM (survives Android app-switch re-mounts)
@@ -863,7 +863,7 @@ export default function DrivePage() {
 
         {/* Toast */}
         {toast && (
-          <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 bg-[#1a1a1a] border border-[#3b8dd4]/30 rounded-full text-[15px] text-[#3b8dd4] shadow-lg whitespace-nowrap">
+          <div className="fixed bottom-28 left-4 right-4 z-50 px-5 py-3 bg-[#111] border border-[#3b8dd4]/30 rounded-2xl text-[14px] text-[#3b8dd4] shadow-2xl leading-snug break-words">
             {toast}
           </div>
         )}
