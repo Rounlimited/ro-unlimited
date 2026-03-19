@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-// Use self-hosted Bot API server for 2GB uploads, fall back to public API
-const TELEGRAM_API_BASE = process.env.TELEGRAM_API_URL || 'https://api.telegram.org';
-const TELEGRAM_API = `${TELEGRAM_API_BASE}/bot${TELEGRAM_TOKEN}`;
+// Self-hosted server for both upload (2GB) and download (no 20MB limit)
+const TELEGRAM_API = `${process.env.TELEGRAM_API_URL || 'https://api.telegram.org'}/bot${TELEGRAM_TOKEN}`;
 // We use a private channel/chat to store files — bot sends to itself
 // First message to the bot creates the chat_id
 const STORAGE_CHAT_ID = process.env.TELEGRAM_STORAGE_CHAT_ID || '';
@@ -87,31 +86,21 @@ export async function POST(req: NextRequest) {
       const { data: file } = await supabase.from('user_files').select('telegram_file_id').eq('id', body.id).single();
       if (!file) return NextResponse.json({ error: 'File not found' }, { status: 404 });
 
-      const tgRes = await fetch(`${TELEGRAM_API}/getFile?file_id=${file.telegram_file_id}`);
+      // Use public API for getFile (works for all files) then download through public CDN
+      const tgRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getFile?file_id=${file.telegram_file_id}`);
       const tgData = await tgRes.json();
       if (!tgData.ok) return NextResponse.json({ error: 'Failed to get file from Telegram' }, { status: 500 });
 
-      // Self-hosted API returns absolute paths like /var/lib/telegram-bot-api/.../documents/file_1.jpg
-      // Nginx serves files from the bot directory on port 8082
       const filePath = tgData.result.file_path;
-      const FILE_SERVER = process.env.TELEGRAM_FILE_SERVER || TELEGRAM_API_BASE;
-      let fileUrl: string;
+      const fileSize = tgData.result.file_size || 0;
 
-      if (filePath.startsWith('/var/lib/telegram-bot-api/')) {
-        // Extract relative path after the bot token directory
-        const parts = filePath.split('/documents/');
-        const relativePath = parts.length > 1 ? `documents/${parts[1]}` : filePath.split('/').slice(-2).join('/');
-        fileUrl = `${FILE_SERVER}/files/${relativePath}`;
-      } else if (filePath.startsWith('documents/') || filePath.startsWith('photos/') || filePath.startsWith('videos/')) {
-        fileUrl = `${FILE_SERVER}/files/${filePath}`;
-      } else {
-        // Public API format
-        fileUrl = `${TELEGRAM_API_BASE}/file/bot${TELEGRAM_TOKEN}/${filePath}`;
+      // Public API download limit is 20MB. Use proxy for larger files.
+      if (fileSize > 20 * 1024 * 1024) {
+        // Large file — proxy through our server-side fetch (server→Telegram CDN→user)
+        return NextResponse.json({ url: `/api/admin/drive/file?url=${encodeURIComponent(`https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${filePath}`)}` });
       }
-
-      // Proxy through our API to handle HTTP→HTTPS
-      const proxyUrl = `/api/admin/drive/file?url=${encodeURIComponent(fileUrl)}`;
-      return NextResponse.json({ url: proxyUrl });
+      // Small file — direct Telegram CDN URL (fast, HTTPS, no proxy needed)
+      return NextResponse.json({ url: `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${filePath}` });
     }
 
     if (body.action === 'create_folder') {
