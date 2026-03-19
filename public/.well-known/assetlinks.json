@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.rounlimited.admin",
+    "sha256_cert_fingerprints": ["67:59:70:D7:6D:D5:C6:8A:26:EF:85:D7:B0:A7:34:B9:8E:14:17:0E:02:83:02:9D:34:57:A2:C4:45:26:F6:70"]
+  }
+}]

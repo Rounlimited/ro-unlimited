@@ -639,19 +639,55 @@ export default function DrivePage() {
               className="w-12 h-12 bg-[#1a1a1a] border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
               <FolderPlus size={20} />
             </button>
-            <button onClick={() => {
-              // Play silent audio to keep Chrome alive while file picker is open
+            <button onClick={async () => {
+              // Try native Capacitor file picker first (survives Samsung killing WebView)
               try {
-                const ctx = new AudioContext();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                gain.gain.value = 0.001; // silent keepalive
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                // Store cleanup function
-                (window as any).__roKeepAlive = () => { osc.stop(); ctx.close(); };
+                const { Capacitor } = await import('@capacitor/core');
+                if (Capacitor.isNativePlatform()) {
+                  const { FilePicker } = (Capacitor as any).Plugins;
+                  if (FilePicker) {
+                    const result = await FilePicker.pickFiles();
+                    if (result.files?.length && userEmail) {
+                      setUploading(true);
+                      let uploaded = 0;
+                      const UPLOAD_BASE = process.env.NEXT_PUBLIC_TELEGRAM_UPLOAD_URL || '';
+                      const BOT_TOKEN = '8749047502:AAGIy6qsa_6R81FW88XX1REn3MBTc8NJ7dc';
+                      const CHAT_ID = '8195603202';
+                      for (const f of result.files) {
+                        setUploadProgress(`Uploading ${f.name} (${(f.size / 1024 / 1024).toFixed(1)}MB)...`);
+                        // Convert base64 to blob
+                        const byteChars = atob(f.data);
+                        const byteArray = new Uint8Array(byteChars.length);
+                        for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
+                        const blob = new Blob([byteArray], { type: f.mimeType });
+                        const file = new File([blob], f.name, { type: f.mimeType });
+
+                        const tgForm = new FormData();
+                        tgForm.append('chat_id', CHAT_ID);
+                        tgForm.append('document', file, f.name);
+                        tgForm.append('caption', `${userEmail} | ${currentPath} | ${f.name}`);
+                        try {
+                          const tgRes = await fetch(`${UPLOAD_BASE}/bot${BOT_TOKEN}/sendDocument`, { method: 'POST', body: tgForm });
+                          const tgData = await tgRes.json();
+                          if (tgData.ok) {
+                            const doc = tgData.result.document;
+                            await fetch('/api/admin/drive', {
+                              method: 'POST', headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ action: 'save_metadata', user_email: userEmail, filename: doc.file_name || f.name, original_filename: f.name, mime_type: doc.mime_type || f.mimeType, file_size: doc.file_size || f.size, telegram_file_id: doc.file_id, folder: currentPath }),
+                            });
+                            uploaded++;
+                          }
+                        } catch {}
+                      }
+                      setUploading(false);
+                      setUploadProgress('');
+                      if (uploaded > 0) { setToast(`${uploaded} file${uploaded > 1 ? 's' : ''} uploaded`); fetchFiles(); }
+                    }
+                    return;
+                  }
+                }
               } catch {}
+              // Fallback: regular file input
               document.getElementById('ro-drive-upload-input')?.click();
             }} disabled={uploading}
               className={`flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors ${uploading ? 'opacity-50' : ''}`}>
