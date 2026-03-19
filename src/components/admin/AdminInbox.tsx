@@ -7,7 +7,7 @@ import {
   X, Check, Loader2, Users, Paperclip, Menu, Pencil,
   MoreVertical, ChevronDown, RefreshCw, Plus, Bold, Italic,
   Underline as UnderlineIcon, Strikethrough, List, ListOrdered, Quote, Link2,
-  EyeOff, CheckSquare, Square,
+  EyeOff, CheckSquare, Square, Download, Eye, FileText, Image,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -84,6 +84,116 @@ function EditorToolbar({ editor }: { editor: any }) {
         const url = window.prompt("Enter URL:"); if (url) editor.chain().focus().setLink({ href: url }).run();
       }}><Link2 size={16} /></Btn>
     </div>
+  );
+}
+
+// ── Attachment Preview (Gmail-style inline preview + download) ──
+function AttachmentPreview({ attachments }: { attachments: Message["attachments"] }) {
+  const [previewAtt, setPreviewAtt] = useState<Message["attachments"][0] | null>(null);
+
+  function formatSize(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function getIcon(ct: string) {
+    if (ct.startsWith("image/")) return <Image size={18} className="text-blue-400" />;
+    if (ct === "application/pdf") return <FileText size={18} className="text-red-400" />;
+    return <Paperclip size={18} className="text-[#C9A84C]" />;
+  }
+
+  function isPreviewable(ct: string) {
+    return ct.startsWith("image/") || ct === "application/pdf";
+  }
+
+  return (
+    <>
+      <div className="mt-4 border border-white/10 rounded-2xl overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-white/[0.03] border-b border-white/10">
+          <Paperclip size={14} className="text-white/40" />
+          <span className="text-[13px] text-white/50 font-medium">
+            {attachments.length} attachment{attachments.length > 1 ? "s" : ""}
+          </span>
+        </div>
+        <div className="grid gap-0 divide-y divide-white/5">
+          {attachments.map(att => (
+            <div key={att.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors">
+              {/* Thumbnail for images */}
+              {att.content_type.startsWith("image/") ? (
+                <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 cursor-pointer"
+                  onClick={() => setPreviewAtt(att)}>
+                  <img src={att.s3_url} alt={att.filename}
+                    className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                  {getIcon(att.content_type)}
+                </div>
+              )}
+              {/* File info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] text-white/80 font-medium truncate">{att.filename}</p>
+                <p className="text-[12px] text-white/30">{formatSize(att.size_bytes)}</p>
+              </div>
+              {/* Actions */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {isPreviewable(att.content_type) && (
+                  <button onClick={() => setPreviewAtt(att)}
+                    className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white/80 transition-colors"
+                    title="Preview">
+                    <Eye size={16} />
+                  </button>
+                )}
+                <a href={att.s3_url} download={att.filename} target="_blank" rel="noopener noreferrer"
+                  className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-[#C9A84C] transition-colors"
+                  title="Download">
+                  <Download size={16} />
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Fullscreen Preview Modal ── */}
+      {previewAtt && (
+        <div className="fixed inset-0 z-[9999] bg-black/90 flex flex-col"
+          onClick={() => setPreviewAtt(null)}>
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 bg-black/50 border-b border-white/10"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 min-w-0">
+              {getIcon(previewAtt.content_type)}
+              <span className="text-[15px] text-white/80 font-medium truncate">{previewAtt.filename}</span>
+              <span className="text-[12px] text-white/30 flex-shrink-0">{formatSize(previewAtt.size_bytes)}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <a href={previewAtt.s3_url} download={previewAtt.filename} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-[13px] text-white/80 transition-colors"
+                onClick={e => e.stopPropagation()}>
+                <Download size={14} /> Download
+              </a>
+              <button onClick={() => setPreviewAtt(null)}
+                className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors ml-1">
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+          {/* Content */}
+          <div className="flex-1 flex items-center justify-center overflow-auto p-4"
+            onClick={e => e.stopPropagation()}>
+            {previewAtt.content_type.startsWith("image/") ? (
+              <img src={previewAtt.s3_url} alt={previewAtt.filename}
+                className="max-w-full max-h-full object-contain rounded-lg" />
+            ) : previewAtt.content_type === "application/pdf" ? (
+              <iframe src={previewAtt.s3_url} title={previewAtt.filename}
+                className="w-full h-full rounded-lg bg-white" style={{ maxWidth: 900 }} />
+            ) : null}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -601,14 +711,7 @@ export default function AdminInbox() {
                 <pre className="text-[15px] text-white/80 whitespace-pre-wrap font-sans leading-relaxed">{msg.body_text || "(no content)"}</pre>
               )}
               {msg.attachments?.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {msg.attachments.map(att => (
-                    <a key={att.id} href={att.s3_url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-[13px] text-[#C9A84C] hover:border-[#C9A84C]/30">
-                      <Paperclip size={14} /> {att.filename}
-                    </a>
-                  ))}
-                </div>
+                <AttachmentPreview attachments={msg.attachments} />
               )}
             </div>
           ))}
