@@ -645,7 +645,8 @@ export default function DrivePage() {
                 const ctx = new AudioContext();
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
-                gain.gain.value = 0.001; // essentially silent
+                gain.gain.value = 0.3; // audible beep to test keepalive
+                osc.frequency.value = 440; // A note
                 osc.connect(gain);
                 gain.connect(ctx.destination);
                 osc.start();
