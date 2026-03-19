@@ -7,12 +7,14 @@ import {
   X, Check, Loader2, Users, Paperclip, Menu, Pencil,
   MoreVertical, ChevronDown, RefreshCw, Plus, Bold, Italic,
   Underline as UnderlineIcon, Strikethrough, List, ListOrdered, Quote, Link2,
+  EyeOff, CheckSquare, Square,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Types ──
 interface Thread {
@@ -114,6 +116,22 @@ export default function AdminInbox() {
   const toastTimer = useRef<NodeJS.Timeout>();
   const showToast = (msg: string) => { setToast(msg); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 3000); };
 
+  // ── Multi-select state ──
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const longPressTimer = useRef<NodeJS.Timeout>();
+  const longPressTriggered = useRef(false);
+
+  // ── Dropdown menu state ──
+  const [threadMenuOpen, setThreadMenuOpen] = useState(false);
+  const [msgMenuOpenId, setMsgMenuOpenId] = useState<string | null>(null);
+  const threadMenuRef = useRef<HTMLDivElement>(null);
+  const msgMenuRef = useRef<HTMLDivElement>(null);
+
+  // ── User email for persistent state ──
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const persistInitialized = useRef(false);
+
   // Tiptap editor for compose
   const editor = useEditor({
     extensions: [
@@ -127,16 +145,88 @@ export default function AdminInbox() {
     },
   });
 
+  // ── Get user email from Supabase auth ──
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user?.email) {
+        setUserEmail(data.user.email);
+      }
+    });
+  }, []);
+
+  // ── Load persistent state when userEmail is available ──
+  useEffect(() => {
+    if (!userEmail || persistInitialized.current) return;
+    try {
+      const saved = localStorage.getItem("ro_inbox_state_" + userEmail);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.folder && FOLDERS.some(f => f.key === parsed.folder)) {
+          setFolder(parsed.folder);
+        }
+        // accountEmail will be applied once accounts are loaded
+        if (parsed.accountEmail) {
+          // Store it temporarily so we can apply it after accounts load
+          persistInitialized.current = true;
+          (window as any).__ro_inbox_saved_account = parsed.accountEmail;
+        } else {
+          persistInitialized.current = true;
+        }
+      } else {
+        persistInitialized.current = true;
+      }
+    } catch {
+      persistInitialized.current = true;
+    }
+  }, [userEmail]);
+
+  // ── Save persistent state when folder or account changes ──
+  useEffect(() => {
+    if (!userEmail || !persistInitialized.current) return;
+    try {
+      localStorage.setItem("ro_inbox_state_" + userEmail, JSON.stringify({
+        accountEmail: activeAccount?.email || null,
+        folder,
+      }));
+    } catch { /* ignore */ }
+  }, [userEmail, activeAccount, folder]);
+
+  // ── Close dropdown menus when clicking outside ──
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (threadMenuOpen && threadMenuRef.current && !threadMenuRef.current.contains(e.target as Node)) {
+        setThreadMenuOpen(false);
+      }
+      if (msgMenuOpenId && msgMenuRef.current && !msgMenuRef.current.contains(e.target as Node)) {
+        setMsgMenuOpenId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [threadMenuOpen, msgMenuOpenId]);
+
   // ── Fetch accounts ──
   const fetchAccounts = async () => {
     const res = await fetch("/api/admin/email-accounts");
     if (!res.ok) return;
     const data = await res.json();
-    // API returns either { accounts: [...] } or bare array depending on role
     const list = Array.isArray(data) ? data : (data.accounts || []);
     if (list.length) {
       setAccounts(list);
       if (!activeAccount) {
+        // Check if there's a saved account from localStorage
+        const savedAccountEmail = (window as any).__ro_inbox_saved_account;
+        if (savedAccountEmail) {
+          const saved = list.find((a: EmailAccount) => a.email === savedAccountEmail);
+          if (saved) {
+            setActiveAccount(saved);
+            setFromAccount(saved.email);
+            delete (window as any).__ro_inbox_saved_account;
+            return;
+          }
+          delete (window as any).__ro_inbox_saved_account;
+        }
         const def = list.find((a: EmailAccount) => a.is_default) || list[0];
         setActiveAccount(def);
         setFromAccount(def.email);
@@ -181,9 +271,73 @@ export default function AdminInbox() {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ thread_ids: ids, action, account: activeAccount?.email }),
     });
-    showToast(action === "trash" ? "Moved to trash" : action === "star" ? "Starred" : "Updated");
-    if (action === "trash" && view === "thread") setView("list");
+    const toastMap: Record<string, string> = {
+      trash: "Moved to trash",
+      star: "Starred",
+      unstar: "Unstarred",
+      mark_unread: "Marked as unread",
+      spam: "Moved to spam",
+      mark_read: "Marked as read",
+    };
+    showToast(toastMap[action] || "Updated");
+    if ((action === "trash" || action === "mark_unread") && view === "thread") setView("list");
     fetchThreads();
+  };
+
+  // ── Multi-select helpers ──
+  const enterSelectMode = (threadId: string) => {
+    setSelectMode(true);
+    setSelectedIds(new Set([threadId]));
+  };
+
+  const toggleSelect = (threadId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(threadId)) next.delete(threadId);
+      else next.add(threadId);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const batchAction = async (action: string) => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    await threadAction(action, ids);
+    exitSelectMode();
+  };
+
+  // ── Long press handlers ──
+  const handlePointerDown = (threadId: string) => {
+    longPressTriggered.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      enterSelectMode(threadId);
+    }, 500);
+  };
+
+  const handlePointerUp = () => {
+    clearTimeout(longPressTimer.current);
+  };
+
+  const handlePointerCancel = () => {
+    clearTimeout(longPressTimer.current);
+  };
+
+  const handleThreadClick = (thread: Thread) => {
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false;
+      return;
+    }
+    if (selectMode) {
+      toggleSelect(thread.thread_id);
+    } else {
+      openThread(thread);
+    }
   };
 
   // ── Compose ──
@@ -334,6 +488,15 @@ export default function AdminInbox() {
           </div>
           <EditorToolbar editor={editor} />
           <EditorContent editor={editor} />
+          {/* Attachment bar */}
+          <div className="px-4 py-2 border-t border-white/5 flex items-center gap-2">
+            <button
+              onClick={() => showToast("Attachments coming soon — storage integration pending")}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors text-[13px]">
+              <Paperclip size={16} />
+              Attach file
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -346,13 +509,38 @@ export default function AdminInbox() {
     return (
       <div className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col">
         <div className="flex items-center gap-1 px-2 py-2 border-b border-white/5">
-          <button onClick={() => { setView("list"); setSelectedThread(null); }} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
+          <button onClick={() => { setView("list"); setSelectedThread(null); setThreadMenuOpen(false); }} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
             <ChevronLeft size={26} />
           </button>
           <div className="flex-1" />
           <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/40 hover:text-red-400 hover:bg-white/5"><Trash2 size={22} /></button>
           <button onClick={() => threadAction(selectedThread.starred ? "unstar" : "star")} className="p-2 rounded-full text-white/40 hover:text-[#D4772C] hover:bg-white/5"><MailOpen size={22} /></button>
-          <button className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5"><MoreVertical size={22} /></button>
+          {/* Thread three-dot menu */}
+          <div className="relative" ref={threadMenuRef}>
+            <button onClick={() => setThreadMenuOpen(!threadMenuOpen)} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
+              <MoreVertical size={22} />
+            </button>
+            {threadMenuOpen && (
+              <div className="absolute right-0 top-full mt-1 w-52 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                <button onClick={() => { setThreadMenuOpen(false); threadAction("mark_unread"); }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
+                  <EyeOff size={18} className="text-white/40" /> Mark as unread
+                </button>
+                <button onClick={() => { setThreadMenuOpen(false); threadAction("spam"); }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
+                  <AlertOctagon size={18} className="text-white/40" /> Move to spam
+                </button>
+                <button onClick={() => { setThreadMenuOpen(false); threadAction("trash"); }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
+                  <Trash2 size={18} className="text-white/40" /> Move to trash
+                </button>
+                <button onClick={() => { setThreadMenuOpen(false); threadAction(selectedThread.starred ? "unstar" : "star"); }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
+                  <Star size={18} className="text-white/40" /> {selectedThread.starred ? "Unstar" : "Star"}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="px-5 pt-4 pb-3">
@@ -382,10 +570,32 @@ export default function AdminInbox() {
                   <p className="text-[13px] text-white/30">to {msg.direction === "outbound" ? msg.to_email : "me"} <ChevronDown size={10} className="inline" /></p>
                 </div>
                 <button onClick={() => startCompose("reply", msg)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5"><Reply size={20} /></button>
-                <button className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5"><MoreVertical size={20} /></button>
+                {/* Per-message three-dot menu */}
+                <div className="relative" ref={msgMenuOpenId === msg.id ? msgMenuRef : undefined}>
+                  <button onClick={() => setMsgMenuOpenId(msgMenuOpenId === msg.id ? null : msg.id)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
+                    <MoreVertical size={20} />
+                  </button>
+                  {msgMenuOpenId === msg.id && (
+                    <div className="absolute right-0 top-full mt-1 w-48 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                      <button onClick={() => { setMsgMenuOpenId(null); startCompose("reply", msg); }}
+                        className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
+                        <Reply size={18} className="text-white/40" /> Reply
+                      </button>
+                      <button onClick={() => { setMsgMenuOpenId(null); startCompose("forward", msg); }}
+                        className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
+                        <Forward size={18} className="text-white/40" /> Forward
+                      </button>
+                      <button onClick={() => { setMsgMenuOpenId(null); threadAction("mark_unread"); }}
+                        className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
+                        <EyeOff size={18} className="text-white/40" /> Mark as unread
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               {msg.body_html ? (
-                <div className="text-[15px] text-white/80 leading-relaxed [&_a]:text-[#3b8dd4] [&_img]:max-w-full"
+                <div className="text-[15px] text-white/80 leading-relaxed overflow-x-auto overflow-y-hidden max-w-full [&_a]:text-[#3b8dd4] [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full [&_table]:table-fixed [&_td]:break-words [&_div]:max-w-full [&_pre]:max-w-full [&_pre]:overflow-x-auto"
+                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
                   dangerouslySetInnerHTML={{ __html: msg.body_html }} />
               ) : (
                 <pre className="text-[15px] text-white/80 whitespace-pre-wrap font-sans leading-relaxed">{msg.body_text || "(no content)"}</pre>
@@ -461,29 +671,56 @@ export default function AdminInbox() {
     <div className="h-full flex flex-col bg-[#0a0a0a] relative">
       {sidebarOpen && <Sidebar />}
 
-      {/* Top bar — Gmail style */}
-      <div className="flex items-center gap-3 px-4 py-2.5">
-        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
-          <Menu size={26} />
-        </button>
-        <div className="flex-1 relative">
-          <div className="flex items-center gap-2.5 px-4 py-3 bg-[#1a1a1a] rounded-full border border-white/5">
-            <Search size={20} className="text-white/30 shrink-0" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search in mail"
-              className="flex-1 bg-transparent text-[15px] text-white placeholder:text-white/25 focus:outline-none" />
-          </div>
+      {/* Batch action bar — shown in select mode */}
+      {selectMode && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-[#111] border-b border-white/5">
+          <button onClick={exitSelectMode} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
+            <X size={22} />
+          </button>
+          <span className="text-[16px] font-semibold text-white flex-1">{selectedIds.size} selected</span>
+          <button onClick={() => batchAction("mark_read")} className="p-2 rounded-full text-white/40 hover:text-[#3b8dd4] hover:bg-white/5" title="Mark read">
+            <MailOpen size={20} />
+          </button>
+          <button onClick={() => batchAction("mark_unread")} className="p-2 rounded-full text-white/40 hover:text-[#C9A84C] hover:bg-white/5" title="Mark unread">
+            <EyeOff size={20} />
+          </button>
+          <button onClick={() => batchAction((() => { const allStarred = filtered.filter(t => selectedIds.has(t.thread_id)).every(t => t.starred); return allStarred ? "unstar" : "star"; })())}
+            className="p-2 rounded-full text-white/40 hover:text-[#D4772C] hover:bg-white/5" title="Star/Unstar">
+            <Star size={20} />
+          </button>
+          <button onClick={() => batchAction("trash")} className="p-2 rounded-full text-white/40 hover:text-red-400 hover:bg-white/5" title="Trash">
+            <Trash2 size={20} />
+          </button>
         </div>
-        <button onClick={() => setView("accounts")}
-          className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-          style={activeAccount ? { backgroundColor: activeAccount.color + "25", color: activeAccount.color } : { backgroundColor: "#1a1a1a", color: "#888" }}>
-          {activeAccount ? activeAccount.initials : "All"}
-        </button>
-      </div>
+      )}
+
+      {/* Top bar — Gmail style (hidden in select mode) */}
+      {!selectMode && (
+        <div className="flex items-center gap-3 px-4 py-2.5">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
+            <Menu size={26} />
+          </button>
+          <div className="flex-1 relative">
+            <div className="flex items-center gap-2.5 px-4 py-3 bg-[#1a1a1a] rounded-full border border-white/5">
+              <Search size={20} className="text-white/30 shrink-0" />
+              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search in mail"
+                className="flex-1 bg-transparent text-[15px] text-white placeholder:text-white/25 focus:outline-none" />
+            </div>
+          </div>
+          <button onClick={() => setView("accounts")}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+            style={activeAccount ? { backgroundColor: activeAccount.color + "25", color: activeAccount.color } : { backgroundColor: "#1a1a1a", color: "#888" }}>
+            {activeAccount ? activeAccount.initials : "All"}
+          </button>
+        </div>
+      )}
 
       {/* Folder label */}
-      <div className="px-5 py-1.5">
-        <span className="text-[15px] font-medium text-white/30 capitalize">{folder}</span>
-      </div>
+      {!selectMode && (
+        <div className="px-5 py-1.5">
+          <span className="text-[15px] font-medium text-white/30 capitalize">{folder}</span>
+        </div>
+      )}
 
       {/* Thread list */}
       <div className="flex-1 overflow-y-auto">
@@ -497,13 +734,27 @@ export default function AdminInbox() {
         ) : filtered.map(thread => {
           const senderEmail = folder === "sent" ? thread.to_email : thread.from_email;
           const senderName = senderEmail.split("@")[0];
+          const isSelected = selectedIds.has(thread.thread_id);
           return (
-            <button key={thread.thread_id} onClick={() => openThread(thread)}
-              className={`w-full flex items-start gap-3 px-5 py-4 text-left transition-colors active:bg-white/[0.03] ${thread.unread_count > 0 ? "bg-[#C9A84C]/[0.02]" : ""}`}>
-              <div className="w-11 h-11 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0 mt-0.5"
-                style={{ backgroundColor: avatarColor(senderEmail) + "25", color: avatarColor(senderEmail) }}>
-                {getInitial(senderName)}
-              </div>
+            <button key={thread.thread_id}
+              onPointerDown={() => handlePointerDown(thread.thread_id)}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
+              onContextMenu={e => { e.preventDefault(); if (!selectMode) enterSelectMode(thread.thread_id); }}
+              onClick={() => handleThreadClick(thread)}
+              className={`w-full flex items-start gap-3 px-5 py-4 text-left transition-colors active:bg-white/[0.03] ${thread.unread_count > 0 ? "bg-[#C9A84C]/[0.02]" : ""} ${isSelected ? "bg-[#C9A84C]/[0.08]" : ""}`}>
+              {/* Avatar or checkbox in select mode */}
+              {selectMode ? (
+                <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 mt-0.5 border-2 transition-colors"
+                  style={isSelected ? { borderColor: "#C9A84C", backgroundColor: "#C9A84C20" } : { borderColor: "rgba(255,255,255,0.15)", backgroundColor: "transparent" }}>
+                  {isSelected ? <Check size={20} className="text-[#C9A84C]" /> : <span className="w-5 h-5" />}
+                </div>
+              ) : (
+                <div className="w-11 h-11 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0 mt-0.5"
+                  style={{ backgroundColor: avatarColor(senderEmail) + "25", color: avatarColor(senderEmail) }}>
+                  {getInitial(senderName)}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className={`text-[16px] truncate ${thread.unread_count > 0 ? "font-bold text-white" : "font-medium text-white/60"}`}>
@@ -518,21 +769,25 @@ export default function AdminInbox() {
                 </p>
                 <p className="text-[14px] text-white/25 truncate mt-0.5">{thread.latest_body_preview}</p>
               </div>
-              <button onClick={e => { e.stopPropagation(); threadAction(thread.starred ? "unstar" : "star", [thread.thread_id]); }}
-                className="mt-1.5 shrink-0 p-1">
-                <Star size={20} className={thread.starred ? "fill-[#D4772C] text-[#D4772C]" : "text-white/10"} />
-              </button>
+              {!selectMode && (
+                <button onClick={e => { e.stopPropagation(); threadAction(thread.starred ? "unstar" : "star", [thread.thread_id]); }}
+                  className="mt-1.5 shrink-0 p-1">
+                  <Star size={20} className={thread.starred ? "fill-[#D4772C] text-[#D4772C]" : "text-white/10"} />
+                </button>
+              )}
             </button>
           );
         })}
       </div>
 
       {/* FAB Compose */}
-      <button onClick={() => startCompose("new")}
-        className="fixed bottom-20 right-5 lg:bottom-8 lg:right-8 z-30 flex items-center gap-2 px-6 py-4 bg-[#1a1a1a] border border-[#C9A84C]/20 rounded-2xl shadow-lg shadow-[#C9A84C]/5 text-[#C9A84C] font-bold text-[15px] hover:bg-[#222] transition-colors"
-        style={{ marginBottom: "env(safe-area-inset-bottom)" }}>
-        <Pencil size={20} /> Compose
-      </button>
+      {!selectMode && (
+        <button onClick={() => startCompose("new")}
+          className="fixed bottom-20 right-5 lg:bottom-8 lg:right-8 z-30 flex items-center gap-2 px-6 py-4 bg-[#1a1a1a] border border-[#C9A84C]/20 rounded-2xl shadow-lg shadow-[#C9A84C]/5 text-[#C9A84C] font-bold text-[15px] hover:bg-[#222] transition-colors"
+          style={{ marginBottom: "env(safe-area-inset-bottom)" }}>
+          <Pencil size={20} /> Compose
+        </button>
+      )}
 
       {/* Toast */}
       {toast && (
