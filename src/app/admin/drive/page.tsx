@@ -64,6 +64,7 @@ export default function DrivePage() {
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [toast, setToast] = useState<string | null>(null);
+  const [customFolders, setCustomFolders] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
@@ -171,8 +172,7 @@ export default function DrivePage() {
     fetchFiles();
   };
 
-  // Create folder — add to a local list so it shows immediately even when empty
-  const [customFolders, setCustomFolders] = useState<string[]>([]);
+  // Create folder
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) return;
     const name = newFolderName.trim().toLowerCase().replace(/\s+/g, '-');
