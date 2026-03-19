@@ -439,7 +439,7 @@ export default function DrivePage() {
       {/* File inputs — IDs for DOM listeners that survive Android app-switch */}
       <input id="ro-drive-media-input" ref={fileInputRef} type="file" multiple accept="image/*,video/*" onChange={handleUpload}
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
-      <input id="ro-drive-docs-input" ref={docsInputRef} type="file" multiple onChange={handleUpload}
+      <input id="ro-drive-docs-input" ref={docsInputRef} type="file" multiple accept="image/*,video/*,audio/*,application/*,text/*" onChange={handleUpload}
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
       <div className="min-h-screen bg-[#0a0a0a]">
         {/* ── Header ── */}
@@ -638,11 +638,11 @@ export default function DrivePage() {
             </button>
             <button onClick={() => document.getElementById('ro-drive-docs-input')?.click()} disabled={uploading}
               className={`flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors ${uploading ? 'opacity-50' : ''}`}>
-              <FileIcon size={16} /> Files
+              <Upload size={16} /> All Files
             </button>
             <button onClick={() => document.getElementById('ro-drive-media-input')?.click()} disabled={uploading}
               className={`flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors ${uploading ? 'opacity-50' : ''}`}>
-              <Image size={18} /> Media
+              <Image size={18} /> Photos
             </button>
           </div>
         </div>
