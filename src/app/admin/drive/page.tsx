@@ -69,6 +69,7 @@ export default function DrivePage() {
   const [previewFile, setPreviewFile] = useState<UserFile | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
@@ -98,6 +99,18 @@ export default function DrivePage() {
   }, [userEmail]);
 
   useEffect(() => { fetchFiles(); }, [fetchFiles]);
+
+  // Load thumbnails for image files in current view
+  useEffect(() => {
+    if (viewMode !== 'grid') return;
+    const imageFiles = allFiles.filter(f => f.mime_type?.startsWith('image/') && !thumbnails[f.id]);
+    if (!imageFiles.length) return;
+    // Load up to 10 at a time
+    imageFiles.slice(0, 10).forEach(async (f) => {
+      const url = await getFileUrl(f.id);
+      if (url) setThumbnails(prev => ({ ...prev, [f.id]: url }));
+    });
+  }, [allFiles, viewMode, currentPath]);
 
   // ── Derive current folder contents ──
   const getFolderContents = () => {
@@ -436,18 +449,31 @@ export default function DrivePage() {
                         const color = getFileColor(file.mime_type);
                         return (
                           <button key={file.id} onClick={() => openPreview(file)}
-                            className="relative bg-[#141414] border border-white/5 rounded-2xl p-4 text-left hover:border-white/10 transition-all active:scale-[0.98] group">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: color + '12' }}>
-                                <Icon size={22} style={{ color }} />
+                            className="relative bg-[#141414] border border-white/5 rounded-2xl overflow-hidden text-left hover:border-white/10 transition-all active:scale-[0.98] group">
+                            {/* Thumbnail for images */}
+                            {file.mime_type?.startsWith('image/') && thumbnails[file.id] ? (
+                              <div className="w-full h-28 bg-black/30 relative">
+                                <img src={thumbnails[file.id]} alt="" className="w-full h-full object-cover" />
+                                <button onClick={e => { e.stopPropagation(); openFileMenu(file.id); }}
+                                  className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white/70 hover:bg-black/70 transition-colors">
+                                  <MoreVertical size={14} />
+                                </button>
                               </div>
-                              <button onClick={e => { e.stopPropagation(); openFileMenu(file.id); }}
-                                className="p-1.5 rounded-full text-white/25 hover:text-white/50 hover:bg-white/5 transition-colors">
-                                <MoreVertical size={16} />
-                              </button>
+                            ) : (
+                              <div className="flex items-start justify-between p-4 pb-2">
+                                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: color + '12' }}>
+                                  <Icon size={22} style={{ color }} />
+                                </div>
+                                <button onClick={e => { e.stopPropagation(); openFileMenu(file.id); }}
+                                  className="p-1.5 rounded-full text-white/25 hover:text-white/50 hover:bg-white/5 transition-colors">
+                                  <MoreVertical size={16} />
+                                </button>
+                              </div>
+                            )}
+                            <div className="px-4 py-2.5">
+                              <p className="text-[13px] text-white font-medium truncate">{file.original_filename}</p>
+                              <p className="text-[11px] text-white/25 mt-0.5">{formatSize(file.file_size)}</p>
                             </div>
-                            <p className="text-[14px] text-white font-medium truncate">{file.original_filename}</p>
-                            <p className="text-[11px] text-white/25 mt-0.5">{formatSize(file.file_size)}</p>
                           </button>
                         );
                       })}
@@ -485,14 +511,9 @@ export default function DrivePage() {
               className="w-12 h-12 bg-[#1a1a1a] border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
               <FolderPlus size={20} />
             </button>
-            <label className={`relative flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors cursor-pointer overflow-hidden ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-              <FileIcon size={16} /> Files
-              <input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.ppt,.pptx" onChange={handleUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" style={{ fontSize: '100px' }} />
-            </label>
             <label className={`relative flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors cursor-pointer overflow-hidden ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-              <Upload size={18} /> Media
-              <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,audio/*" onChange={handleUpload}
+              <Upload size={18} /> Upload
+              <input ref={fileInputRef} type="file" multiple accept="*/*" onChange={handleUpload}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" style={{ fontSize: '100px' }} />
             </label>
           </div>
