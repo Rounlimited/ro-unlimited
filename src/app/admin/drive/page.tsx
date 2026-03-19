@@ -428,8 +428,8 @@ export default function DrivePage() {
 
   return (
     <AuthGuard>
-      {/* Single file input — no accept filter, lets Android show its default picker */}
-      <input id="ro-drive-upload-input" ref={fileInputRef} type="file" multiple onChange={handleUpload}
+      {/* Photo/video picker — uses overlay on Samsung, never kills the app */}
+      <input id="ro-drive-upload-input" ref={fileInputRef} type="file" multiple accept="image/*,video/*" onChange={handleUpload}
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
       <div className="min-h-screen bg-[#0a0a0a]">
         {/* ── Header ── */}
