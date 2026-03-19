@@ -41,7 +41,12 @@ export async function GET(req: NextRequest) {
   // Calculate storage used
   const totalBytes = files.reduce((sum, f) => sum + (f.file_size || 0), 0);
 
-  return NextResponse.json({ files, totalBytes });
+  // Fetch explicit folders for this user
+  let foldersQuery = supabase.from('user_folders').select('*').order('name');
+  if (userEmail) foldersQuery = foldersQuery.eq('user_email', userEmail);
+  const { data: folders } = await foldersQuery;
+
+  return NextResponse.json({ files, totalBytes, folders: folders || [] });
 }
 
 // POST — upload file or manage files
@@ -89,7 +94,23 @@ export async function POST(req: NextRequest) {
     }
 
     if (body.action === 'create_folder') {
-      return NextResponse.json({ success: true, folder: body.folder });
+      const { path, name, user_email } = body;
+      if (!path || !name || !user_email) return NextResponse.json({ error: 'path, name, and user_email required' }, { status: 400 });
+      const { data, error } = await supabase.from('user_folders').upsert({
+        user_email, path, name,
+      }, { onConflict: 'user_email,path' }).select().single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true, folder: data });
+    }
+
+    if (body.action === 'delete_folder') {
+      const { path, user_email } = body;
+      if (!path || !user_email) return NextResponse.json({ error: 'path and user_email required' }, { status: 400 });
+      // Delete the folder record
+      await supabase.from('user_folders').delete().eq('user_email', user_email).eq('path', path);
+      // Delete all subfolders
+      await supabase.from('user_folders').delete().eq('user_email', user_email).like('path', path + '/%');
+      return NextResponse.json({ success: true });
     }
 
     if (body.action === 'share') {

@@ -79,7 +79,10 @@ export default function DrivePage() {
     });
   }, []);
 
-  // Fetch ALL files for this user (we filter client-side for folder navigation)
+  // Explicit folders from DB
+  const [dbFolders, setDbFolders] = useState<{ id: string; path: string; name: string }[]>([]);
+
+  // Fetch ALL files + folders for this user
   const fetchFiles = useCallback(async () => {
     if (!userEmail) return;
     setLoading(true);
@@ -87,6 +90,7 @@ export default function DrivePage() {
     const data = await res.json();
     setAllFiles(data.files || []);
     setTotalBytes(data.totalBytes || 0);
+    setDbFolders(data.folders || []);
     setLoading(false);
   }, [userEmail]);
 
@@ -102,25 +106,39 @@ export default function DrivePage() {
       return filePath === currentPath || filePath === currentPath.replace(/\/$/, '');
     });
 
-    // Subfolders: find unique next-level folder names from files deeper in the tree
-    const subfolderSet = new Set<string>();
+    // Subfolders from files (implicit)
+    const subfolderMap = new Map<string, { name: string; path: string; fileCount: number; totalSize: number }>();
     allFiles.forEach(f => {
       const filePath = (f.folder || '/') + '/';
       if (filePath.startsWith(normalizedPath) && filePath !== normalizedPath) {
         const remainder = filePath.slice(normalizedPath.length);
         const nextSegment = remainder.split('/')[0];
-        if (nextSegment) subfolderSet.add(nextSegment);
+        if (nextSegment && !subfolderMap.has(nextSegment)) {
+          const folderPath = normalizedPath + nextSegment;
+          const filesInside = allFiles.filter(ff => (ff.folder || '/').startsWith(folderPath));
+          subfolderMap.set(nextSegment, {
+            name: nextSegment,
+            path: folderPath,
+            fileCount: filesInside.length,
+            totalSize: filesInside.reduce((s, ff) => s + (ff.file_size || 0), 0),
+          });
+        }
       }
     });
 
-    // Also check for "virtual" folders (folders with no files directly in them but with deeper files)
-    const subfolders = [...subfolderSet].sort().map(name => {
-      const folderPath = normalizedPath + name;
-      // Count files in this folder and all subfolders
-      const count = allFiles.filter(f => (f.folder || '/').startsWith(folderPath)).length;
-      const size = allFiles.filter(f => (f.folder || '/').startsWith(folderPath)).reduce((s, f) => s + (f.file_size || 0), 0);
-      return { name, path: folderPath, fileCount: count, totalSize: size };
+    // Subfolders from DB (explicit — includes empty folders)
+    dbFolders.forEach(df => {
+      const dfParent = df.path.substring(0, df.path.lastIndexOf('/')) || '/';
+      const dfParentNorm = dfParent.endsWith('/') ? dfParent : dfParent + '/';
+      if (dfParentNorm === normalizedPath || dfParent === currentPath) {
+        const name = df.name;
+        if (!subfolderMap.has(name)) {
+          subfolderMap.set(name, { name, path: df.path, fileCount: 0, totalSize: 0 });
+        }
+      }
     });
+
+    const subfolders = [...subfolderMap.values()].sort((a, b) => a.name.localeCompare(b.name));
 
     // Search filter
     if (search) {
@@ -203,16 +221,25 @@ export default function DrivePage() {
     setToast('File deleted'); setMenuOpen(null); fetchFiles();
   };
 
-  // ── Delete folder (all files in it) ──
+  // ── Delete folder (DB record + all files in it) ──
   const handleDeleteFolder = async (folderPath: string, folderName: string) => {
     const filesInFolder = allFiles.filter(f => (f.folder || '/').startsWith(folderPath));
-    if (!confirm(`Delete folder "${folderName}" and ${filesInFolder.length} file${filesInFolder.length !== 1 ? 's' : ''} inside?`)) return;
+    const msg = filesInFolder.length > 0
+      ? `Delete folder "${folderName}" and ${filesInFolder.length} file${filesInFolder.length !== 1 ? 's' : ''} inside?`
+      : `Delete empty folder "${folderName}"?`;
+    if (!confirm(msg)) return;
+    // Delete files
     for (const f of filesInFolder) {
       await fetch('/api/admin/drive', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', id: f.id }),
       });
     }
+    // Delete folder record from DB
+    await fetch('/api/admin/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete_folder', path: folderPath, user_email: userEmail }),
+    });
     setToast(`Folder "${folderName}" deleted`); setMenuOpen(null); fetchFiles();
   };
 
@@ -232,14 +259,21 @@ export default function DrivePage() {
   };
 
   // ── Create folder ──
-  const handleCreateFolder = () => {
-    if (!newFolderName.trim()) return;
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim() || !userEmail) return;
     const name = newFolderName.trim().toLowerCase().replace(/\s+/g, '-');
-    // Create a "ghost" file to make the folder exist, or just navigate
     const newPath = (currentPath === '/' ? '/' : currentPath + '/') + name;
     setShowNewFolder(false);
     setNewFolderName('');
+
+    // Save folder to DB so it persists even when empty
+    await fetch('/api/admin/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create_folder', path: newPath, name, user_email: userEmail }),
+    });
+
     setToast(`Folder "${name}" created`);
+    await fetchFiles(); // Refresh to pick up the new folder
     navigateToFolder(newPath);
   };
 
