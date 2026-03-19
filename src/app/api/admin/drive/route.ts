@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
+// Use self-hosted Bot API server for 2GB uploads, fall back to public API
+const TELEGRAM_API_BASE = process.env.TELEGRAM_API_URL || 'https://api.telegram.org';
+const TELEGRAM_API = `${TELEGRAM_API_BASE}/bot${TELEGRAM_TOKEN}`;
 // We use a private channel/chat to store files — bot sends to itself
 // First message to the bot creates the chat_id
 const STORAGE_CHAT_ID = process.env.TELEGRAM_STORAGE_CHAT_ID || '';
@@ -89,7 +91,7 @@ export async function POST(req: NextRequest) {
       const tgData = await tgRes.json();
       if (!tgData.ok) return NextResponse.json({ error: 'Failed to get file from Telegram' }, { status: 500 });
 
-      const downloadUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${tgData.result.file_path}`;
+      const downloadUrl = `${TELEGRAM_API_BASE}/file/bot${TELEGRAM_TOKEN}/${tgData.result.file_path}`;
       return NextResponse.json({ url: downloadUrl });
     }
 
@@ -186,9 +188,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'file and user_email required' }, { status: 400 });
   }
 
-  // Check file size (50MB limit for Telegram Bot API)
-  if (file.size > 50 * 1024 * 1024) {
-    return NextResponse.json({ error: 'File too large. Maximum 50MB.' }, { status: 413 });
+  // Check file size (2GB limit with self-hosted Bot API, 50MB with public API)
+  const maxSize = process.env.TELEGRAM_API_URL ? 2 * 1024 * 1024 * 1024 : 50 * 1024 * 1024;
+  if (file.size > maxSize) {
+    return NextResponse.json({ error: `File too large. Maximum ${process.env.TELEGRAM_API_URL ? '2GB' : '50MB'}.` }, { status: 413 });
   }
 
   // Determine storage chat — use bot's own saved messages or a channel
