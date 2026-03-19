@@ -320,6 +320,11 @@ export default function DrivePage() {
 
   return (
     <AuthGuard>
+      {/* Hidden file inputs — at top level so they survive re-renders */}
+      <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,audio/*" onChange={handleUpload}
+        className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
+      <input id="fileDocsInput" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.ppt,.pptx,.eps,.ai,.psd,.svg" onChange={handleUpload}
+        className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
       <div className="min-h-screen bg-[#0a0a0a]">
         {/* ── Header ── */}
         <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5">
@@ -511,11 +516,14 @@ export default function DrivePage() {
               className="w-12 h-12 bg-[#1a1a1a] border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
               <FolderPlus size={20} />
             </button>
-            <label className={`relative flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors cursor-pointer overflow-hidden ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-              <Upload size={18} /> Upload
-              <input ref={fileInputRef} type="file" multiple accept="*/*" onChange={handleUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" style={{ fontSize: '100px' }} />
-            </label>
+            <button onClick={() => document.getElementById('fileDocsInput')?.click()} disabled={uploading}
+              className={`flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors ${uploading ? 'opacity-50' : ''}`}>
+              <FileIcon size={16} /> Files
+            </button>
+            <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+              className={`flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors ${uploading ? 'opacity-50' : ''}`}>
+              <Image size={18} /> Media
+            </button>
           </div>
         </div>
 
