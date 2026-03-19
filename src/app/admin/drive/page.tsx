@@ -223,7 +223,37 @@ export default function DrivePage() {
     setCurrentPath(parent || '/');
   };
 
-  // ── Upload — direct to Oracle/Telegram, bypasses Vercel 4.5MB limit ──
+  // ── Upload with progress tracking ──
+  const uploadWithProgress = (url: string, formData: FormData, fileName: string, fileSize: number): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const startTime = Date.now();
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          const elapsed = (Date.now() - startTime) / 1000;
+          const speed = e.loaded / elapsed;
+          const remaining = (e.total - e.loaded) / speed;
+          const speedStr = speed > 1024 * 1024 ? `${(speed / (1024 * 1024)).toFixed(1)} MB/s` : `${(speed / 1024).toFixed(0)} KB/s`;
+          const remainStr = remaining > 60 ? `${Math.ceil(remaining / 60)}m left` : `${Math.ceil(remaining)}s left`;
+          const loadedMB = (e.loaded / (1024 * 1024)).toFixed(1);
+          const totalMB = (e.total / (1024 * 1024)).toFixed(1);
+          setUploadProgress(`${fileName} — ${pct}% (${loadedMB}/${totalMB} MB) ${speedStr} · ${remainStr}`);
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        try { resolve(JSON.parse(xhr.responseText)); } catch { resolve({ ok: false }); }
+      });
+      xhr.addEventListener('error', () => reject(new Error('Network error')));
+      xhr.addEventListener('abort', () => reject(new Error('Cancelled')));
+
+      xhr.open('POST', url);
+      xhr.send(formData);
+    });
+  };
+
   const doUpload = async (fileList: FileList) => {
     if (!fileList?.length || !userEmail) return;
     setUploading(true);
@@ -234,24 +264,23 @@ export default function DrivePage() {
 
     for (const file of Array.from(fileList)) {
       const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      setUploadProgress(`Uploading ${file.name} (${sizeMB}MB)...`);
+      setUploadProgress(`Preparing ${file.name} (${sizeMB} MB)...`);
 
       try {
         if (UPLOAD_BASE && file.size > 4 * 1024 * 1024) {
-          // Large file: upload directly to Oracle/Telegram (no Vercel proxy)
+          // Large file: direct to Oracle/Telegram with progress
           const tgForm = new FormData();
           tgForm.append('chat_id', CHAT_ID);
           tgForm.append('document', file, file.name);
           tgForm.append('caption', `${userEmail} | ${currentPath} | ${file.name}`);
 
-          const tgRes = await fetch(`${UPLOAD_BASE}/bot${BOT_TOKEN}/sendDocument`, {
-            method: 'POST',
-            body: tgForm,
-          });
-          const tgData = await tgRes.json();
+          const tgData = await uploadWithProgress(
+            `${UPLOAD_BASE}/bot${BOT_TOKEN}/sendDocument`,
+            tgForm, file.name, file.size
+          );
 
           if (tgData.ok) {
-            // Save metadata to Supabase via our API
+            setUploadProgress(`Saving ${file.name}...`);
             const doc = tgData.result.document;
             await fetch('/api/admin/drive', {
               method: 'POST',
@@ -272,7 +301,8 @@ export default function DrivePage() {
             setToast(`Failed: ${tgData.description || 'Upload error'}`);
           }
         } else {
-          // Small file: upload through Vercel API (under 4.5MB)
+          // Small file: through Vercel
+          setUploadProgress(`Uploading ${file.name} (${sizeMB} MB)...`);
           const formData = new FormData();
           formData.append('file', file);
           formData.append('user_email', userEmail);
@@ -592,8 +622,12 @@ export default function DrivePage() {
         <div className="fixed bottom-20 right-4 z-30 flex flex-col items-end gap-2.5"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
           {uploading && (
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-[#1a1a1a] border border-[#3b8dd4]/30 rounded-full text-[13px] text-[#3b8dd4]">
-              <Loader2 size={14} className="animate-spin" /> {uploadProgress}
+            <div className="w-[calc(100vw-2rem)] max-w-md px-4 py-3 bg-[#111] border border-[#3b8dd4]/30 rounded-2xl shadow-2xl">
+              <div className="flex items-center gap-2 mb-1">
+                <Loader2 size={16} className="animate-spin text-[#3b8dd4] shrink-0" />
+                <span className="text-[14px] text-white font-medium truncate">Uploading</span>
+              </div>
+              <p className="text-[13px] text-[#3b8dd4] leading-snug">{uploadProgress}</p>
             </div>
           )}
           <div className="flex gap-2.5">
