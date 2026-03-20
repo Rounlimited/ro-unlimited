@@ -345,14 +345,23 @@ export default function DrivePage() {
   };
 
   // ── Open file preview ──
+  const closePreview = () => { setPreviewFile(null); setPreviewUrl(''); };
   const openPreview = async (file: UserFile) => {
     setPreviewFile(file);
     setPreviewLoading(true);
     setPreviewUrl('');
+    window.history.pushState({ drivePreview: true }, '');
     const url = await getFileUrl(file.id);
     setPreviewUrl(url);
     setPreviewLoading(false);
   };
+
+  // Handle browser back button to close preview instead of leaving page
+  useEffect(() => {
+    const onPop = () => { if (previewFile) closePreview(); };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [previewFile]);
 
   // ── Download file ──
   const handleDownload = async (file: UserFile) => {
@@ -685,7 +694,7 @@ export default function DrivePage() {
           <div className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col">
             {/* Preview header */}
             <div className="flex items-center gap-2 px-3 py-3 border-b border-white/5">
-              <button onClick={() => { setPreviewFile(null); setPreviewUrl(''); }} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
+              <button onClick={() => window.history.back()} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
                 <ChevronLeft size={24} />
               </button>
               <div className="flex-1 min-w-0">

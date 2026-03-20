@@ -104,14 +104,22 @@ export default function SharedFolderPage({ params }: { params: { token: string }
     return d.url || '';
   };
 
+  const closePreview = () => { setPreviewFile(null); setPreviewUrl(''); };
   const openPreview = async (file: SharedFile) => {
     setPreviewFile(file);
     setPreviewLoading(true);
     setPreviewUrl('');
+    window.history.pushState({ preview: true }, '');
     const url = await getUrl(file);
     setPreviewUrl(url);
     setPreviewLoading(false);
   };
+
+  useEffect(() => {
+    const onPop = () => { if (previewFile) closePreview(); };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [previewFile]);
 
   const handleDownload = async (file: SharedFile) => {
     const url = previewUrl || await getUrl(file);
@@ -313,7 +321,7 @@ export default function SharedFolderPage({ params }: { params: { token: string }
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
         <div className="flex items-center gap-2 px-3 py-3 border-b border-white/5">
-          <button onClick={() => { setPreviewFile(null); setPreviewUrl(''); }} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
+          <button onClick={() => window.history.back()} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
             <ChevronLeft size={24} />
           </button>
           <div className="flex-1 min-w-0">
