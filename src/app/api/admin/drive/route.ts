@@ -21,13 +21,23 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get('search');
 
   const showTrash = searchParams.get('trash') === '1';
+  const zone = searchParams.get('zone'); // 'company' | 'personal' | null
 
   let query = supabase
     .from('user_files')
     .select('*')
     .order('created_at', { ascending: false });
 
-  if (userEmail) query = query.eq('user_email', userEmail);
+  if (zone === 'company') {
+    // Company Drive — all files NOT under /personal/ from ALL users
+    // Don't filter by user_email — this is shared across all admins
+  } else if (zone === 'personal' && userEmail) {
+    // Personal Drive — only this user's files under /personal/
+    query = query.eq('user_email', userEmail);
+  } else if (userEmail) {
+    query = query.eq('user_email', userEmail);
+  }
+
   if (folder) query = query.eq('folder', folder);
   if (entityType) query = query.eq('entity_type', entityType);
   if (entityId) query = query.eq('entity_id', entityId);
@@ -43,6 +53,14 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   let files = data || [];
+
+  // Zone-level filtering (PostgREST can't do NOT LIKE easily)
+  if (zone === 'company') {
+    files = files.filter(f => !(f.folder || '/').startsWith('/personal/'));
+  } else if (zone === 'personal') {
+    files = files.filter(f => (f.folder || '/').startsWith('/personal/'));
+  }
+
   if (search) {
     const s = search.toLowerCase();
     files = files.filter(f => f.original_filename.toLowerCase().includes(s) || f.folder?.toLowerCase().includes(s));
@@ -51,10 +69,16 @@ export async function GET(req: NextRequest) {
   // Calculate storage used
   const totalBytes = files.reduce((sum, f) => sum + (f.file_size || 0), 0);
 
-  // Fetch explicit folders for this user
+  // Fetch folders — company zone gets all non-personal folders from all users
   let foldersQuery = supabase.from('user_folders').select('*').order('name');
-  if (userEmail) foldersQuery = foldersQuery.eq('user_email', userEmail);
+  if (zone !== 'company' && userEmail) foldersQuery = foldersQuery.eq('user_email', userEmail);
   const { data: folders } = await foldersQuery;
+  let filteredFolders = folders || [];
+  if (zone === 'company') {
+    filteredFolders = filteredFolders.filter(f => !f.path.startsWith('/personal/'));
+  } else if (zone === 'personal') {
+    filteredFolders = filteredFolders.filter(f => f.path.startsWith('/personal/'));
+  }
 
   // Auto-purge files deleted more than 30 days ago
   if (!showTrash) {
@@ -63,7 +87,7 @@ export async function GET(req: NextRequest) {
     await supabase.from('user_files').delete().not('deleted_at', 'is', null).lt('deleted_at', thirtyDaysAgo.toISOString());
   }
 
-  return NextResponse.json({ files, totalBytes, folders: folders || [] });
+  return NextResponse.json({ files, totalBytes, folders: filteredFolders });
 }
 
 // POST — upload file or manage files

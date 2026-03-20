@@ -187,17 +187,18 @@ export default function DrivePage() {
   };
   const zoneRoot = driveZone !== 'shared' ? getZoneRoot(driveZone, userEmail) : '/';
 
-  // Fetch ALL files + folders for this user
+  // Fetch files + folders — company zone fetches from ALL users
   const fetchFiles = useCallback(async () => {
     if (!userEmail) return;
     setLoading(true);
-    const res = await fetch(`/api/admin/drive?user=${encodeURIComponent(userEmail)}`);
+    const zoneParam = driveZone !== 'shared' ? `&zone=${driveZone}` : '';
+    const res = await fetch(`/api/admin/drive?user=${encodeURIComponent(userEmail)}${zoneParam}`);
     const data = await res.json();
     setAllFiles(data.files || []);
     setTotalBytes(data.totalBytes || 0);
     setDbFolders(data.folders || []);
     setLoading(false);
-  }, [userEmail]);
+  }, [userEmail, driveZone]);
 
   useEffect(() => { fetchFiles(); }, [fetchFiles]);
 
@@ -213,20 +214,9 @@ export default function DrivePage() {
     });
   }, [allFiles, viewMode, currentPath]);
 
-  // ── Filter files/folders to current zone ──
-  const zoneFiles = allFiles.filter(f => {
-    const fp = f.folder || '/';
-    if (driveZone === 'shared') return false;
-    if (driveZone === 'personal') return fp.startsWith(zoneRoot);
-    // Company: everything NOT under /personal/
-    return !fp.startsWith('/personal/');
-  });
-
-  const zoneFolders = dbFolders.filter(df => {
-    if (driveZone === 'shared') return false;
-    if (driveZone === 'personal') return df.path.startsWith(zoneRoot);
-    return !df.path.startsWith('/personal/');
-  });
+  // Zone files/folders — already filtered server-side by zone param
+  const zoneFiles = driveZone === 'shared' ? [] : allFiles;
+  const zoneFolders = driveZone === 'shared' ? [] : dbFolders;
 
   const zoneTotalBytes = zoneFiles.reduce((s, f) => s + (f.file_size || 0), 0);
 
