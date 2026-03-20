@@ -462,11 +462,8 @@ export default function DrivePage() {
   // Keep the ref updated so the DOM listener always calls the latest version
   handleUploadRef.current = doUpload;
 
-  // Legacy handler for React onChange (backup)
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length) doUpload(e.target.files);
-    e.target.value = '';
-  };
+  // handleUpload removed — DOM listener in useEffect handles all uploads
+  // to avoid double-fire (React onChange + DOM addEventListener both triggering)
 
   // ── Get file URL from Telegram ──
   const getFileUrl = async (fileId: string): Promise<string> => {
@@ -814,15 +811,11 @@ export default function DrivePage() {
 
   return (
     <AuthGuard>
-      {/* Photo/video picker — uses overlay on Samsung */}
-      <input id="ro-drive-media-input" ref={fileInputRef} type="file" multiple accept="image/*,video/*" onChange={handleUpload}
+      {/* Photo/video picker — DOM change listener handles upload (no React onChange to avoid double-fire) */}
+      <input id="ro-drive-media-input" ref={fileInputRef} type="file" multiple accept="image/*,video/*"
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
       {/* All files picker — no accept filter */}
-      <input id="ro-drive-upload-input" type="file" multiple onChange={(e) => {
-        // Stop keepalive audio
-        try { (window as any).__roKeepAlive?.(); } catch {}
-        handleUpload(e);
-      }}
+      <input id="ro-drive-upload-input" type="file" multiple
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
       <div className="theme-page-dark flex-1 flex flex-col overflow-y-auto bg-[#0a0a0a]"
         onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
