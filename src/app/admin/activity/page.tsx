@@ -96,6 +96,7 @@ export default function ActivityPage() {
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [days, setDays] = useState(7);
   const [viewerEmail, setViewerEmail] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchData = useCallback(async (email: string) => {
     try {
@@ -151,8 +152,6 @@ export default function ActivityPage() {
   });
 
   const pushEvents = activity.filter(a => a.action === "push_sent");
-
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a] text-white">
