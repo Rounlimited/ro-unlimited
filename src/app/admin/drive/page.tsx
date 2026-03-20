@@ -498,37 +498,12 @@ export default function DrivePage() {
     setPreviewLoading(false);
   };
 
-  // Handle device/browser back button — navigate up in Drive instead of leaving
-  const driveStateRef = useRef({ currentPath, zoneRoot, previewFile });
+  // Handle browser/device back button to close preview instead of leaving page
   useEffect(() => {
-    driveStateRef.current = { currentPath, zoneRoot, previewFile };
-  });
-
-  // Push an initial guard entry on mount so first back doesn't exit
-  useEffect(() => {
-    window.history.pushState({ driveGuard: true }, '');
-
-    const onPop = () => {
-      const { currentPath: path, zoneRoot: root, previewFile: preview } = driveStateRef.current;
-      // Close preview if open
-      if (preview) {
-        setPreviewFile(null);
-        setPreviewUrl('');
-        setTimeout(() => window.history.pushState({ driveGuard: true }, ''), 0);
-        return;
-      }
-      // Navigate up one folder if not at root
-      if (path !== root && path !== '/') {
-        const segs = path.split('/').filter(Boolean);
-        const parent = '/' + segs.slice(0, -1).join('/');
-        setCurrentPath(parent.length >= root.length ? parent : root);
-        setTimeout(() => window.history.pushState({ driveGuard: true }, ''), 0);
-      }
-      // At root: don't push — let the browser naturally go back to dashboard
-    };
+    const onPop = () => { if (previewFile) { setPreviewFile(null); setPreviewUrl(''); } };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, []);
+  }, [previewFile]);
 
   // ── Download file ──
   const handleDownload = async (file: UserFile) => {
