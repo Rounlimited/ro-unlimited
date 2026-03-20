@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v3'; // force cache bust 2026-03-19
+const CACHE_NAME = 'ro-admin-v4'; // force cache bust — light theme v2
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',
