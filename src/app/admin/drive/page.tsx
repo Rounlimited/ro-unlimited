@@ -112,6 +112,8 @@ export default function DrivePage() {
   const [showSort, setShowSort] = useState(false);
   // Drag & drop
   const [dragOver, setDragOver] = useState(false);
+  // FAB expand/collapse
+  const [fabOpen, setFabOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
@@ -1215,44 +1217,57 @@ export default function DrivePage() {
           )}
         </div>
 
-        {/* ── FAB buttons — compact bottom-right ── */}
+        {/* ── FAB — collapsible, bottom-right ── */}
         {!showTrash && driveZone !== 'shared' && (
-          <div className="fixed bottom-5 right-3 z-30 flex flex-col items-end gap-2"
-            style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
-            {uploading && (
-              <div className="w-[calc(100vw-2rem)] max-w-sm px-3 py-2 bg-[#111] border border-[#3b8dd4]/30 rounded-xl shadow-2xl">
-                <div className="flex items-center gap-2">
-                  <Loader2 size={14} className="animate-spin text-[#3b8dd4] shrink-0" />
-                  <p className="text-[12px] text-[#3b8dd4] leading-snug truncate flex-1">{uploadProgress}</p>
+          <>
+            {/* Backdrop to close FAB */}
+            {fabOpen && <div className="fixed inset-0 z-29" onClick={() => setFabOpen(false)} />}
+            <div className="fixed bottom-5 right-3 z-30 flex flex-col items-end gap-2"
+              style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
+              {uploading && (
+                <div className="w-[calc(100vw-2rem)] max-w-sm px-3 py-2 bg-[#111] border border-[#3b8dd4]/30 rounded-xl shadow-2xl">
+                  <div className="flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin text-[#3b8dd4] shrink-0" />
+                    <p className="text-[12px] text-[#3b8dd4] leading-snug truncate flex-1">{uploadProgress}</p>
+                  </div>
                 </div>
-              </div>
-            )}
-            <div className="flex gap-1.5">
-              <button onClick={() => setShowNewFolder(true)}
-                className="w-10 h-10 bg-[#1a1a1a] border border-white/10 rounded-xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
-                <FolderPlus size={16} />
-              </button>
-              <button onClick={() => {
-                if ((window as any).RONative?.isNativeApp?.()) {
-                  (window as any).RONative.openUploader(userEmail, currentPath);
-                } else {
-                  const params = new URLSearchParams({ user: userEmail, folder: currentPath });
-                  const a = document.createElement('a');
-                  a.href = `/admin/drive/upload-files?${params}`;
-                  a.target = '_blank';
-                  a.rel = 'noopener noreferrer';
-                  a.click();
-                }
-              }} disabled={uploading}
-                className={`flex items-center gap-1.5 px-3 h-10 bg-white/5 border border-white/10 rounded-xl shadow-lg text-white/50 font-semibold text-[13px] hover:bg-white/10 transition-colors ${uploading ? 'opacity-50' : ''}`}>
-                <FileIcon size={14} /> Files
-              </button>
-              <button onClick={() => document.getElementById('ro-drive-media-input')?.click()} disabled={uploading}
-                className={`flex items-center gap-1.5 px-3 h-10 bg-[#3b8dd4] rounded-xl shadow-lg shadow-[#3b8dd4]/20 text-white font-semibold text-[13px] hover:bg-[#3b8dd4]/90 transition-colors ${uploading ? 'opacity-50' : ''}`}>
-                <Image size={14} /> Photos
+              )}
+              {/* Expanded options */}
+              {fabOpen && (
+                <div className="flex flex-col items-end gap-2 mb-1 animate-in fade-in slide-in-from-bottom-2 duration-150">
+                  <button onClick={() => { setShowNewFolder(true); setFabOpen(false); }}
+                    className="flex items-center gap-2 px-3 h-9 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-lg text-white/50 text-[13px] font-medium hover:bg-white/5 transition-colors">
+                    <FolderPlus size={15} className="text-[#3b8dd4]" /> New Folder
+                  </button>
+                  <button onClick={() => {
+                    setFabOpen(false);
+                    if ((window as any).RONative?.isNativeApp?.()) {
+                      (window as any).RONative.openUploader(userEmail, currentPath);
+                    } else {
+                      const params = new URLSearchParams({ user: userEmail, folder: currentPath });
+                      const a = document.createElement('a');
+                      a.href = `/admin/drive/upload-files?${params}`;
+                      a.target = '_blank';
+                      a.rel = 'noopener noreferrer';
+                      a.click();
+                    }
+                  }} disabled={uploading}
+                    className="flex items-center gap-2 px-3 h-9 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-lg text-white/50 text-[13px] font-medium hover:bg-white/5 transition-colors">
+                    <FileIcon size={15} className="text-white/40" /> Upload Files
+                  </button>
+                  <button onClick={() => { setFabOpen(false); document.getElementById('ro-drive-media-input')?.click(); }} disabled={uploading}
+                    className="flex items-center gap-2 px-3 h-9 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-lg text-white/50 text-[13px] font-medium hover:bg-white/5 transition-colors">
+                    <Image size={15} className="text-[#22C55E]" /> Photos
+                  </button>
+                </div>
+              )}
+              {/* Main FAB toggle */}
+              <button onClick={() => setFabOpen(!fabOpen)}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all active:scale-90 ${fabOpen ? 'bg-white/10 border border-white/10 rotate-45' : 'bg-[#3b8dd4] shadow-[#3b8dd4]/30'}`}>
+                <Plus size={22} className={fabOpen ? 'text-white/60' : 'text-white'} />
               </button>
             </div>
-          </div>
+          </>
         )}
 
         {/* ── File Preview/Info Screen ── */}
@@ -1298,7 +1313,20 @@ export default function DrivePage() {
                   {previewFile.mime_type?.includes('pdf') && (
                     <iframe src={previewUrl} className="w-full h-full rounded-lg border border-white/10" />
                   )}
-                  {!previewFile.mime_type?.startsWith('image/') && !previewFile.mime_type?.startsWith('video/') && !previewFile.mime_type?.startsWith('audio/') && !previewFile.mime_type?.includes('pdf') && (
+                  {/* Office docs — docx, xlsx, pptx via Microsoft Office Online viewer */}
+                  {(previewFile.mime_type?.includes('word') || previewFile.mime_type?.includes('spreadsheet') || previewFile.mime_type?.includes('presentation') ||
+                    previewFile.mime_type?.includes('msword') || previewFile.mime_type?.includes('excel') || previewFile.mime_type?.includes('powerpoint') ||
+                    previewFile.original_filename?.match(/\.(docx?|xlsx?|pptx?)$/i)) && (
+                    <iframe
+                      src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewUrl)}`}
+                      className="w-full h-full rounded-lg border border-white/10 bg-white"
+                      style={{ minHeight: '80vh' }}
+                    />
+                  )}
+                  {!previewFile.mime_type?.startsWith('image/') && !previewFile.mime_type?.startsWith('video/') && !previewFile.mime_type?.startsWith('audio/') && !previewFile.mime_type?.includes('pdf') &&
+                   !previewFile.mime_type?.includes('word') && !previewFile.mime_type?.includes('spreadsheet') && !previewFile.mime_type?.includes('presentation') &&
+                   !previewFile.mime_type?.includes('msword') && !previewFile.mime_type?.includes('excel') && !previewFile.mime_type?.includes('powerpoint') &&
+                   !previewFile.original_filename?.match(/\.(docx?|xlsx?|pptx?)$/i) && (
                     <div className="text-center">
                       <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4"
                         style={{ backgroundColor: getFileColor(previewFile.mime_type) + '15' }}>

@@ -363,6 +363,9 @@ export default function SharedFolderPage({ params }: { params: { token: string }
     const isVideo = previewFile.mime_type?.startsWith('video/');
     const isAudio = previewFile.mime_type?.startsWith('audio/');
     const isPdf = previewFile.mime_type?.includes('pdf');
+    const isOffice = previewFile.mime_type?.includes('word') || previewFile.mime_type?.includes('spreadsheet') || previewFile.mime_type?.includes('presentation') ||
+      previewFile.mime_type?.includes('msword') || previewFile.mime_type?.includes('excel') || previewFile.mime_type?.includes('powerpoint') ||
+      !!previewFile.original_filename?.match(/\.(docx?|xlsx?|pptx?)$/i);
     const Icon = getFileIcon(previewFile.mime_type);
     const color = getFileColor(previewFile.mime_type);
     return (
@@ -396,7 +399,11 @@ export default function SharedFolderPage({ params }: { params: { token: string }
                 </div>
               )}
               {isPdf && <iframe src={previewUrl} className="w-full h-full rounded-lg border border-white/10" />}
-              {!isImage && !isVideo && !isAudio && !isPdf && (
+              {isOffice && (
+                <iframe src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewUrl)}`}
+                  className="w-full h-full rounded-lg border border-white/10 bg-white" style={{ minHeight: '80vh' }} />
+              )}
+              {!isImage && !isVideo && !isAudio && !isPdf && !isOffice && (
                 <div className="text-center">
                   <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: color + '15' }}>
                     <Icon size={36} style={{ color }} />
