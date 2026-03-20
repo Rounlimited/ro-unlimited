@@ -8,7 +8,7 @@ import {
   Upload, FolderPlus, Search, Trash2, Download, File as FileIcon, Image, Film,
   FileText, Music, Archive, MoreVertical, X, Loader2, ChevronLeft, ChevronRight,
   HardDrive, FolderOpen, Folder, Eye, Share2, FolderInput, Grid3X3, List,
-  Home, Plus, Check, Copy, Lock, Clock, Link2, Shield, Trash,
+  Home, Plus, Check, Copy, Lock, Clock, Link2, Shield, Trash, Users, Building2, User,
 } from 'lucide-react';
 
 interface UserFile {
@@ -80,6 +80,21 @@ export default function DrivePage() {
   const [shareExpiry, setShareExpiry] = useState(30);
   const [shareLoading, setShareLoading] = useState(false);
   const [activeShares, setActiveShares] = useState<any[]>([]);
+  // User-to-user sharing
+  const [shareUserEmail, setShareUserEmail] = useState('');
+  const [shareUserPerm, setShareUserPerm] = useState<'read' | 'readwrite'>('read');
+  const [adminUsers, setAdminUsers] = useState<string[]>([]);
+  // Drive zones
+  const [driveZone, setDriveZone] = useState<'company' | 'personal' | 'shared'>(() => {
+    if (typeof window !== 'undefined') return (sessionStorage.getItem('ro_drive_zone') as any) || 'company';
+    return 'company';
+  });
+  // Shared with me data
+  const [sharedWithMe, setSharedWithMe] = useState<{ shares: any[]; files: any[]; folders: any[] }>({ shares: [], files: [], folders: [] });
+  const [sharedWithMeLoading, setSharedWithMeLoading] = useState(false);
+  // Move file picker
+  const [moveFile, setMoveFile] = useState<UserFile | null>(null);
+  const [movePath, setMovePath] = useState('/');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
@@ -88,6 +103,31 @@ export default function DrivePage() {
 
   useEffect(() => { if (toast) { const delay = toast.toLowerCase().includes('fail') || toast.toLowerCase().includes('error') ? 8000 : 3000; const t = setTimeout(() => setToast(null), delay); return () => clearTimeout(t); } }, [toast]);
   useEffect(() => { localStorage.setItem('ro_drive_view', viewMode); }, [viewMode]);
+  useEffect(() => { sessionStorage.setItem('ro_drive_zone', driveZone); }, [driveZone]);
+
+  // Fetch shared with me when that zone is selected
+  const fetchSharedWithMe = useCallback(async () => {
+    if (!userEmail) return;
+    setSharedWithMeLoading(true);
+    const res = await fetch('/api/admin/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_shared_with_me', user_email: userEmail }),
+    });
+    const data = await res.json();
+    setSharedWithMe({ shares: data.shares || [], files: data.files || [], folders: data.folders || [] });
+    setSharedWithMeLoading(false);
+  }, [userEmail]);
+
+  useEffect(() => { if (driveZone === 'shared' && userEmail) fetchSharedWithMe(); }, [driveZone, userEmail]);
+
+  // Load admin users list for share sheet
+  useEffect(() => {
+    if (!shareSheet) return;
+    fetch('/api/admin/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list_admin_users' }),
+    }).then(r => r.json()).then(d => setAdminUsers((d.users || []).filter((e: string) => e !== userEmail)));
+  }, [shareSheet, userEmail]);
 
   // Attach change listeners via DOM (survives Android app-switch re-mounts)
   useEffect(() => {
@@ -205,10 +245,21 @@ export default function DrivePage() {
 
   const { subfolders, files } = getFolderContents();
 
+  // Switch zone handler
+  const switchZone = (zone: 'company' | 'personal' | 'shared') => {
+    setDriveZone(zone);
+    setSearch('');
+    setShowSearch(false);
+    if (zone === 'company') setCurrentPath('/');
+    else if (zone === 'personal') setCurrentPath('/');
+    // 'shared' zone uses its own view, path doesn't matter
+  };
+
   // ── Breadcrumb segments ──
   const pathSegments = currentPath.split('/').filter(Boolean);
+  const zoneName = driveZone === 'company' ? 'Company Drive' : driveZone === 'personal' ? 'My Drive' : 'Shared with Me';
   const breadcrumbs = [
-    { name: 'RO Drive', path: '/' },
+    { name: zoneName, path: '/' },
     ...pathSegments.map((seg, i) => ({
       name: seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' '),
       path: '/' + pathSegments.slice(0, i + 1).join('/'),
@@ -479,6 +530,63 @@ export default function DrivePage() {
     setToast('Link copied!');
   };
 
+  // ── Share with user ──
+  const shareWithUser = async () => {
+    if (!shareSheet || !shareUserEmail) return;
+    setShareLoading(true);
+    const payload: any = {
+      action: 'share_with_user', user_email: userEmail,
+      shared_with_email: shareUserEmail, permission: shareUserPerm,
+      resource_type: shareSheet.type,
+      ...(shareSheet.type === 'folder' ? { resource_path: shareSheet.path } : { file_id: shareSheet.fileId }),
+    };
+    const res = await fetch('/api/admin/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setToast(data.updated ? `Updated access for ${shareUserEmail}` : `Shared with ${shareUserEmail}`);
+      setShareUserEmail('');
+    } else {
+      setToast(data.error || 'Failed to share');
+    }
+    setShareLoading(false);
+  };
+
+  // ── Move file ──
+  const handleMoveFile = async () => {
+    if (!moveFile) return;
+    await fetch('/api/admin/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'move', id: moveFile.id, folder: movePath }),
+    });
+    setToast(`Moved to ${movePath === '/' ? 'root' : movePath.split('/').filter(Boolean).pop()}`);
+    setMoveFile(null);
+    fetchFiles();
+  };
+
+  // Get subfolders for move picker
+  const getMoveFolders = () => {
+    const normalizedPath = movePath.endsWith('/') ? movePath : movePath + '/';
+    const folderSet = new Map<string, string>();
+    allFiles.forEach(f => {
+      const fp = (f.folder || '/') + '/';
+      if (fp.startsWith(normalizedPath) && fp !== normalizedPath) {
+        const nextSeg = fp.slice(normalizedPath.length).split('/')[0];
+        if (nextSeg) folderSet.set(nextSeg, normalizedPath + nextSeg);
+      }
+    });
+    dbFolders.forEach(df => {
+      const parent = df.path.substring(0, df.path.lastIndexOf('/')) || '/';
+      const parentNorm = parent.endsWith('/') ? parent : parent + '/';
+      if (parentNorm === normalizedPath || parent === movePath) {
+        if (!folderSet.has(df.name)) folderSet.set(df.name, df.path);
+      }
+    });
+    return [...folderSet.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  };
+
   // ── Create folder ──
   const handleCreateFolder = async () => {
     if (!newFolderName.trim() || !userEmail) return;
@@ -573,11 +681,107 @@ export default function DrivePage() {
               </>
             )}
           </div>
+
+          {/* Zone switcher */}
+          <div className="flex gap-1 px-4 py-2 border-t border-white/[0.03]">
+            {([
+              { key: 'company' as const, label: 'Company', icon: Building2 },
+              { key: 'personal' as const, label: 'My Drive', icon: User },
+              { key: 'shared' as const, label: 'Shared', icon: Users },
+            ]).map(z => (
+              <button key={z.key} onClick={() => switchZone(z.key)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${driveZone === z.key ? 'bg-[#3b8dd4]/15 text-[#3b8dd4]' : 'text-white/30 hover:text-white/50 hover:bg-white/[0.03]'}`}>
+                <z.icon size={14} />
+                {z.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* ── Content ── */}
         <div className="pb-28 px-4 pt-3">
-          {loading ? (
+          {driveZone === 'shared' ? (
+            /* ── Shared with Me view ── */
+            sharedWithMeLoading ? (
+              <div className="flex items-center justify-center py-20"><Loader2 size={28} className="text-[#3b8dd4] animate-spin" /></div>
+            ) : sharedWithMe.folders.length === 0 && sharedWithMe.files.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Users size={52} className="text-white/8 mb-4" />
+                <p className="text-white/25 text-[17px] font-medium mb-1">Nothing shared with you</p>
+                <p className="text-white/15 text-[14px]">When someone shares files or folders with you, they appear here</p>
+              </div>
+            ) : (
+              <>
+                {/* Shared folders */}
+                {sharedWithMe.folders.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-[12px] text-white/25 uppercase tracking-wider font-semibold mb-2 px-1">Shared Folders</p>
+                    <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-2.5' : 'space-y-1'}>
+                      {sharedWithMe.folders.map((sf: any) => (
+                        viewMode === 'grid' ? (
+                          <div key={sf.id}
+                            className="bg-[#141414] border border-white/5 rounded-2xl p-4 text-left">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="w-11 h-11 rounded-xl bg-[#3b8dd4]/10 flex items-center justify-center">
+                                <Folder size={22} className="text-[#3b8dd4]" />
+                              </div>
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${sf.permission === 'readwrite' ? 'bg-[#C9A84C]/15 text-[#C9A84C]' : 'bg-[#3b8dd4]/15 text-[#3b8dd4]'}`}>
+                                {sf.permission === 'readwrite' ? 'Edit' : 'View'}
+                              </span>
+                            </div>
+                            <p className="text-[15px] text-white font-medium truncate capitalize">{sf.name?.replace(/-/g, ' ')}</p>
+                            <p className="text-[12px] text-white/25 mt-0.5">{sf.file_count} file{sf.file_count !== 1 ? 's' : ''} &middot; {formatSize(sf.total_size)}</p>
+                            <p className="text-[11px] text-white/15 mt-1">From {sf.owner_email?.split('@')[0]}</p>
+                          </div>
+                        ) : (
+                          <div key={sf.id}
+                            className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.03] transition-colors">
+                            <div className="w-10 h-10 rounded-xl bg-[#3b8dd4]/10 flex items-center justify-center shrink-0">
+                              <Folder size={20} className="text-[#3b8dd4]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[15px] text-white font-medium truncate capitalize">{sf.name?.replace(/-/g, ' ')}</p>
+                              <p className="text-[12px] text-white/25">{sf.file_count} file{sf.file_count !== 1 ? 's' : ''} &middot; {formatSize(sf.total_size)} &middot; From {sf.owner_email?.split('@')[0]}</p>
+                            </div>
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${sf.permission === 'readwrite' ? 'bg-[#C9A84C]/15 text-[#C9A84C]' : 'bg-[#3b8dd4]/15 text-[#3b8dd4]'}`}>
+                              {sf.permission === 'readwrite' ? 'Edit' : 'View'}
+                            </span>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Shared files */}
+                {sharedWithMe.files.length > 0 && (
+                  <div>
+                    <p className="text-[12px] text-white/25 uppercase tracking-wider font-semibold mb-2 px-1">Shared Files</p>
+                    <div className="space-y-1">
+                      {sharedWithMe.files.map((file: any) => {
+                        const Icon = getFileIcon(file.mime_type);
+                        const color = getFileColor(file.mime_type);
+                        return (
+                          <div key={file.id} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.03] transition-colors">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: color + '12' }}>
+                              <Icon size={20} style={{ color }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[15px] text-white font-medium truncate">{file.original_filename}</p>
+                              <p className="text-[12px] text-white/25">{formatSize(file.file_size)} &middot; From {file.shared_by?.split('@')[0]}</p>
+                            </div>
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${file.share_permission === 'readwrite' ? 'bg-[#C9A84C]/15 text-[#C9A84C]' : 'bg-[#3b8dd4]/15 text-[#3b8dd4]'}`}>
+                              {file.share_permission === 'readwrite' ? 'Edit' : 'View'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )
+          ) : loading ? (
             <div className="flex justify-center py-20"><Loader2 size={28} className="text-[#3b8dd4] animate-spin" /></div>
           ) : search ? (
             // Search results
@@ -850,14 +1054,7 @@ export default function DrivePage() {
                       className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-[#3b8dd4] hover:bg-[#3b8dd4]/10">
                       <Share2 size={20} /> Share
                     </button>
-                    <button onClick={() => {
-                      const folder = prompt('Move to folder path:', file.folder);
-                      if (folder) {
-                        fetch('/api/admin/drive', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ action: 'move', id: file.id, folder }) })
-                          .then(() => { setToast('File moved'); setMenuOpen(null); fetchFiles(); });
-                      }
-                    }}
+                    <button onClick={() => { setMoveFile(file); setMovePath('/'); setMenuOpen(null); }}
                       className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-white/70 hover:bg-white/5">
                       <FolderInput size={20} /> Move
                     </button>
@@ -1023,6 +1220,31 @@ export default function DrivePage() {
                       )}
                     </div>
                   )}
+
+                  {/* Share with specific user */}
+                  {adminUsers.length > 0 && (
+                    <div className="mt-5 space-y-3">
+                      <p className="text-[12px] text-white/25 uppercase tracking-wider font-semibold">Share with User</p>
+                      <div className="flex gap-2">
+                        <select value={shareUserEmail} onChange={e => setShareUserEmail(e.target.value)}
+                          className="flex-1 px-3 py-2.5 bg-[#0a0a0a] border border-white/5 rounded-xl text-[14px] text-white focus:outline-none appearance-none cursor-pointer">
+                          <option value="" className="bg-[#1a1a1a]">Select user...</option>
+                          {adminUsers.map(email => (
+                            <option key={email} value={email} className="bg-[#1a1a1a]">{email}</option>
+                          ))}
+                        </select>
+                        <select value={shareUserPerm} onChange={e => setShareUserPerm(e.target.value as any)}
+                          className="px-3 py-2.5 bg-[#0a0a0a] border border-white/5 rounded-xl text-[13px] text-white/60 focus:outline-none appearance-none cursor-pointer">
+                          <option value="read" className="bg-[#1a1a1a]">View</option>
+                          <option value="readwrite" className="bg-[#1a1a1a]">Edit</option>
+                        </select>
+                      </div>
+                      <button onClick={shareWithUser} disabled={!shareUserEmail || shareLoading}
+                        className="w-full py-2.5 bg-white/5 border border-white/10 text-white/60 font-medium text-[14px] rounded-xl hover:bg-white/10 transition-colors disabled:opacity-30">
+                        <Users size={16} className="inline mr-2" />Share with User
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="px-5 pb-3">
@@ -1071,6 +1293,76 @@ export default function DrivePage() {
               )}
             </div>
           </>
+        )}
+
+        {/* ── Move file picker ── */}
+        {moveFile && (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={() => setMoveFile(null)}>
+            <div className="w-full max-w-lg bg-[#141414] border-t border-white/10 rounded-t-3xl shadow-2xl max-h-[70vh] flex flex-col"
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
+              onClick={e => e.stopPropagation()}>
+              <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mt-3 mb-2" />
+              <div className="px-5 pb-3 border-b border-white/5">
+                <h3 className="text-[17px] font-bold text-white">Move &ldquo;{moveFile.original_filename}&rdquo;</h3>
+                <p className="text-[12px] text-white/30 mt-0.5">Select destination folder</p>
+              </div>
+
+              {/* Breadcrumb for move path */}
+              <div className="flex items-center gap-1 px-5 py-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                <button onClick={() => setMovePath('/')}
+                  className={`text-[13px] font-medium shrink-0 ${movePath === '/' ? 'text-white' : 'text-white/40 hover:text-white/70'}`}>
+                  Root
+                </button>
+                {movePath.split('/').filter(Boolean).map((seg, i, arr) => (
+                  <div key={i} className="flex items-center shrink-0">
+                    <ChevronRight size={12} className="text-white/15 mx-0.5" />
+                    <button onClick={() => setMovePath('/' + arr.slice(0, i + 1).join('/'))}
+                      className={`text-[13px] font-medium capitalize ${i === arr.length - 1 ? 'text-white' : 'text-white/40 hover:text-white/70'}`}>
+                      {seg.replace(/-/g, ' ')}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Folder list */}
+              <div className="flex-1 overflow-y-auto px-3">
+                {movePath !== '/' && (
+                  <button onClick={() => {
+                    const segs = movePath.split('/').filter(Boolean);
+                    setMovePath('/' + segs.slice(0, -1).join('/') || '/');
+                  }}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-white/40 hover:bg-white/[0.03]">
+                    <ChevronLeft size={18} /> Back
+                  </button>
+                )}
+                {getMoveFolders().map(([name, path]) => (
+                  <button key={path} onClick={() => setMovePath(path)}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.03] transition-colors active:bg-white/[0.05]">
+                    <div className="w-9 h-9 rounded-lg bg-[#3b8dd4]/10 flex items-center justify-center shrink-0">
+                      <Folder size={18} className="text-[#3b8dd4]" />
+                    </div>
+                    <span className="text-[14px] text-white font-medium capitalize truncate">{name.replace(/-/g, ' ')}</span>
+                    <ChevronRight size={16} className="text-white/15 ml-auto shrink-0" />
+                  </button>
+                ))}
+                {getMoveFolders().length === 0 && movePath === '/' && (
+                  <p className="text-center text-white/20 text-[13px] py-6">No subfolders — file will move to root</p>
+                )}
+              </div>
+
+              {/* Move here button */}
+              <div className="px-5 pt-3 flex gap-2">
+                <button onClick={() => setMoveFile(null)}
+                  className="flex-1 py-3 text-[14px] text-white/40 border border-white/10 rounded-xl hover:bg-white/5">
+                  Cancel
+                </button>
+                <button onClick={handleMoveFile}
+                  className="flex-1 py-3 text-[14px] bg-[#3b8dd4] text-white font-semibold rounded-xl hover:bg-[#3b8dd4]/90">
+                  Move Here
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Toast */}

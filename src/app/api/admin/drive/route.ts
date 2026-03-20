@@ -247,6 +247,102 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    // ── User-to-user sharing ──
+    if (body.action === 'share_with_user') {
+      const { resource_type, resource_path, file_id, shared_with_email, permission, user_email } = body;
+      if (!shared_with_email || !user_email) return NextResponse.json({ error: 'emails required' }, { status: 400 });
+      if (shared_with_email === user_email) return NextResponse.json({ error: 'Cannot share with yourself' }, { status: 400 });
+      // Check if already shared
+      let query = supabase.from('user_shares').select('id')
+        .eq('owner_email', user_email).eq('shared_with_email', shared_with_email);
+      if (resource_type === 'folder') query = query.eq('resource_type', 'folder').eq('resource_path', resource_path);
+      else query = query.eq('resource_type', 'file').eq('file_id', file_id);
+      const { data: existing } = await query.limit(1).single();
+      if (existing) {
+        // Update permission
+        await supabase.from('user_shares').update({ permission: permission || 'read' }).eq('id', existing.id);
+        return NextResponse.json({ success: true, updated: true });
+      }
+      const { error } = await supabase.from('user_shares').insert({
+        resource_type: resource_type || 'folder',
+        resource_path: resource_path || null,
+        file_id: file_id || null,
+        owner_email: user_email,
+        shared_with_email,
+        permission: permission || 'read',
+      });
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    if (body.action === 'list_user_shares') {
+      const { user_email } = body;
+      if (!user_email) return NextResponse.json({ error: 'user_email required' }, { status: 400 });
+      // Shares I've given out
+      const { data: outgoing } = await supabase.from('user_shares').select('*').eq('owner_email', user_email);
+      // Shares given to me
+      const { data: incoming } = await supabase.from('user_shares').select('*').eq('shared_with_email', user_email);
+      return NextResponse.json({ outgoing: outgoing || [], incoming: incoming || [] });
+    }
+
+    if (body.action === 'delete_user_share') {
+      const { share_id } = body;
+      if (!share_id) return NextResponse.json({ error: 'share_id required' }, { status: 400 });
+      await supabase.from('user_shares').delete().eq('id', share_id);
+      return NextResponse.json({ success: true });
+    }
+
+    if (body.action === 'get_shared_with_me') {
+      const { user_email } = body;
+      if (!user_email) return NextResponse.json({ error: 'user_email required' }, { status: 400 });
+      // Get all shares where I'm the recipient
+      const { data: shares } = await supabase.from('user_shares').select('*').eq('shared_with_email', user_email);
+      if (!shares?.length) return NextResponse.json({ shares: [], files: [], folders: [] });
+
+      // Gather all shared files and folders
+      const fileShares = shares.filter(s => s.resource_type === 'file' && s.file_id);
+      const folderShares = shares.filter(s => s.resource_type === 'folder' && s.resource_path);
+
+      let sharedFiles: any[] = [];
+      let sharedFolders: any[] = [];
+
+      // Get files shared directly
+      if (fileShares.length) {
+        const fileIds = fileShares.map(s => s.file_id);
+        const { data: files } = await supabase.from('user_files').select('*').in('id', fileIds);
+        sharedFiles = (files || []).map(f => {
+          const share = fileShares.find(s => s.file_id === f.id);
+          return { ...f, shared_by: share?.owner_email, share_permission: share?.permission, share_id: share?.id };
+        });
+      }
+
+      // Get folders and their contents
+      for (const fs of folderShares) {
+        const { data: files } = await supabase.from('user_files').select('*')
+          .eq('user_email', fs.owner_email).like('folder', `${fs.resource_path}%`);
+        const { data: folders } = await supabase.from('user_folders').select('*')
+          .eq('user_email', fs.owner_email).like('path', `${fs.resource_path}%`);
+        const folderName = fs.resource_path === '/' ? 'Full Drive' : fs.resource_path.split('/').filter(Boolean).pop() || fs.resource_path;
+        sharedFolders.push({
+          ...fs,
+          name: folderName,
+          file_count: (files || []).length,
+          total_size: (files || []).reduce((s: number, f: any) => s + (f.file_size || 0), 0),
+          files: files || [],
+          subfolders: folders || [],
+        });
+      }
+
+      return NextResponse.json({ shares, files: sharedFiles, folders: sharedFolders });
+    }
+
+    if (body.action === 'list_admin_users') {
+      // Return list of admin user emails for user-to-user sharing picker
+      const { data } = await supabase.auth.admin.listUsers();
+      const emails = (data?.users || []).map((u: any) => u.email).filter(Boolean);
+      return NextResponse.json({ users: emails });
+    }
+
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   }
 
