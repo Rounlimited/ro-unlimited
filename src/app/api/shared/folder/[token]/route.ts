@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   // Get files
   const { data: files } = await supabase
     .from('user_files')
-    .select('id, original_filename, mime_type, file_size, telegram_file_id')
+    .select('id, original_filename, mime_type, file_size, telegram_file_id, folder')
     .eq('user_email', share.user_email)
     .like('folder', `${share.folder_path}%`)
     .order('original_filename');

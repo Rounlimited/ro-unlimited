@@ -424,7 +424,6 @@ export default function DrivePage() {
 
     setToast(`Folder "${name}" created`);
     await fetchFiles(); // Refresh to pick up the new folder
-    navigateToFolder(newPath);
   };
 
   // ── Open file/folder menu ──
@@ -491,6 +490,20 @@ export default function DrivePage() {
                   </div>
                   <p className="text-[11px] text-white/20 mt-0.5">{formatSize(totalBytes)} used</p>
                 </div>
+                <button onClick={async () => {
+                  const res = await fetch('/api/admin/drive', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'share_folder', folder_path: currentPath, permission: 'read', user_email: userEmail }),
+                  });
+                  const data = await res.json();
+                  if (data.link) {
+                    try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
+                    try { await navigator.clipboard.writeText(data.link); } catch {}
+                    setToast('Share link copied!');
+                  }
+                }} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
+                  <Share2 size={20} />
+                </button>
                 <button onClick={() => setShowSearch(true)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
                   <Search size={20} />
                 </button>
