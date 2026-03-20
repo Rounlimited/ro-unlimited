@@ -330,6 +330,8 @@ export default function DrivePage() {
 
   // ── Navigation ──
   const navigateToFolder = (path: string) => {
+    // Push history entry so Android back button can walk back up
+    window.history.pushState({ drivePath: path }, '');
     setCurrentPath(path);
     setSearch('');
     setShowSearch(false);
@@ -488,12 +490,30 @@ export default function DrivePage() {
     setPreviewLoading(false);
   };
 
-  // Handle browser/device back button to close preview instead of leaving page
+  // Android back button — navigate up folders or close preview
+  // Uses a ref updated via useEffect (not during render) to avoid React #310
+  const backStateRef = useRef({ path: currentPath, root: zoneRoot, hasPreview: !!previewFile });
   useEffect(() => {
-    const onPop = () => { if (previewFile) { setPreviewFile(null); setPreviewUrl(''); } };
+    backStateRef.current = { path: currentPath, root: zoneRoot, hasPreview: !!previewFile };
+  }, [currentPath, zoneRoot, previewFile]);
+
+  useEffect(() => {
+    const onPop = () => {
+      const { path, root, hasPreview } = backStateRef.current;
+      if (hasPreview) {
+        setPreviewFile(null);
+        setPreviewUrl('');
+        return;
+      }
+      if (path !== root && path !== '/') {
+        const segs = path.split('/').filter(Boolean);
+        const parent = '/' + segs.slice(0, -1).join('/');
+        setCurrentPath(parent.length >= root.length ? parent : root);
+      }
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, [previewFile]);
+  }, []);
 
   // ── Download file ──
   const handleDownload = async (file: UserFile) => {
