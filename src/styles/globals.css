@@ -50,11 +50,34 @@
     --admin-input-bg: rgba(0,0,0,0.04);
   }
 
-  /* Font size preferences — scale all text via zoom on admin container.
-     Tailwind uses px-based text sizes, so we scale the whole admin view. */
-  html.font-small body.admin-mode { zoom: 0.9; -moz-transform: scale(0.9); -moz-transform-origin: top left; }
-  html.font-normal body.admin-mode { zoom: 1; }
-  html.font-large body.admin-mode { zoom: 1.1; -moz-transform: scale(1.1); -moz-transform-origin: top left; }
+  /* Font size preferences — adjust text sizes without scaling layout.
+     Uses CSS custom property that components can reference. */
+  html.font-small { --font-scale: 0.88; }
+  html.font-normal { --font-scale: 1; }
+  html.font-large { --font-scale: 1.15; }
+
+  /* Scale all Tailwind text-[Xpx] classes when font pref is not normal.
+     Only targets admin mode to avoid affecting the public site. */
+  html:not(.font-normal) body.admin-mode .text-\[9px\] { font-size: calc(9px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[10px\] { font-size: calc(10px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[11px\] { font-size: calc(11px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[12px\] { font-size: calc(12px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[13px\] { font-size: calc(13px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[14px\] { font-size: calc(14px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[15px\] { font-size: calc(15px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[16px\] { font-size: calc(16px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[17px\] { font-size: calc(17px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[18px\] { font-size: calc(18px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[20px\] { font-size: calc(20px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[22px\] { font-size: calc(22px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[24px\] { font-size: calc(24px * var(--font-scale)) !important; }
+  /* Tailwind named sizes */
+  html:not(.font-normal) body.admin-mode .text-xs { font-size: calc(12px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-sm { font-size: calc(14px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-base { font-size: calc(16px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-lg { font-size: calc(18px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-xl { font-size: calc(20px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-2xl { font-size: calc(24px * var(--font-scale)) !important; }
   body {
     @apply bg-ro-black text-ro-white font-body;
     -webkit-font-smoothing: antialiased;
