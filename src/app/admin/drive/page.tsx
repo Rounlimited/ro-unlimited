@@ -284,7 +284,8 @@ export default function DrivePage() {
     return { subfolders, files: filesHere };
   };
 
-  const { subfolders, files } = getFolderContents();
+  const { subfolders, files: unsortedFiles } = getFolderContents();
+  const files = sortFiles(unsortedFiles);
 
   // Switch zone handler
   const switchZone = (zone: 'company' | 'personal' | 'shared') => {
@@ -585,6 +586,105 @@ export default function DrivePage() {
     setToast('Link copied!');
   };
 
+  // ── Trash ──
+  const fetchTrash = async () => {
+    if (!userEmail) return;
+    setTrashLoading(true);
+    const res = await fetch(`/api/admin/drive?user=${encodeURIComponent(userEmail)}&trash=1`);
+    const data = await res.json();
+    setTrashFiles(data.files || []);
+    setTrashLoading(false);
+  };
+
+  const restoreFile = async (id: string) => {
+    await fetch('/api/admin/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'restore', id }),
+    });
+    setTrashFiles(prev => prev.filter(f => f.id !== id));
+    setToast('File restored');
+    fetchFiles();
+  };
+
+  const permanentDelete = async (id: string) => {
+    if (!confirm('Permanently delete this file? This cannot be undone.')) return;
+    await fetch('/api/admin/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'permanent_delete', id }),
+    });
+    setTrashFiles(prev => prev.filter(f => f.id !== id));
+    setToast('File permanently deleted');
+  };
+
+  const emptyTrash = async () => {
+    if (!confirm(`Permanently delete all ${trashFiles.length} files in trash?`)) return;
+    await fetch('/api/admin/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'empty_trash', user_email: userEmail }),
+    });
+    setTrashFiles([]);
+    setToast('Trash emptied');
+  };
+
+  // ── Sort ──
+  const sortFiles = (files: UserFile[]) => {
+    return [...files].sort((a, b) => {
+      switch (sortBy) {
+        case 'name': return a.original_filename.localeCompare(b.original_filename);
+        case 'size': return (b.file_size || 0) - (a.file_size || 0);
+        case 'type': return (a.mime_type || '').localeCompare(b.mime_type || '');
+        default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+  };
+
+  // ── Bulk operations ──
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    const { files: currentFiles } = getFolderContents();
+    if (selected.size === currentFiles.length) setSelected(new Set());
+    else setSelected(new Set(currentFiles.map(f => f.id)));
+  };
+
+  const bulkDelete = async () => {
+    if (!selected.size) return;
+    if (!confirm(`Move ${selected.size} file${selected.size > 1 ? 's' : ''} to trash?`)) return;
+    for (const id of selected) {
+      await fetch('/api/admin/drive', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id }),
+      });
+    }
+    setToast(`${selected.size} file${selected.size > 1 ? 's' : ''} moved to trash`);
+    setSelected(new Set());
+    setSelectMode(false);
+    fetchFiles();
+  };
+
+  const bulkMove = () => {
+    if (!selected.size) return;
+    // Use first selected file for the move picker; we'll move all
+    const firstFile = allFiles.find(f => selected.has(f.id));
+    if (firstFile) { setMoveFile(firstFile); setMovePath('/'); }
+  };
+
+  // ── Drag & drop ──
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true); };
+  const handleDragLeave = () => setDragOver(false);
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files?.length) doUpload(e.dataTransfer.files);
+  };
+
   // ── Share with user ──
   const shareWithUser = async () => {
     if (!shareSheet || !shareUserEmail) return;
@@ -609,14 +709,27 @@ export default function DrivePage() {
     setShareLoading(false);
   };
 
-  // ── Move file ──
+  // ── Move file(s) ──
   const handleMoveFile = async () => {
     if (!moveFile) return;
-    await fetch('/api/admin/drive', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'move', id: moveFile.id, folder: movePath }),
-    });
-    setToast(`Moved to ${movePath === '/' ? 'root' : movePath.split('/').filter(Boolean).pop()}`);
+    if (selected.size > 0) {
+      // Bulk move
+      for (const id of selected) {
+        await fetch('/api/admin/drive', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'move', id, folder: movePath }),
+        });
+      }
+      setToast(`${selected.size} file${selected.size > 1 ? 's' : ''} moved`);
+      setSelected(new Set());
+      setSelectMode(false);
+    } else {
+      await fetch('/api/admin/drive', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'move', id: moveFile.id, folder: movePath }),
+      });
+      setToast(`Moved to ${movePath === '/' ? 'root' : movePath.split('/').filter(Boolean).pop()}`);
+    }
     setMoveFile(null);
     fetchFiles();
   };
@@ -681,7 +794,8 @@ export default function DrivePage() {
         handleUpload(e);
       }}
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
-      <div className="theme-page-dark min-h-screen bg-[#0a0a0a]">
+      <div className="theme-page-dark min-h-screen bg-[#0a0a0a]"
+        onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
         {/* ── Header ── */}
         <div className="theme-header sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5">
           <div className="flex items-center gap-2 px-4 py-3">
@@ -727,6 +841,9 @@ export default function DrivePage() {
                 <button onClick={() => openShareSheet('folder', currentPath)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
                   <Share2 size={20} />
                 </button>
+                <button onClick={() => setShowSort(s => !s)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
+                  <ArrowUpDown size={18} />
+                </button>
                 <button onClick={() => setShowSearch(true)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
                   <Search size={20} />
                 </button>
@@ -744,18 +861,115 @@ export default function DrivePage() {
               { key: 'personal' as const, label: 'My Drive', icon: User },
               { key: 'shared' as const, label: 'Shared', icon: Users },
             ]).map(z => (
-              <button key={z.key} onClick={() => switchZone(z.key)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${driveZone === z.key ? 'bg-[#3b8dd4]/15 text-[#3b8dd4]' : 'text-white/30 hover:text-white/50 hover:bg-white/[0.03]'}`}>
+              <button key={z.key} onClick={() => { switchZone(z.key); setShowTrash(false); setSelectMode(false); setSelected(new Set()); }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${!showTrash && driveZone === z.key ? 'bg-[#3b8dd4]/15 text-[#3b8dd4]' : 'text-white/30 hover:text-white/50 hover:bg-white/[0.03]'}`}>
                 <z.icon size={14} />
                 {z.label}
               </button>
             ))}
+            <button onClick={() => { setShowTrash(true); fetchTrash(); setSelectMode(false); setSelected(new Set()); }}
+              className={`px-3 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-semibold transition-colors ${showTrash ? 'bg-red-500/15 text-red-400' : 'text-white/30 hover:text-white/50 hover:bg-white/[0.03]'}`}>
+              <Trash2 size={14} />
+            </button>
           </div>
         </div>
 
+        {/* Sort dropdown */}
+        {showSort && (
+          <div className="px-4 py-2 flex gap-2">
+            {([
+              { key: 'date' as const, label: 'Date' },
+              { key: 'name' as const, label: 'Name' },
+              { key: 'size' as const, label: 'Size' },
+              { key: 'type' as const, label: 'Type' },
+            ]).map(s => (
+              <button key={s.key} onClick={() => { setSortBy(s.key); setShowSort(false); }}
+                className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors ${sortBy === s.key ? 'bg-[#3b8dd4]/15 text-[#3b8dd4]' : 'bg-white/5 text-white/40 hover:text-white/60'}`}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Bulk action bar */}
+        {selectMode && selected.size > 0 && (
+          <div className="sticky top-[110px] z-20 mx-4 mb-2 flex items-center gap-2 px-4 py-2.5 bg-[#1a1a1a] border border-[#3b8dd4]/20 rounded-xl">
+            <button onClick={selectAll} className="p-1.5 rounded-lg text-[#3b8dd4] hover:bg-[#3b8dd4]/10">
+              <CheckSquare size={18} />
+            </button>
+            <span className="text-[13px] text-white/60 flex-1">{selected.size} selected</span>
+            <button onClick={bulkMove} className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5" title="Move">
+              <FolderInput size={18} />
+            </button>
+            <button onClick={bulkDelete} className="p-2 rounded-lg text-red-400 hover:bg-red-500/10" title="Delete">
+              <Trash2 size={18} />
+            </button>
+            <button onClick={() => { setSelectMode(false); setSelected(new Set()); }} className="p-2 rounded-lg text-white/30 hover:text-white hover:bg-white/5">
+              <X size={18} />
+            </button>
+          </div>
+        )}
+
+        {/* Drag & drop overlay */}
+        {dragOver && (
+          <div className="fixed inset-0 z-50 bg-[#3b8dd4]/10 border-4 border-dashed border-[#3b8dd4]/40 flex items-center justify-center pointer-events-none">
+            <div className="text-center">
+              <Upload size={48} className="text-[#3b8dd4] mx-auto mb-3" />
+              <p className="text-[18px] text-white font-bold">Drop files to upload</p>
+              <p className="text-[14px] text-white/40">to {currentPath === '/' ? 'root' : currentPath.split('/').filter(Boolean).pop()}</p>
+            </div>
+          </div>
+        )}
+
         {/* ── Content ── */}
         <div className="pb-28 px-4 pt-3">
-          {driveZone === 'shared' ? (
+          {showTrash ? (
+            /* ── Trash view ── */
+            trashLoading ? (
+              <div className="flex items-center justify-center py-20"><Loader2 size={28} className="text-red-400 animate-spin" /></div>
+            ) : trashFiles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Trash2 size={52} className="text-white/8 mb-4" />
+                <p className="text-white/25 text-[17px] font-medium mb-1">Trash is empty</p>
+                <p className="text-white/15 text-[14px]">Deleted files appear here for 30 days</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[13px] text-white/30">{trashFiles.length} file{trashFiles.length !== 1 ? 's' : ''} in trash</p>
+                  <button onClick={emptyTrash}
+                    className="text-[12px] text-red-400 font-medium px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors">
+                    Empty Trash
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  {trashFiles.map(file => {
+                    const Icon = getFileIcon(file.mime_type);
+                    const color = getFileColor(file.mime_type);
+                    return (
+                      <div key={file.id} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.03] transition-colors">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: color + '12' }}>
+                          <Icon size={20} style={{ color }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[15px] text-white font-medium truncate">{file.original_filename}</p>
+                          <p className="text-[12px] text-white/25">{formatSize(file.file_size)} &middot; Deleted {file.deleted_at ? new Date(file.deleted_at).toLocaleDateString() : ''}</p>
+                        </div>
+                        <button onClick={() => restoreFile(file.id)}
+                          className="p-2 rounded-lg text-[#3b8dd4] hover:bg-[#3b8dd4]/10" title="Restore">
+                          <Undo2 size={16} />
+                        </button>
+                        <button onClick={() => permanentDelete(file.id)}
+                          className="p-2 rounded-lg text-red-400 hover:bg-red-500/10" title="Delete permanently">
+                          <Trash size={16} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )
+          ) : driveZone === 'shared' ? (
             /* ── Shared with Me view ── */
             sharedWithMeLoading ? (
               <div className="flex items-center justify-center py-20"><Loader2 size={28} className="text-[#3b8dd4] animate-spin" /></div>
@@ -846,12 +1060,48 @@ export default function DrivePage() {
                 <div className="text-center py-16"><p className="text-white/20 text-[16px]">No files found</p></div>
               ) : (
                 <div className="space-y-1">
-                  {files.map(file => <FileListItem key={file.id} file={file} onTap={openPreview} onMenu={openFileMenu} menuOpen={menuOpen} />)}
+                  {files.map(file => <FileListItem key={file.id} file={file} onTap={openPreview} onMenu={openFileMenu} menuOpen={menuOpen} selectMode={selectMode} isSelected={selected.has(file.id)} onToggle={toggleSelect} />)}
                 </div>
               )}
             </>
           ) : (
             <>
+              {/* Recent files — show at zone root */}
+              {currentPath === zoneRoot && !selectMode && zoneFiles.length > 0 && (
+                <div className="mb-5">
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <p className="text-[12px] text-white/25 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                      <History size={12} /> Recent
+                    </p>
+                    <button onClick={() => setSelectMode(true)} className="text-[11px] text-white/25 hover:text-white/50 px-2 py-1 rounded-lg hover:bg-white/5">
+                      Select
+                    </button>
+                  </div>
+                  <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                    {zoneFiles.slice(0, 8).map(file => {
+                      const Icon = getFileIcon(file.mime_type);
+                      const color = getFileColor(file.mime_type);
+                      return (
+                        <button key={file.id} onClick={() => openPreview(file)}
+                          className="shrink-0 w-28 bg-[#141414] border border-white/5 rounded-xl overflow-hidden text-left hover:border-white/10 active:scale-[0.97] transition-all">
+                          {file.mime_type?.startsWith('image/') && thumbnails[file.id] ? (
+                            <div className="w-full h-16 bg-black/30"><img src={thumbnails[file.id]} alt="" className="w-full h-full object-cover" /></div>
+                          ) : (
+                            <div className="w-full h-16 flex items-center justify-center" style={{ backgroundColor: color + '08' }}>
+                              <Icon size={24} style={{ color }} />
+                            </div>
+                          )}
+                          <div className="px-2 py-1.5">
+                            <p className="text-[11px] text-white font-medium truncate">{file.original_filename}</p>
+                            <p className="text-[10px] text-white/20">{new Date(file.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Folders */}
               {subfolders.length > 0 && (
                 <div className="mb-4">
@@ -901,33 +1151,46 @@ export default function DrivePage() {
               {/* Files */}
               {files.length > 0 && (
                 <div>
-                  <p className="text-[12px] text-white/25 uppercase tracking-wider font-semibold mb-2 px-1">Files</p>
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <p className="text-[12px] text-white/25 uppercase tracking-wider font-semibold">Files</p>
+                    {!selectMode && files.length > 1 && (
+                      <button onClick={() => setSelectMode(true)} className="text-[11px] text-white/25 hover:text-white/50 px-2 py-1 rounded-lg hover:bg-white/5">Select</button>
+                    )}
+                  </div>
                   {viewMode === 'grid' ? (
                     <div className="grid grid-cols-2 gap-2.5">
                       {files.map(file => {
                         const Icon = getFileIcon(file.mime_type);
                         const color = getFileColor(file.mime_type);
                         return (
-                          <button key={file.id} onClick={() => openPreview(file)}
-                            className="relative bg-[#141414] border border-white/5 rounded-2xl overflow-hidden text-left hover:border-white/10 transition-all active:scale-[0.98] group">
+                          <button key={file.id} onClick={() => selectMode ? toggleSelect(file.id) : openPreview(file)}
+                            className={`relative bg-[#141414] border rounded-2xl overflow-hidden text-left hover:border-white/10 transition-all active:scale-[0.98] group ${selected.has(file.id) ? 'border-[#3b8dd4]/40 bg-[#3b8dd4]/[0.05]' : 'border-white/5'}`}>
+                            {/* Select checkbox */}
+                            {selectMode && (
+                              <div className="absolute top-2 left-2 z-10">
+                                {selected.has(file.id)
+                                  ? <CheckSquare size={18} className="text-[#3b8dd4]" />
+                                  : <Square size={18} className="text-white/25" />}
+                              </div>
+                            )}
                             {/* Thumbnail for images */}
                             {file.mime_type?.startsWith('image/') && thumbnails[file.id] ? (
                               <div className="w-full h-28 bg-black/30 relative">
                                 <img src={thumbnails[file.id]} alt="" className="w-full h-full object-cover" />
-                                <button onClick={e => { e.stopPropagation(); openFileMenu(file.id); }}
+                                {!selectMode && <button onClick={e => { e.stopPropagation(); openFileMenu(file.id); }}
                                   className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white/70 hover:bg-black/70 transition-colors">
                                   <MoreVertical size={14} />
-                                </button>
+                                </button>}
                               </div>
                             ) : (
                               <div className="flex items-start justify-between p-4 pb-2">
                                 <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: color + '12' }}>
                                   <Icon size={22} style={{ color }} />
                                 </div>
-                                <button onClick={e => { e.stopPropagation(); openFileMenu(file.id); }}
+                                {!selectMode && <button onClick={e => { e.stopPropagation(); openFileMenu(file.id); }}
                                   className="p-1.5 rounded-full text-white/25 hover:text-white/50 hover:bg-white/5 transition-colors">
                                   <MoreVertical size={16} />
-                                </button>
+                                </button>}
                               </div>
                             )}
                             <div className="px-4 py-2.5">
@@ -940,7 +1203,7 @@ export default function DrivePage() {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {files.map(file => <FileListItem key={file.id} file={file} onTap={openPreview} onMenu={openFileMenu} menuOpen={menuOpen} />)}
+                      {files.map(file => <FileListItem key={file.id} file={file} onTap={openPreview} onMenu={openFileMenu} menuOpen={menuOpen} selectMode={selectMode} isSelected={selected.has(file.id)} onToggle={toggleSelect} />)}
                     </div>
                   )}
                 </div>
@@ -1432,21 +1695,33 @@ export default function DrivePage() {
 }
 
 // ── File list item (reusable for list view + search results) ──
-function FileListItem({ file, onTap, onMenu, menuOpen }: { file: UserFile; onTap: (f: UserFile) => void; onMenu: (id: string) => void; menuOpen: string | null }) {
+function FileListItem({ file, onTap, onMenu, menuOpen, selectMode, isSelected, onToggle }: {
+  file: UserFile; onTap: (f: UserFile) => void; onMenu: (id: string) => void; menuOpen: string | null;
+  selectMode?: boolean; isSelected?: boolean; onToggle?: (id: string) => void;
+}) {
   const Icon = getFileIcon(file.mime_type);
   const color = getFileColor(file.mime_type);
   return (
-    <div className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.03] transition-colors active:bg-white/[0.05]">
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: color + '12' }}>
-        <Icon size={20} style={{ color }} />
-      </div>
-      <button onClick={() => onTap(file)} className="flex-1 min-w-0 text-left">
+    <div className={`flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.03] transition-colors active:bg-white/[0.05] ${isSelected ? 'bg-[#3b8dd4]/[0.05]' : ''}`}
+      onClick={() => selectMode && onToggle ? onToggle(file.id) : undefined}>
+      {selectMode ? (
+        <div className="shrink-0">
+          {isSelected ? <CheckSquare size={20} className="text-[#3b8dd4]" /> : <Square size={20} className="text-white/25" />}
+        </div>
+      ) : (
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: color + '12' }}>
+          <Icon size={20} style={{ color }} />
+        </div>
+      )}
+      <button onClick={() => !selectMode && onTap(file)} className="flex-1 min-w-0 text-left">
         <p className="text-[15px] text-white font-medium truncate">{file.original_filename}</p>
         <p className="text-[12px] text-white/25">{formatSize(file.file_size)} &middot; {new Date(file.created_at).toLocaleDateString()}</p>
       </button>
-      <button onClick={() => onMenu(file.id)} className="p-2 rounded-full text-white/15 hover:text-white/40 hover:bg-white/5 shrink-0">
-        <MoreVertical size={18} />
-      </button>
+      {!selectMode && (
+        <button onClick={() => onMenu(file.id)} className="p-2 rounded-full text-white/15 hover:text-white/40 hover:bg-white/5 shrink-0">
+          <MoreVertical size={18} />
+        </button>
+      )}
     </div>
   );
 }

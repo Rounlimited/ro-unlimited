@@ -20,6 +20,8 @@ export async function GET(req: NextRequest) {
   const entityId = searchParams.get('entity_id');
   const search = searchParams.get('search');
 
+  const showTrash = searchParams.get('trash') === '1';
+
   let query = supabase
     .from('user_files')
     .select('*')
@@ -30,7 +32,14 @@ export async function GET(req: NextRequest) {
   if (entityType) query = query.eq('entity_type', entityType);
   if (entityId) query = query.eq('entity_id', entityId);
 
-  const { data, error } = await query.limit(100);
+  // Filter by trash status
+  if (showTrash) {
+    query = query.not('deleted_at', 'is', null);
+  } else {
+    query = query.is('deleted_at', null);
+  }
+
+  const { data, error } = await query.limit(500);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   let files = data || [];
@@ -46,6 +55,13 @@ export async function GET(req: NextRequest) {
   let foldersQuery = supabase.from('user_folders').select('*').order('name');
   if (userEmail) foldersQuery = foldersQuery.eq('user_email', userEmail);
   const { data: folders } = await foldersQuery;
+
+  // Auto-purge files deleted more than 30 days ago
+  if (!showTrash) {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    await supabase.from('user_files').delete().not('deleted_at', 'is', null).lt('deleted_at', thirtyDaysAgo.toISOString());
+  }
 
   return NextResponse.json({ files, totalBytes, folders: folders || [] });
 }
@@ -81,8 +97,28 @@ export async function POST(req: NextRequest) {
     }
 
     if (body.action === 'delete') {
+      // Soft delete — move to trash
+      const { error } = await supabase.from('user_files').update({ deleted_at: new Date().toISOString() }).eq('id', body.id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    if (body.action === 'restore') {
+      const { error } = await supabase.from('user_files').update({ deleted_at: null }).eq('id', body.id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    if (body.action === 'permanent_delete') {
       const { error } = await supabase.from('user_files').delete().eq('id', body.id);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    if (body.action === 'empty_trash') {
+      const { user_email } = body;
+      if (!user_email) return NextResponse.json({ error: 'user_email required' }, { status: 400 });
+      await supabase.from('user_files').delete().eq('user_email', user_email).not('deleted_at', 'is', null);
       return NextResponse.json({ success: true });
     }
 
