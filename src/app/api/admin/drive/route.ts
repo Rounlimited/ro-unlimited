@@ -307,6 +307,61 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    // ── Download from URL ──
+    if (body.action === 'download_url') {
+      const { url, folder, user_email } = body;
+      if (!url || !user_email) return NextResponse.json({ error: 'url and user_email required' }, { status: 400 });
+
+      try {
+        // Download the file from the URL
+        const urlRes = await fetch(url, { redirect: 'follow' });
+        if (!urlRes.ok) return NextResponse.json({ error: `Download failed: ${urlRes.status} ${urlRes.statusText}` }, { status: 400 });
+
+        const contentType = urlRes.headers.get('content-type') || 'application/octet-stream';
+        const contentDisposition = urlRes.headers.get('content-disposition') || '';
+        // Extract filename from URL or content-disposition
+        let filename = '';
+        const cdMatch = contentDisposition.match(/filename[*]?=(?:UTF-8''|"?)([^";]+)/i);
+        if (cdMatch) filename = decodeURIComponent(cdMatch[1].replace(/"/g, ''));
+        if (!filename) {
+          try { filename = new URL(url).pathname.split('/').filter(Boolean).pop() || 'download'; } catch { filename = 'download'; }
+        }
+        filename = filename.replace(/[^\w\s\-\.]/g, '_').slice(0, 200);
+
+        const blob = await urlRes.blob();
+        if (blob.size > 2 * 1024 * 1024 * 1024) return NextResponse.json({ error: 'File too large (>2GB)' }, { status: 413 });
+
+        // Upload to Telegram
+        const tgForm = new FormData();
+        tgForm.append('chat_id', STORAGE_CHAT_ID);
+        tgForm.append('document', blob, filename);
+        tgForm.append('caption', `${user_email} | ${folder || '/'} | ${filename} [url download]`);
+
+        const tgRes = await fetch(`${TELEGRAM_API}/sendDocument`, { method: 'POST', body: tgForm });
+        const tgData = await tgRes.json();
+        if (!tgData.ok) return NextResponse.json({ error: `Telegram upload failed: ${tgData.description}` }, { status: 500 });
+
+        const doc = tgData.result.document || tgData.result.video || tgData.result.audio || tgData.result.animation || tgData.result.voice;
+        if (!doc) return NextResponse.json({ error: 'No file in Telegram response' }, { status: 500 });
+
+        // Save metadata
+        const { data, error } = await supabase.from('user_files').insert({
+          user_email,
+          filename: doc.file_name || filename,
+          original_filename: filename,
+          mime_type: doc.mime_type || contentType,
+          file_size: doc.file_size || blob.size,
+          telegram_file_id: doc.file_id,
+          folder: folder || '/',
+        }).select().single();
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+        return NextResponse.json({ success: true, filename, file: data });
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message || 'Download failed' }, { status: 500 });
+      }
+    }
+
     // ── User-to-user sharing ──
     if (body.action === 'share_with_user') {
       const { resource_type, resource_path, file_id, shared_with_email, permission, user_email } = body;

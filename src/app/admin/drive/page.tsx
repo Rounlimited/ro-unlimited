@@ -100,6 +100,10 @@ export default function DrivePage() {
   // Move file picker
   const [moveFile, setMoveFile] = useState<UserFile | null>(null);
   const [movePath, setMovePath] = useState('/');
+  // URL download
+  const [showUrlDownload, setShowUrlDownload] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState('');
+  const [urlDownloading, setUrlDownloading] = useState(false);
   // Trash
   const [showTrash, setShowTrash] = useState(false);
   const [trashFiles, setTrashFiles] = useState<UserFile[]>([]);
@@ -792,6 +796,32 @@ export default function DrivePage() {
     return [...folderSet.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   };
 
+  // ── Download from URL ──
+  const handleUrlDownload = async () => {
+    if (!downloadUrl.trim() || !userEmail) return;
+    setUrlDownloading(true);
+    setShowUrlDownload(false);
+    setToast('Downloading from URL...');
+    try {
+      const res = await fetch('/api/admin/drive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'download_url', url: downloadUrl.trim(), folder: currentPath, user_email: userEmail }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setToast(`Download failed: ${data.error}`);
+      } else {
+        setToast(`Downloaded: ${data.filename}`);
+        fetchFiles();
+      }
+    } catch (err) {
+      setToast('Download failed — network error');
+    }
+    setUrlDownloading(false);
+    setDownloadUrl('');
+  };
+
   // ── Create folder ──
   const handleCreateFolder = async () => {
     if (!newFolderName.trim() || !userEmail) return;
@@ -1296,6 +1326,10 @@ export default function DrivePage() {
                     className="flex items-center gap-2 px-3 h-9 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-lg text-white/50 text-[13px] font-medium hover:bg-white/5 transition-colors">
                     <Image size={15} className="text-[#22C55E]" /> Photos
                   </button>
+                  <button onClick={() => { setShowUrlDownload(true); setFabOpen(false); }}
+                    className="flex items-center gap-2 px-3 h-9 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-lg text-white/50 text-[13px] font-medium hover:bg-white/5 transition-colors">
+                    <Link2 size={15} className="text-[#C9A84C]" /> From URL
+                  </button>
                 </div>
               )}
               {/* Main FAB toggle */}
@@ -1489,6 +1523,30 @@ export default function DrivePage() {
                 <button onClick={handleCreateFolder}
                   className="flex-1 py-2.5 text-[14px] bg-[#3b8dd4] text-white font-semibold rounded-xl hover:bg-[#3b8dd4]/90">
                   Create
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── URL Download modal ── */}
+        {showUrlDownload && (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowUrlDownload(false)}>
+            <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+              <h3 className="text-[17px] font-semibold text-white mb-1">Download from URL</h3>
+              <p className="text-[12px] text-white/30 mb-4">Paste any file URL — the server will download it to your current folder</p>
+              <input type="url" value={downloadUrl} onChange={e => setDownloadUrl(e.target.value)}
+                placeholder="https://example.com/file.pdf" autoFocus
+                onKeyDown={e => e.key === 'Enter' && handleUrlDownload()}
+                className="w-full px-4 py-3 bg-[#111] border border-white/10 rounded-xl text-[15px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/50 mb-4" />
+              <div className="flex gap-2">
+                <button onClick={() => { setShowUrlDownload(false); setDownloadUrl(''); }}
+                  className="flex-1 py-2.5 text-[14px] text-white/40 border border-white/10 rounded-xl hover:bg-white/5">
+                  Cancel
+                </button>
+                <button onClick={handleUrlDownload} disabled={!downloadUrl.trim() || urlDownloading}
+                  className="flex-1 py-2.5 text-[14px] bg-[#C9A84C] text-black font-semibold rounded-xl hover:bg-[#C9A84C]/90 disabled:opacity-40">
+                  {urlDownloading ? 'Downloading...' : 'Download'}
                 </button>
               </div>
             </div>
