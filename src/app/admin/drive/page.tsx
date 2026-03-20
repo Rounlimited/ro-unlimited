@@ -788,7 +788,7 @@ export default function DrivePage() {
         handleUpload(e);
       }}
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
-      <div className="theme-page-dark min-h-screen bg-[#0a0a0a]"
+      <div className="theme-page-dark flex-1 flex flex-col overflow-y-auto bg-[#0a0a0a]"
         onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
         {/* ── Header ── */}
         <div className="theme-header sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5">
@@ -916,7 +916,7 @@ export default function DrivePage() {
         )}
 
         {/* ── Content ── */}
-        <div className="pb-24 px-4 pt-3 overflow-y-auto">
+        <div className="pb-24 px-4 pt-3">
           {showTrash ? (
             /* ── Trash view ── */
             trashLoading ? (
