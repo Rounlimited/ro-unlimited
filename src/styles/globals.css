@@ -468,8 +468,9 @@
 .light-theme img[src="/ro-icon.svg"][aria-hidden="true"] { opacity: 0.04 !important; }
 
 /* ── Page-level theme overrides (inline styles need class-based override) ── */
-.light-theme .theme-page-navy { background: #f0f0f1 !important; }
-.light-theme .theme-page-dark { background: #f0f0f1 !important; }
+.light-theme .theme-page-navy { background: #f0f0f1 !important; background-color: #f0f0f1 !important; }
+.light-theme .theme-page-dark { background: #f0f0f1 !important; background-color: #f0f0f1 !important; }
+.light-theme .bg-\[\#050810\] { background-color: #f0f0f1 !important; }
 .light-theme .theme-header { background: rgba(240,240,241,0.95) !important; border-color: rgba(0,0,0,0.06) !important; }
 .light-theme .theme-grid-overlay { background-image: linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px) !important; }
 .light-theme .theme-card-navy { background: #ffffff !important; border-color: rgba(59,141,212,0.15) !important; box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important; }

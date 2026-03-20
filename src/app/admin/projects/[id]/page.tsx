@@ -495,13 +495,13 @@ export default function ProjectDetailPage() {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background:'#050810' }}>
+    <div className="theme-page-navy min-h-screen flex items-center justify-center bg-[#050810]">
       <Loader2 className="animate-spin" size={24} style={{ color:'#C9A84C' }} />
     </div>
   );
 
   if (!project) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background:'#050810' }}>
+    <div className="theme-page-navy min-h-screen flex items-center justify-center bg-[#050810]">
       <p style={{ color:'rgba(255,255,255,0.3)' }}>Project not found</p>
     </div>
   );
@@ -510,7 +510,7 @@ export default function ProjectDetailPage() {
   const DivIcon = div.icon;
 
   return (
-    <div className="theme-page-navy h-full overflow-y-auto" style={{ background:'#050810' }}>
+    <div className="theme-page-navy h-full overflow-y-auto bg-[#050810]">
       {/* Neon grid */}
       <div className="theme-grid-overlay fixed inset-0 pointer-events-none" style={{
         backgroundImage:`linear-gradient(rgba(42,74,138,0.05) 1px, transparent 1px),linear-gradient(90deg, rgba(42,74,138,0.05) 1px, transparent 1px)`,
