@@ -159,7 +159,8 @@ export default function SharedFolderPage({ params }: { params: { token: string }
       const dt = Date.now() - touchStartRef.current.t;
       if (dx > 80 && dy < 50 && dt < 400 && touchStartRef.current.x < 40) {
         if (previewFile) { closePreview(); return; }
-        if (currentPath !== rootPath) goBack();
+        const root = data?.folder_path || '/';
+        if (currentPath !== root) goBack();
       }
     };
     document.addEventListener('touchstart', onStart, { passive: true });
@@ -168,7 +169,7 @@ export default function SharedFolderPage({ params }: { params: { token: string }
       document.removeEventListener('touchstart', onStart);
       document.removeEventListener('touchend', onEnd);
     };
-  }, [currentPath, previewFile, rootPath]);
+  }, [currentPath, previewFile, data]);
 
   const handleDownload = async (file: SharedFile) => {
     const url = previewUrl || await getUrl(file);
