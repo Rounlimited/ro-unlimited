@@ -666,13 +666,14 @@ export default function DrivePage() {
     if (firstFile) { setMoveFile(firstFile); setMovePath('/'); }
   };
 
-  // ── Drag & drop ──
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true); };
-  const handleDragLeave = () => setDragOver(false);
+  // ── Drag & drop (desktop only) ──
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOver(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOver(false); };
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOver(false);
-    if (e.dataTransfer.files?.length) doUpload(e.dataTransfer.files);
+    if (e.dataTransfer?.files?.length) doUpload(e.dataTransfer.files);
   };
 
   // ── Share with user ──
