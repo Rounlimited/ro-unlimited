@@ -329,7 +329,7 @@ export default function AdminDashboard() {
         <div ref={row3Ref} data-tour="hero-buttons" className="grid grid-cols-3 gap-2 relative z-10">
           {/* Email — blue */}
           <Link href="/admin/inbox"
-            className="relative overflow-hidden border border-[#2a6aaa]/30 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
+            className="theme-card-blue relative overflow-hidden border border-[#2a6aaa]/30 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(145deg, #0c1a2e, #0a1220)' }}
           >
             <div className="relative flex-shrink-0">
@@ -359,7 +359,7 @@ export default function AdminDashboard() {
 
           {/* Estimates — gold/green */}
           <Link href="/admin/estimates"
-            className="relative overflow-hidden border border-[#C9A84C]/25 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
+            className="theme-card-gold relative overflow-hidden border border-[#C9A84C]/25 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(145deg, #1a1508, #120f04)' }}
           >
             <div className="relative flex-shrink-0">
@@ -386,7 +386,7 @@ export default function AdminDashboard() {
 
           {/* Team — orange */}
           <Link href="/admin/employees"
-            className="relative overflow-hidden border border-[#D4772C]/25 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
+            className="theme-card-orange relative overflow-hidden border border-[#D4772C]/25 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(145deg, #1a1208, #140e06)' }}
           >
             <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -408,7 +408,7 @@ export default function AdminDashboard() {
         <div data-tour="quick-actions" className="grid grid-cols-3 gap-2 relative z-10">
           {/* Portfolio — gold */}
           <Link href="/admin/projects"
-            className="relative overflow-hidden border border-[#C9A84C]/20 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
+            className="theme-card-gold relative overflow-hidden border border-[#C9A84C]/20 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(145deg, #1a1508, #120f04)' }}>
             <div className="w-11 h-11 rounded-xl flex items-center justify-center"
               style={{ background: 'linear-gradient(145deg, #C9A84C, #a8893d)', boxShadow: '0 4px 15px rgba(201,168,76,0.3), inset 0 1px 0 rgba(255,255,255,0.2)' }}>
@@ -419,7 +419,7 @@ export default function AdminDashboard() {
           </Link>
           {/* RO Drive — blue-cyan */}
           <Link href="/admin/drive"
-            className="relative overflow-hidden border border-[#3b8dd4]/25 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
+            className="theme-card-blue relative overflow-hidden border border-[#3b8dd4]/25 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(145deg, #0c1a2e, #0a1220)' }}>
             <div className="w-11 h-11 rounded-xl flex items-center justify-center"
               style={{ background: 'linear-gradient(145deg, #3b8dd4, #1B6AB5)', boxShadow: '0 4px 15px rgba(59,141,212,0.35), inset 0 1px 0 rgba(255,255,255,0.15)' }}>
@@ -430,7 +430,7 @@ export default function AdminDashboard() {
           </Link>
           {/* Settings — silver */}
           <Link href="/admin/settings"
-            className="relative overflow-hidden border border-white/8 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
+            className="theme-card-silver relative overflow-hidden border border-white/8 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(145deg, #161616, #0f0f0f)' }}>
             <div className="w-11 h-11 rounded-xl flex items-center justify-center"
               style={{ background: 'linear-gradient(145deg, #666, #444)', boxShadow: '0 4px 15px rgba(100,100,100,0.2), inset 0 1px 0 rgba(255,255,255,0.1)' }}>
