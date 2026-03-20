@@ -324,25 +324,23 @@ export default function AiChatBubble() {
     );
   };
 
-  // ── Pull-tab (closed) — always docked to right edge ──
+  // ── Closed state — header button triggers open via DOM click ──
+  useEffect(() => {
+    const btn = document.getElementById('ai-bubble-header-btn');
+    if (!btn) return;
+    const handler = () => { setOpen(true); setDisplayMode('full'); };
+    btn.addEventListener('click', handler);
+    // Show unread badge on header button
+    if (unread > 0) {
+      btn.setAttribute('data-unread', String(unread));
+    } else {
+      btn.removeAttribute('data-unread');
+    }
+    return () => btn.removeEventListener('click', handler);
+  }, [open, unread]);
+
   if (!open) {
-    return (
-      <>
-        <ToastNotification />
-        <button onClick={() => { setOpen(true); setDisplayMode('full'); }}
-          className="fixed top-3 right-3 z-[90] group transition-all active:scale-95">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center relative overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, #2a6aaa, #3b8dd4)', boxShadow: '0 2px 12px rgba(59,141,212,0.3)' }}>
-            <Sparkles size={15} className="text-white group-hover:scale-110 transition-transform" />
-          </div>
-          {unread > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg">
-              {unread}
-            </span>
-          )}
-        </button>
-      </>
-    );
+    return <ToastNotification />;
   }
 
   // ── Minimized bar ──
@@ -350,8 +348,8 @@ export default function AiChatBubble() {
     return (
       <>
         <ToastNotification />
-        <div className="fixed top-3 right-14 z-[90] flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-2xl cursor-pointer hover:scale-105 transition-all"
-          style={{ background: 'linear-gradient(135deg, #C9A84C, #D4772C)', boxShadow: '0 2px 16px rgba(201,168,76,0.3)' }}
+        <div className="fixed bottom-20 right-4 z-[90] flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-2xl cursor-pointer hover:scale-105 transition-all"
+          style={{ background: 'linear-gradient(135deg, #C9A84C, #D4772C)', boxShadow: '0 2px 16px rgba(201,168,76,0.3)', marginBottom: 'env(safe-area-inset-bottom)' }}
           onClick={() => setDisplayMode('full')}>
           <Sparkles size={14} className="text-black" />
           <span className="text-black text-[12px] font-semibold">AI</span>

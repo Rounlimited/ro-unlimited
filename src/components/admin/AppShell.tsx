@@ -799,13 +799,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <img src="/ro-unlimited-logo.svg" alt="RO Unlimited" className="w-48 h-auto object-contain" />
           <span className="text-[11px] text-white/20 uppercase tracking-wider border-l border-white/10 pl-2">Admin</span>
         </button>
-        <div className="flex items-center gap-2">
-          {isDevUser && (
-            <span className="text-[9px] text-white/15 font-mono tabular-nums mr-1">
-              {BUILD_TIMESTAMP.replace('T', ' ').slice(0, 19)}
-            </span>
-          )}
-          <NotificationBell />
+        <div className="flex items-center gap-1.5">
+          <button id="ai-bubble-header-btn" className="p-1.5 rounded-lg hover:bg-white/5 transition-colors active:scale-95">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #2a6aaa, #3b8dd4)' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                <path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>
+              </svg>
+            </div>
+          </button>
+          <NotificationBell buildTimestamp={isDevUser ? BUILD_TIMESTAMP.replace('T', ' ').slice(0, 19) : undefined} />
         </div>
       </header>
 

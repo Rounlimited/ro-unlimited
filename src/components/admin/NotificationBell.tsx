@@ -41,7 +41,7 @@ function getIcon(type: string) {
   }
 }
 
-export default function NotificationBell() {
+export default function NotificationBell({ buildTimestamp }: { buildTimestamp?: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [briefing, setBriefing] = useState<BriefingItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -187,6 +187,11 @@ export default function NotificationBell() {
             ))}
           </div>
         ) : null}
+        {buildTimestamp && (
+          <div style={{ padding: '6px 16px 8px', borderTop: '1px solid rgba(255,255,255,0.03)', textAlign: 'center' }}>
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.1)', fontFamily: 'monospace' }}>Build: {buildTimestamp}</span>
+          </div>
+        )}
       </div>
     </>,
     document.body
