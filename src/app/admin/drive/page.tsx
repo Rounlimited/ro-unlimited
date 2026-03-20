@@ -417,8 +417,13 @@ export default function DrivePage() {
 
           if (tgData.ok) {
             setUploadProgress(`Saving ${file.name}...`);
-            const doc = tgData.result.document;
-            await fetch('/api/admin/drive', {
+            // Telegram may return the file as document, video, audio, animation, or voice
+            const doc = tgData.result.document || tgData.result.video || tgData.result.audio || tgData.result.animation || tgData.result.voice;
+            if (!doc || !doc.file_id) {
+              setToast(`Upload succeeded but no file ID returned for ${file.name}`);
+              continue;
+            }
+            const metaRes = await fetch('/api/admin/drive', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -432,7 +437,12 @@ export default function DrivePage() {
                 folder: currentPath,
               }),
             });
-            uploaded++;
+            const metaData = await metaRes.json();
+            if (metaData.error) {
+              setToast(`Metadata save failed: ${metaData.error}`);
+            } else {
+              uploaded++;
+            }
           } else {
             setToast(`Failed: ${tgData.description || 'Upload error'}`);
           }

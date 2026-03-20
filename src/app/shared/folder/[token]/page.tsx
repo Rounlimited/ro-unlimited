@@ -282,7 +282,7 @@ export default function SharedFolderPage({ params }: { params: { token: string }
         });
 
         if (tgData.ok) {
-          const doc = tgData.result.document;
+          const doc = tgData.result.document || tgData.result.video || tgData.result.audio || tgData.result.animation || tgData.result.voice;
           await fetch(`/api/shared/folder/${params.token}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

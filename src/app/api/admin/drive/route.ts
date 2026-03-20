@@ -458,7 +458,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Telegram upload failed: ${tgData.description}` }, { status: 500 });
   }
 
-  const doc = tgData.result.document;
+  const doc = tgData.result.document || tgData.result.video || tgData.result.audio || tgData.result.animation || tgData.result.voice;
   const telegramFileId = doc.file_id;
 
   // Save metadata to Supabase
