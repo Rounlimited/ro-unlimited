@@ -475,35 +475,30 @@ export default function DrivePage() {
   };
 
   // Handle device/browser back button — navigate up in Drive instead of leaving
-  const currentPathRef = useRef(currentPath);
-  currentPathRef.current = currentPath;
-  const zoneRootRef = useRef(zoneRoot);
-  zoneRootRef.current = zoneRoot;
-  const previewFileRef = useRef(previewFile);
-  previewFileRef.current = previewFile;
+  const driveStateRef = useRef({ currentPath, zoneRoot, previewFile });
+  useEffect(() => {
+    driveStateRef.current = { currentPath, zoneRoot, previewFile };
+  });
 
   // Push an initial guard entry on mount so first back doesn't exit
   useEffect(() => {
     window.history.pushState({ driveGuard: true }, '');
-  }, []);
 
-  useEffect(() => {
     const onPop = () => {
+      const { currentPath: path, zoneRoot: root, previewFile: preview } = driveStateRef.current;
       // Close preview if open
-      if (previewFileRef.current) {
-        closePreview();
-        window.history.pushState({ driveGuard: true }, '');
+      if (preview) {
+        setPreviewFile(null);
+        setPreviewUrl('');
+        setTimeout(() => window.history.pushState({ driveGuard: true }, ''), 0);
         return;
       }
       // Navigate up one folder if not at root
-      const path = currentPathRef.current;
-      const root = zoneRootRef.current;
       if (path !== root && path !== '/') {
         const segs = path.split('/').filter(Boolean);
         const parent = '/' + segs.slice(0, -1).join('/');
         setCurrentPath(parent.length >= root.length ? parent : root);
-        // Push another guard so the next back also stays in Drive
-        window.history.pushState({ driveGuard: true }, '');
+        setTimeout(() => window.history.pushState({ driveGuard: true }, ''), 0);
       }
       // At root: don't push — let the browser naturally go back to dashboard
     };
