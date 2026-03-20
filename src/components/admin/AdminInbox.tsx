@@ -776,18 +776,25 @@ export default function AdminInbox() {
   // ═══════════════════════════════════════════
   if (isDesktop) {
     return (
-      <div className="h-full flex bg-[#0a0a0a]">
+      <div className="fixed inset-0 z-[55] flex bg-[#0a0a0a]">
         {/* Left: Folder sidebar — Gmail style */}
-        <div className="w-52 flex-shrink-0 border-r border-white/5 flex flex-col">
+        <div className="w-56 flex-shrink-0 border-r border-white/5 flex flex-col">
+          {/* Logo + back to dashboard */}
+          <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+            <a href="/admin" className="flex items-center gap-2 text-white/40 hover:text-white/70 transition-colors" title="Back to Dashboard">
+              <img src="/ro-icon.svg" alt="RO" className="w-7 h-7" />
+              <span className="text-[12px] font-semibold tracking-wide uppercase">Admin</span>
+            </a>
+          </div>
           {/* Compose button — big like Gmail */}
-          <div className="px-3 pt-4 pb-2">
+          <div className="px-3 pt-1 pb-3">
             <button onClick={() => startCompose("new")}
               className="w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-[15px] font-semibold transition-all hover:shadow-lg"
               style={{ background: 'linear-gradient(135deg, #C9A84C, #D4772C)', color: '#000', boxShadow: '0 2px 12px rgba(201,168,76,0.2)' }}>
               <Pencil size={18} /> Compose
             </button>
           </div>
-          <nav className="flex-1 overflow-y-auto px-2 pt-2 space-y-0.5">
+          <nav className="flex-1 overflow-y-auto px-2 space-y-0.5">
             {FOLDERS.map(f => {
               const FIcon = f.icon;
               const count = folderCounts[f.key] || 0;
@@ -803,26 +810,11 @@ export default function AdminInbox() {
               );
             })}
           </nav>
-          {/* Account switcher */}
-          <div className="border-t border-white/5 p-2 space-y-0.5">
-            <p className="px-3 pt-2 pb-1 text-[10px] text-white/15 uppercase tracking-widest font-semibold">Accounts</p>
-            <button onClick={() => { setActiveAccount(null); localStorage.removeItem('ro_inbox_account'); }}
-              className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] transition-colors ${!activeAccount ? "bg-white/5 text-white/70 font-medium" : "text-white/30 hover:bg-white/[0.03]"}`}>
-              <Mail size={14} /> All Mail
-            </button>
-            {accounts.map(a => (
-              <button key={a.email} onClick={() => { setActiveAccount(a); setFromAccount(a.email); localStorage.setItem('ro_inbox_account', a.email); }}
-                className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] transition-colors ${activeAccount?.email === a.email ? "bg-white/5 text-white/70 font-medium" : "text-white/30 hover:bg-white/[0.03]"}`}>
-                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style={{ backgroundColor: a.color + "25", color: a.color }}>{a.initials}</div>
-                {a.email.split("@")[0]}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Main content — thread list OR thread detail (Gmail switches, not split) */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Top toolbar — search + actions */}
+          {/* Top toolbar — search + account dropdown + actions */}
           <div className="flex items-center gap-3 px-4 py-2 border-b border-white/5">
             {selectedThread && messages.length > 0 ? (
               /* Thread open — show back + subject + actions */
@@ -845,11 +837,34 @@ export default function AdminInbox() {
                     className="flex-1 bg-transparent text-[14px] text-white placeholder:text-white/20 focus:outline-none" />
                   {search && <button onClick={() => setSearch("")} className="text-white/20 hover:text-white/40"><X size={14} /></button>}
                 </div>
-                <button onClick={() => setView("accounts")}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
-                  style={activeAccount ? { backgroundColor: activeAccount.color + "25", color: activeAccount.color } : { backgroundColor: "#1a1a1a", color: "#888" }}>
-                  {activeAccount ? activeAccount.initials : "All"}
-                </button>
+                {/* Account dropdown — Gmail style */}
+                <div className="relative">
+                  <button onClick={() => setView(view === "accounts" ? "list" : "accounts" as any)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-[13px]"
+                    style={activeAccount ? { color: activeAccount.color } : { color: '#888' }}>
+                    {activeAccount ? (
+                      <><div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style={{ backgroundColor: activeAccount.color + "25" }}>{activeAccount.initials}</div> {activeAccount.email.split("@")[0]}</>
+                    ) : (
+                      <><Mail size={14} /> All Mail</>
+                    )}
+                    <ChevronDown size={12} className="text-white/30" />
+                  </button>
+                  {view === "accounts" && (
+                    <div className="absolute right-0 top-full mt-1 w-56 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                      <button onClick={() => { setActiveAccount(null); localStorage.removeItem('ro_inbox_account'); setView("list"); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-[13px] transition-colors ${!activeAccount ? "bg-[#C9A84C]/5 text-[#C9A84C]" : "text-white/50 hover:bg-white/[0.03]"}`}>
+                        <Mail size={14} /> All Mail
+                      </button>
+                      {accounts.map(a => (
+                        <button key={a.email} onClick={() => { setActiveAccount(a); setFromAccount(a.email); localStorage.setItem('ro_inbox_account', a.email); setView("list"); }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-[13px] transition-colors border-t border-white/[0.03] ${activeAccount?.email === a.email ? "bg-[#C9A84C]/5 text-[#C9A84C]" : "text-white/50 hover:bg-white/[0.03]"}`}>
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: a.color + "25", color: a.color }}>{a.initials}</div>
+                          {a.email}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
@@ -1095,11 +1110,10 @@ export default function AdminInbox() {
 
         {/* Toast */}
         {toast && (
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 bg-[#1a1a1a] border border-[#C9A84C]/30 rounded-full text-[14px] text-[#C9A84C] shadow-lg">
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] px-5 py-2.5 bg-[#1a1a1a] border border-[#C9A84C]/30 rounded-full text-[14px] text-[#C9A84C] shadow-lg">
             {toast}
           </div>
         )}
-      </div>
       </div>
     );
   }
