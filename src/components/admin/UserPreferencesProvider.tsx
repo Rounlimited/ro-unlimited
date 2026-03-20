@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 export interface UserPreferences {
   id?: string;
   user_id: string;
-  theme: 'dark' | 'light';
+  theme: string;
   font_size: 'small' | 'normal' | 'large';
   animations_enabled: boolean;
   compact_mode: boolean;
@@ -32,19 +32,29 @@ export function usePreferences() {
   return useContext(PreferencesContext);
 }
 
+// All available theme classes
+const THEME_CLASSES = ['dark-theme', 'light-theme', 'theme-midnight', 'theme-amoled', 'theme-warm', 'theme-hi-contrast'];
+const THEME_META: Record<string, string> = {
+  dark: '#0a0a0a', light: '#f0f0f1', midnight: '#0a1628',
+  amoled: '#000000', warm: '#1a1208', 'hi-contrast': '#000000',
+};
+
 // Apply theme class to document root
 function applyTheme(theme: string) {
   const root = document.documentElement;
+  // Remove all theme classes
+  THEME_CLASSES.forEach(c => root.classList.remove(c));
+  // Light-based themes get light-theme class too (for the light overrides)
   if (theme === 'light') {
     root.classList.add('light-theme');
-    root.classList.remove('dark-theme');
   } else {
+    // Dark-based themes: add their specific class + dark-theme base
     root.classList.add('dark-theme');
-    root.classList.remove('light-theme');
+    if (theme !== 'dark') root.classList.add(`theme-${theme}`);
   }
   // Update iOS status bar color
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', theme === 'light' ? '#f0f0f1' : '#1B2A4A');
+  if (meta) meta.setAttribute('content', THEME_META[theme] || '#0a0a0a');
 }
 
 function applyFontSize(size: string) {

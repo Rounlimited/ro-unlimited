@@ -477,20 +477,28 @@ export default function SettingsPage() {
               {/* Theme */}
               <div className="py-3">
                 <span className="text-[14px] text-white/70 block mb-3">Theme</span>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {([
-                    { value: 'dark' as const, label: 'Dark', icon: Moon },
-                    { value: 'light' as const, label: 'Light', icon: Sun },
+                    { value: 'dark', label: 'Dark', color: '#C9A84C', preview: '#0a0a0a' },
+                    { value: 'light', label: 'Light', color: '#9e7e30', preview: '#f0f0f1' },
+                    { value: 'midnight', label: 'Midnight', color: '#4488FF', preview: '#0a1628' },
+                    { value: 'amoled', label: 'AMOLED', color: '#00ff88', preview: '#000000' },
+                    { value: 'warm', label: 'Warm', color: '#D4772C', preview: '#1a1208' },
+                    { value: 'hi-contrast', label: 'Hi-Con', color: '#ffffff', preview: '#000000' },
                   ]).map(opt => (
                     <button key={opt.value}
-                      onClick={() => updatePreference({ theme: opt.value })}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-medium border transition-all ${
+                      onClick={() => updatePreference({ theme: opt.value as any })}
+                      className={`flex flex-col items-center gap-1.5 py-2.5 px-2 rounded-xl text-[12px] font-medium border transition-all ${
                         preferences.theme === opt.value
-                          ? 'bg-[#C9A84C]/10 border-[#C9A84C]/30 text-[#C9A84C]'
+                          ? 'border-[#C9A84C]/40 shadow-[0_0_12px_rgba(201,168,76,0.15)]'
                           : 'bg-white/[0.03] border-white/10 text-white/40 hover:border-white/20'
-                      }`}>
-                      <opt.icon size={14} />
-                      {opt.label}
+                      }`}
+                      style={preferences.theme === opt.value ? { background: `${opt.color}15`, borderColor: `${opt.color}60` } : {}}>
+                      <div className="w-8 h-8 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center"
+                        style={{ background: opt.preview }}>
+                        <div className="w-3 h-0.5 rounded-full" style={{ background: opt.color }} />
+                      </div>
+                      <span style={preferences.theme === opt.value ? { color: opt.color } : {}}>{opt.label}</span>
                     </button>
                   ))}
                 </div>
