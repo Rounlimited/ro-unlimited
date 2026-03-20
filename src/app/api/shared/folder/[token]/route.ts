@@ -19,6 +19,25 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   const share = await getShare(supabase, params.token);
   if (!share) return NextResponse.json({ error: 'Link not found or expired' }, { status: 404 });
 
+  // If password-protected, check if password was provided via query param
+  if (share.password_hash) {
+    const { searchParams } = new URL(req.url);
+    const pw = searchParams.get('pw');
+    if (!pw) {
+      // Return minimal info — client needs to show password gate
+      return NextResponse.json({
+        requires_password: true,
+        folder_path: share.folder_path,
+        permission: share.permission,
+      });
+    }
+    const crypto = await import('crypto');
+    const hash = crypto.createHash('sha256').update(pw).digest('hex');
+    if (hash !== share.password_hash) {
+      return NextResponse.json({ error: 'Incorrect password', requires_password: true }, { status: 403 });
+    }
+  }
+
   // Increment access count
   await supabase.from('folder_shares').update({ accessed_count: (share.accessed_count || 0) + 1 }).eq('id', share.id);
 

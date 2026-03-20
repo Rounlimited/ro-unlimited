@@ -8,7 +8,7 @@ import {
   Upload, FolderPlus, Search, Trash2, Download, File as FileIcon, Image, Film,
   FileText, Music, Archive, MoreVertical, X, Loader2, ChevronLeft, ChevronRight,
   HardDrive, FolderOpen, Folder, Eye, Share2, FolderInput, Grid3X3, List,
-  Home, Plus, Check, Copy,
+  Home, Plus, Check, Copy, Lock, Clock, Link2, Shield, Trash,
 } from 'lucide-react';
 
 interface UserFile {
@@ -73,6 +73,13 @@ export default function DrivePage() {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
+  // Share sheet state
+  const [shareSheet, setShareSheet] = useState<{ type: 'folder' | 'file'; path: string; fileId?: string } | null>(null);
+  const [shareSheetTab, setShareSheetTab] = useState<'create' | 'manage'>('create');
+  const [sharePassword, setSharePassword] = useState('');
+  const [shareExpiry, setShareExpiry] = useState(30);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [activeShares, setActiveShares] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
@@ -402,19 +409,74 @@ export default function DrivePage() {
     setToast(`Folder "${folderName}" deleted`); setMenuOpen(null); fetchFiles();
   };
 
-  // ── Share file ──
-  const handleShare = async (fileId: string, permission: 'read' | 'readwrite') => {
+  // ── Share sheet helpers ──
+  const openShareSheet = async (type: 'folder' | 'file', path: string, fileId?: string) => {
+    setShareSheet({ type, path, fileId });
+    setShareSheetTab('create');
+    setSharePassword('');
+    setShareExpiry(30);
+    setShareLoading(true);
+    setMenuOpen(null);
+    // Load existing shares
+    if (type === 'folder') {
+      const res = await fetch('/api/admin/drive', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list_folder_shares', folder_path: path, user_email: userEmail }),
+      });
+      const data = await res.json();
+      setActiveShares(data.shares || []);
+    } else if (fileId) {
+      const res = await fetch('/api/admin/drive', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list_shares', file_id: fileId }),
+      });
+      const data = await res.json();
+      setActiveShares(data.shares || []);
+    }
+    setShareLoading(false);
+  };
+
+  const createShare = async (permission: 'read' | 'readwrite') => {
+    if (!shareSheet) return;
+    setShareLoading(true);
+    const action = shareSheet.type === 'folder' ? 'share_folder' : 'share';
+    const payload: any = {
+      action, permission, user_email: userEmail,
+      ...(shareSheet.type === 'folder'
+        ? { folder_path: shareSheet.path, expiry_days: shareExpiry, password: sharePassword || undefined }
+        : { file_id: shareSheet.fileId }),
+    };
     const res = await fetch('/api/admin/drive', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'share', file_id: fileId, permission, user_email: userEmail }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (data.link) {
-      try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
-      try { await navigator.clipboard.writeText(data.link); } catch {}
-      setToast(permission === 'read' ? 'View-only link copied!' : 'Full access link copied!');
+      try { await navigator.clipboard.writeText(data.link); } catch {
+        try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
+      }
+      setToast(data.reused ? 'Existing share link copied!' : `${permission === 'read' ? 'View-only' : 'Full access'} link copied!`);
+      // Refresh share list
+      openShareSheet(shareSheet.type, shareSheet.path, shareSheet.fileId);
     }
-    setMenuOpen(null);
+    setShareLoading(false);
+  };
+
+  const deleteShareLink = async (shareId: string, type: 'folder' | 'file') => {
+    const action = type === 'folder' ? 'delete_folder_share' : 'delete_share';
+    await fetch('/api/admin/drive', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, share_id: shareId }),
+    });
+    setActiveShares(prev => prev.filter(s => s.id !== shareId));
+    setToast('Share link revoked');
+  };
+
+  const copyLink = async (link: string) => {
+    try { await navigator.clipboard.writeText(link); } catch {
+      try { const ta = document.createElement('textarea'); ta.value = link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
+    }
+    setToast('Link copied!');
   };
 
   // ── Create folder ──
@@ -499,18 +561,7 @@ export default function DrivePage() {
                   </div>
                   <p className="text-[11px] text-white/20 mt-0.5">{formatSize(totalBytes)} used</p>
                 </div>
-                <button onClick={async () => {
-                  const res = await fetch('/api/admin/drive', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'share_folder', folder_path: currentPath, permission: 'read', user_email: userEmail }),
-                  });
-                  const data = await res.json();
-                  if (data.link) {
-                    try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
-                    try { await navigator.clipboard.writeText(data.link); } catch {}
-                    setToast('Share link copied!');
-                  }
-                }} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
+                <button onClick={() => openShareSheet('folder', currentPath)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
                   <Share2 size={20} />
                 </button>
                 <button onClick={() => setShowSearch(true)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
@@ -766,7 +817,7 @@ export default function DrivePage() {
                   className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#3b8dd4] text-white font-semibold text-[15px] rounded-xl hover:bg-[#3b8dd4]/90 transition-colors">
                   <Download size={18} /> Download
                 </button>
-                <button onClick={() => handleShare(previewFile.id, 'read')}
+                <button onClick={() => openShareSheet('file', previewFile.folder || '/', previewFile.id)}
                   className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 text-white/70 font-medium text-[15px] rounded-xl hover:bg-white/10 transition-colors">
                   <Share2 size={18} /> Share
                 </button>
@@ -795,13 +846,9 @@ export default function DrivePage() {
                       className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-white/70 hover:bg-white/5">
                       <Download size={20} /> Download
                     </button>
-                    <button onClick={() => handleShare(file.id, 'read')}
+                    <button onClick={() => openShareSheet('file', file.folder || '/', file.id)}
                       className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-[#3b8dd4] hover:bg-[#3b8dd4]/10">
-                      <Eye size={20} /> Share (View Only)
-                    </button>
-                    <button onClick={() => handleShare(file.id, 'readwrite')}
-                      className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-[#C9A84C] hover:bg-[#C9A84C]/10">
-                      <Share2 size={20} /> Share (Full Access)
+                      <Share2 size={20} /> Share
                     </button>
                     <button onClick={() => {
                       const folder = prompt('Move to folder path:', file.folder);
@@ -840,37 +887,9 @@ export default function DrivePage() {
                 className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-white/70 hover:bg-white/5">
                 <FolderOpen size={20} /> Open
               </button>
-              <button onClick={async () => {
-                const res = await fetch('/api/admin/drive', {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action: 'share_folder', folder_path: menuOpen, permission: 'read', user_email: userEmail }),
-                });
-                const data = await res.json();
-                if (data.link) {
-                  try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
-                  try { await navigator.clipboard.writeText(data.link); } catch {}
-                  setToast('View-only folder link copied!');
-                }
-                setMenuOpen(null);
-              }}
+              <button onClick={() => openShareSheet('folder', menuOpen!)}
                 className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-[#3b8dd4] hover:bg-[#3b8dd4]/10">
-                <Eye size={20} /> Share Folder (View Only)
-              </button>
-              <button onClick={async () => {
-                const res = await fetch('/api/admin/drive', {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action: 'share_folder', folder_path: menuOpen, permission: 'readwrite', user_email: userEmail }),
-                });
-                const data = await res.json();
-                if (data.link) {
-                  try { const ta = document.createElement('textarea'); ta.value = data.link; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
-                  try { await navigator.clipboard.writeText(data.link); } catch {}
-                  setToast('Full access folder link copied!');
-                }
-                setMenuOpen(null);
-              }}
-                className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-[#C9A84C] hover:bg-[#C9A84C]/10">
-                <Share2 size={20} /> Share Folder (Full Access)
+                <Share2 size={20} /> Share Folder
               </button>
               <button onClick={() => handleDeleteFolder(menuOpen!, menuTarget)}
                 className="w-full flex items-center gap-3 px-5 py-3.5 text-[15px] text-red-400 hover:bg-red-500/10">
@@ -901,6 +920,157 @@ export default function DrivePage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* ── Share options sheet ── */}
+        {shareSheet && (
+          <>
+            <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setShareSheet(null)} />
+            <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#141414] border-t border-white/10 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto"
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}>
+              <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mt-3 mb-2" />
+
+              {/* Header */}
+              <div className="px-5 pt-1 pb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-[17px] font-bold text-white">
+                    Share {shareSheet.type === 'folder' ? 'Folder' : 'File'}
+                  </h3>
+                  <p className="text-[12px] text-white/30 mt-0.5 truncate max-w-[250px]">
+                    {shareSheet.type === 'folder' ? (shareSheet.path === '/' ? 'Root Drive' : shareSheet.path.split('/').filter(Boolean).pop()?.replace(/-/g, ' ')) : 'Selected file'}
+                  </p>
+                </div>
+                <button onClick={() => setShareSheet(null)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex gap-1 mx-5 mb-4 p-1 bg-[#0a0a0a] rounded-xl">
+                <button onClick={() => setShareSheetTab('create')}
+                  className={`flex-1 py-2 text-[13px] font-semibold rounded-lg transition-colors ${shareSheetTab === 'create' ? 'bg-[#3b8dd4] text-white' : 'text-white/40 hover:text-white/60'}`}>
+                  Create Link
+                </button>
+                <button onClick={() => setShareSheetTab('manage')}
+                  className={`flex-1 py-2 text-[13px] font-semibold rounded-lg transition-colors ${shareSheetTab === 'manage' ? 'bg-[#3b8dd4] text-white' : 'text-white/40 hover:text-white/60'}`}>
+                  Manage ({activeShares.filter(s => !s.expired).length})
+                </button>
+              </div>
+
+              {shareSheetTab === 'create' ? (
+                <div className="px-5 pb-3">
+                  {/* Quick share buttons */}
+                  <div className="space-y-2.5 mb-5">
+                    <button onClick={() => createShare('read')} disabled={shareLoading}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 bg-[#3b8dd4]/10 border border-[#3b8dd4]/20 rounded-xl hover:bg-[#3b8dd4]/15 transition-colors active:scale-[0.98]">
+                      <div className="w-10 h-10 rounded-xl bg-[#3b8dd4]/20 flex items-center justify-center">
+                        <Eye size={20} className="text-[#3b8dd4]" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="text-[15px] text-white font-medium">View Only</p>
+                        <p className="text-[12px] text-white/30">Recipients can view and download</p>
+                      </div>
+                      <Copy size={16} className="text-white/20" />
+                    </button>
+
+                    <button onClick={() => createShare('readwrite')} disabled={shareLoading}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 bg-[#C9A84C]/10 border border-[#C9A84C]/20 rounded-xl hover:bg-[#C9A84C]/15 transition-colors active:scale-[0.98]">
+                      <div className="w-10 h-10 rounded-xl bg-[#C9A84C]/20 flex items-center justify-center">
+                        <Share2 size={20} className="text-[#C9A84C]" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="text-[15px] text-white font-medium">Full Access</p>
+                        <p className="text-[12px] text-white/30">Upload, create folders, and delete</p>
+                      </div>
+                      <Copy size={16} className="text-white/20" />
+                    </button>
+                  </div>
+
+                  {/* Advanced options (folder shares only) */}
+                  {shareSheet.type === 'folder' && (
+                    <div className="space-y-3">
+                      <p className="text-[12px] text-white/25 uppercase tracking-wider font-semibold">Options</p>
+
+                      {/* Password */}
+                      <div className="flex items-center gap-3 px-4 py-3 bg-[#0a0a0a] border border-white/5 rounded-xl">
+                        <Lock size={18} className="text-white/30 shrink-0" />
+                        <input type="text" value={sharePassword} onChange={e => setSharePassword(e.target.value)}
+                          placeholder="Password (optional)"
+                          className="flex-1 bg-transparent text-[14px] text-white placeholder:text-white/20 focus:outline-none" />
+                        {sharePassword && (
+                          <button onClick={() => setSharePassword('')} className="p-1 text-white/20 hover:text-white/40">
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Expiration */}
+                      <div className="flex items-center gap-3 px-4 py-3 bg-[#0a0a0a] border border-white/5 rounded-xl">
+                        <Clock size={18} className="text-white/30 shrink-0" />
+                        <select value={shareExpiry} onChange={e => setShareExpiry(Number(e.target.value))}
+                          className="flex-1 bg-transparent text-[14px] text-white focus:outline-none appearance-none cursor-pointer">
+                          <option value={7} className="bg-[#1a1a1a]">Expires in 7 days</option>
+                          <option value={30} className="bg-[#1a1a1a]">Expires in 30 days</option>
+                          <option value={90} className="bg-[#1a1a1a]">Expires in 90 days</option>
+                          <option value={0} className="bg-[#1a1a1a]">Never expires</option>
+                        </select>
+                      </div>
+
+                      {sharePassword && (
+                        <p className="text-[12px] text-[#C9A84C]/60 px-1">
+                          Password-protected links always create a new share
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="px-5 pb-3">
+                  {shareLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 size={24} className="animate-spin text-[#3b8dd4]" />
+                    </div>
+                  ) : activeShares.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Link2 size={32} className="text-white/10 mx-auto mb-2" />
+                      <p className="text-white/25 text-[14px]">No share links yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {activeShares.map(share => (
+                        <div key={share.id}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${share.expired ? 'bg-red-500/5 border-red-500/10 opacity-50' : 'bg-[#0a0a0a] border-white/5'}`}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className={`text-[13px] font-medium ${share.permission === 'readwrite' ? 'text-[#C9A84C]' : 'text-[#3b8dd4]'}`}>
+                                {share.permission === 'readwrite' ? 'Full Access' : 'View Only'}
+                              </span>
+                              {share.has_password && <Lock size={12} className="text-white/30" />}
+                              {share.expired && <span className="text-[11px] text-red-400">Expired</span>}
+                            </div>
+                            <p className="text-[11px] text-white/20">
+                              {share.accessed_count || 0} view{share.accessed_count !== 1 ? 's' : ''}
+                              {share.expires_at ? ` · Expires ${new Date(share.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ' · Never expires'}
+                            </p>
+                          </div>
+                          {!share.expired && (
+                            <button onClick={() => copyLink(share.link)}
+                              className="p-2 rounded-lg text-white/30 hover:text-[#3b8dd4] hover:bg-[#3b8dd4]/10 transition-colors">
+                              <Copy size={16} />
+                            </button>
+                          )}
+                          <button onClick={() => deleteShareLink(share.id, shareSheet.type)}
+                            className="p-2 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+                            <Trash size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {/* Toast */}

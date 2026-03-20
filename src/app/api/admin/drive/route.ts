@@ -131,20 +131,69 @@ export async function POST(req: NextRequest) {
     }
 
     if (body.action === 'share_folder') {
-      const { folder_path, permission, user_email } = body;
+      const { folder_path, permission, user_email, password, expiry_days } = body;
       if (!folder_path || !user_email) return NextResponse.json({ error: 'folder_path and user_email required' }, { status: 400 });
       const crypto = await import('crypto');
+      const perm = permission || 'read';
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+
+      // Cleanup expired shares while we're here
+      await supabase.from('folder_shares').delete().lt('expires_at', new Date().toISOString());
+
+      // Check for existing active share with same folder+permission (no password)
+      if (!password) {
+        const { data: existing } = await supabase.from('folder_shares')
+          .select('*')
+          .eq('folder_path', folder_path)
+          .eq('user_email', user_email)
+          .eq('permission', perm)
+          .is('password_hash', null)
+          .gt('expires_at', new Date().toISOString())
+          .limit(1)
+          .single();
+        if (existing) {
+          return NextResponse.json({ share: existing, link: `${baseUrl}/shared/folder/${existing.token}`, reused: true });
+        }
+      }
+
       const token = crypto.randomBytes(24).toString('hex');
       const expires = new Date();
-      expires.setDate(expires.getDate() + 30);
+      expires.setDate(expires.getDate() + (expiry_days || 30));
+      const passwordHash = password ? crypto.createHash('sha256').update(password).digest('hex') : null;
+
       const { data, error } = await supabase.from('folder_shares').insert({
         folder_path, user_email, token,
-        permission: permission || 'read',
-        expires_at: expires.toISOString(),
+        permission: perm,
+        expires_at: expiry_days === 0 ? null : expires.toISOString(),
+        password_hash: passwordHash,
       }).select().single();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
       return NextResponse.json({ share: data, link: `${baseUrl}/shared/folder/${token}` });
+    }
+
+    if (body.action === 'list_folder_shares') {
+      const { folder_path, user_email } = body;
+      if (!folder_path || !user_email) return NextResponse.json({ error: 'folder_path and user_email required' }, { status: 400 });
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+      const { data } = await supabase.from('folder_shares').select('*')
+        .eq('folder_path', folder_path).eq('user_email', user_email)
+        .order('created_at', { ascending: false });
+      const now = new Date();
+      return NextResponse.json({
+        shares: (data || []).map(s => ({
+          ...s,
+          link: `${baseUrl}/shared/folder/${s.token}`,
+          expired: s.expires_at ? new Date(s.expires_at) < now : false,
+          has_password: !!s.password_hash,
+        })),
+      });
+    }
+
+    if (body.action === 'delete_folder_share') {
+      const { share_id } = body;
+      if (!share_id) return NextResponse.json({ error: 'share_id required' }, { status: 400 });
+      await supabase.from('folder_shares').delete().eq('id', share_id);
+      return NextResponse.json({ success: true });
     }
 
     if (body.action === 'delete_folder') {

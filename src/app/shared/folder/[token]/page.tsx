@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   ChevronLeft, ChevronRight, Download, Eye, Folder, FolderOpen, FolderPlus,
   HardDrive, Loader2, File as FileIcon, Image, Film, Music, FileText, Archive,
-  MoreVertical, X, Search, Grid3X3, List, Trash2, Upload, Info,
+  MoreVertical, X, Search, Grid3X3, List, Trash2, Upload, Info, Lock,
 } from 'lucide-react';
 
 interface SharedFile {
@@ -52,6 +52,9 @@ export default function SharedFolderPage({ params }: { params: { token: string }
   const [data, setData] = useState<ShareData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [currentPath, setCurrentPath] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [search, setSearch] = useState('');
@@ -72,13 +75,36 @@ export default function SharedFolderPage({ params }: { params: { token: string }
 
   useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); } }, [toast]);
 
-  const fetchData = async () => {
-    const res = await fetch(`/api/shared/folder/${params.token}`);
+  const fetchData = async (pw?: string) => {
+    const pwParam = pw || password;
+    const url = pwParam
+      ? `/api/shared/folder/${params.token}?pw=${encodeURIComponent(pwParam)}`
+      : `/api/shared/folder/${params.token}`;
+    const res = await fetch(url);
     const d = await res.json();
+    if (d.requires_password && !d.error) {
+      setNeedsPassword(true);
+      setLoading(false);
+      return;
+    }
+    if (d.error && d.requires_password) {
+      setPasswordError('Incorrect password');
+      setLoading(false);
+      return;
+    }
     if (d.error) { setError(d.error); setLoading(false); return; }
+    setNeedsPassword(false);
+    setPasswordError('');
     setData(d);
     if (!currentPath) setCurrentPath(d.folder_path);
     setLoading(false);
+  };
+
+  const handlePasswordSubmit = () => {
+    if (!password.trim()) return;
+    setLoading(true);
+    setPasswordError('');
+    fetchData(password);
   };
 
   useEffect(() => { fetchData(); }, [params.token]);
@@ -304,6 +330,27 @@ export default function SharedFolderPage({ params }: { params: { token: string }
       <div className="text-center">
         <h1 className="text-[24px] font-bold text-white mb-2">Link Expired</h1>
         <p className="text-white/40 text-[16px]">{error}</p>
+      </div>
+    </div>
+  );
+
+  if (needsPassword) return (
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-6">
+      <div className="w-full max-w-sm text-center">
+        <div className="w-16 h-16 rounded-2xl bg-[#3b8dd4]/10 flex items-center justify-center mx-auto mb-5">
+          <Lock size={28} className="text-[#3b8dd4]" />
+        </div>
+        <h1 className="text-[22px] font-bold text-white mb-2">Password Required</h1>
+        <p className="text-white/40 text-[14px] mb-6">This shared folder is protected with a password</p>
+        <input type="password" value={password} onChange={e => { setPassword(e.target.value); setPasswordError(''); }}
+          onKeyDown={e => e.key === 'Enter' && handlePasswordSubmit()}
+          placeholder="Enter password" autoFocus
+          className="w-full px-4 py-3.5 bg-[#141414] border border-white/10 rounded-xl text-[16px] text-white text-center placeholder:text-white/20 focus:outline-none focus:border-[#3b8dd4]/50 mb-3" />
+        {passwordError && <p className="text-red-400 text-[13px] mb-3">{passwordError}</p>}
+        <button onClick={handlePasswordSubmit} disabled={!password.trim() || loading}
+          className="w-full py-3.5 bg-[#3b8dd4] text-white font-semibold text-[16px] rounded-xl hover:bg-[#3b8dd4]/90 transition-colors disabled:opacity-50">
+          {loading ? 'Verifying...' : 'Open Folder'}
+        </button>
       </div>
     </div>
   );
