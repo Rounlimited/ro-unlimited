@@ -404,21 +404,49 @@ export default function AdminDashboard() {
           </Link>
         </div>
 
-        {/* Row 4: Quick Actions */}
-        <div data-tour="quick-actions" className="grid grid-cols-3 gap-2 relative z-10">
-          {[
-            { href: '/admin/projects',    icon: Camera, label: 'Portfolio' },
-            { href: '/admin/drive',       icon: HardDrive, label: 'RO Drive' },
-            { href: '/admin/settings',    icon: Video, label: 'Settings' },
-          ].map(({ href, icon: Icon, label }) => (
-            <Link key={href} href={href}
-              className="bg-[#141414] border border-white/5 rounded-xl p-2.5 flex flex-col items-center gap-1.5 group">
-              <div className="w-11 h-11 rounded-xl bg-[#C9A84C]/10 flex items-center justify-center">
-                <Icon size={20} className="text-[#C9A84C]" />
+        {/* Row 4: RO Drive hero + quick actions */}
+        <div data-tour="quick-actions" className="space-y-2 relative z-10">
+          <Link href="/admin/drive"
+            className="relative overflow-hidden border border-[#3b8dd4]/25 rounded-2xl p-4 flex items-center gap-4 group active:scale-[0.98] transition-transform"
+            style={{ background: 'linear-gradient(135deg, #0c1a2e 0%, #0a1525 50%, #0f1a12 100%)' }}
+          >
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{
+                background: 'linear-gradient(145deg, #3b8dd4, #2a6aaa)',
+                boxShadow: '0 6px 20px rgba(59,141,212,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+              }}>
+              <HardDrive size={26} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[17px] font-bold text-white leading-tight">RO Drive</p>
+              <p className="text-[12px] text-[#3b8dd4]/70 mt-0.5">Cloud storage &middot; Upload &middot; Share</p>
+            </div>
+            <ArrowUpRight size={18} className="text-[#3b8dd4]/50 flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #3b8dd4, #22c55e, transparent)' }} />
+            <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-[0.04]" style={{ background: 'radial-gradient(circle, #3b8dd4, transparent)' }} />
+          </Link>
+          <div className="grid grid-cols-2 gap-2">
+            <Link href="/admin/projects"
+              className="relative overflow-hidden border border-[#C9A84C]/15 rounded-xl p-3 flex items-center gap-3 group active:scale-[0.97] transition-transform"
+              style={{ background: 'linear-gradient(145deg, #1a1508, #120f04)' }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'linear-gradient(145deg, #C9A84C, #a8893d)', boxShadow: '0 3px 12px rgba(201,168,76,0.25)' }}>
+                <Camera size={18} className="text-white" />
               </div>
-              <p className="text-[11px] text-white/40 text-center leading-tight">{label}</p>
+              <p className="text-[13px] font-bold text-[#C9A84C] leading-tight">Portfolio</p>
+              <div className="absolute bottom-0 left-0 right-0 h-[1px]" style={{ background: 'linear-gradient(90deg, transparent, #C9A84C, transparent)' }} />
             </Link>
-          ))}
+            <Link href="/admin/settings"
+              className="relative overflow-hidden border border-white/8 rounded-xl p-3 flex items-center gap-3 group active:scale-[0.97] transition-transform"
+              style={{ background: 'linear-gradient(145deg, #161616, #0f0f0f)' }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'linear-gradient(145deg, #555, #3a3a3a)', boxShadow: '0 3px 12px rgba(100,100,100,0.15)' }}>
+                <Video size={18} className="text-white" />
+              </div>
+              <p className="text-[13px] font-bold text-white/60 leading-tight">Settings</p>
+              <div className="absolute bottom-0 left-0 right-0 h-[1px]" style={{ background: 'linear-gradient(90deg, transparent, #666, transparent)' }} />
+            </Link>
+          </div>
         </div>
 
         {/* Row 4: Quick Stats */}
