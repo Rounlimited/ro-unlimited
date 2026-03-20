@@ -199,6 +199,8 @@ function AttachmentPreview({ attachments }: { attachments: Message["attachments"
 }
 
 export default function AdminInbox() {
+  // ── Hooks (must be before any early returns) ──
+  const { isDesktop } = useDeviceContext();
   // ── State ──
   const [view, setView] = useState<View>("list");
   const [folder, setFolder] = useState<Folder>("inbox");
@@ -768,8 +770,6 @@ export default function AdminInbox() {
       </div>
     );
   }
-
-  const { isDesktop } = useDeviceContext();
 
   // ═══════════════════════════════════════════
   // DESKTOP SPLIT-PANE LAYOUT
