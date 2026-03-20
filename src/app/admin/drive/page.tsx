@@ -220,6 +220,18 @@ export default function DrivePage() {
 
   const zoneTotalBytes = zoneFiles.reduce((s, f) => s + (f.file_size || 0), 0);
 
+  // ── Sort ──
+  const sortFiles = (fileList: UserFile[]) => {
+    return [...fileList].sort((a, b) => {
+      switch (sortBy) {
+        case 'name': return a.original_filename.localeCompare(b.original_filename);
+        case 'size': return (b.file_size || 0) - (a.file_size || 0);
+        case 'type': return (a.mime_type || '').localeCompare(b.mime_type || '');
+        default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+  };
+
   // ── Derive current folder contents ──
   const getFolderContents = () => {
     const normalizedPath = currentPath.endsWith('/') ? currentPath : currentPath + '/';
@@ -616,17 +628,7 @@ export default function DrivePage() {
     setToast('Trash emptied');
   };
 
-  // ── Sort ──
-  const sortFiles = (files: UserFile[]) => {
-    return [...files].sort((a, b) => {
-      switch (sortBy) {
-        case 'name': return a.original_filename.localeCompare(b.original_filename);
-        case 'size': return (b.file_size || 0) - (a.file_size || 0);
-        case 'type': return (a.mime_type || '').localeCompare(b.mime_type || '');
-        default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
-    });
-  };
+  // sortFiles moved above getFolderContents
 
   // ── Bulk operations ──
   const toggleSelect = (id: string) => {
