@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { gsap } from 'gsap';
 import {
   Video, FileText, ArrowUpRight, CheckCircle2,
-  AlertCircle, Pencil, Camera, Clock, MessageCircle, Mail, Users, Calculator
+  AlertCircle, Camera, Clock, MessageCircle, Mail, Users, Calculator, HardDrive
 } from 'lucide-react';
 
 interface SiteSettings { heroVideoUrl?: string; }
@@ -408,7 +408,7 @@ export default function AdminDashboard() {
         <div data-tour="quick-actions" className="grid grid-cols-3 gap-2 relative z-10">
           {[
             { href: '/admin/projects',    icon: Camera, label: 'Portfolio' },
-            { href: '/admin/site-editor', icon: Pencil, label: 'Editor' },
+            { href: '/admin/drive',       icon: HardDrive, label: 'RO Drive' },
             { href: '/admin/settings',    icon: Video, label: 'Settings' },
           ].map(({ href, icon: Icon, label }) => (
             <Link key={href} href={href}
