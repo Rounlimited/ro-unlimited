@@ -215,7 +215,7 @@ function DetailsTab({ project, onSave }: { project: Project; onSave: (patch: Par
 function MediaTab({ project }: { project: Project }) {
   return (
     <div className="pb-24">
-      <div className="rounded-2xl p-8 text-center" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
+      <div className="theme-card-navy rounded-2xl p-8 text-center" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
         <Camera size={32} className="mx-auto mb-3" style={{ color:'rgba(68,136,255,0.3)' }} />
         <p className="text-sm mb-1" style={{ color:'rgba(255,255,255,0.4)' }}>Media uploads</p>
         <p className="text-xs" style={{ color:'rgba(255,255,255,0.2)' }}>Photo & video management coming next sprint</p>
@@ -228,7 +228,7 @@ function MediaTab({ project }: { project: Project }) {
 function VendorsTab({ project }: { project: Project }) {
   return (
     <div className="pb-24">
-      <div className="rounded-2xl p-8 text-center" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
+      <div className="theme-card-navy rounded-2xl p-8 text-center" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
         <Users size={32} className="mx-auto mb-3" style={{ color:'rgba(68,136,255,0.3)' }} />
         <p className="text-sm mb-1" style={{ color:'rgba(255,255,255,0.4)' }}>Vendor & sub tracking</p>
         <p className="text-xs" style={{ color:'rgba(255,255,255,0.2)' }}>Manage vendors and subs per project</p>
@@ -241,7 +241,7 @@ function VendorsTab({ project }: { project: Project }) {
 function DocsTab({ project }: { project: Project }) {
   return (
     <div className="pb-24">
-      <div className="rounded-2xl p-8 text-center" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
+      <div className="theme-card-navy rounded-2xl p-8 text-center" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
         <Wrench size={32} className="mx-auto mb-3" style={{ color:'rgba(68,136,255,0.3)' }} />
         <p className="text-sm mb-1" style={{ color:'rgba(255,255,255,0.4)' }}>Document vault</p>
         <p className="text-xs" style={{ color:'rgba(255,255,255,0.2)' }}>Plans, permits, contracts per project</p>
@@ -269,7 +269,7 @@ function SendTab({ project, onSend }: { project: Project; onSend: () => Promise<
         <p className="text-sm text-center mb-6" style={{ color:'rgba(255,255,255,0.4)', maxWidth:280 }}>
           We're working on it. You'll get a message when your project is live on the site — usually within 24 hours.
         </p>
-        <div className="w-full rounded-2xl p-4" style={{ background:'#0F1F3D', border:'1px solid rgba(255,208,96,0.2)' }}>
+        <div className="theme-card-navy w-full rounded-2xl p-4" style={{ background:'#0F1F3D', border:'1px solid rgba(255,208,96,0.2)' }}>
           <p className="text-[11px] text-center" style={{ color:'rgba(255,208,96,0.6)' }}>
             ⏳ Submitted for publishing · Awaiting NexaVision
           </p>
@@ -315,7 +315,7 @@ function SendTab({ project, onSend }: { project: Project; onSend: () => Promise<
         </div>
 
         {/* Checklist */}
-        <div className="rounded-2xl overflow-hidden mb-5" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
+        <div className="theme-card-navy rounded-2xl overflow-hidden mb-5" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
           <p className="text-[10px] uppercase tracking-widest px-4 pt-3 pb-2" style={{ color:'rgba(255,255,255,0.25)' }}>What NexaVision handles</p>
           {[
             'Layout and formatting for your site',
@@ -405,7 +405,7 @@ function SendTab({ project, onSend }: { project: Project; onSend: () => Promise<
     };
     return (
       <div className="pb-24 px-1 pt-2 space-y-4">
-        <div className="rounded-2xl overflow-hidden" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
+        <div className="theme-card-navy rounded-2xl overflow-hidden" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
           <div className="px-4 py-3 border-b" style={{ borderColor:'rgba(42,74,138,0.2)' }}>
             <p className="text-[10px] uppercase tracking-widest" style={{ color:'rgba(255,255,255,0.25)' }}>Sending to NexaVision</p>
           </div>
@@ -510,9 +510,9 @@ export default function ProjectDetailPage() {
   const DivIcon = div.icon;
 
   return (
-    <div className="h-full overflow-y-auto" style={{ background:'#050810' }}>
+    <div className="theme-page-navy h-full overflow-y-auto" style={{ background:'#050810' }}>
       {/* Neon grid */}
-      <div className="fixed inset-0 pointer-events-none" style={{
+      <div className="theme-grid-overlay fixed inset-0 pointer-events-none" style={{
         backgroundImage:`linear-gradient(rgba(42,74,138,0.05) 1px, transparent 1px),linear-gradient(90deg, rgba(42,74,138,0.05) 1px, transparent 1px)`,
         backgroundSize:'48px 48px', zIndex:0,
       }} />

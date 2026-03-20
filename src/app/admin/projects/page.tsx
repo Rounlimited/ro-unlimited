@@ -115,11 +115,11 @@ export default function ProjectsPage() {
     d ? new Date(d).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : null;
 
   return (
-    <div className="h-full overflow-y-auto" style={{ background: '#050810' }}>
+    <div className="theme-page-navy h-full overflow-y-auto" style={{ background: '#050810' }}>
       <AdminHeader title="Job Files" subtitle={`${projects.length} project${projects.length !== 1 ? 's' : ''}`} backHref="/admin" />
 
       {/* Neon grid */}
-      <div className="fixed inset-0 pointer-events-none" style={{
+      <div className="theme-grid-overlay fixed inset-0 pointer-events-none" style={{
         backgroundImage: `
           linear-gradient(rgba(42,74,138,0.05) 1px, transparent 1px),
           linear-gradient(90deg, rgba(42,74,138,0.05) 1px, transparent 1px)
@@ -196,7 +196,7 @@ export default function ProjectsPage() {
             <Loader2 className="animate-spin" size={22} style={{ color: '#C9A84C' }} />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20 rounded-2xl" style={{
+          <div className="theme-card-navy text-center py-20 rounded-2xl" style={{
             background: '#0F1F3D',
             border: '1px solid rgba(42,74,138,0.3)',
           }}>
@@ -224,7 +224,7 @@ export default function ProjectsPage() {
                 <Link
                   key={project._id}
                   href={`/admin/projects/${project._id}`}
-                  className="block rounded-2xl overflow-hidden transition-all group active:scale-[0.99]"
+                  className="theme-card-navy block rounded-2xl overflow-hidden transition-all group active:scale-[0.99]"
                   style={{
                     background: '#0F1F3D',
                     border: '1px solid rgba(42,74,138,0.3)',

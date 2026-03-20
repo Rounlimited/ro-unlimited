@@ -9,12 +9,14 @@ import {
   FileText, Music, Archive, MoreVertical, X, Loader2, ChevronLeft, ChevronRight,
   HardDrive, FolderOpen, Folder, Eye, Share2, FolderInput, Grid3X3, List,
   Home, Plus, Check, Copy, Lock, Clock, Link2, Shield, Trash, Users, Building2, User,
+  RotateCcw, CheckSquare, Square, ArrowUpDown, History, Undo2,
 } from 'lucide-react';
 
 interface UserFile {
   id: string; user_email: string; filename: string; original_filename: string;
   mime_type: string; file_size: number; folder: string;
   entity_type: string | null; entity_id: string | null; created_at: string;
+  deleted_at?: string | null;
 }
 
 function formatSize(bytes: number): string {
@@ -57,10 +59,8 @@ export default function DrivePage() {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('ro_drive_path');
       if (saved) return saved;
-      const zone = sessionStorage.getItem('ro_drive_zone') || 'company';
-      return zone === 'personal' ? '/personal/user' : '/company';
     }
-    return '/company';
+    return '/';
   });
   const [totalBytes, setTotalBytes] = useState(0);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
@@ -100,6 +100,18 @@ export default function DrivePage() {
   // Move file picker
   const [moveFile, setMoveFile] = useState<UserFile | null>(null);
   const [movePath, setMovePath] = useState('/');
+  // Trash
+  const [showTrash, setShowTrash] = useState(false);
+  const [trashFiles, setTrashFiles] = useState<UserFile[]>([]);
+  const [trashLoading, setTrashLoading] = useState(false);
+  // Bulk selection
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Sort
+  const [sortBy, setSortBy] = useState<'date' | 'name' | 'size' | 'type'>('date');
+  const [showSort, setShowSort] = useState(false);
+  // Drag & drop
+  const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
@@ -168,10 +180,10 @@ export default function DrivePage() {
   // Explicit folders from DB
   const [dbFolders, setDbFolders] = useState<{ id: string; path: string; name: string }[]>([]);
 
-  // Zone root path
+  // Zone root path — Company uses / (all non-personal files), Personal uses /personal/{user}
   const getZoneRoot = (zone: string, email: string) => {
     if (zone === 'personal') return `/personal/${email.split('@')[0]}`;
-    return '/company';
+    return '/'; // Company root is / — includes all legacy + non-personal files
   };
   const zoneRoot = driveZone !== 'shared' ? getZoneRoot(driveZone, userEmail) : '/';
 
@@ -204,19 +216,16 @@ export default function DrivePage() {
   // ── Filter files/folders to current zone ──
   const zoneFiles = allFiles.filter(f => {
     const fp = f.folder || '/';
-    if (driveZone === 'shared') return false; // handled separately
-    // Files in zone root
-    if (fp.startsWith(zoneRoot)) return true;
-    // Legacy files at '/' show in company zone
-    if (driveZone === 'company' && (fp === '/' || (!fp.startsWith('/company') && !fp.startsWith('/personal')))) return true;
-    return false;
+    if (driveZone === 'shared') return false;
+    if (driveZone === 'personal') return fp.startsWith(zoneRoot);
+    // Company: everything NOT under /personal/
+    return !fp.startsWith('/personal/');
   });
 
   const zoneFolders = dbFolders.filter(df => {
     if (driveZone === 'shared') return false;
-    if (df.path.startsWith(zoneRoot)) return true;
-    if (driveZone === 'company' && !df.path.startsWith('/company') && !df.path.startsWith('/personal')) return true;
-    return false;
+    if (driveZone === 'personal') return df.path.startsWith(zoneRoot);
+    return !df.path.startsWith('/personal/');
   });
 
   const zoneTotalBytes = zoneFiles.reduce((s, f) => s + (f.file_size || 0), 0);
@@ -672,9 +681,9 @@ export default function DrivePage() {
         handleUpload(e);
       }}
         className="fixed" style={{ top: -9999, left: -9999, opacity: 0, pointerEvents: 'none' }} />
-      <div className="min-h-screen bg-[#0a0a0a]">
+      <div className="theme-page-dark min-h-screen bg-[#0a0a0a]">
         {/* ── Header ── */}
-        <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5">
+        <div className="theme-header sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5">
           <div className="flex items-center gap-2 px-4 py-3">
             {currentPath === zoneRoot || currentPath === '/' ? (
               <Link href="/admin" className="p-1.5 rounded-full text-white/40 hover:text-white hover:bg-white/5">

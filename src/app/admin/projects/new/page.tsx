@@ -155,11 +155,11 @@ export default function NewProjectPage() {
   const canAdvanceWhen = true;  // all optional
 
   return (
-    <div className="h-full overflow-y-auto" style={{ background: '#050810' }}>
+    <div className="theme-page-navy h-full overflow-y-auto" style={{ background: '#050810' }}>
       <AdminHeader title="New Job File" subtitle="Create a master record" backHref="/admin/projects" />
 
       {/* Neon grid background */}
-      <div className="fixed inset-0 pointer-events-none" style={{
+      <div className="theme-grid-overlay fixed inset-0 pointer-events-none" style={{
         backgroundImage: `
           linear-gradient(rgba(42,74,138,0.06) 1px, transparent 1px),
           linear-gradient(90deg, rgba(42,74,138,0.06) 1px, transparent 1px)
