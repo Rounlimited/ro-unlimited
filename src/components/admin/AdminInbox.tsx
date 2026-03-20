@@ -326,17 +326,15 @@ export default function AdminInbox() {
     if (list.length) {
       setAccounts(list);
       if (!activeAccount) {
-        // Check if there's a saved account from localStorage
-        const savedAccountEmail = (window as any).__ro_inbox_saved_account;
-        if (savedAccountEmail) {
-          const saved = list.find((a: EmailAccount) => a.email === savedAccountEmail);
+        // Restore last-used account from localStorage
+        const savedEmail = localStorage.getItem('ro_inbox_account');
+        if (savedEmail) {
+          const saved = list.find((a: EmailAccount) => a.email === savedEmail);
           if (saved) {
             setActiveAccount(saved);
             setFromAccount(saved.email);
-            delete (window as any).__ro_inbox_saved_account;
             return;
           }
-          delete (window as any).__ro_inbox_saved_account;
         }
         const def = list.find((a: EmailAccount) => a.is_default) || list[0];
         setActiveAccount(def);
@@ -517,7 +515,7 @@ export default function AdminInbox() {
             <span className="text-lg font-semibold text-white">Switch account</span>
             <ChevronDown size={20} className="text-white/40" />
           </div>
-          <button onClick={() => { setActiveAccount(null); setView("list"); }}
+          <button onClick={() => { setActiveAccount(null); localStorage.removeItem('ro_inbox_account'); setView("list"); }}
             className={`w-full flex items-center gap-4 px-5 py-4 border-t border-white/[0.04] transition-colors hover:bg-white/[0.03] ${!activeAccount ? "bg-[#C9A84C]/5" : ""}`}>
             <div className="w-12 h-12 rounded-full bg-[#1a1a1a] border border-white/10 flex items-center justify-center">
               <Mail size={20} className="text-white/40" />
@@ -528,7 +526,7 @@ export default function AdminInbox() {
             </div>
           </button>
           {accounts.map(account => (
-            <button key={account.email} onClick={() => { setActiveAccount(account); setFromAccount(account.email); setView("list"); }}
+            <button key={account.email} onClick={() => { setActiveAccount(account); setFromAccount(account.email); localStorage.setItem('ro_inbox_account', account.email); setView("list"); }}
               className={`w-full flex items-center gap-4 px-5 py-4 border-t border-white/[0.04] transition-colors hover:bg-white/[0.03] ${activeAccount?.email === account.email ? "bg-[#C9A84C]/5" : ""}`}>
               <div className="w-12 h-12 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0" style={{ backgroundColor: account.color + "25", color: account.color }}>
                 {account.initials}
