@@ -778,7 +778,7 @@ export default function AdminInbox() {
     return (
       <div className="h-full flex bg-[#0a0a0a]">
         {/* Left: Folder sidebar (always visible) */}
-        <div className="w-56 flex-shrink-0 border-r border-white/5 flex flex-col">
+        <div className="w-48 flex-shrink-0 border-r border-white/5 flex flex-col">
           <div className="px-4 pt-5 pb-3 flex items-center justify-between">
             <span className="font-bold text-[18px] text-[#C9A84C]">Mail</span>
             <button onClick={() => startCompose("new")} className="p-2 rounded-lg hover:bg-white/5 text-[#C9A84C]">
@@ -818,7 +818,7 @@ export default function AdminInbox() {
         </div>
 
         {/* Middle: Thread list */}
-        <div className="w-96 flex-shrink-0 border-r border-white/5 flex flex-col">
+        <div className="w-80 xl:w-96 flex-shrink-0 border-r border-white/5 flex flex-col">
           {/* Search */}
           <div className="px-3 py-3 border-b border-white/5">
             <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.03] rounded-lg border border-white/5">
@@ -868,10 +868,10 @@ export default function AdminInbox() {
         </div>
 
         {/* Right: Message detail / Compose */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 bg-[#0d0d0d]">
           {view === "compose" ? (
             /* Compose form — render in right panel */
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full">
               <div className="flex items-center gap-3 px-6 py-4 border-b border-white/5">
                 <button onClick={() => setView("list")} className="p-2 rounded-lg text-white/30 hover:text-white hover:bg-white/5"><X size={20} /></button>
                 <h2 className="text-[16px] font-semibold">{composeMode === "reply" ? "Reply" : composeMode === "forward" ? "Forward" : "New Message"}</h2>
@@ -907,7 +907,7 @@ export default function AdminInbox() {
             </div>
           ) : selectedThread && messages.length > 0 ? (
             /* Thread detail */
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full">
               {/* Thread header */}
               <div className="flex items-center gap-3 px-6 py-4 border-b border-white/5">
                 <h2 className="text-[18px] font-semibold text-white flex-1 truncate">{selectedThread.subject}</h2>
