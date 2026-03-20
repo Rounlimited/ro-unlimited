@@ -495,9 +495,9 @@ export default function AdminInbox() {
   });
 
   // ═══════════════════════════════════════════
-  // ACCOUNT SWITCHER — Full screen
+  // ACCOUNT SWITCHER — Full screen (mobile only)
   // ═══════════════════════════════════════════
-  if (view === "accounts") {
+  if (view === "accounts" && !isDesktop) {
     return (
       <div className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5">
@@ -546,9 +546,9 @@ export default function AdminInbox() {
   }
 
   // ═══════════════════════════════════════════
-  // COMPOSE — Full screen with Tiptap
+  // COMPOSE — Full screen with Tiptap (mobile only)
   // ═══════════════════════════════════════════
-  if (view === "compose") {
+  if (view === "compose" && !isDesktop) {
     return (
       <div className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
@@ -615,9 +615,9 @@ export default function AdminInbox() {
   }
 
   // ═══════════════════════════════════════════
-  // THREAD VIEW — Full screen
+  // THREAD VIEW — Full screen (mobile only)
   // ═══════════════════════════════════════════
-  if (view === "thread" && selectedThread) {
+  if (view === "thread" && selectedThread && !isDesktop) {
     return (
       <div className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col">
         <div className="flex items-center gap-1 px-2 py-2 border-b border-white/5">
@@ -776,7 +776,8 @@ export default function AdminInbox() {
   // ═══════════════════════════════════════════
   if (isDesktop) {
     return (
-      <div className="h-full flex bg-[#0a0a0a]">
+      <div className="h-full flex justify-center bg-[#0a0a0a]">
+      <div className="h-full flex w-full max-w-[1400px]">
         {/* Left: Folder sidebar (always visible) */}
         <div className="w-48 flex-shrink-0 border-r border-white/5 flex flex-col">
           <div className="px-4 pt-5 pb-3 flex items-center justify-between">
@@ -977,6 +978,7 @@ export default function AdminInbox() {
             {toast}
           </div>
         )}
+      </div>
       </div>
     );
   }
