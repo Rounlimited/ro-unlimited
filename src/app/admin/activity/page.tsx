@@ -152,10 +152,12 @@ export default function ActivityPage() {
 
   const pushEvents = activity.filter(a => a.action === "push_sent");
 
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white pb-24">
+    <div className="h-full flex flex-col bg-[#0a0a0a] text-white">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/10 px-4 py-3">
+      <div className="flex-shrink-0 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/10 px-4 py-3 z-50">
         <div className="flex items-center gap-3">
           <button onClick={() => router.push("/admin")} className="p-2 -ml-2 rounded-xl hover:bg-white/10">
             <ChevronLeft size={20} className="text-white/60" />
@@ -178,7 +180,8 @@ export default function ActivityPage() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+      <div className="flex-1 overflow-y-auto">
+      <div className="max-w-3xl mx-auto px-4 py-6 pb-24 space-y-6">
 
         {/* ── User Summary Cards ── */}
         <div>
@@ -312,25 +315,73 @@ export default function ActivityPage() {
               const info = getActionInfo(entry.action);
               const device = getDevice(entry.user_agent);
               const InfoIcon = info.icon;
+              const isExpanded = expandedId === entry.id;
+              const hasDetails = entry.user_agent || entry.page || (entry.details && Object.keys(entry.details).length > 0);
               return (
-                <div key={entry.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.02] transition-colors">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: `${info.color}15` }}>
-                    <InfoIcon size={14} style={{ color: info.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[13px] text-white/70 font-medium">{entry.user_email === "system" ? "System" : entry.user_email.split("@")[0]}</span>
-                      <span className="text-[12px] text-white/30">{info.label}</span>
+                <div key={entry.id}>
+                  <button
+                    onClick={() => hasDetails && setExpandedId(isExpanded ? null : entry.id)}
+                    className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+                      isExpanded ? "bg-white/[0.04]" : "hover:bg-white/[0.02]"
+                    }`}>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${info.color}15` }}>
+                      <InfoIcon size={14} style={{ color: info.color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] text-white/70 font-medium">{entry.user_email === "system" ? "System" : entry.user_email.split("@")[0]}</span>
+                        <span className="text-[12px] text-white/30">{info.label}</span>
+                      </div>
                       {entry.page && (
-                        <span className="text-[12px] text-white/20 font-mono truncate">{entry.page}</span>
+                        <span className="text-[11px] text-white/20 font-mono block truncate mt-0.5">{entry.page}</span>
                       )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <device.icon size={12} className="text-white/20" />
-                    <span className="text-[11px] text-white/25 whitespace-nowrap">{toETFull(entry.created_at)}</span>
-                  </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <device.icon size={12} className="text-white/20" />
+                      <span className="text-[11px] text-white/25 whitespace-nowrap">{toET(entry.created_at)}</span>
+                    </div>
+                  </button>
+                  {/* Expanded detail panel */}
+                  {isExpanded && (
+                    <div className="mx-3 mb-2 p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-2 text-[12px]">
+                      <div className="flex gap-2">
+                        <span className="text-white/25 w-16 shrink-0">User</span>
+                        <span className="text-white/60">{entry.user_email}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="text-white/25 w-16 shrink-0">Action</span>
+                        <span className="text-white/60">{entry.action}</span>
+                      </div>
+                      {entry.page && (
+                        <div className="flex gap-2">
+                          <span className="text-white/25 w-16 shrink-0">Page</span>
+                          <span className="text-white/60 font-mono break-all">{entry.page}</span>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <span className="text-white/25 w-16 shrink-0">Time</span>
+                        <span className="text-white/60">{toETFull(entry.created_at)}</span>
+                      </div>
+                      {entry.user_agent && (
+                        <div className="flex gap-2">
+                          <span className="text-white/25 w-16 shrink-0">Device</span>
+                          <span className="text-white/60 break-all leading-relaxed">
+                            {device.label}
+                            <span className="block text-[10px] text-white/15 mt-1">{entry.user_agent}</span>
+                          </span>
+                        </div>
+                      )}
+                      {entry.details && Object.keys(entry.details).length > 0 && (
+                        <div className="flex gap-2">
+                          <span className="text-white/25 w-16 shrink-0">Details</span>
+                          <pre className="text-white/40 font-mono text-[10px] break-all whitespace-pre-wrap leading-relaxed flex-1 min-w-0">
+                            {JSON.stringify(entry.details, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -339,6 +390,7 @@ export default function ActivityPage() {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
