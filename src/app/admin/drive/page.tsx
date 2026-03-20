@@ -668,10 +668,11 @@ export default function DrivePage() {
     if (firstFile) { setMoveFile(firstFile); setMovePath('/'); }
   };
 
-  // ── Drag & drop (desktop only) ──
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOver(true); };
-  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOver(false); };
-  const handleDrop = (e: React.DragEvent) => {
+  // ── Drag & drop (desktop only — disabled on touch devices to not block scroll) ──
+  const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window);
+  const handleDragOver = isTouchDevice ? undefined : (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOver(true); };
+  const handleDragLeave = isTouchDevice ? undefined : (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragOver(false); };
+  const handleDrop = isTouchDevice ? undefined : (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragOver(false);
@@ -915,7 +916,7 @@ export default function DrivePage() {
         )}
 
         {/* ── Content ── */}
-        <div className="pb-28 px-4 pt-3">
+        <div className="pb-24 px-4 pt-3 overflow-y-auto">
           {showTrash ? (
             /* ── Trash view ── */
             trashLoading ? (
@@ -1214,46 +1215,45 @@ export default function DrivePage() {
           )}
         </div>
 
-        {/* ── FAB buttons ── */}
-        <div className="fixed bottom-20 right-4 z-30 flex flex-col items-end gap-2.5"
-          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
-          {uploading && (
-            <div className="w-[calc(100vw-2rem)] max-w-md px-4 py-3 bg-[#111] border border-[#3b8dd4]/30 rounded-2xl shadow-2xl">
-              <div className="flex items-center gap-2 mb-1">
-                <Loader2 size={16} className="animate-spin text-[#3b8dd4] shrink-0" />
-                <span className="text-[14px] text-white font-medium truncate">Uploading</span>
+        {/* ── FAB buttons — compact bottom-right ── */}
+        {!showTrash && driveZone !== 'shared' && (
+          <div className="fixed bottom-5 right-3 z-30 flex flex-col items-end gap-2"
+            style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
+            {uploading && (
+              <div className="w-[calc(100vw-2rem)] max-w-sm px-3 py-2 bg-[#111] border border-[#3b8dd4]/30 rounded-xl shadow-2xl">
+                <div className="flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin text-[#3b8dd4] shrink-0" />
+                  <p className="text-[12px] text-[#3b8dd4] leading-snug truncate flex-1">{uploadProgress}</p>
+                </div>
               </div>
-              <p className="text-[13px] text-[#3b8dd4] leading-snug">{uploadProgress}</p>
+            )}
+            <div className="flex gap-1.5">
+              <button onClick={() => setShowNewFolder(true)}
+                className="w-10 h-10 bg-[#1a1a1a] border border-white/10 rounded-xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
+                <FolderPlus size={16} />
+              </button>
+              <button onClick={() => {
+                if ((window as any).RONative?.isNativeApp?.()) {
+                  (window as any).RONative.openUploader(userEmail, currentPath);
+                } else {
+                  const params = new URLSearchParams({ user: userEmail, folder: currentPath });
+                  const a = document.createElement('a');
+                  a.href = `/admin/drive/upload-files?${params}`;
+                  a.target = '_blank';
+                  a.rel = 'noopener noreferrer';
+                  a.click();
+                }
+              }} disabled={uploading}
+                className={`flex items-center gap-1.5 px-3 h-10 bg-white/5 border border-white/10 rounded-xl shadow-lg text-white/50 font-semibold text-[13px] hover:bg-white/10 transition-colors ${uploading ? 'opacity-50' : ''}`}>
+                <FileIcon size={14} /> Files
+              </button>
+              <button onClick={() => document.getElementById('ro-drive-media-input')?.click()} disabled={uploading}
+                className={`flex items-center gap-1.5 px-3 h-10 bg-[#3b8dd4] rounded-xl shadow-lg shadow-[#3b8dd4]/20 text-white font-semibold text-[13px] hover:bg-[#3b8dd4]/90 transition-colors ${uploading ? 'opacity-50' : ''}`}>
+                <Image size={14} /> Photos
+              </button>
             </div>
-          )}
-          <div className="flex gap-2.5">
-            <button onClick={() => setShowNewFolder(true)}
-              className="w-12 h-12 bg-[#1a1a1a] border border-white/10 rounded-2xl flex items-center justify-center text-white/40 hover:text-[#3b8dd4] hover:border-[#3b8dd4]/20 transition-colors shadow-lg">
-              <FolderPlus size={20} />
-            </button>
-            <button onClick={() => {
-              // If running in native app, call the native bridge
-              if ((window as any).RONative?.isNativeApp?.()) {
-                (window as any).RONative.openUploader(userEmail, currentPath);
-              } else {
-                // PWA fallback — open in Chrome tab
-                const params = new URLSearchParams({ user: userEmail, folder: currentPath });
-                const a = document.createElement('a');
-                a.href = `/admin/drive/upload-files?${params}`;
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer';
-                a.click();
-              }
-            }} disabled={uploading}
-              className={`flex items-center gap-2 px-4 h-12 bg-white/5 border border-white/10 rounded-2xl shadow-lg text-white/60 font-bold text-[14px] hover:bg-white/10 transition-colors ${uploading ? 'opacity-50' : ''}`}>
-              <FileIcon size={16} /> Files
-            </button>
-            <button onClick={() => document.getElementById('ro-drive-media-input')?.click()} disabled={uploading}
-              className={`flex items-center gap-2 px-5 h-12 bg-[#3b8dd4] rounded-2xl shadow-lg shadow-[#3b8dd4]/20 text-white font-bold text-[15px] hover:bg-[#3b8dd4]/90 transition-colors ${uploading ? 'opacity-50' : ''}`}>
-              <Image size={18} /> Photos
-            </button>
           </div>
-        </div>
+        )}
 
         {/* ── File Preview/Info Screen ── */}
         {previewFile && (
