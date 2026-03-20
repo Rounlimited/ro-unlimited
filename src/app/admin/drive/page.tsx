@@ -54,8 +54,13 @@ export default function DrivePage() {
   const [userEmail, setUserEmail] = useState('');
   const [search, setSearch] = useState('');
   const [currentPath, setCurrentPath] = useState(() => {
-    if (typeof window !== 'undefined') return sessionStorage.getItem('ro_drive_path') || '/';
-    return '/';
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('ro_drive_path');
+      if (saved) return saved;
+      const zone = sessionStorage.getItem('ro_drive_zone') || 'company';
+      return zone === 'personal' ? '/personal/user' : '/company';
+    }
+    return '/company';
   });
   const [totalBytes, setTotalBytes] = useState(0);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
@@ -163,6 +168,13 @@ export default function DrivePage() {
   // Explicit folders from DB
   const [dbFolders, setDbFolders] = useState<{ id: string; path: string; name: string }[]>([]);
 
+  // Zone root path
+  const getZoneRoot = (zone: string, email: string) => {
+    if (zone === 'personal') return `/personal/${email.split('@')[0]}`;
+    return '/company';
+  };
+  const zoneRoot = driveZone !== 'shared' ? getZoneRoot(driveZone, userEmail) : '/';
+
   // Fetch ALL files + folders for this user
   const fetchFiles = useCallback(async () => {
     if (!userEmail) return;
@@ -189,26 +201,46 @@ export default function DrivePage() {
     });
   }, [allFiles, viewMode, currentPath]);
 
+  // ── Filter files/folders to current zone ──
+  const zoneFiles = allFiles.filter(f => {
+    const fp = f.folder || '/';
+    if (driveZone === 'shared') return false; // handled separately
+    // Files in zone root
+    if (fp.startsWith(zoneRoot)) return true;
+    // Legacy files at '/' show in company zone
+    if (driveZone === 'company' && (fp === '/' || (!fp.startsWith('/company') && !fp.startsWith('/personal')))) return true;
+    return false;
+  });
+
+  const zoneFolders = dbFolders.filter(df => {
+    if (driveZone === 'shared') return false;
+    if (df.path.startsWith(zoneRoot)) return true;
+    if (driveZone === 'company' && !df.path.startsWith('/company') && !df.path.startsWith('/personal')) return true;
+    return false;
+  });
+
+  const zoneTotalBytes = zoneFiles.reduce((s, f) => s + (f.file_size || 0), 0);
+
   // ── Derive current folder contents ──
   const getFolderContents = () => {
     const normalizedPath = currentPath.endsWith('/') ? currentPath : currentPath + '/';
 
     // Files directly in this folder
-    const filesHere = allFiles.filter(f => {
+    const filesHere = zoneFiles.filter(f => {
       const filePath = f.folder || '/';
       return filePath === currentPath || filePath === currentPath.replace(/\/$/, '');
     });
 
     // Subfolders from files (implicit)
     const subfolderMap = new Map<string, { name: string; path: string; fileCount: number; totalSize: number }>();
-    allFiles.forEach(f => {
+    zoneFiles.forEach(f => {
       const filePath = (f.folder || '/') + '/';
       if (filePath.startsWith(normalizedPath) && filePath !== normalizedPath) {
         const remainder = filePath.slice(normalizedPath.length);
         const nextSegment = remainder.split('/')[0];
         if (nextSegment && !subfolderMap.has(nextSegment)) {
           const folderPath = normalizedPath + nextSegment;
-          const filesInside = allFiles.filter(ff => (ff.folder || '/').startsWith(folderPath));
+          const filesInside = zoneFiles.filter(ff => (ff.folder || '/').startsWith(folderPath));
           subfolderMap.set(nextSegment, {
             name: nextSegment,
             path: folderPath,
@@ -220,7 +252,7 @@ export default function DrivePage() {
     });
 
     // Subfolders from DB (explicit — includes empty folders)
-    dbFolders.forEach(df => {
+    zoneFolders.forEach(df => {
       const dfParent = df.path.substring(0, df.path.lastIndexOf('/')) || '/';
       const dfParentNorm = dfParent.endsWith('/') ? dfParent : dfParent + '/';
       if (dfParentNorm === normalizedPath || dfParent === currentPath) {
@@ -236,7 +268,7 @@ export default function DrivePage() {
     // Search filter
     if (search) {
       const s = search.toLowerCase();
-      const searchFiles = allFiles.filter(f => f.original_filename.toLowerCase().includes(s));
+      const searchFiles = zoneFiles.filter(f => f.original_filename.toLowerCase().includes(s));
       return { subfolders: [], files: searchFiles };
     }
 
@@ -250,24 +282,37 @@ export default function DrivePage() {
     setDriveZone(zone);
     setSearch('');
     setShowSearch(false);
-    if (zone === 'company') setCurrentPath('/');
-    else if (zone === 'personal') setCurrentPath('/');
-    // 'shared' zone uses its own view, path doesn't matter
+    if (zone !== 'shared') {
+      const root = getZoneRoot(zone, userEmail);
+      setCurrentPath(root);
+    }
   };
 
   // ── Breadcrumb segments ──
-  const pathSegments = currentPath.split('/').filter(Boolean);
+  // Strip zone prefix from display path
+  const displayPath = driveZone !== 'shared'
+    ? (currentPath.startsWith(zoneRoot) ? currentPath.slice(zoneRoot.length) || '/' : currentPath)
+    : '/';
+  const pathSegments = displayPath.split('/').filter(Boolean);
   const zoneName = driveZone === 'company' ? 'Company Drive' : driveZone === 'personal' ? 'My Drive' : 'Shared with Me';
   const breadcrumbs = [
-    { name: zoneName, path: '/' },
+    { name: zoneName, path: zoneRoot },
     ...pathSegments.map((seg, i) => ({
       name: seg.charAt(0).toUpperCase() + seg.slice(1).replace(/-/g, ' '),
-      path: '/' + pathSegments.slice(0, i + 1).join('/'),
+      path: zoneRoot + '/' + pathSegments.slice(0, i + 1).join('/'),
     })),
   ];
 
   // Persist current path to sessionStorage
   useEffect(() => { sessionStorage.setItem('ro_drive_path', currentPath); }, [currentPath]);
+
+  // Correct path when userEmail becomes available and zone is personal
+  useEffect(() => {
+    if (userEmail && driveZone === 'personal') {
+      const root = getZoneRoot('personal', userEmail);
+      if (!currentPath.startsWith(root)) setCurrentPath(root);
+    }
+  }, [userEmail, driveZone]);
 
   // ── Navigation ──
   const navigateToFolder = (path: string) => {
@@ -278,9 +323,10 @@ export default function DrivePage() {
   };
 
   const goBack = () => {
-    if (currentPath === '/') return;
-    const parent = '/' + pathSegments.slice(0, -1).join('/');
-    setCurrentPath(parent || '/');
+    if (currentPath === zoneRoot || currentPath === '/') return;
+    const segs = currentPath.split('/').filter(Boolean);
+    const parent = '/' + segs.slice(0, -1).join('/');
+    setCurrentPath(parent.length >= zoneRoot.length ? parent : zoneRoot);
   };
 
   // ── Upload with progress tracking ──
@@ -630,7 +676,7 @@ export default function DrivePage() {
         {/* ── Header ── */}
         <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5">
           <div className="flex items-center gap-2 px-4 py-3">
-            {currentPath === '/' ? (
+            {currentPath === zoneRoot || currentPath === '/' ? (
               <Link href="/admin" className="p-1.5 rounded-full text-white/40 hover:text-white hover:bg-white/5">
                 <ChevronLeft size={24} />
               </Link>
@@ -667,7 +713,7 @@ export default function DrivePage() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-[11px] text-white/20 mt-0.5">{formatSize(totalBytes)} used</p>
+                  <p className="text-[11px] text-white/20 mt-0.5">{formatSize(zoneTotalBytes)} used</p>
                 </div>
                 <button onClick={() => openShareSheet('folder', currentPath)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
                   <Share2 size={20} />
