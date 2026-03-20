@@ -682,6 +682,34 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     setShowHint(false);
   }, []);
 
+  // ── Swipe-right to go back (iOS PWA has no back button) ──
+  // Dispatches 'swipe-back' custom event. Pages can listen and preventDefault() to handle it themselves.
+  // If no page handles it, AppShell falls back to router.back().
+  const swipeRef = useRef<{ x: number; y: number; t: number }>({ x: 0, y: 0, t: 0 });
+  useEffect(() => {
+    const onStart = (e: TouchEvent) => {
+      swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+    };
+    const onEnd = (e: TouchEvent) => {
+      const dx = e.changedTouches[0].clientX - swipeRef.current.x;
+      const dy = Math.abs(e.changedTouches[0].clientY - swipeRef.current.y);
+      const dt = Date.now() - swipeRef.current.t;
+      if (dx > 80 && dy < 50 && dt < 400 && swipeRef.current.x < 40) {
+        if (pathname === '/admin' || pathname === '/admin/login') return;
+        // Let pages handle it first via custom event
+        const evt = new CustomEvent('swipe-back', { cancelable: true });
+        const handled = !window.dispatchEvent(evt); // returns false if preventDefault() was called
+        if (!handled) router.back();
+      }
+    };
+    document.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('touchend', onEnd, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', onStart);
+      document.removeEventListener('touchend', onEnd);
+    };
+  }, [pathname, router]);
+
   // Auto-hide tab bar after 4 seconds of being visible
   useEffect(() => {
     if (tabBarVisible) {

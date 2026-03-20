@@ -344,27 +344,17 @@ export default function DrivePage() {
     setCurrentPath(parent.length >= zoneRoot.length ? parent : zoneRoot);
   };
 
-  // ── Swipe-right to go back (iOS has no back button) ──
-  const touchStartRef = useRef<{ x: number; y: number; t: number }>({ x: 0, y: 0, t: 0 });
+  // ── Handle swipe-back from AppShell (iOS has no back button) ──
   useEffect(() => {
-    const onStart = (e: TouchEvent) => {
-      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+    const handler = (e: Event) => {
+      // If in preview, close it
+      if (previewFile) { closePreview(); e.preventDefault(); return; }
+      // If in a subfolder, go up
+      if (currentPath !== zoneRoot && currentPath !== '/') { goBack(); e.preventDefault(); }
+      // Otherwise let AppShell handle it (router.back to leave Drive)
     };
-    const onEnd = (e: TouchEvent) => {
-      const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
-      const dy = Math.abs(e.changedTouches[0].clientY - touchStartRef.current.y);
-      const dt = Date.now() - touchStartRef.current.t;
-      // Swipe right: >80px horizontal, <50px vertical, <400ms, started from left 40px edge
-      if (dx > 80 && dy < 50 && dt < 400 && touchStartRef.current.x < 40) {
-        goBack();
-      }
-    };
-    document.addEventListener('touchstart', onStart, { passive: true });
-    document.addEventListener('touchend', onEnd, { passive: true });
-    return () => {
-      document.removeEventListener('touchstart', onStart);
-      document.removeEventListener('touchend', onEnd);
-    };
+    window.addEventListener('swipe-back', handler);
+    return () => window.removeEventListener('swipe-back', handler);
   }, [currentPath, zoneRoot, previewFile]);
 
   // ── Upload with progress tracking ──

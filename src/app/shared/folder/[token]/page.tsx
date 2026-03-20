@@ -147,7 +147,7 @@ export default function SharedFolderPage({ params }: { params: { token: string }
     return () => window.removeEventListener('popstate', onPop);
   }, [previewFile]);
 
-  // Swipe-right to go back (iOS has no back button)
+  // Swipe-right to go back (iOS has no back button — shared pages aren't in AppShell so handle directly)
   const touchStartRef = useRef<{ x: number; y: number; t: number }>({ x: 0, y: 0, t: 0 });
   useEffect(() => {
     const onStart = (e: TouchEvent) => {
@@ -158,8 +158,8 @@ export default function SharedFolderPage({ params }: { params: { token: string }
       const dy = Math.abs(e.changedTouches[0].clientY - touchStartRef.current.y);
       const dt = Date.now() - touchStartRef.current.t;
       if (dx > 80 && dy < 50 && dt < 400 && touchStartRef.current.x < 40) {
-        if (previewFile) closePreview();
-        else goBack();
+        if (previewFile) { closePreview(); return; }
+        if (currentPath !== rootPath) goBack();
       }
     };
     document.addEventListener('touchstart', onStart, { passive: true });
@@ -168,7 +168,7 @@ export default function SharedFolderPage({ params }: { params: { token: string }
       document.removeEventListener('touchstart', onStart);
       document.removeEventListener('touchend', onEnd);
     };
-  }, [currentPath, previewFile]);
+  }, [currentPath, previewFile, rootPath]);
 
   const handleDownload = async (file: SharedFile) => {
     const url = previewUrl || await getUrl(file);
