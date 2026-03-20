@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">RO Admin</string>
+    <string name="title_activity_main">RO Admin</string>
+    <string name="package_name">com.rounlimited.admin</string>
+    <string name="custom_url_scheme">com.rounlimited.admin</string>
+</resources>

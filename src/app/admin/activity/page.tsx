@@ -180,7 +180,7 @@ export default function ActivityPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-      <div className="max-w-3xl mx-auto px-4 py-6 pb-24 space-y-6">
+      <div className="max-w-3xl lg:max-w-5xl mx-auto px-4 py-6 pb-24 space-y-6">
 
         {/* ── User Summary Cards ── */}
         <div>

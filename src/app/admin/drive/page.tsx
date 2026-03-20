@@ -955,7 +955,7 @@ export default function DrivePage() {
         )}
 
         {/* ── Content ── */}
-        <div className="pb-24 px-4 pt-3">
+        <div className="pb-24 px-4 lg:px-8 pt-3">
           {showTrash ? (
             /* ── Trash view ── */
             trashLoading ? (
@@ -1018,7 +1018,7 @@ export default function DrivePage() {
                 {sharedWithMe.folders.length > 0 && (
                   <div className="mb-4">
                     <p className="text-[12px] text-white/25 uppercase tracking-wider font-semibold mb-2 px-1">Shared Folders</p>
-                    <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-2.5' : 'space-y-1'}>
+                    <div className={viewMode === 'grid' ? 'grid grid-cols-2 lg:grid-cols-4 gap-2.5' : 'space-y-1'}>
                       {sharedWithMe.folders.map((sf: any) => (
                         viewMode === 'grid' ? (
                           <div key={sf.id}
@@ -1140,7 +1140,7 @@ export default function DrivePage() {
                 <div className="mb-4">
                   <p className="text-[12px] text-white/25 uppercase tracking-wider font-semibold mb-2 px-1">Folders</p>
                   {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
                       {subfolders.map(sf => (
                         <button key={sf.path} onClick={() => navigateToFolder(sf.path)}
                           className="relative bg-[#141414] border border-white/5 rounded-2xl p-4 text-left hover:border-[#3b8dd4]/20 hover:bg-[#3b8dd4]/[0.03] transition-all active:scale-[0.98] group">
@@ -1191,7 +1191,7 @@ export default function DrivePage() {
                     )}
                   </div>
                   {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-2.5">
                       {files.map(file => {
                         const Icon = getFileIcon(file.mime_type);
                         const color = getFileColor(file.mime_type);

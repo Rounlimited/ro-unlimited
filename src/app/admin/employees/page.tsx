@@ -225,7 +225,7 @@ export default function EmployeesPage() {
     <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white">
       <AdminHeader title="Team" subtitle="Employee Management" backHref="/admin" />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+      <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Top actions */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -324,7 +324,7 @@ export default function EmployeesPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
             {filtered.map((emp) => {
               const fullName = `${emp.first_name} ${emp.last_name}`;
               return (

@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
     "@floating-ui/react": "^0.27.19",
     "@gsap/react": "^2.1.2",
     "@react-pdf/renderer": "^4.3.2",

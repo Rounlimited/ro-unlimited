@@ -185,7 +185,7 @@ export default function SettingsPage() {
     <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white">
       <AdminHeader title="Settings" subtitle={isNexa ? 'Developer Controls' : 'Site Configuration'} backHref="/admin" />
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="max-w-4xl lg:max-w-5xl mx-auto px-6 py-8">
         {/* Message */}
         {message && (
           <div className={`mb-6 p-3 rounded-lg border text-sm flex items-center justify-between ${message.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
@@ -466,7 +466,8 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* ── Preferences ── */}
+        {/* ── Preferences + Developer Tools (2-col on desktop) ── */}
+        <div className="lg:grid lg:grid-cols-2 lg:gap-6">
         {preferences && (
           <section className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden mb-6 mt-6">
             <div className="px-5 py-4 border-b border-white/5 flex items-center gap-2">
@@ -544,7 +545,7 @@ export default function SettingsPage() {
         )}
 
         {isNexa && (
-          <div className="mt-6 border border-purple-500/20 rounded-2xl overflow-hidden">
+          <div className="mt-6 lg:mt-0 border border-purple-500/20 rounded-2xl overflow-hidden">
             <div className="px-4 py-3 bg-purple-500/5 border-b border-purple-500/10 flex items-center gap-2">
               <ShieldCheck size={14} className="text-purple-400" />
               <span className="text-[13px] font-semibold text-purple-400">Developer Tools</span>
@@ -567,6 +568,7 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

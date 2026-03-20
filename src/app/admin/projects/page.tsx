@@ -128,7 +128,7 @@ export default function ProjectsPage() {
         zIndex: 0,
       }} />
 
-      <div className="relative z-10 max-w-2xl mx-auto px-4 pt-4 pb-24">
+      <div className="relative z-10 max-w-2xl lg:max-w-5xl mx-auto px-4 lg:px-8 pt-4 pb-24">
 
         {/* Message toast */}
         {message && (
@@ -216,7 +216,7 @@ export default function ProjectsPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4 lg:space-y-0">
             {filtered.map((project, i) => {
               const div = DIVISION_CONFIG[project.division] || DIVISION_CONFIG.residential;
               const DivIcon = div.icon;
