@@ -118,37 +118,37 @@ function AttachmentPreview({ attachments }: { attachments: Message["attachments"
         </div>
         <div className="grid gap-0 divide-y divide-white/5">
           {attachments.map(att => (
-            <div key={att.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors">
-              {/* Thumbnail for images */}
+            <div key={att.id} className="flex items-center gap-2 px-3 py-3 hover:bg-white/[0.03] transition-colors">
+              {/* Icon/Thumbnail */}
               {att.content_type.startsWith("image/") ? (
-                <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 cursor-pointer"
+                <div className="w-9 h-9 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 cursor-pointer"
                   onClick={() => setPreviewAtt(att)}>
                   <img src={att.s3_url} alt={att.filename}
                     className="w-full h-full object-cover" />
                 </div>
               ) : (
-                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
                   {getIcon(att.content_type)}
                 </div>
               )}
-              {/* File info */}
-              <div className="flex-1 min-w-0">
-                <p className="text-[14px] text-white/80 font-medium truncate">{att.filename}</p>
-                <p className="text-[12px] text-white/30">{formatSize(att.size_bytes)}</p>
+              {/* File info — constrained width so buttons always show */}
+              <div className="min-w-0" style={{ flex: '1 1 0', maxWidth: 'calc(100% - 120px)' }}>
+                <p className="text-[13px] text-white/80 font-medium truncate">{att.filename}</p>
+                <p className="text-[11px] text-white/30">{formatSize(att.size_bytes)}</p>
               </div>
-              {/* Actions */}
-              <div className="flex items-center gap-1 flex-shrink-0">
+              {/* Actions — always visible */}
+              <div className="flex items-center gap-0 flex-shrink-0 ml-auto">
                 {isPreviewable(att.content_type) && (
                   <button onClick={() => setPreviewAtt(att)}
-                    className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white/80 transition-colors"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/40 hover:text-white/80 transition-colors"
                     title="Preview">
-                    <Eye size={16} />
+                    <Eye size={18} />
                   </button>
                 )}
                 <a href={att.s3_url} download={att.filename} target="_blank" rel="noopener noreferrer"
-                  className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-[#C9A84C] transition-colors"
+                  className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/40 hover:text-[#C9A84C] transition-colors"
                   title="Download">
-                  <Download size={16} />
+                  <Download size={18} />
                 </a>
               </div>
             </div>

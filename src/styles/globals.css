@@ -383,6 +383,96 @@
 .light-theme .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15) !important; }
 .light-theme .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.08) !important; }
 
+/* ── Inline style gradient backgrounds (dashboard hero cards) ── */
+.light-theme [style*="linear-gradient(145deg, #0c1a2e"] { background: linear-gradient(145deg, #e0ecf7, #d4e3f3) !important; }
+.light-theme [style*="linear-gradient(145deg, #1a1508"] { background: linear-gradient(145deg, #f5f0e0, #ede6d2) !important; }
+.light-theme [style*="linear-gradient(145deg, #161616"] { background: linear-gradient(145deg, #ececec, #e2e2e2) !important; }
+.light-theme [style*="linear-gradient(145deg, #0d1a0f"] { background: linear-gradient(145deg, #e2f0e4, #d6ebd9) !important; }
+.light-theme [style*="linear-gradient(145deg, #1a0d0d"] { background: linear-gradient(145deg, #f5e0e0, #ebd6d6) !important; }
+
+/* ── Dashboard card icon gradient buttons — make icons pop on light ── */
+.light-theme [style*="linear-gradient(145deg, #3b8dd4"] { box-shadow: 0 4px 15px rgba(59,141,212,0.25) !important; }
+.light-theme [style*="linear-gradient(145deg, #C9A84C"] { box-shadow: 0 4px 15px rgba(201,168,76,0.25) !important; }
+.light-theme [style*="linear-gradient(145deg, #D4772C"] { box-shadow: 0 4px 15px rgba(212,119,44,0.25) !important; }
+.light-theme [style*="linear-gradient(145deg, #666"] { box-shadow: 0 4px 15px rgba(100,100,100,0.2) !important; }
+
+/* ── Bottom glow lines on dashboard cards ── */
+.light-theme [style*="linear-gradient(90deg, transparent, #3b8dd4, transparent)"] { opacity: 0.5; }
+.light-theme [style*="linear-gradient(90deg, transparent, #C9A84C, transparent)"] { opacity: 0.5; }
+.light-theme [style*="linear-gradient(90deg, transparent, #D4772C, transparent)"] { opacity: 0.5; }
+.light-theme [style*="linear-gradient(90deg, transparent, #888, transparent)"] { opacity: 0.3; }
+
+/* ── Stronger text for light mode — make it pop ── */
+.light-theme .text-white { color: rgba(0,0,0,0.92) !important; }
+.light-theme .text-white\/90 { color: rgba(0,0,0,0.9) !important; }
+.light-theme .text-white\/80 { color: rgba(0,0,0,0.8) !important; }
+.light-theme .text-white\/70 { color: rgba(0,0,0,0.7) !important; }
+.light-theme .text-white\/60 { color: rgba(0,0,0,0.6) !important; }
+.light-theme .text-white\/50 { color: rgba(0,0,0,0.5) !important; }
+.light-theme .font-bold, .light-theme .font-semibold { color: inherit; }
+
+/* ── Navy / blueprint components — used on Projects page ── */
+.light-theme .card-navy { background: #f0f4fa !important; border-color: rgba(59,141,212,0.15) !important; }
+.light-theme .card-navy-raised { background: #e8eef8 !important; border-color: rgba(59,141,212,0.2) !important; }
+.light-theme .blueprint-overlay { background-image: linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px) !important; }
+.light-theme .blueprint-overlay-warm { background-image: linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px) !important; }
+.light-theme .steel-texture { background: linear-gradient(135deg, #f8f8f8 0%, #eeeeee 25%, #f8f8f8 50%, #f0f0f0 75%, #f8f8f8 100%) !important; }
+
+/* ── Neon glows — remove/soften in light mode ── */
+.light-theme .neon-gold { box-shadow: 0 2px 8px rgba(201,168,76,0.15) !important; }
+.light-theme .neon-blue { box-shadow: 0 2px 8px rgba(59,141,212,0.15) !important; }
+.light-theme .neon-navy { box-shadow: 0 2px 8px rgba(42,74,138,0.1) !important; }
+.light-theme .text-neon-gold { text-shadow: none !important; color: #9e7e30 !important; }
+.light-theme .text-neon-blue { text-shadow: none !important; color: #2a6fb0 !important; }
+.light-theme .text-shadow-gold { text-shadow: none !important; }
+
+/* ── Warm background utilities ── */
+.light-theme .bg-warm-black { background-color: #faf6ef !important; }
+.light-theme .bg-warm-dark { background-color: #f8f4ed !important; }
+.light-theme .warm-glow, .light-theme .warm-glow-strong, .light-theme .warm-glow-golden {
+  background: radial-gradient(ellipse at center, rgba(201,168,76,0.04) 0%, transparent 70%) !important;
+}
+.light-theme .warm-vignette { background: none !important; }
+.light-theme .warm-gradient-section { background: linear-gradient(180deg, #f8f8f8 0%, #faf6ef 50%, #f8f8f8 100%) !important; }
+.light-theme .warm-gradient-deep { background: linear-gradient(180deg, #f8f8f8 0%, #f5f0e5 50%, #f8f8f8 100%) !important; }
+
+/* ── Opacity-based accent backgrounds ── */
+.light-theme .bg-\[\#C9A84C\]\/5 { background-color: rgba(201,168,76,0.08) !important; }
+.light-theme .bg-\[\#C9A84C\]\/10 { background-color: rgba(201,168,76,0.1) !important; }
+.light-theme .bg-\[\#3b8dd4\]\/5 { background-color: rgba(59,141,212,0.08) !important; }
+.light-theme .bg-\[\#3b8dd4\]\/10 { background-color: rgba(59,141,212,0.1) !important; }
+.light-theme .bg-\[\#D4772C\]\/5 { background-color: rgba(212,119,44,0.08) !important; }
+.light-theme .bg-\[\#D4772C\]\/10 { background-color: rgba(212,119,44,0.1) !important; }
+
+/* ── Gradient borders on dashboard cards ── */
+.light-theme .border-\[\#2a6aaa\]\/30 { border-color: rgba(59,141,212,0.2) !important; }
+.light-theme .border-\[\#C9A84C\]\/20 { border-color: rgba(201,168,76,0.2) !important; }
+.light-theme .border-\[\#D4772C\]\/25,
+.light-theme .border-\[\#D4772C\]\/20 { border-color: rgba(212,119,44,0.2) !important; }
+.light-theme .border-white\/8 { border-color: rgba(0,0,0,0.06) !important; }
+
+/* ── bg-[#141414]/40 — system status cards ── */
+.light-theme .bg-\[\#141414\]\/40 { background-color: rgba(0,0,0,0.02) !important; }
+
+/* ── Green/blue/orange status accent colors — boost for light bg ── */
+.light-theme .bg-green-500\/10 { background-color: rgba(22,163,74,0.1) !important; }
+.light-theme .bg-\[\#3b8dd4\]\/10 { background-color: rgba(59,141,212,0.1) !important; }
+.light-theme .bg-\[\#D4772C\]\/10 { background-color: rgba(212,119,44,0.1) !important; }
+.light-theme .bg-\[\#C9A84C\]\/10 { background-color: rgba(201,168,76,0.1) !important; }
+
+/* ── Body background for admin mode ── */
+.light-theme body.admin-mode { background-color: #f0f0f1 !important; }
+
+/* ── From/to gradient classes ── */
+.light-theme .from-\[\#C9A84C\]\/10 { --tw-gradient-from: rgba(201,168,76,0.08) !important; }
+.light-theme .bg-gradient-to-r.from-\[\#C9A84C\]\/10 { background: linear-gradient(to right, rgba(201,168,76,0.08), transparent) !important; }
+
+/* ── Backdrop blur panels ── */
+.light-theme .backdrop-blur-sm { backdrop-filter: blur(4px); background-color: rgba(255,255,255,0.6) !important; }
+
+/* ── RO watermark in dashboard — hide in light mode ── */
+.light-theme img[src="/ro-icon.svg"][aria-hidden="true"] { opacity: 0.04 !important; }
+
 /* ── Special components ── */
 
 /* Splash screen — keep dark regardless of theme */
