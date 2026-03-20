@@ -10,10 +10,13 @@ import WalkthroughTours from '@/components/admin/WalkthroughTours';
 import AiChatBubble from '@/components/admin/AiChatBubble';
 import ActivityTracker from '@/components/admin/ActivityTracker';
 import UserPreferencesProvider from '@/components/admin/UserPreferencesProvider';
+import DesktopShell from '@/components/admin/desktop/DesktopShell';
+import { useDeviceContext } from '@/components/animations/useMediaQuery';
 
 function AdminContent({ children }: { children: React.ReactNode }) {
   const { onboarding, updateOnboarding } = useOnboarding();
   const [activeTour, setActiveTour] = useState<string | null>(null);
+  const { isDesktop } = useDeviceContext();
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -26,22 +29,28 @@ function AdminContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <AppShell>{children}</AppShell>
+      {isDesktop ? (
+        <DesktopShell>{children}</DesktopShell>
+      ) : (
+        <AppShell>{children}</AppShell>
+      )}
       <AiChatBubble />
       <ActivityTracker />
-      <PWAInstall />
-      <WalkthroughTours
-        activeTour={activeTour}
-        onTourComplete={async (tourId) => {
-          setActiveTour(null);
-          if (onboarding) {
-            await updateOnboarding({
-              tours_completed: { ...onboarding.tours_completed, [tourId]: true },
-            });
-          }
-        }}
-        onTourSkip={() => setActiveTour(null)}
-      />
+      {!isDesktop && <PWAInstall />}
+      {!isDesktop && (
+        <WalkthroughTours
+          activeTour={activeTour}
+          onTourComplete={async (tourId) => {
+            setActiveTour(null);
+            if (onboarding) {
+              await updateOnboarding({
+                tours_completed: { ...onboarding.tours_completed, [tourId]: true },
+              });
+            }
+          }}
+          onTourSkip={() => setActiveTour(null)}
+        />
+      )}
     </>
   );
 }
