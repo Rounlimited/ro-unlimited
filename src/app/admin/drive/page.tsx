@@ -474,9 +474,33 @@ export default function DrivePage() {
     setPreviewLoading(false);
   };
 
-  // Handle browser back button to close preview instead of leaving page
+  // Handle device/browser back button — navigate up in Drive instead of leaving
+  const currentPathRef = useRef(currentPath);
+  currentPathRef.current = currentPath;
+  const zoneRootRef = useRef(zoneRoot);
+  zoneRootRef.current = zoneRoot;
+
+  // Push history state when navigating into a folder
   useEffect(() => {
-    const onPop = () => { if (previewFile) closePreview(); };
+    if (currentPath !== zoneRoot && currentPath !== '/') {
+      window.history.pushState({ drivePath: currentPath }, '');
+    }
+  }, [currentPath, zoneRoot]);
+
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      // Close preview if open
+      if (previewFile) { closePreview(); return; }
+      // Navigate up one folder if not at root
+      const path = currentPathRef.current;
+      const root = zoneRootRef.current;
+      if (path !== root && path !== '/') {
+        e.preventDefault();
+        const segs = path.split('/').filter(Boolean);
+        const parent = '/' + segs.slice(0, -1).join('/');
+        setCurrentPath(parent.length >= root.length ? parent : root);
+      }
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, [previewFile]);
