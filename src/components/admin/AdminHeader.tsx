@@ -3,43 +3,54 @@
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ExternalLink, LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useDeviceContext } from '@/components/animations/useMediaQuery';
 
 interface AdminHeaderProps {
   title: string;
   subtitle?: string;
-  backHref?: string;  // kept for API compat — ignored, always uses router.back()
+  backHref?: string;
   showLogout?: boolean;
+  showBack?: boolean; // explicitly control back arrow (auto-hidden on desktop top-level)
 }
 
-export default function AdminHeader({ title, subtitle, backHref, showLogout = true }: AdminHeaderProps) {
+export default function AdminHeader({ title, subtitle, backHref, showLogout = true, showBack }: AdminHeaderProps) {
   const router = useRouter();
   const supabase = createClient();
+  const { isDesktop } = useDeviceContext();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/admin/login');
   };
 
+  // On desktop, hide back arrow and logout (sidebar + top bar handle navigation)
+  const shouldShowBack = showBack !== undefined ? showBack : !isDesktop;
+  const shouldShowLogout = showLogout && !isDesktop;
+
   return (
-    <header className="border-b border-white/5 bg-[#0f0f0f] sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+    <header className={`border-b border-white/5 bg-[#0f0f0f] sticky top-0 z-50 ${isDesktop ? 'lg:bg-transparent lg:border-none' : ''}`}>
+      <div className="max-w-6xl lg:max-w-none mx-auto px-6 lg:px-8 py-5 lg:py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => backHref ? router.push(backHref) : router.back()}
-            className="text-white/30 hover:text-white transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </button>
+          {shouldShowBack && (
+            <button
+              onClick={() => backHref ? router.push(backHref) : router.back()}
+              className="text-white/30 hover:text-white transition-colors"
+            >
+              <ArrowLeft size={18} />
+            </button>
+          )}
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+            <h1 className={`text-lg font-semibold tracking-tight ${isDesktop ? 'text-[22px]' : ''}`}>{title}</h1>
             {subtitle && <p className="text-[11px] text-white/30 tracking-wide uppercase">{subtitle}</p>}
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <a href="/" target="_blank" className="flex items-center gap-2 px-3 py-1.5 text-xs text-white/30 hover:text-white border border-white/5 hover:border-white/10 rounded transition-all">
-            <ExternalLink size={12} /> Live Site
-          </a>
-          {showLogout && (
+          {!isDesktop && (
+            <a href="/" target="_blank" className="flex items-center gap-2 px-3 py-1.5 text-xs text-white/30 hover:text-white border border-white/5 hover:border-white/10 rounded transition-all">
+              <ExternalLink size={12} /> Live Site
+            </a>
+          )}
+          {shouldShowLogout && (
             <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-1.5 text-xs text-white/30 hover:text-red-400 border border-white/5 hover:border-red-400/20 rounded transition-all">
               <LogOut size={12} /> Sign Out
             </button>

@@ -273,7 +273,7 @@ export default function AdminDashboard() {
       {/* ════════════════════════════════════
           DASHBOARD
       ════════════════════════════════════ */}
-      <div className="flex flex-col h-full px-3 py-3 gap-3 relative overflow-y-auto scrollbar-hide">
+      <div className="flex flex-col h-full px-3 py-3 lg:px-8 lg:py-6 gap-3 lg:gap-5 relative overflow-y-auto scrollbar-hide">
 
         {/* Dim RO watermark */}
         <img src="/ro-icon.svg" alt="" aria-hidden="true"
@@ -326,7 +326,7 @@ export default function AdminDashboard() {
         </Link>
 
         {/* Row 3: Hero buttons — Email + Estimates + Team */}
-        <div ref={row3Ref} data-tour="hero-buttons" className="grid grid-cols-3 gap-2 relative z-10">
+        <div ref={row3Ref} data-tour="hero-buttons" className="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-3 relative z-10">
           {/* Email — blue */}
           <Link href="/admin/inbox"
             className="theme-card-blue relative overflow-hidden border border-[#2a6aaa]/30 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
@@ -405,7 +405,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Row 4: Quick Actions */}
-        <div data-tour="quick-actions" className="grid grid-cols-3 gap-2 relative z-10">
+        <div data-tour="quick-actions" className="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-3 relative z-10">
           {/* Portfolio — gold */}
           <Link href="/admin/projects"
             className="theme-card-gold relative overflow-hidden border border-[#C9A84C]/20 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"

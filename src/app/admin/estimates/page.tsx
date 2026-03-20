@@ -7,8 +7,9 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Plus, Search, FileText, X, ChevronRight, DollarSign,
   Clock, AlertTriangle, Send, Eye, CheckCircle2, XCircle,
-  Home, Building2, Mountain, Filter, Trash2, Loader2,
+  Home, Building2, Mountain, Filter, Trash2, Loader2, ArrowUpDown,
 } from 'lucide-react';
+import { useDeviceContext } from '@/components/animations/useMediaQuery';
 
 interface Estimate {
   id: string;
@@ -85,6 +86,7 @@ function isExpired(validUntil: string | null, status: string): boolean {
 
 export default function EstimatesPage() {
   const router = useRouter();
+  const { isDesktop } = useDeviceContext();
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -92,6 +94,8 @@ export default function EstimatesPage() {
   const [divisionFilter, setDivisionFilter] = useState('all');
   const [deleteTarget, setDeleteTarget] = useState<Estimate | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [sortBy, setSortBy] = useState<'created_at' | 'total' | 'estimate_number' | 'project_name'>('created_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -171,11 +175,30 @@ export default function EstimatesPage() {
     return counts;
   }, [estimates]);
 
+  // Sorted list for desktop table
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      let cmp = 0;
+      switch (sortBy) {
+        case 'total': cmp = (a.total || 0) - (b.total || 0); break;
+        case 'estimate_number': cmp = a.estimate_number.localeCompare(b.estimate_number); break;
+        case 'project_name': cmp = a.project_name.localeCompare(b.project_name); break;
+        default: cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+  }, [filtered, sortBy, sortDir]);
+
+  const toggleSort = (col: typeof sortBy) => {
+    if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(col); setSortDir('desc'); }
+  };
+
   return (
     <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white pb-32">
       <AdminHeader title="Estimates" subtitle="Estimation System" backHref="/admin" />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+      <div className="max-w-4xl lg:max-w-none mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header row */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -334,7 +357,72 @@ export default function EstimatesPage() {
               </Link>
             )}
           </div>
+        ) : isDesktop ? (
+          /* ── Desktop Table View ── */
+          <div className="bg-[#111] border border-white/5 rounded-xl overflow-hidden">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-white/5 text-[12px] text-white/30 uppercase tracking-wider">
+                  {([
+                    { key: 'estimate_number' as const, label: 'Estimate #', w: 'w-36' },
+                    { key: 'project_name' as const, label: 'Project', w: '' },
+                    { key: null, label: 'Customer', w: '' },
+                    { key: null, label: 'Division', w: 'w-28' },
+                    { key: null, label: 'Status', w: 'w-28' },
+                    { key: 'total' as const, label: 'Total', w: 'w-32' },
+                    { key: 'created_at' as const, label: 'Date', w: 'w-28' },
+                    { key: null, label: '', w: 'w-20' },
+                  ]).map((col, i) => (
+                    <th key={i} className={`px-4 py-3 font-semibold ${col.w}`}>
+                      {col.key ? (
+                        <button onClick={() => toggleSort(col.key!)} className="flex items-center gap-1 hover:text-white/50 transition-colors">
+                          {col.label}
+                          <ArrowUpDown size={11} className={sortBy === col.key ? 'text-[#C9A84C]' : 'opacity-30'} />
+                        </button>
+                      ) : col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map(estimate => {
+                  const statusCfg = STATUS_CONFIG[estimate.status] || STATUS_CONFIG.draft;
+                  const divCfg = DIVISION_CONFIG[estimate.division] || DIVISION_CONFIG.residential;
+                  const DivIcon = divCfg.icon;
+                  const customerName = estimate.customer ? `${estimate.customer.first_name} ${estimate.customer.last_name}` : 'No Customer';
+                  const href = estimate.status === 'draft' ? `/admin/estimates/new?edit=${estimate.id}` : `/admin/estimates/${estimate.id}`;
+                  return (
+                    <tr key={estimate.id} onClick={() => router.push(href)}
+                      className="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer transition-colors group">
+                      <td className="px-4 py-3.5 text-[14px] font-bold text-[#C9A84C]">{estimate.estimate_number}</td>
+                      <td className="px-4 py-3.5 text-[14px] text-white/80 font-medium truncate max-w-[200px]">{estimate.project_name}</td>
+                      <td className="px-4 py-3.5 text-[13px] text-white/40">{customerName}</td>
+                      <td className="px-4 py-3.5">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${divCfg.bg} ${divCfg.text}`}>
+                          <DivIcon size={10} /> {divCfg.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
+                          {statusCfg.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-[15px] font-bold text-white tabular-nums">{formatCurrency(estimate.total || 0)}</td>
+                      <td className="px-4 py-3.5 text-[12px] text-white/25">{formatDate(estimate.created_at)}</td>
+                      <td className="px-4 py-3.5">
+                        <button onClick={e => { e.stopPropagation(); setDeleteTarget(estimate); }}
+                          className="p-2 rounded-lg text-white/10 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         ) : (
+          /* ── Mobile Card View ── */
           <div className="space-y-2">
             {filtered.map((estimate) => {
               const statusCfg = STATUS_CONFIG[estimate.status] || STATUS_CONFIG.draft;
@@ -352,62 +440,31 @@ export default function EstimatesPage() {
                   href={estimate.status === 'draft' ? `/admin/estimates/new?edit=${estimate.id}` : `/admin/estimates/${estimate.id}`}
                   className="block bg-[#111] border border-white/5 rounded-xl p-4 hover:border-white/10 hover:bg-[#141414] transition-all"
                 >
-                  {/* Top row: estimate number + status + total */}
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2.5 flex-wrap">
-                      <span className="text-[16px] font-bold text-[#C9A84C]">
-                        {estimate.estimate_number}
-                      </span>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border} ${estimate.status === 'expired' ? 'line-through' : ''}`}>
-                        {statusCfg.label}
-                      </span>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${divCfg.bg} ${divCfg.text}`}>
-                        <DivIcon size={10} />
-                        {divCfg.label}
-                      </span>
+                      <span className="text-[16px] font-bold text-[#C9A84C]">{estimate.estimate_number}</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>{statusCfg.label}</span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${divCfg.bg} ${divCfg.text}`}><DivIcon size={10} />{divCfg.label}</span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-[18px] font-bold text-white">
-                        {formatCurrency(estimate.total || 0)}
-                      </span>
+                      <span className="text-[18px] font-bold text-white">{formatCurrency(estimate.total || 0)}</span>
                       <ChevronRight size={16} className="text-white/10 group-hover:text-white/30 transition-colors" />
                     </div>
                   </div>
-
-                  {/* Project name */}
-                  <p className="text-[15px] font-medium text-white/80 mb-1 truncate">
-                    {estimate.project_name}
-                  </p>
-
-                  {/* Customer + dates */}
+                  <p className="text-[15px] font-medium text-white/80 mb-1 truncate">{estimate.project_name}</p>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <span className="text-[13px] text-white/30">
-                      {customerName}
-                      {companyName && (
-                        <span className="text-white/15"> &mdash; {companyName}</span>
-                      )}
-                    </span>
-                    <span className="flex items-center gap-1 text-[12px] text-white/20">
-                      <Clock size={11} />
-                      {formatDate(estimate.created_at)}
-                    </span>
+                    <span className="text-[13px] text-white/30">{customerName}{companyName && <span className="text-white/15"> &mdash; {companyName}</span>}</span>
+                    <span className="flex items-center gap-1 text-[12px] text-white/20"><Clock size={11} />{formatDate(estimate.created_at)}</span>
                     {estimate.valid_until && (
                       <span className={`flex items-center gap-1 text-[12px] ${expired ? 'text-red-400' : 'text-white/20'}`}>
-                        {expired ? <AlertTriangle size={11} /> : <Clock size={11} />}
-                        {expired ? 'Expired ' : 'Valid until '}
-                        {formatDate(estimate.valid_until)}
+                        {expired ? <AlertTriangle size={11} /> : <Clock size={11} />}{expired ? 'Expired ' : 'Valid until '}{formatDate(estimate.valid_until)}
                       </span>
                     )}
                   </div>
                 </Link>
-                {/* Delete button — always visible */}
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(estimate); }}
+                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(estimate); }}
                   className="absolute top-3 right-3 p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 active:bg-red-500/30 transition-colors z-10"
-                  title="Delete estimate"
-                >
-                  <Trash2 size={16} />
-                </button>
+                  title="Delete estimate"><Trash2 size={16} /></button>
                 </div>
               );
             })}
