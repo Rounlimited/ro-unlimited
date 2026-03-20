@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v6'; // light theme v4 — drive + projects pages
+const CACHE_NAME = 'ro-admin-v7'; // desktop inbox split-pane fix
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',
