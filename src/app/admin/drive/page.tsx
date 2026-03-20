@@ -337,11 +337,35 @@ export default function DrivePage() {
   };
 
   const goBack = () => {
+    if (previewFile) { closePreview(); return; }
     if (currentPath === zoneRoot || currentPath === '/') return;
     const segs = currentPath.split('/').filter(Boolean);
     const parent = '/' + segs.slice(0, -1).join('/');
     setCurrentPath(parent.length >= zoneRoot.length ? parent : zoneRoot);
   };
+
+  // ── Swipe-right to go back (iOS has no back button) ──
+  const touchStartRef = useRef<{ x: number; y: number; t: number }>({ x: 0, y: 0, t: 0 });
+  useEffect(() => {
+    const onStart = (e: TouchEvent) => {
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+    };
+    const onEnd = (e: TouchEvent) => {
+      const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+      const dy = Math.abs(e.changedTouches[0].clientY - touchStartRef.current.y);
+      const dt = Date.now() - touchStartRef.current.t;
+      // Swipe right: >80px horizontal, <50px vertical, <400ms, started from left 40px edge
+      if (dx > 80 && dy < 50 && dt < 400 && touchStartRef.current.x < 40) {
+        goBack();
+      }
+    };
+    document.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('touchend', onEnd, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', onStart);
+      document.removeEventListener('touchend', onEnd);
+    };
+  }, [currentPath, zoneRoot, previewFile]);
 
   // ── Upload with progress tracking ──
   const uploadWithProgress = (url: string, formData: FormData, fileName: string, fileSize: number): Promise<any> => {
@@ -821,11 +845,11 @@ export default function DrivePage() {
         <div className="theme-header sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5">
           <div className="flex items-center gap-2 px-4 py-3">
             {currentPath === zoneRoot || currentPath === '/' ? (
-              <Link href="/admin" className="p-1.5 rounded-full text-white/40 hover:text-white hover:bg-white/5">
+              <Link href="/admin" className="w-11 h-11 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/5 -ml-1">
                 <ChevronLeft size={24} />
               </Link>
             ) : (
-              <button onClick={goBack} className="p-1.5 rounded-full text-white/40 hover:text-white hover:bg-white/5">
+              <button onClick={goBack} className="w-11 h-11 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/5 -ml-1">
                 <ChevronLeft size={24} />
               </button>
             )}
@@ -1299,9 +1323,9 @@ export default function DrivePage() {
         {previewFile && (
           <div className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col">
             {/* Preview header */}
-            <div className="flex items-center gap-2 px-3 py-3 border-b border-white/5">
-              <button onClick={() => window.history.back()} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
-                <ChevronLeft size={24} />
+            <div className="flex items-center gap-2 px-2 py-2 border-b border-white/5">
+              <button onClick={() => window.history.back()} className="w-11 h-11 flex items-center justify-center rounded-full text-white/50 hover:text-white hover:bg-white/5 active:bg-white/10">
+                <ChevronLeft size={26} />
               </button>
               <div className="flex-1 min-w-0">
                 <p className="text-[15px] text-white font-medium truncate">{previewFile.original_filename}</p>
