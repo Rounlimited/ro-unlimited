@@ -15,6 +15,7 @@ import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { createClient } from "@/lib/supabase/client";
+import { useDeviceContext } from "@/components/animations/useMediaQuery";
 
 // ── Types ──
 interface Thread {
@@ -764,6 +765,218 @@ export default function AdminInbox() {
             <Forward size={18} /> Forward
           </button>
         </div>
+      </div>
+    );
+  }
+
+  const { isDesktop } = useDeviceContext();
+
+  // ═══════════════════════════════════════════
+  // DESKTOP SPLIT-PANE LAYOUT
+  // ═══════════════════════════════════════════
+  if (isDesktop) {
+    return (
+      <div className="h-full flex bg-[#0a0a0a]">
+        {/* Left: Folder sidebar (always visible) */}
+        <div className="w-56 flex-shrink-0 border-r border-white/5 flex flex-col">
+          <div className="px-4 pt-5 pb-3 flex items-center justify-between">
+            <span className="font-bold text-[18px] text-[#C9A84C]">Mail</span>
+            <button onClick={() => startCompose("new")} className="p-2 rounded-lg hover:bg-white/5 text-[#C9A84C]">
+              <Pencil size={16} />
+            </button>
+          </div>
+          <nav className="flex-1 overflow-y-auto px-2 space-y-0.5">
+            {FOLDERS.map(f => {
+              const FIcon = f.icon;
+              const count = folderCounts[f.key] || 0;
+              return (
+                <button key={f.key} onClick={() => { setFolder(f.key); setSelectedThread(null); setMessages([]); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] transition-colors ${
+                    folder === f.key ? "bg-[#C9A84C]/10 text-[#C9A84C] font-semibold" : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"
+                  }`}>
+                  <FIcon size={16} />
+                  <span className="flex-1 text-left">{f.label}</span>
+                  {count > 0 && f.key !== 'sent' && <span className="text-[11px] text-white/20">{count}</span>}
+                </button>
+              );
+            })}
+          </nav>
+          {/* Account switcher */}
+          <div className="border-t border-white/5 p-2 space-y-1">
+            <button onClick={() => { setActiveAccount(null); localStorage.removeItem('ro_inbox_account'); }}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] transition-colors ${!activeAccount ? "bg-white/5 text-white/70" : "text-white/30 hover:bg-white/[0.03]"}`}>
+              <Mail size={14} /> All Mail
+            </button>
+            {accounts.map(a => (
+              <button key={a.email} onClick={() => { setActiveAccount(a); setFromAccount(a.email); localStorage.setItem('ro_inbox_account', a.email); }}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] transition-colors ${activeAccount?.email === a.email ? "bg-white/5 text-white/70" : "text-white/30 hover:bg-white/[0.03]"}`}>
+                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style={{ backgroundColor: a.color + "25", color: a.color }}>{a.initials}</div>
+                {a.email.split("@")[0]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Middle: Thread list */}
+        <div className="w-96 flex-shrink-0 border-r border-white/5 flex flex-col">
+          {/* Search */}
+          <div className="px-3 py-3 border-b border-white/5">
+            <div className="flex items-center gap-2 px-3 py-2 bg-white/[0.03] rounded-lg border border-white/5">
+              <Search size={16} className="text-white/25" />
+              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search mail..."
+                className="flex-1 bg-transparent text-[14px] text-white placeholder:text-white/20 focus:outline-none" />
+              {search && <button onClick={() => setSearch("")} className="text-white/20 hover:text-white/40"><X size={14} /></button>}
+            </div>
+          </div>
+          {/* Folder label */}
+          <div className="px-4 py-2 text-[13px] text-white/20 font-medium uppercase tracking-wider">{folder}</div>
+          {/* Threads */}
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <div className="flex justify-center py-16"><Loader2 size={24} className="text-[#C9A84C] animate-spin" /></div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+                <Mail size={32} className="text-white/10 mb-3" />
+                <p className="text-white/25 text-[14px]">{search ? "No matches" : "Empty"}</p>
+              </div>
+            ) : filtered.map(thread => {
+              const senderEmail = folder === "sent" ? thread.to_email : thread.from_email;
+              const senderName = senderEmail.split("@")[0];
+              const isActive = selectedThread?.thread_id === thread.thread_id;
+              return (
+                <button key={thread.thread_id} onClick={() => handleThreadClick(thread)}
+                  className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-white/[0.03] ${
+                    isActive ? "bg-[#C9A84C]/[0.06] border-l-2 border-l-[#C9A84C]" : thread.unread_count > 0 ? "bg-white/[0.01]" : "hover:bg-white/[0.02]"
+                  }`}>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[13px] font-bold"
+                    style={{ backgroundColor: avatarColor(senderEmail) + "25", color: avatarColor(senderEmail) }}>
+                    {getInitial(senderName)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[14px] truncate ${thread.unread_count > 0 ? "font-bold text-white" : "text-white/60"}`}>{senderName}</span>
+                      {thread.message_count > 1 && <span className="text-[12px] text-white/20">{thread.message_count}</span>}
+                      <span className="ml-auto text-[11px] text-white/20 shrink-0">{timeAgo(thread.latest_message)}</span>
+                    </div>
+                    <p className={`text-[13px] truncate ${thread.unread_count > 0 ? "font-semibold text-white/90" : "text-white/45"}`}>{thread.subject}</p>
+                    <p className="text-[12px] text-white/20 truncate">{thread.latest_body_preview}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right: Message detail / Compose */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {view === "compose" ? (
+            /* Compose form — render in right panel */
+            <div className="flex-1 flex flex-col">
+              <div className="flex items-center gap-3 px-6 py-4 border-b border-white/5">
+                <button onClick={() => setView("list")} className="p-2 rounded-lg text-white/30 hover:text-white hover:bg-white/5"><X size={20} /></button>
+                <h2 className="text-[16px] font-semibold">{composeMode === "reply" ? "Reply" : composeMode === "forward" ? "Forward" : "New Message"}</h2>
+                <div className="ml-auto">
+                  <button onClick={handleSend} disabled={sending}
+                    className="flex items-center gap-2 px-5 py-2 bg-[#C9A84C] text-black text-[14px] font-semibold rounded-xl hover:opacity-90 disabled:opacity-50">
+                    {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Send
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-[13px] text-white/30 w-12">To</span>
+                  <input value={composeTo} onChange={e => setComposeTo(e.target.value)} placeholder="recipient@email.com"
+                    className="flex-1 bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/30" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[13px] text-white/30 w-12">Subject</span>
+                  <input value={composeSubject} onChange={e => setComposeSubject(e.target.value)} placeholder="Subject"
+                    className="flex-1 bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2 text-[14px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/30" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[13px] text-white/30 w-12">From</span>
+                  <select value={fromAccount} onChange={e => setFromAccount(e.target.value)}
+                    className="flex-1 bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2 text-[14px] text-white focus:outline-none">
+                    {accounts.map(a => <option key={a.email} value={a.email}>{a.email}</option>)}
+                  </select>
+                </div>
+                <div className="border border-white/5 rounded-xl overflow-hidden">
+                  <EditorContent editor={editor} className="prose prose-invert max-w-none min-h-[200px] px-4 py-3 text-[14px] [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[200px]" />
+                </div>
+              </div>
+            </div>
+          ) : selectedThread && messages.length > 0 ? (
+            /* Thread detail */
+            <div className="flex-1 flex flex-col">
+              {/* Thread header */}
+              <div className="flex items-center gap-3 px-6 py-4 border-b border-white/5">
+                <h2 className="text-[18px] font-semibold text-white flex-1 truncate">{selectedThread.subject}</h2>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => startCompose("reply", messages[messages.length - 1])} className="p-2 rounded-lg text-white/30 hover:text-white hover:bg-white/5"><Reply size={18} /></button>
+                  <button onClick={() => startCompose("forward", messages[messages.length - 1])} className="p-2 rounded-lg text-white/30 hover:text-white hover:bg-white/5"><Forward size={18} /></button>
+                  <button onClick={() => threadAction("trash")} className="p-2 rounded-lg text-white/30 hover:text-red-400 hover:bg-white/5"><Trash2 size={18} /></button>
+                </div>
+              </div>
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                {loadingThread ? (
+                  <div className="flex justify-center py-16"><Loader2 size={24} className="text-[#C9A84C] animate-spin" /></div>
+                ) : messages.map(msg => (
+                  <div key={msg.id} className="bg-white/[0.02] rounded-2xl p-5 border border-white/5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-bold shrink-0"
+                        style={{ backgroundColor: avatarColor(msg.from_email) + "30", color: avatarColor(msg.from_email) }}>
+                        {getInitial(msg.from_email)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[15px] font-semibold text-white">{msg.from_email.split("@")[0]}</span>
+                          <span className="text-[12px] text-white/20">&lt;{msg.from_email}&gt;</span>
+                          <span className="ml-auto text-[12px] text-white/20">{new Date(msg.created_at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</span>
+                        </div>
+                        <p className="text-[12px] text-white/25">to {msg.direction === "outbound" ? msg.to_email : "me"}</p>
+                      </div>
+                    </div>
+                    {msg.body_html ? (
+                      <div className="text-[14px] text-white/80 leading-relaxed [&_a]:text-[#3b8dd4] [&_img]:max-w-full [&_img]:h-auto"
+                        style={{ wordBreak: 'break-word' }}
+                        dangerouslySetInnerHTML={{ __html: msg.body_html }} />
+                    ) : (
+                      <pre className="text-[14px] text-white/80 whitespace-pre-wrap font-sans leading-relaxed">{msg.body_text || "(no content)"}</pre>
+                    )}
+                    {msg.attachments?.length > 0 && <AttachmentPreview attachments={msg.attachments} />}
+                  </div>
+                ))}
+              </div>
+              {/* Quick reply bar */}
+              <div className="flex-shrink-0 border-t border-white/5 px-6 py-3 flex items-center gap-3">
+                <button onClick={() => startCompose("reply", messages[messages.length - 1])}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/[0.03] border border-white/5 rounded-xl text-[14px] text-white/50 hover:text-white hover:bg-white/[0.05] transition-colors">
+                  <Reply size={16} /> Reply
+                </button>
+                <button onClick={() => startCompose("forward", messages[messages.length - 1])}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/[0.03] border border-white/5 rounded-xl text-[14px] text-white/50 hover:text-white hover:bg-white/[0.05] transition-colors">
+                  <Forward size={16} /> Forward
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Empty state — no thread selected */
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <Mail size={48} className="text-white/5 mx-auto mb-4" />
+                <p className="text-[15px] text-white/20">Select an email to read</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Toast */}
+        {toast && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 bg-[#1a1a1a] border border-[#C9A84C]/30 rounded-full text-[14px] text-[#C9A84C] shadow-lg">
+            {toast}
+          </div>
+        )}
       </div>
     );
   }
