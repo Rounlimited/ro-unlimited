@@ -21,7 +21,7 @@ export default function AiChatBubble() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('Thinking...');
-  const [aiModel, setAiModel] = useState<'claude' | 'groq'>('claude');
+  const [aiModel, setAiModel] = useState<'grok' | 'claude' | 'groq'>('grok');
   const [unread, setUnread] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -475,9 +475,9 @@ export default function AiChatBubble() {
             )}
             {/* Model switch */}
             {!isFloating && (
-              <button onClick={() => setAiModel(prev => prev === 'claude' ? 'groq' : 'claude')}
-                className={`px-2 py-1 rounded text-[11px] font-semibold transition-colors border ${aiModel === 'claude' ? 'bg-[#C9A84C]/15 text-[#C9A84C] border-[#C9A84C]/30' : 'bg-green-500/15 text-green-400 border-green-500/30'}`} title="Switch AI model">
-                {aiModel === 'claude' ? 'Claude' : 'Groq'}
+              <button onClick={() => setAiModel(prev => prev === 'grok' ? 'claude' : prev === 'claude' ? 'groq' : 'grok')}
+                className={`px-2 py-1 rounded text-[11px] font-semibold transition-colors border ${aiModel === 'grok' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : aiModel === 'claude' ? 'bg-[#C9A84C]/15 text-[#C9A84C] border-[#C9A84C]/30' : 'bg-green-500/15 text-green-400 border-green-500/30'}`} title="Switch AI model">
+                {aiModel === 'grok' ? 'Grok' : aiModel === 'claude' ? 'Claude' : 'Groq'}
               </button>
             )}
             {/* New chat */}
