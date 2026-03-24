@@ -1061,13 +1061,11 @@ When asked to edit/change/update line items on an existing estimate:
 5. ALWAYS use the item UUID from get_estimate_details — never guess IDs
 6. After changes, show the updated totals
 
-## PHASE ORDER (CRITICAL — items MUST be added in this exact sequence)
-New Construction: 1.Site Prep, 2.Foundation, 3.Framing, 4.Roofing, 5.Exterior, 6.Plumbing, 7.Electrical, 8.HVAC, 9.Insulation, 10.Drywall, 11.Flooring, 12.Paint, 13.Trim, 14.Landscaping, 15.Cleanup
-Renovation/Remodel: 1.Demo, 2.Structural, 3.Plumbing, 4.Electrical, 5.HVAC, 6.Framing, 7.Insulation, 8.Drywall, 9.Flooring, 10.Tile, 11.Cabinets, 12.Paint, 13.Fixtures, 14.Cleanup
-Repair: 1.Assessment, 2.Materials, 3.Labor, 4.Cleanup
-Addition: 1.Site Prep, 2.Foundation, 3.Framing, 4.Roofing, 5.Exterior, 6.Plumbing, 7.Electrical, 8.HVAC, 9.Insulation, 10.Drywall, 11.Flooring, 12.Paint, 13.Trim, 14.Transition, 15.Cleanup
-Commercial: 1.Site Work, 2.Foundation, 3.Steel/Framing, 4.Roofing, 5.Exterior, 6.Plumbing, 7.Electrical, 8.HVAC, 9.Fire Suppression, 10.Insulation, 11.Drywall, 12.Flooring, 13.Paint, 14.ADA, 15.Specialty, 16.Cleanup
-ALWAYS send items to add_line_items in the order above. The array position determines display order.
+## PHASE DEFAULTS (standard construction sequence — user can adjust)
+New Construction: Site Prep → Foundation → Framing → Roofing → Exterior → Plumbing → Electrical → HVAC → Insulation → Drywall → Flooring → Paint → Trim → Landscaping → Cleanup
+Renovation: Demo → Structural → Plumbing → Electrical → HVAC → Framing → Insulation → Drywall → Flooring → Tile → Cabinets → Paint → Fixtures → Cleanup
+Commercial: Site Work → Foundation → Steel/Framing → Roofing → Exterior → MEP → Fire Suppression → Insulation → Drywall → Flooring → Paint → ADA → Specialty → Cleanup
+When adding line items, send them in construction sequence order. The array position sets the sort_order. User can ask to reorder at any time using update_line_items with sort_order.
 
 ## NAV PAGES
 /admin (dashboard), /admin/estimates (list+8-step wizard), /admin/inbox (Gmail email), /admin/customers, /admin/vendors, /admin/employees (8 tabs), /admin/intakes, /admin/cost-library, /admin/templates, /admin/disclaimers, /admin/settings
@@ -1186,6 +1184,7 @@ export async function POST(req: NextRequest) {
           console.error('[ai-chat] Grok error:', grokRes.status, await grokRes.text());
         } else {
           let grokData = await grokRes.json();
+          console.log('[ai-chat] Grok initial response:', grokData.choices?.[0]?.finish_reason, 'tool_calls:', grokData.choices?.[0]?.message?.tool_calls?.length || 0);
 
           // Tool use loop (max 5 rounds)
           let rounds = 0;
@@ -1193,6 +1192,7 @@ export async function POST(req: NextRequest) {
             rounds++;
             const toolCalls = grokData.choices[0].message.tool_calls || [];
             const assistantMsg = grokData.choices[0].message;
+            console.log(`[ai-chat] Grok tool loop round ${rounds}:`, toolCalls.map((tc: any) => tc.function.name).join(', '));
 
             // Add assistant message with tool calls
             apiMessages.push(assistantMsg);
@@ -1200,7 +1200,9 @@ export async function POST(req: NextRequest) {
             // Execute tools and add results
             for (const tc of toolCalls) {
               const args = typeof tc.function.arguments === 'string' ? JSON.parse(tc.function.arguments) : tc.function.arguments;
+              console.log(`[ai-chat] Executing tool: ${tc.function.name}`, JSON.stringify(args).substring(0, 200));
               const { result, action } = await executeTool(tc.function.name, args, supabase);
+              console.log(`[ai-chat] Tool result: ${tc.function.name}`, typeof result === 'string' ? result.substring(0, 150) : 'object');
               if (action) actions.push(action);
               apiMessages.push({
                 role: 'tool',
