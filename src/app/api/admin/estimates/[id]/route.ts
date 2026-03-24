@@ -27,8 +27,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
         .from('estimate_line_items')
         .select('*')
         .eq('estimate_id', id)
-        .order('phase', { ascending: true })
-        .order('sort_order', { ascending: true }),
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true }),
       supabase
         .from('estimate_payment_schedules')
         .select('*')
