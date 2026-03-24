@@ -1061,12 +1061,13 @@ When asked to edit/change/update line items on an existing estimate:
 5. ALWAYS use the item UUID from get_estimate_details — never guess IDs
 6. After changes, show the updated totals
 
-## PHASE TEMPLATES BY TYPE
-New Construction: Site Prep, Foundation, Framing, Roofing, Exterior, Plumbing, Electrical, HVAC, Insulation, Drywall, Flooring, Paint, Trim, Landscaping, Cleanup
-Renovation/Remodel: Demo, Structural, Plumbing, Electrical, HVAC, Framing, Insulation, Drywall, Flooring, Tile, Cabinets, Paint, Fixtures, Cleanup
-Repair: Assessment, Materials, Labor, Cleanup
-Addition: Site Prep, Foundation, Framing, Roofing, Exterior, Plumbing, Electrical, HVAC, Insulation, Drywall, Flooring, Paint, Trim, Transition, Cleanup
-Commercial: Site Work, Foundation, Steel/Framing, Roofing, Exterior, Plumbing, Electrical, HVAC, Fire Suppression, Insulation, Drywall, Flooring, Paint, ADA, Specialty, Cleanup
+## PHASE ORDER (CRITICAL — items MUST be added in this exact sequence)
+New Construction: 1.Site Prep, 2.Foundation, 3.Framing, 4.Roofing, 5.Exterior, 6.Plumbing, 7.Electrical, 8.HVAC, 9.Insulation, 10.Drywall, 11.Flooring, 12.Paint, 13.Trim, 14.Landscaping, 15.Cleanup
+Renovation/Remodel: 1.Demo, 2.Structural, 3.Plumbing, 4.Electrical, 5.HVAC, 6.Framing, 7.Insulation, 8.Drywall, 9.Flooring, 10.Tile, 11.Cabinets, 12.Paint, 13.Fixtures, 14.Cleanup
+Repair: 1.Assessment, 2.Materials, 3.Labor, 4.Cleanup
+Addition: 1.Site Prep, 2.Foundation, 3.Framing, 4.Roofing, 5.Exterior, 6.Plumbing, 7.Electrical, 8.HVAC, 9.Insulation, 10.Drywall, 11.Flooring, 12.Paint, 13.Trim, 14.Transition, 15.Cleanup
+Commercial: 1.Site Work, 2.Foundation, 3.Steel/Framing, 4.Roofing, 5.Exterior, 6.Plumbing, 7.Electrical, 8.HVAC, 9.Fire Suppression, 10.Insulation, 11.Drywall, 12.Flooring, 13.Paint, 14.ADA, 15.Specialty, 16.Cleanup
+ALWAYS send items to add_line_items in the order above. The array position determines display order.
 
 ## NAV PAGES
 /admin (dashboard), /admin/estimates (list+8-step wizard), /admin/inbox (Gmail email), /admin/customers, /admin/vendors, /admin/employees (8 tabs), /admin/intakes, /admin/cost-library, /admin/templates, /admin/disclaimers, /admin/settings
