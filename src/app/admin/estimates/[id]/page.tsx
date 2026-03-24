@@ -212,6 +212,7 @@ export default function EstimateDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [lineItemSort, setLineItemSort] = useState<'order' | 'phase' | 'category' | 'cost'>('order');
   const [disclaimers, setDisclaimers] = useState<Disclaimer[]>([]);
 
   // Modal states
@@ -447,14 +448,20 @@ export default function EstimateDetailPage() {
 
   const lineItemsByPhase = useMemo(() => {
     if (!estimate) return {};
+    const items = [...estimate.line_items];
+    // Sort items based on selected sort mode
+    if (lineItemSort === 'phase') items.sort((a, b) => (a.phase || 'zzz').localeCompare(b.phase || 'zzz'));
+    else if (lineItemSort === 'category') items.sort((a, b) => (a.category || 'zzz').localeCompare(b.category || 'zzz'));
+    else if (lineItemSort === 'cost') items.sort((a, b) => (b.quantity * b.unit_cost) - (a.quantity * a.unit_cost));
+    // 'order' = default sort_order from API (construction sequence)
     const grouped: Record<string, LineItem[]> = {};
-    for (const item of estimate.line_items) {
-      const phase = item.phase || 'Other';
-      if (!grouped[phase]) grouped[phase] = [];
-      grouped[phase].push(item);
+    for (const item of items) {
+      const groupKey = lineItemSort === 'category' ? (item.category || 'Other') : (item.phase || 'Other');
+      if (!grouped[groupKey]) grouped[groupKey] = [];
+      grouped[groupKey].push(item);
     }
     return grouped;
-  }, [estimate]);
+  }, [estimate, lineItemSort]);
 
   const subtotal = useMemo(
     () => estimate?.line_items.reduce((s, i) => s + (i.quantity * i.unit_cost * (1 + (i.markup_percent || 0) / 100)), 0) || 0,
@@ -810,6 +817,17 @@ export default function EstimateDetailPage() {
         {/* LINE ITEMS TAB */}
         {activeTab === 'line-items' && (
           <div className="space-y-4">
+            {estimate.line_items.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] text-white/30 font-medium">Sort by</span>
+                {(['order', 'phase', 'category', 'cost'] as const).map(mode => (
+                  <button key={mode} onClick={() => setLineItemSort(mode)}
+                    className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors border ${lineItemSort === mode ? 'bg-[#C9A84C]/15 text-[#C9A84C] border-[#C9A84C]/30' : 'text-white/30 border-white/5 hover:border-white/10 hover:text-white/50'}`}>
+                    {mode === 'order' ? 'Construction Order' : mode === 'phase' ? 'Phase (A-Z)' : mode === 'category' ? 'Category' : 'Highest Cost'}
+                  </button>
+                ))}
+              </div>
+            )}
             {estimate.line_items.length === 0 ? (
               <EmptyState
                 icon={<Receipt size={40} className="text-white/10" />}
