@@ -173,18 +173,18 @@ const WRITE_TOOLS = [
   },
   {
     name: 'add_line_items',
-    description: 'Add one or more line items to an estimate. Each item has phase, description, category, quantity, unit, unit_cost, and optional markup_percent. Totals are auto-recalculated.',
+    description: 'Add one or more line items to an estimate. Items are auto-numbered by sort_order based on array position. Totals are auto-recalculated.',
     input_schema: {
       type: 'object' as const,
       properties: {
         estimate_id: { type: 'string', description: 'Estimate UUID (required)' },
         items: {
           type: 'array',
-          description: 'Array of line items to add',
+          description: 'Array of line items to add IN ORDER (first item = sort_order 1, etc.)',
           items: {
             type: 'object',
             properties: {
-              phase: { type: 'string', description: 'Phase name (e.g., "Site Prep", "Framing", "Finishing")' },
+              phase: { type: 'string', description: 'Phase name — use standard construction order: Site Prep, Foundation, Framing, Roofing, Exterior, Plumbing, Electrical, HVAC, Insulation, Drywall, Flooring, Paint, Trim, Landscaping, Cleanup' },
               description: { type: 'string', description: 'Line item description (required)' },
               category: { type: 'string', description: 'Category: material, labor, equipment, subcontractor' },
               quantity: { type: 'number', description: 'Quantity (default 1)' },
@@ -196,6 +196,44 @@ const WRITE_TOOLS = [
         },
       },
       required: ['estimate_id', 'items'],
+    },
+  },
+  {
+    name: 'update_line_items',
+    description: 'Update existing line items on an estimate. Pass an array of items with their IDs and fields to change. Use get_estimate_details first to get item IDs.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        estimate_id: { type: 'string', description: 'Estimate UUID (required)' },
+        items: {
+          type: 'array',
+          description: 'Array of items to update (each must have id)',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Line item UUID (required)' },
+              phase: { type: 'string' }, description: { type: 'string' },
+              category: { type: 'string' }, quantity: { type: 'number' },
+              unit: { type: 'string' }, unit_cost: { type: 'number' },
+              markup_percent: { type: 'number' },
+            },
+            required: ['id'],
+          },
+        },
+      },
+      required: ['estimate_id', 'items'],
+    },
+  },
+  {
+    name: 'delete_line_items',
+    description: 'Delete line items from an estimate by their IDs. Use get_estimate_details first to get item IDs. Totals are auto-recalculated.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        estimate_id: { type: 'string', description: 'Estimate UUID (required)' },
+        item_ids: { type: 'array', items: { type: 'string' }, description: 'Array of line item UUIDs to delete (required)' },
+      },
+      required: ['estimate_id', 'item_ids'],
     },
   },
   {
@@ -349,11 +387,11 @@ function selectTools(lastMessage: string): typeof ALL_TOOLS {
   // Write tools — only when action words present
   if (/create|make|build|add|new/i.test(msg)) {
     if (needs.customer) tools.push(...WRITE_TOOLS.filter(t => t.name === 'create_customer'));
-    if (needs.estimate) tools.push(...WRITE_TOOLS.filter(t => t.name === 'create_estimate' || t.name === 'add_line_items'));
+    if (needs.estimate) tools.push(...WRITE_TOOLS.filter(t => ['create_estimate', 'add_line_items'].includes(t.name)));
   }
-  if (/update|change|edit|modify|set/i.test(msg)) {
+  if (/update|change|edit|modify|set|remove|delete|swap|replace|adjust|fix/i.test(msg)) {
     if (needs.customer) tools.push(...WRITE_TOOLS.filter(t => t.name === 'update_customer'));
-    if (needs.estimate) tools.push(...WRITE_TOOLS.filter(t => t.name === 'update_estimate' || t.name === 'update_estimate_status'));
+    if (needs.estimate) tools.push(...WRITE_TOOLS.filter(t => ['update_estimate', 'update_estimate_status', 'update_line_items', 'delete_line_items'].includes(t.name)));
   }
   if (needs.estimate && /send|share|duplicate|copy|check|validate|revise/i.test(msg)) {
     tools.push(...WRITE_TOOLS.filter(t => ['send_estimate', 'generate_share_link', 'duplicate_estimate', 'check_estimate_pricing'].includes(t.name)));
@@ -655,6 +693,15 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (!input.estimate_id) return { result: 'Error: estimate_id is required.' };
       if (!input.items?.length) return { result: 'Error: items array is required and must not be empty.' };
 
+      // Get current max sort_order for this estimate
+      const { data: existingItems } = await supabase
+        .from('estimate_line_items')
+        .select('sort_order')
+        .eq('estimate_id', input.estimate_id)
+        .order('sort_order', { ascending: false })
+        .limit(1);
+      let nextSort = (existingItems?.[0]?.sort_order || 0) + 1;
+
       const results: any[] = [];
       for (const item of input.items) {
         const quantity = item.quantity || 1;
@@ -674,7 +721,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
             unit_cost,
             markup_percent,
             total,
-            sort_order: item.sort_order ?? 0,
+            sort_order: nextSort++,
           })
           .select()
           .single();
@@ -695,7 +742,70 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         await supabase.from('estimates').update({ ...totals, updated_at: new Date().toISOString() }).eq('id', input.estimate_id);
       }
 
-      return { result: `Added ${results.filter(r => !r.error).length} line item(s):\n${JSON.stringify(results, null, 2)}` };
+      return { result: `Added ${results.filter(r => !r.error).length} line item(s) (sorted ${nextSort - input.items.length} to ${nextSort - 1}):\n${JSON.stringify(results, null, 2)}` };
+    }
+
+    case 'update_line_items': {
+      if (!input.estimate_id) return { result: 'Error: estimate_id is required.' };
+      if (!input.items?.length) return { result: 'Error: items array is required.' };
+
+      const updateResults: any[] = [];
+      for (const item of input.items) {
+        if (!item.id) { updateResults.push({ error: 'Missing id', item }); continue; }
+        const updates: Record<string, any> = {};
+        if (item.phase !== undefined) updates.phase = item.phase;
+        if (item.description !== undefined) updates.description = item.description;
+        if (item.category !== undefined) updates.category = item.category;
+        if (item.quantity !== undefined) updates.quantity = item.quantity;
+        if (item.unit !== undefined) updates.unit = item.unit;
+        if (item.unit_cost !== undefined) updates.unit_cost = item.unit_cost;
+        if (item.markup_percent !== undefined) updates.markup_percent = item.markup_percent;
+        // Recalc total
+        const q = updates.quantity ?? item.quantity;
+        const uc = updates.unit_cost ?? item.unit_cost;
+        const mp = updates.markup_percent ?? item.markup_percent ?? 0;
+        if (q !== undefined && uc !== undefined) updates.total = q * uc * (1 + mp / 100);
+
+        const { data, error } = await supabase.from('estimate_line_items').update(updates).eq('id', item.id).eq('estimate_id', input.estimate_id).select().single();
+        updateResults.push(error ? { error: error.message, id: item.id } : data);
+      }
+
+      // Recalculate estimate totals
+      const [{ data: est2 }, { data: allItems2 }] = await Promise.all([
+        supabase.from('estimates').select('*').eq('id', input.estimate_id).single(),
+        supabase.from('estimate_line_items').select('*').eq('estimate_id', input.estimate_id),
+      ]);
+      if (est2) {
+        const totals = recalcEstimateTotals(allItems2 || [], est2);
+        await supabase.from('estimates').update({ ...totals, updated_at: new Date().toISOString() }).eq('id', input.estimate_id);
+      }
+
+      return { result: `Updated ${updateResults.filter(r => !r.error).length} line item(s):\n${JSON.stringify(updateResults, null, 2)}` };
+    }
+
+    case 'delete_line_items': {
+      if (!input.estimate_id) return { result: 'Error: estimate_id is required.' };
+      if (!input.item_ids?.length) return { result: 'Error: item_ids array is required.' };
+
+      const { error: delErr, count } = await supabase
+        .from('estimate_line_items')
+        .delete()
+        .in('id', input.item_ids)
+        .eq('estimate_id', input.estimate_id);
+
+      if (delErr) return { result: `Error deleting: ${delErr.message}` };
+
+      // Recalculate estimate totals
+      const [{ data: est3 }, { data: allItems3 }] = await Promise.all([
+        supabase.from('estimates').select('*').eq('id', input.estimate_id).single(),
+        supabase.from('estimate_line_items').select('*').eq('estimate_id', input.estimate_id),
+      ]);
+      if (est3) {
+        const totals = recalcEstimateTotals(allItems3 || [], est3);
+        await supabase.from('estimates').update({ ...totals, updated_at: new Date().toISOString() }).eq('id', input.estimate_id);
+      }
+
+      return { result: `Deleted ${count || input.item_ids.length} line item(s). Totals recalculated.` };
     }
 
     case 'update_estimate_status': {
