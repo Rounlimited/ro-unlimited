@@ -200,7 +200,7 @@ const WRITE_TOOLS = [
   },
   {
     name: 'update_line_items',
-    description: 'Update existing line items on an estimate. Pass an array of items with their IDs and fields to change. Use get_estimate_details first to get item IDs.',
+    description: 'Update existing line items on an estimate. Can change any field: phase, description, quantity, unit, unit_cost, markup_percent, sort_order, category. Use get_estimate_details first to get item IDs. Totals auto-recalculate.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -212,9 +212,13 @@ const WRITE_TOOLS = [
             type: 'object',
             properties: {
               id: { type: 'string', description: 'Line item UUID (required)' },
-              phase: { type: 'string' }, description: { type: 'string' },
-              category: { type: 'string' }, quantity: { type: 'number' },
-              unit: { type: 'string' }, unit_cost: { type: 'number' },
+              phase: { type: 'string', description: 'Phase name' },
+              description: { type: 'string', description: 'Item description' },
+              category: { type: 'string', description: 'material, labor, equipment, subcontractor' },
+              quantity: { type: 'number', description: 'Quantity' },
+              unit: { type: 'string', description: 'Unit of measure' },
+              unit_cost: { type: 'number', description: 'Cost per unit' },
+              sort_order: { type: 'number', description: 'Display order (lower = first)' },
               markup_percent: { type: 'number' },
             },
             required: ['id'],
@@ -351,11 +355,14 @@ const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
 // ── Smart tool selection based on user message ──
 // Only send tools relevant to the user's intent to save ~3000 tokens/request
-function selectTools(lastMessage: string): typeof ALL_TOOLS {
+function selectTools(lastMessage: string, messageCount?: number): typeof ALL_TOOLS {
   const msg = lastMessage.toLowerCase();
 
-  // Simple greetings, questions, or chit-chat — no tools needed
-  if (/^(hi|hey|hello|thanks|thank you|ok|okay|got it|sure|yes|no|what|how|why|who|when|where)\b/.test(msg) && msg.length < 80 && !/search|find|look|create|make|build|send|update|change|delete|add|estimate|customer|vendor|employee|email|navigate|go to|open|show/i.test(msg)) {
+  // If conversation has history (>2 messages), always send tools — user is in a workflow
+  if (messageCount && messageCount > 2) return ALL_TOOLS;
+
+  // Simple greetings on FIRST message only — no tools needed
+  if (/^(hi|hey|hello|thanks|thank you)\b/.test(msg) && msg.length < 40) {
     return [];
   }
 
@@ -760,6 +767,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         if (item.unit !== undefined) updates.unit = item.unit;
         if (item.unit_cost !== undefined) updates.unit_cost = item.unit_cost;
         if (item.markup_percent !== undefined) updates.markup_percent = item.markup_percent;
+        if (item.sort_order !== undefined) updates.sort_order = item.sort_order;
         // Recalc total
         const q = updates.quantity ?? item.quantity;
         const uc = updates.unit_cost ?? item.unit_cost;
@@ -1134,7 +1142,7 @@ export async function POST(req: NextRequest) {
 
     // Smart tool selection — only send tools relevant to the user's message
     const lastUserMsg = messages.filter((m: any) => m.role === 'user').pop()?.content || '';
-    const selectedTools = selectTools(typeof lastUserMsg === 'string' ? lastUserMsg : JSON.stringify(lastUserMsg));
+    const selectedTools = selectTools(typeof lastUserMsg === 'string' ? lastUserMsg : JSON.stringify(lastUserMsg), messages.length);
 
     // Convert tools to OpenAI function-calling format (for Grok)
     const openaiTools = (tools: typeof ALL_TOOLS) => tools.map(t => ({
