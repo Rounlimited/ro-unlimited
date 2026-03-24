@@ -309,9 +309,67 @@ const WRITE_TOOLS = [
   },
 ];
 
-// All tools sent directly (Haiku doesn't support deferred tool loading)
-// Prompt caching handles the cost — tools are cached along with system prompt
-const TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
+const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
+
+// ── Smart tool selection based on user message ──
+// Only send tools relevant to the user's intent to save ~3000 tokens/request
+function selectTools(lastMessage: string): typeof ALL_TOOLS {
+  const msg = lastMessage.toLowerCase();
+
+  // Simple greetings, questions, or chit-chat — no tools needed
+  if (/^(hi|hey|hello|thanks|thank you|ok|okay|got it|sure|yes|no|what|how|why|who|when|where)\b/.test(msg) && msg.length < 80 && !/search|find|look|create|make|build|send|update|change|delete|add|estimate|customer|vendor|employee|email|navigate|go to|open|show/i.test(msg)) {
+    return [];
+  }
+
+  const tools: typeof ALL_TOOLS = [];
+  const needs = {
+    search: /search|find|look|check|show me|list|get|pull up|who|how many/i.test(msg),
+    estimate: /estimate|proposal|quote|bid|contract|change order|line item|pricing|price|cost|phase|markup|overhead/i.test(msg),
+    customer: /customer|client|contact|homeowner|property owner/i.test(msg),
+    employee: /employee|worker|staff|crew|team/i.test(msg),
+    vendor: /vendor|supplier|sub|subcontractor/i.test(msg),
+    email: /email|send|compose|mail|message/i.test(msg),
+    navigate: /go to|open|navigate|take me|show me.*page|switch to/i.test(msg),
+    memory: /remember|forget|memory|save.*note/i.test(msg),
+    web: /search.*web|google|look.*up|current.*price|what.*cost|code.*require/i.test(msg),
+  };
+
+  // Always include these lightweight tools
+  if (needs.memory) { tools.push(...READ_TOOLS.filter(t => t.name === 'save_memory' || t.name === 'forget_memory')); }
+  if (needs.web) { tools.push(...READ_TOOLS.filter(t => t.name === 'web_search')); }
+  if (needs.navigate) { tools.push(...WRITE_TOOLS.filter(t => t.name === 'navigate')); }
+
+  // Search tools
+  if (needs.search || needs.customer) tools.push(...READ_TOOLS.filter(t => t.name === 'search_customers'));
+  if (needs.search || needs.estimate) tools.push(...READ_TOOLS.filter(t => t.name === 'search_estimates' || t.name === 'get_estimate_details' || t.name === 'search_cost_library'));
+  if (needs.search || needs.employee) tools.push(...READ_TOOLS.filter(t => t.name === 'search_employees'));
+  if (needs.search || needs.vendor) tools.push(...READ_TOOLS.filter(t => t.name === 'search_vendors'));
+  if (needs.search) tools.push(...READ_TOOLS.filter(t => t.name === 'get_activity_log'));
+
+  // Write tools — only when action words present
+  if (/create|make|build|add|new/i.test(msg)) {
+    if (needs.customer) tools.push(...WRITE_TOOLS.filter(t => t.name === 'create_customer'));
+    if (needs.estimate) tools.push(...WRITE_TOOLS.filter(t => t.name === 'create_estimate' || t.name === 'add_line_items'));
+  }
+  if (/update|change|edit|modify|set/i.test(msg)) {
+    if (needs.customer) tools.push(...WRITE_TOOLS.filter(t => t.name === 'update_customer'));
+    if (needs.estimate) tools.push(...WRITE_TOOLS.filter(t => t.name === 'update_estimate' || t.name === 'update_estimate_status'));
+  }
+  if (needs.estimate && /send|share|duplicate|copy|check|validate|revise/i.test(msg)) {
+    tools.push(...WRITE_TOOLS.filter(t => ['send_estimate', 'generate_share_link', 'duplicate_estimate', 'check_estimate_pricing'].includes(t.name)));
+  }
+  if (needs.email) tools.push(...WRITE_TOOLS.filter(t => t.name === 'compose_email'));
+  if (needs.estimate && /template|disclaimer/i.test(msg)) {
+    tools.push(...WRITE_TOOLS.filter(t => t.name === 'search_templates' || t.name === 'search_disclaimers'));
+  }
+
+  // If nothing matched but message is complex, send all (safety net)
+  if (tools.length === 0 && msg.length > 80) return ALL_TOOLS;
+
+  // Deduplicate
+  const seen = new Set<string>();
+  return tools.filter(t => { if (seen.has(t.name)) return false; seen.add(t.name); return true; });
+}
 
 // ═══════════════════════════════════════════
 // TOOL EXECUTION
@@ -975,6 +1033,10 @@ export async function POST(req: NextRequest) {
           systemBlocks.push({ type: 'text', text: dynamicContext });
         }
 
+        // Smart tool selection — only send tools relevant to the user's message
+        const lastUserMsg = messages.filter((m: any) => m.role === 'user').pop()?.content || '';
+        const selectedTools = selectTools(typeof lastUserMsg === 'string' ? lastUserMsg : JSON.stringify(lastUserMsg));
+
         let claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'x-api-key': claudeKey!, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
@@ -983,7 +1045,7 @@ export async function POST(req: NextRequest) {
             max_tokens: 4000,
             system: systemBlocks,
             messages: apiMessages,
-            tools: TOOLS,
+            ...(selectedTools.length > 0 ? { tools: selectedTools } : {}),
           }),
         });
 
@@ -1011,7 +1073,8 @@ export async function POST(req: NextRequest) {
               });
             }
 
-            // Continue conversation with tool results (same caching + deferred tools)
+            // Continue conversation with tool results — send ALL tools in loop
+            // (model may need different tools after seeing results)
             claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
               method: 'POST',
               headers: { 'x-api-key': claudeKey!, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
@@ -1024,7 +1087,7 @@ export async function POST(req: NextRequest) {
                   { role: 'assistant', content: assistantContent },
                   { role: 'user', content: toolResults },
                 ],
-                tools: TOOLS,
+                tools: ALL_TOOLS,
               }),
             });
 
