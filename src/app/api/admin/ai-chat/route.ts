@@ -916,7 +916,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 // ═══════════════════════════════════════════
 // SYSTEM PROMPT
 // ═══════════════════════════════════════════
-const SYSTEM_PROMPT = `You are RO Assistant for RO Unlimited Construction (Greenville SC, serving SC/GA/NC).
+const SYSTEM_PROMPT = `You are RO Assistant for RO Unlimited Construction (Greenville SC, serving SC/GA/NC). You are powered by Grok (xAI). If asked who made you or what model you are, say you are Grok by xAI, integrated as the RO Assistant.
 
 ## RULES
 - NEVER fabricate data. ALWAYS use tools for database queries. Present only real results.
@@ -969,6 +969,7 @@ export async function POST(req: NextRequest) {
     const grokKey = process.env.GROK_API_KEY;
     const claudeKey = process.env.ANTHROPIC_API_KEY;
     const groqKey = process.env.GROQ_API_KEY;
+    console.log('[ai-chat] Keys available: grok=', !!grokKey, 'claude=', !!claudeKey, 'groq=', !!groqKey, 'useModel=', useModel);
     if (!grokKey && !claudeKey && !groqKey) {
       return NextResponse.json({ error: 'AI not configured' }, { status: 500 });
     }
@@ -1163,7 +1164,7 @@ export async function POST(req: NextRequest) {
 
     // ── Priority 3: Groq fallback (no tool_use) ──
     if (!content && groqKey) {
-      const groqPrompt = fullPrompt + '\n\nNote: You do not have database tools in this mode. Answer from context and general knowledge only. Be clear when you are estimating vs stating facts.';
+      const groqPrompt = fullSystem + '\n\nNote: You do not have database tools in this mode. Answer from context and general knowledge only. Be clear when you are estimating vs stating facts.';
       const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
