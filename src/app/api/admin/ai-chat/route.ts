@@ -916,7 +916,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 // ═══════════════════════════════════════════
 // SYSTEM PROMPT
 // ═══════════════════════════════════════════
-const SYSTEM_PROMPT = `You are RO Assistant for RO Unlimited Construction (Greenville SC, serving SC/GA/NC). You are powered by Grok (xAI). If asked who made you or what model you are, say you are Grok by xAI, integrated as the RO Assistant.
+const SYSTEM_PROMPT = `You are RO Assistant for RO Unlimited Construction (Greenville SC, serving SC/GA/NC). If asked who you are, say you are RO Assistant. Do not claim to be made by any specific AI company.
 
 ## RULES
 - NEVER fabricate data. ALWAYS use tools for database queries. Present only real results.
@@ -1019,6 +1019,7 @@ export async function POST(req: NextRequest) {
     const dynamicContext = contextParts.length ? '\n' + contextParts.join('\n') : '';
     const fullSystem = SYSTEM_PROMPT + dynamicContext;
     let content = '';
+    let usedModel = '';
     const actions: { type: string; path: string; description: string }[] = [];
 
     // Smart tool selection — only send tools relevant to the user's message
@@ -1100,6 +1101,7 @@ export async function POST(req: NextRequest) {
           }
 
           content = grokData.choices?.[0]?.message?.content || '';
+          usedModel = 'grok-4-1-fast';
         }
       } catch (err) {
         console.error('[ai-chat] Grok failed:', err);
@@ -1156,6 +1158,7 @@ export async function POST(req: NextRequest) {
           }
           const textBlocks = claudeData.content?.filter((b: any) => b.type === 'text') || [];
           content = textBlocks.map((b: any) => b.text).join('\n');
+          usedModel = 'claude-haiku-4.5';
         }
       } catch (err) {
         console.error('[ai-chat] Claude failed:', err);
@@ -1182,6 +1185,7 @@ export async function POST(req: NextRequest) {
       }
       const d = await groqRes.json();
       content = d.choices?.[0]?.message?.content || '';
+          usedModel = 'groq-llama-3.3';
     }
 
     if (!content) return NextResponse.json({ error: 'No AI service available' }, { status: 502 });
@@ -1189,6 +1193,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       role: 'assistant',
       content,
+      model: usedModel,
       ...(actions.length > 0 ? { actions } : {}),
     });
   } catch (err: any) {

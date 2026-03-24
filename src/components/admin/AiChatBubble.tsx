@@ -244,7 +244,8 @@ export default function AiChatBubble() {
       });
 
       const data = await res.json();
-      const reply: Message = { role: 'assistant', content: data.content || data.error || 'Sorry, something went wrong.' };
+      const modelTag = data.model ? `\n\n---\n*Powered by ${data.model}*` : '';
+      const reply: Message = { role: 'assistant', content: (data.content || data.error || 'Sorry, something went wrong.') + modelTag };
       const finalMessages = [...newMessages, reply];
       setMessages(finalMessages);
       if (displayMode === 'minimized' || !open) setUnread(prev => prev + 1);
