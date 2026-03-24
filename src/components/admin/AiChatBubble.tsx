@@ -244,8 +244,7 @@ export default function AiChatBubble() {
       });
 
       const data = await res.json();
-      const modelTag = data.model ? `\n\n---\n*Powered by ${data.model}*` : '';
-      const reply: Message = { role: 'assistant', content: (data.content || data.error || 'Sorry, something went wrong.') + modelTag };
+      const reply: Message = { role: 'assistant', content: data.content || data.error || 'Sorry, something went wrong.' };
       const finalMessages = [...newMessages, reply];
       setMessages(finalMessages);
       if (displayMode === 'minimized' || !open) setUnread(prev => prev + 1);
@@ -300,14 +299,44 @@ export default function AiChatBubble() {
 
   // Markdown rendering
   const renderContent = (text: string) => {
-    return text.split('\n').map((line, i) => {
-      let processed = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      if (processed.startsWith('- ') || processed.startsWith('* ')) {
-        processed = `<span style="color:#C9A84C;margin-right:4px">&#8226;</span>${processed.slice(2)}`;
-        return <div key={i} className="flex items-start gap-0 pl-2 py-0.5" dangerouslySetInnerHTML={{ __html: processed }} />;
+    // Strip code fences
+    let cleaned = text.replace(/```[\s\S]*?```/g, (m) => {
+      const inner = m.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
+      return inner.split('\n').map(l => `<div style="font-family:monospace;font-size:12px;color:#8ab88a;background:#111;padding:2px 8px;border-radius:4px;margin:1px 0">${l}</div>`).join('');
+    });
+    // Strip the "Powered by" model tag
+    cleaned = cleaned.replace(/\n*---\n\*Powered by [^*]+\*/, '');
+
+    return cleaned.split('\n').map((line, i) => {
+      let p = line;
+      // Bold
+      p = p.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      // Inline code
+      p = p.replace(/`([^`]+)`/g, '<code style="background:#1a1a1a;padding:1px 5px;border-radius:3px;font-size:12px;color:#C9A84C">$1</code>');
+      // Links [text](url)
+      p = p.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#C9A84C;text-decoration:underline">$1</a>');
+      // Headings
+      if (p.startsWith('### ')) return <div key={i} style={{ fontSize: 14, fontWeight: 700, color: '#C9A84C', marginTop: 8, marginBottom: 4 }}><span dangerouslySetInnerHTML={{ __html: p.slice(4) }} /></div>;
+      if (p.startsWith('## ')) return <div key={i} style={{ fontSize: 15, fontWeight: 700, color: '#C9A84C', marginTop: 8, marginBottom: 4 }}><span dangerouslySetInnerHTML={{ __html: p.slice(3) }} /></div>;
+      if (p.startsWith('# ')) return <div key={i} style={{ fontSize: 16, fontWeight: 700, color: '#C9A84C', marginTop: 8, marginBottom: 4 }}><span dangerouslySetInnerHTML={{ __html: p.slice(2) }} /></div>;
+      // Horizontal rule
+      if (/^---+$/.test(p.trim())) return <hr key={i} style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', margin: '8px 0' }} />;
+      // Numbered list
+      if (/^\d+\.\s/.test(p)) {
+        const content = p.replace(/^\d+\.\s/, '');
+        return <div key={i} className="flex items-start gap-0 pl-2 py-0.5"><span style={{ color: '#C9A84C', marginRight: 6, fontWeight: 600 }}>{p.match(/^\d+/)?.[0]}.</span><span dangerouslySetInnerHTML={{ __html: content }} /></div>;
       }
-      if (!processed.trim()) return <div key={i} className="h-2" />;
-      return <div key={i} className="py-0.5" dangerouslySetInnerHTML={{ __html: processed }} />;
+      // Bullet list
+      if (p.startsWith('- ') || p.startsWith('* ') || p.startsWith('• ')) {
+        const content = p.replace(/^[-*•]\s/, '');
+        return <div key={i} className="flex items-start gap-0 pl-2 py-0.5"><span style={{ color: '#C9A84C', marginRight: 4 }}>&#8226;</span><span dangerouslySetInnerHTML={{ __html: content }} /></div>;
+      }
+      // Blockquote
+      if (p.startsWith('> ')) return <div key={i} style={{ borderLeft: '3px solid #C9A84C33', paddingLeft: 12, color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', margin: '4px 0' }} dangerouslySetInnerHTML={{ __html: p.slice(2) }} />;
+      // Empty line
+      if (!p.trim()) return <div key={i} className="h-2" />;
+      // Normal text
+      return <div key={i} className="py-0.5" dangerouslySetInnerHTML={{ __html: p }} />;
     });
   };
 
