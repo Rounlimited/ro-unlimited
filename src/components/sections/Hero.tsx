@@ -334,10 +334,10 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
                 We Build
               </span>
               <span ref={line2Ref} className="block gradient-text-gold font-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.9] mb-4">
-                Everything
+                Commercial
               </span>
               <span ref={line3Ref} className="block text-ro-white font-heading text-3xl sm:text-4xl md:text-5xl tracking-wider uppercase leading-[0.9]">
-                From the Ground Up
+                From Pad to CO
               </span>
             </h1>
 
@@ -347,8 +347,8 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
             />
 
             {/* Description */}
-            <p ref={descRef} className="max-w-2xl mx-auto text-ro-gray-400 text-lg sm:text-xl font-body leading-relaxed mb-12">
-              Commercial. Residential. Land grading to luxury finishes. One company that shows up, builds right, and stands behind every job.
+            <p ref={descRef} className="max-w-2xl mx-auto text-ro-gray-400 text-lg sm:text-xl font-body leading-relaxed mb-12 px-1">
+              Commercial construction specialists — QSR, retail, banks, industrial, ground-up. We also build luxury residential, but commercial is where our depth shows: hoods, life safety, shell, and site work across GA, SC, and NC.
             </p>
 
             {/* CTAs */}
@@ -370,7 +370,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
                     <div className="text-ro-gold font-heading text-3xl sm:text-4xl mb-1">
                       <CountUp end={num} suffix={suffix} duration={2} />
                     </div>
-                    <div className="text-ro-gray-500 text-xs tracking-wider uppercase font-body">{stat.label}</div>
+                    <div className="text-ro-gray-500 text-[11px] sm:text-xs tracking-wider uppercase font-body leading-snug px-1">{stat.label}</div>
                   </div>
                 );
               })}

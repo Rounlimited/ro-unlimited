@@ -109,7 +109,7 @@ export default function Navbar() {
             const isActive = pathname === link.href;
             return (
               <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)}
-                className={`block px-4 py-3 text-sm tracking-wider uppercase font-body border-l-2 transition-all duration-300 ${isActive ? 'border-ro-gold text-ro-gold bg-ro-gold/5' : 'border-transparent text-ro-gray-400 hover:border-ro-gold/30 hover:text-ro-white'}`}>
+                className={`block px-4 py-3 text-base tracking-wider uppercase font-body border-l-2 transition-all duration-300 ${isActive ? 'border-ro-gold text-ro-gold bg-ro-gold/5' : 'border-transparent text-ro-gray-400 hover:border-ro-gold/30 hover:text-ro-white'}`}>
                 {link.label}
               </Link>
             );

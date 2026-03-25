@@ -59,9 +59,80 @@ export const FOOTER_COMPANY_LINKS = [
   { label: 'About', href: '/our-story' },
 ] as const;
 
+/** Homepage hero trust strip — commercial-first framing */
 export const TRUST_STATS = [
-  { value: '25+', label: 'Years Experience' },
-  { value: '500+', label: 'Projects Completed' },
-  { value: '100%', label: 'Client Satisfaction' },
-  { value: '3', label: 'State Service Area' },
+  { value: '25+', label: 'Years in Business' },
+  { value: '500+', label: 'Projects Delivered' },
+  { value: '3', label: 'States Licensed' },
+  { value: '100%', label: 'We Stand Behind It' },
 ] as const;
+
+/**
+ * Homepage “division” cards — commercial project types (pivot).
+ * Same shape as DIVISIONS for DivisionCards; links go to commercial or capabilities anchors.
+ */
+export const COMMERCIAL_HOME_CARDS = [
+  {
+    id: 'qsr',
+    name: 'QSR & Franchise',
+    shortName: 'QSR & Franchise',
+    href: '/capabilities#kitchen',
+    description: 'Restaurants, drive-thrus, fast casual — hood systems, grease traps, brand-driven schedules.',
+    services: ['Type I & II hoods', 'Drive-thru lanes', 'Franchise timelines'],
+    icon: 'utensils',
+    targetAudience: 'Franchise development, owner-operators, brand GCs',
+  },
+  {
+    id: 'retail',
+    name: 'Retail & Strip',
+    shortName: 'Retail & Strip',
+    href: '/commercial',
+    description: 'Strip malls, retail pads, mixed-use shells — site to storefront with commercial occupancy in mind.',
+    services: ['Shell & tenant buildout', 'Parking & ADA', 'Pad development'],
+    icon: 'store',
+    targetAudience: 'Developers, retail owners, RE investors',
+  },
+  {
+    id: 'bank',
+    name: 'Bank & Financial',
+    shortName: 'Banks',
+    href: '/commercial',
+    description: 'Branch and financial builds — security, vault coordination, ADA, and clean professional delivery.',
+    services: ['Vault & secure areas', 'ADA compliance', 'MEP coordination'],
+    icon: 'landmark',
+    targetAudience: 'Financial institutions, developers',
+  },
+  {
+    id: 'renovation',
+    name: 'Renovation & Buildout',
+    shortName: 'Renovation',
+    href: '/commercial',
+    description: 'Tenant improvements and repositioning — working buildings stay working while we execute.',
+    services: ['Tenant buildouts', 'Core & shell', 'Phased work'],
+    icon: 'hammer',
+    targetAudience: 'Landlords, tenants, GCs',
+  },
+  {
+    id: 'industrial',
+    name: 'Industrial & Warehouse',
+    shortName: 'Industrial',
+    href: '/commercial',
+    description: 'Metal buildings, warehousing, and light industrial — foundations through envelope.',
+    services: ['Metal buildings', 'Slabs & docks', 'Site utilities'],
+    icon: 'warehouse',
+    targetAudience: 'Owners, developers, logistics',
+  },
+  {
+    id: 'groundup',
+    name: 'Ground-Up Commercial',
+    shortName: 'Ground-Up',
+    href: '/commercial',
+    description: 'Full-scope commercial development from graded pad to certificate of occupancy.',
+    services: ['Steel & shell', 'Site development', 'CO coordination'],
+    icon: 'building',
+    targetAudience: 'Developers, institutional clients',
+  },
+] as const;
+
+/** Shared shape for homepage division / commercial-type cards (DivisionCards). */
+export type DivisionCardEntry = (typeof DIVISIONS)[number] | (typeof COMMERCIAL_HOME_CARDS)[number];

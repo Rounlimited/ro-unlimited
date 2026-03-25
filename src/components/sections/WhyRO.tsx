@@ -1,15 +1,15 @@
 'use client';
 
 import { useRef } from 'react';
-import { Shield, Clock, Wrench, Award } from 'lucide-react';
+import { Shield, Layers, Flame, MapPin } from 'lucide-react';
 import { gsap, ScrollTrigger, SplitText, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
 
 const REASONS = [
-  { icon: Shield, title: '25+ Years Showing Up', description: 'Two generations of earning trust across three states. Not because of marketing — because the work speaks for itself.' },
-  { icon: Wrench, title: 'One Company. Ground Up.', description: 'Land grading, foundation, structural, finishes — we don\'t hand your project off to someone else.' },
-  { icon: Clock, title: 'Built to Last', description: "Clients call us 20 years later because the work held up. That's the kind of builder you want." },
-  { icon: Award, title: 'We Take the Hard Jobs', description: "Difficult sites, tight timelines, complex specs — we've built through all of it and came out the other side." },
+  { icon: Layers, title: 'Full-scope commercial', description: 'Grading through certificate of occupancy — one accountable team. Developers and GCs get a partner who can carry the full job, not a parade of disconnected subs.' },
+  { icon: Flame, title: 'Restaurant & kitchen systems', description: 'Type I/II hoods, grease interceptors, commercial gas, and make-up air. We speak QSR, fast-casual, and brand-driven schedules.' },
+  { icon: Shield, title: 'Life safety & occupancy', description: 'Fire suppression coordination, ADA paths, MEP rough-in, and CO pressure — experience across South Carolina, North Carolina, and Georgia.' },
+  { icon: MapPin, title: 'Fast-track & tri-state', description: 'Franchise timelines and multi-site programs demand a builder who already knows local inspectors, soils, and suppliers in your footprint.' },
 ];
 
 /**
@@ -288,7 +288,7 @@ export default function WhyRO() {
             ref={badgeRef}
             className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-4 block"
           >
-            Why RO Unlimited
+            Why commercial clients choose RO
           </span>
 
           {/* Title with scaffolding overlay */}
@@ -310,7 +310,7 @@ export default function WhyRO() {
               ref={titleRef}
               className="relative text-ro-white font-heading text-4xl sm:text-5xl md:text-6xl tracking-tight uppercase leading-[1.1]"
             >
-              Built <span className="text-ro-gold">Different</span>
+              Built For <span className="text-ro-gold">Commercial</span>
             </h2>
           </div>
 
@@ -355,12 +355,12 @@ export default function WhyRO() {
                 </div>
 
                 {/* Title */}
-                <h3 className="reason-title text-ro-white font-heading text-sm sm:text-base lg:text-lg tracking-wider uppercase mb-2">
+                <h3 className="reason-title text-ro-white font-heading text-base sm:text-base lg:text-lg tracking-wider uppercase mb-2">
                   {reason.title}
                 </h3>
 
                 {/* Description */}
-                <p className="reason-desc text-ro-gray-500 text-xs sm:text-sm leading-relaxed">
+                <p className="reason-desc text-ro-gray-500 text-sm sm:text-base leading-relaxed">
                   {reason.description}
                 </p>
 

@@ -4,6 +4,7 @@ import WhyRO from '@/components/sections/WhyRO';
 import ConstructionCTA from '@/components/sections/ConstructionCTA';
 import SectionTransition from '@/components/animations/SectionTransition';
 import { getHeroVideo } from '@/lib/sanity/queries';
+import { COMMERCIAL_HOME_CARDS } from '@/lib/constants';
 
 export const revalidate = 60;
 
@@ -35,7 +36,13 @@ export default async function HomePage() {
 
       <Hero heroVideoUrl={heroVideoUrl} />
       <SectionTransition label="FLOOR 01" sparks />
-      <DivisionCards />
+      <DivisionCards
+        items={COMMERCIAL_HOME_CARDS}
+        eyebrow="Commercial project types"
+        titleBeforeGold="The work we"
+        titleGold="Go after"
+        exploreLabel="Explore"
+      />
       <SectionTransition label="FLOOR 02" sparks />
       <WhyRO />
       <SectionTransition label="FLOOR 03" sparks />

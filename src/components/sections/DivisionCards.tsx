@@ -2,8 +2,8 @@
 
 import { useRef } from 'react';
 import Link from 'next/link';
-import { DIVISIONS } from '@/lib/constants';
-import { ArrowRight, Home, Building2, Mountain, HardHat } from 'lucide-react';
+import { DIVISIONS, type DivisionCardEntry } from '@/lib/constants';
+import { ArrowRight, Home, Building2, Mountain, HardHat, UtensilsCrossed, Store, Landmark, Hammer, Warehouse } from 'lucide-react';
 import { gsap, ScrollTrigger, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
 
@@ -13,6 +13,11 @@ const ICONS: Record<string, any> = {
   building: Building2,
   mountain: Mountain,
   hardhat: HardHat,
+  utensils: UtensilsCrossed,
+  store: Store,
+  landmark: Landmark,
+  hammer: Hammer,
+  warehouse: Warehouse,
 };
 
 /**
@@ -21,7 +26,24 @@ const ICONS: Record<string, any> = {
  * Desktop layout: 2-column grid on lg+, max-w-5xl stage.
  * Mobile layout: single column accordion (unchanged).
  */
-export default function DivisionCards() {
+type DivisionCardsProps = {
+  /** Defaults to legacy four divisions; homepage passes commercial project types. */
+  items?: readonly DivisionCardEntry[];
+  eyebrow?: string;
+  titleBeforeGold?: string;
+  titleGold?: string;
+  exploreLabel?: string;
+};
+
+export default function DivisionCards({
+  items,
+  eyebrow = 'Our Divisions',
+  titleBeforeGold = 'Built to Handle',
+  titleGold = 'Any Project',
+  exploreLabel = 'Explore Division',
+}: DivisionCardsProps) {
+  const cards: readonly DivisionCardEntry[] = items ?? DIVISIONS;
+  const tallStack = cards.length > 4;
   const sectionRef  = useRef<HTMLDivElement>(null);
   const stageRef    = useRef<HTMLDivElement>(null);
   const cardRefs    = useRef<(HTMLDivElement | null)[]>([]);
@@ -185,7 +207,7 @@ export default function DivisionCards() {
   }, { scope: sectionRef });
 
   return (
-    <div ref={spacerRef} className="relative z-[30] [height:220vh] lg:[height:400vh]">
+    <div ref={spacerRef} className={tallStack ? 'relative z-[30] [height:330vh] lg:[height:600vh]' : 'relative z-[30] [height:220vh] lg:[height:400vh]'}>
       <section
         ref={sectionRef}
         className="sticky top-0 h-screen overflow-hidden bg-ro-black"
@@ -198,11 +220,11 @@ export default function DivisionCards() {
         <div className="relative z-10 flex flex-col h-screen px-4 sm:px-6 lg:px-8">
           {/* Section Header */}
           <div className="pt-12 sm:pt-16 lg:pt-20 pb-4 sm:pb-6 text-center flex-shrink-0">
-            <span className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-3 block">
-              Our Divisions
+            <span className="text-ro-gold text-[11px] sm:text-xs font-mono tracking-[0.3em] uppercase mb-3 block">
+              {eyebrow}
             </span>
             <h2 className="text-ro-white font-heading text-2xl sm:text-3xl md:text-5xl tracking-tight uppercase mb-3">
-              Built to Handle <span className="gradient-text-gold">Any Project</span>
+              {titleBeforeGold} <span className="gradient-text-gold">{titleGold}</span>
             </h2>
             <div className="mx-auto w-20 h-[2px] bg-ro-gold"
               style={{ boxShadow: '0 0 8px rgba(201,168,76,0.4)' }}
@@ -212,7 +234,7 @@ export default function DivisionCards() {
           {/* Card Stage — single col on mobile, 2-col grid on desktop */}
           <div ref={stageRef} className="relative flex-1 max-w-2xl lg:max-w-5xl mx-auto w-full">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 lg:pt-2">
-              {DIVISIONS.map((division, index) => {
+              {cards.map((division, index) => {
                 const Icon = ICONS[division.icon] || Building2;
                 return (
                   <div
@@ -246,7 +268,7 @@ export default function DivisionCards() {
                           <div className="division-icon w-8 h-8 sm:w-10 sm:h-10 border border-ro-gold/30 flex items-center justify-center text-ro-gold flex-shrink-0">
                             <Icon size={18} className="sm:w-[22px] sm:h-[22px]" />
                           </div>
-                          <h3 className="division-name text-ro-white font-heading text-lg sm:text-xl lg:text-2xl tracking-wider uppercase">
+                          <h3 className="division-name text-ro-white font-heading text-xl sm:text-xl lg:text-2xl tracking-wider uppercase">
                             {division.name}
                           </h3>
                         </div>
@@ -254,24 +276,24 @@ export default function DivisionCards() {
                         {/* Card Body — collapses on scroll */}
                         <div className="card-body overflow-hidden">
                           <div className="card-body-inner pt-3 sm:pt-4 pb-2">
-                            <p className="division-audience text-ro-gold/50 text-xs tracking-wider uppercase mb-2 sm:mb-3">
+                            <p className="division-audience text-ro-gold/50 text-[13px] sm:text-xs tracking-wider uppercase mb-2 sm:mb-3">
                               {division.targetAudience}
                             </p>
-                            <p className="division-desc text-ro-gray-400 text-sm sm:text-base leading-relaxed mb-3 sm:mb-4">
+                            <p className="division-desc text-ro-gray-400 text-base sm:text-base lg:text-[15px] leading-relaxed mb-3 sm:mb-4">
                               {division.description}
                             </p>
                             <div className="division-tags flex flex-wrap gap-2 mb-3 sm:mb-4">
                               {division.services.slice(0, 3).map(service => (
                                 <span
                                   key={service}
-                                  className="division-tag px-2 sm:px-3 py-1 text-xs font-mono text-ro-gray-500 border border-ro-gray-800"
+                                  className="division-tag px-2 sm:px-3 py-1 text-[13px] sm:text-xs font-mono text-ro-gray-500 border border-ro-gray-800"
                                 >
                                   {service}
                                 </span>
                               ))}
                             </div>
                             <div className="division-arrow flex items-center gap-2 text-ro-gold text-sm tracking-wider uppercase font-heading">
-                              <span>Explore Division</span>
+                              <span>{exploreLabel}</span>
                               <ArrowRight size={14} />
                             </div>
                           </div>
