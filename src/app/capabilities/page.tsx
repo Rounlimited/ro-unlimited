@@ -26,11 +26,10 @@ export default function CapabilitiesPage() {
             </h1>
             <div className="w-24 gold-line mb-6" />
             <p className="text-ro-gray-400 text-lg sm:text-xl leading-relaxed mb-4 max-w-2xl">
-              This is the technical credibility page — the systems, codes, and scopes that separate a commercial builder from a residential-only contractor.
-              If you are a franchise development manager, a commercial developer, or a GC vetting subs, this is what you are looking for.
+              Commercial jobs are won in systems, sequencing, and inspection readiness, but they are remembered by how the finished place feels. If you are vetting restaurant, retail, or build-out partners, this is the scope depth that proves RO can deliver both.
             </p>
             <p className="text-ro-gray-500 text-sm sm:text-base leading-relaxed mb-10 max-w-2xl">
-              {COMPANY.experience} years across {COMPANY.serviceAreaShort}. Full-scope capability from site work through certificate of occupancy.
+              {COMPANY.experience} years across {COMPANY.serviceAreaShort}. Full-scope capability from site work through turnover, with the judgment to keep commercial work clean, intentional, and client-facing when the finish matters.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link
@@ -102,8 +101,7 @@ export default function CapabilitiesPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-ro-white font-heading text-2xl sm:text-3xl tracking-tight uppercase mb-6">Why this page exists</h2>
           <p className="text-ro-gray-400 text-base sm:text-lg leading-relaxed mb-10">
-            Most local builders cannot articulate commercial kitchen, life-safety, and multi-state code scope at this level. When a brand or developer reads this,
-            they should immediately know RO understands their job — not just &ldquo;we build stuff.&rdquo;
+            Most local builders cannot talk about commercial kitchens, life safety, build-out sequencing, and multi-state code pressure at this level. When a brand, developer, or local business owner reads this, they should immediately feel that RO understands both the technical side and the standard the finished space has to meet.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/commercial" className="text-ro-gold/80 hover:text-ro-gold text-xs font-mono tracking-wider uppercase">
@@ -119,7 +117,7 @@ export default function CapabilitiesPage() {
 
       <section className="py-16 border-t border-ro-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <p className="text-ro-gray-500 text-sm text-center sm:text-left">Pad to CO. One team. Three states.</p>
+          <p className="text-ro-gray-500 text-sm text-center sm:text-left">Serious scope. Clean delivery. Three states.</p>
           <div className="flex flex-wrap justify-center gap-4">
             <a
               href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`}

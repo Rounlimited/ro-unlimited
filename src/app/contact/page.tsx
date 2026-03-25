@@ -84,8 +84,7 @@ export default function ContactPage() {
           </h1>
           <div className="mx-auto w-24 gold-line mb-6" />
           <p className="text-ro-gray-400 text-lg max-w-2xl mx-auto leading-relaxed">
-            Send scope, location, and timing — we reply with a serious, qualified response. Residential inquiries are
-            welcome; use the project type dropdown accordingly.
+            Send the scope, location, and timing. For restaurant, retail, renovation, and build-out work, we review projects with both execution and finished presentation in mind. Residential inquiries are welcome too; use the project type dropdown accordingly.
           </p>
           <p className="text-ro-gray-600 text-sm mt-3 max-w-md mx-auto">
             <a href="/our-story" className="text-ro-gold/60 hover:text-ro-gold transition-colors">

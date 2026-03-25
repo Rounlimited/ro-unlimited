@@ -22,7 +22,7 @@ const PROOF_STATS = [
 const PROCESS_STEPS = [
   { num: '01', title: 'Consultation', desc: 'Scope, budget, and timeline — defined before a shovel hits dirt.' },
   { num: '02', title: 'Site Evaluation', desc: 'Terrain, access, utilities, and permitting — no surprises.' },
-  { num: '03', title: 'Design-Build Coordination', desc: 'Engineering, architecture, and construction under one roof.' },
+  { num: '03', title: 'Design-Build Coordination', desc: 'Engineering, architecture, construction, and finish decisions aligned when the project calls for more than a standard spec package.' },
   { num: '04', title: 'Ground-Up Construction', desc: 'Steel, concrete, mixed-material — built to commercial spec.' },
   { num: '05', title: 'Final Delivery', desc: 'Punch list complete. Keys in hand. On time.' },
 ];
@@ -31,7 +31,7 @@ const DIFFERENTIATORS = [
   { icon: Shield, title: 'Single Point of Accountability', desc: 'One company from land grading through final walkthrough. No finger-pointing between subs.' },
   { icon: Layers, title: 'Ground-Up Capability', desc: 'We grade the dirt, pour the foundation, raise the steel, and finish the interior. All in-house.' },
   { icon: Clock, title: '25+ Years of Problem Solving', desc: 'Complex sites, tight timelines, impossible specs — we\'ve built through all of it.' },
-  { icon: MapPin, title: 'Tri-State Knowledge', desc: 'Georgia, South Carolina, North Carolina — soil conditions, permitting, inspectors, and suppliers across all three states.' },
+  { icon: MapPin, title: 'Tri-State Knowledge', desc: 'Georgia, South Carolina, North Carolina — soil conditions, permitting, inspectors, suppliers, and the judgment to keep client-facing spaces from feeling generic.' },
 ];
 
 const CROSS_DIVISIONS = [
@@ -307,7 +307,7 @@ export default function CommercialPage() {
           <div className="hero-gold-line w-10 h-[2px] bg-gradient-to-r from-ro-gold to-transparent mb-6" />
 
           <p className="hero-desc text-ro-gray-400 text-sm sm:text-base leading-relaxed mb-8 max-w-xs">
-            Steel builds, retail storefronts, mixed-material construction, and full commercial development. One company — ground up.
+            Steel builds, restaurant spaces, retail storefronts, mixed-material construction, and full commercial development. Built with the operational discipline buyers need and the finish quality modern brands notice.
           </p>
 
           <div className="hero-btns flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3">
@@ -348,6 +348,9 @@ export default function CommercialPage() {
                 Full Commercial<br /><span className="gradient-text-gold">Service Scope</span>
               </h2>
               <div className="w-20 h-[2px] bg-gradient-to-r from-ro-gold to-transparent mt-6" />
+              <p className="text-ro-gray-500 text-sm sm:text-base leading-relaxed mt-6 max-w-md">
+                Especially for restaurant, renovation, and local-business work, the goal is not just to get open. It is to open with a space that feels intentional.
+              </p>
             </div>
           <div className="space-y-4 sm:space-y-6">
             {division.services.map((service, i) => (
@@ -520,8 +523,8 @@ export default function CommercialPage() {
               The RO <span className="gradient-text-gold">Standard</span>
             </h2>
           </div>
-          <p className="text-ro-gray-400 text-center text-sm sm:text-base leading-relaxed max-w-2xl mx-auto mb-4">
-            Every electrician, plumber, framer, concrete crew, and specialty trade that touches an RO project has been vetted to a standard most contractors never think about.
+            <p className="text-ro-gray-400 text-center text-sm sm:text-base leading-relaxed max-w-2xl mx-auto mb-4">
+            Every electrician, plumber, framer, concrete crew, and specialty trade that touches an RO project has been vetted to a standard most contractors never think about, especially on spaces where the final impression matters as much as the schedule.
           </p>
           <p className="text-ro-gold/60 text-center text-xs font-mono tracking-[0.2em] uppercase mb-16">
             This isn&apos;t a staffing agency pulling warm bodies — this is a curated network built over 25 years.
@@ -607,7 +610,7 @@ export default function CommercialPage() {
             <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">
               More Than <span className="gradient-text-gold">Commercial</span>
             </h2>
-            <p className="text-ro-gray-500 text-sm sm:text-base mt-4 max-w-md mx-auto">We don&apos;t sub out what we can do ourselves.</p>
+            <p className="text-ro-gray-500 text-sm sm:text-base mt-4 max-w-md mx-auto">We don&apos;t sub out what we can do ourselves, and we don&apos;t treat client-facing spaces like commodity work.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {CROSS_DIVISIONS.map((div) => (

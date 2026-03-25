@@ -64,12 +64,12 @@ export default function Navbar() {
             />
           </Link>
 
-          <div className="hidden lg:flex items-center gap-0 xl:gap-0.5 flex-wrap justify-end max-w-[52%] 2xl:max-w-none">
+          <div className="hidden lg:flex items-center gap-0.5 xl:gap-1 flex-wrap justify-end max-w-[52%] 2xl:max-w-none">
             {NAV_LINKS.map((link) => {
               const isActive = pathname === link.href;
               return (
                 <Link key={link.href} href={link.href}
-                  className={`relative px-2 xl:px-2.5 py-2 text-[10px] xl:text-[11px] tracking-wider uppercase font-body transition-colors duration-300 whitespace-nowrap ${isActive ? 'text-ro-gold' : 'text-ro-gray-400 hover:text-ro-white'}`}>
+                  className={`relative px-2.5 xl:px-3 py-2 text-[10px] xl:text-[11px] tracking-[0.16em] uppercase font-body transition-colors duration-300 whitespace-nowrap ${isActive ? 'text-ro-gold' : 'text-ro-gray-400 hover:text-ro-white'}`}>
                   {link.label}
                   {isActive && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-[2px] bg-ro-gold" />}
                 </Link>
@@ -84,7 +84,7 @@ export default function Navbar() {
             </a>
             <Link href="/contact"
               className="relative px-6 py-2.5 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-colors duration-300">
-              Get a Quote
+              Start a Project
             </Link>
             {/* Join the RO Network — desktop badge, same style as footer */}
             <div ref={desktopJoinRef} style={{ transformOrigin: 'left center', display: 'inline-block' }}>
@@ -134,6 +134,13 @@ export default function Navbar() {
             <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="flex items-center gap-2 text-ro-gold px-4 py-2">
               <Phone size={16} /><span className="font-mono">{COMPANY.phone}</span>
             </a>
+            <Link
+              href="/contact"
+              onClick={() => setIsOpen(false)}
+              className="mt-3 mx-4 flex items-center justify-center px-5 py-3 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase"
+            >
+              Start a Project
+            </Link>
           </div>
         </div>
       </div>

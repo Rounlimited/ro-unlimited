@@ -38,9 +38,9 @@ export default async function HomePage() {
       <SectionTransition label="FLOOR 01" sparks />
       <DivisionCards
         items={COMMERCIAL_HOME_CARDS}
-        eyebrow="Commercial project types"
-        titleBeforeGold="The work we"
-        titleGold="Go after"
+        eyebrow="Commercial sectors"
+        titleBeforeGold="Built for"
+        titleGold="serious work"
         exploreLabel="Explore"
       />
       <SectionTransition label="FLOOR 02" sparks />

@@ -20,7 +20,7 @@ export default function ProjectsPage() {
           </h1>
           <div className="w-24 gold-line mx-auto mb-8" />
           <p className="text-ro-gray-400 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-4">
-            We are rebuilding this gallery around commercial work — project types, square footage, scope, and the systems we installed.
+            We are rebuilding this gallery around commercial work that shows both scope and finish: restaurants, retail, renovations, build-outs, and local businesses where execution matters and the final look still has to land.
             Full case studies and photography are rolling out next.
           </p>
           <p className="text-ro-gray-600 text-sm max-w-xl mx-auto mb-10">

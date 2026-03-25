@@ -6,10 +6,10 @@ import { gsap, ScrollTrigger, SplitText, useGSAP, MEDIA_QUERIES } from '@/compon
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
 
 const REASONS = [
-  { icon: Layers, title: 'Full-scope commercial', description: 'Grading through certificate of occupancy — one accountable team. Developers and GCs get a partner who can carry the full job, not a parade of disconnected subs.' },
-  { icon: Flame, title: 'Restaurant & kitchen systems', description: 'Type I/II hoods, grease interceptors, commercial gas, and make-up air. We speak QSR, fast-casual, and brand-driven schedules.' },
-  { icon: Shield, title: 'Life safety & occupancy', description: 'Fire suppression coordination, ADA paths, MEP rough-in, and CO pressure — experience across South Carolina, North Carolina, and Georgia.' },
-  { icon: MapPin, title: 'Fast-track & tri-state', description: 'Franchise timelines and multi-site programs demand a builder who already knows local inspectors, soils, and suppliers in your footprint.' },
+  { icon: Layers, title: 'Full-scope control', description: 'Site work, shell, interiors, and closeout under one accountable team. Less handoff noise. More control from first mobilization to turnover.' },
+  { icon: Flame, title: 'Kitchen systems fluency', description: 'Restaurants and QSR work come with real pressure: hoods, grease, gas, make-up air, inspections, and brand timing. We already speak that language.' },
+  { icon: Shield, title: 'Inspection-ready delivery', description: 'ADA, life safety, MEP coordination, occupancy, and punch discipline handled with the kind of preparation that keeps momentum.' },
+  { icon: MapPin, title: 'Multi-state confidence', description: 'Georgia, South Carolina, and North Carolina coverage with local familiarity, fast-track experience, and a standard that carries from one site to the next.' },
 ];
 
 /**
@@ -182,8 +182,8 @@ export default function WhyRO() {
         );
 
         entranceTl.fromTo(allCards,
-          { y: 20, opacity: 0 },
-          { y: 0, opacity: 1, stagger: 0.1, duration: 0.5, ease: 'power2.out' },
+          { y: 20, opacity: 0, scale: 0.97 },
+          { y: 0, opacity: 1, scale: 1, stagger: 0.1, duration: 0.5, ease: 'power2.out' },
           1.2
         );
 
@@ -245,23 +245,42 @@ export default function WhyRO() {
         1.0
       );
 
-      // ─── Cards: simple fade+rise, stagger pairs ───
-      // WhyRO cards are in a 2-col grid, so stagger left-right pairs
+      // ─── Cards: premium panel reveal with inner stagger ───
       allCards.forEach((card, i) => {
-        gsap.fromTo(card,
-          { y: 30, opacity: 0 },
-          {
-            y: 0, opacity: 1,
-            duration: 0.6,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: card,
-              start: 'top 70%',
-              toggleActions: 'play none none none',
-              id: `whyro-card-${i}-mobile`,
+        const innerBits = card.querySelectorAll('.reason-icon, .reason-title, .reason-desc');
+        if (innerBits.length) gsap.set(innerBits, { opacity: 0, y: 12 });
+
+        gsap.timeline({
+          scrollTrigger: {
+            trigger: card,
+            start: 'top 72%',
+            toggleActions: 'play none none none',
+            id: `whyro-card-${i}-mobile`,
+          },
+        })
+          .fromTo(card,
+            {
+              y: 30,
+              opacity: 0,
+              scale: 0.97,
+              clipPath: 'inset(12% 0% 0% 0%)',
+              boxShadow: '0 0 0 rgba(201,168,76,0)',
             },
-          }
-        );
+            {
+              y: 0,
+              opacity: 1,
+              scale: 1,
+              clipPath: 'inset(0% 0% 0% 0%)',
+              boxShadow: '0 16px 34px rgba(0,0,0,0.25), 0 0 20px rgba(201,168,76,0.06)',
+              duration: 0.65,
+              ease: 'power3.out',
+            }
+          )
+          .fromTo(innerBits,
+            { opacity: 0, y: 12 },
+            { opacity: 1, y: 0, stagger: 0.06, duration: 0.35, ease: 'power2.out' },
+            0.12
+          );
       });
 
       return () => { split.revert(); };
@@ -288,7 +307,7 @@ export default function WhyRO() {
             ref={badgeRef}
             className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-4 block"
           >
-            Why commercial clients choose RO
+            Why serious buyers choose RO
           </span>
 
           {/* Title with scaffolding overlay */}
@@ -310,7 +329,7 @@ export default function WhyRO() {
               ref={titleRef}
               className="relative text-ro-white font-heading text-4xl sm:text-5xl md:text-6xl tracking-tight uppercase leading-[1.1]"
             >
-              Built For <span className="text-ro-gold">Commercial</span>
+              Built to Be <span className="text-ro-gold">Chosen</span>
             </h2>
           </div>
 

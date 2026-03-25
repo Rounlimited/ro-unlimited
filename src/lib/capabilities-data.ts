@@ -12,7 +12,7 @@ export const CAPABILITY_SECTIONS: CapabilitySection[] = [
     id: 'kitchen',
     title: 'Commercial Kitchen & Restaurant Systems',
     summary:
-      'Restaurant and QSR builds demand systems residential contractors never touch. We speak the language of brand standards, exhaust, and food-service infrastructure.',
+      'Restaurant and QSR work demands more than passing inspections. We handle the kitchen systems, brand standards, and infrastructure details that let the finished space feel sharp, efficient, and built for repeat business.',
     bullets: [
       'Type I and Type II hood systems — installation, ductwork, make-up air',
       'Grease trap and interceptor installation',
@@ -38,7 +38,7 @@ export const CAPABILITY_SECTIONS: CapabilitySection[] = [
     id: 'structural',
     title: 'Structural & Shell',
     summary:
-      'Ground-up commercial shell work — steel, concrete, and envelope — built for developers and GCs who need a partner that can execute.',
+      'Ground-up commercial shell work for developers and GCs who need execution and presence. Steel, concrete, and envelope built to perform, then support a finished project that looks deliberate instead of merely complete.',
     bullets: [
       'Steel erection and structural steel packages',
       'CMU / block construction',
@@ -51,7 +51,7 @@ export const CAPABILITY_SECTIONS: CapabilitySection[] = [
     id: 'site',
     title: 'Site Development',
     summary:
-      'Pad to building: mass grading, utilities, and parking — the front end that keeps commercial schedules on track.',
+      'Mass grading, utilities, parking, and site sequencing that keep schedules moving while setting up the finished project to arrive with the right first impression.',
     bullets: [
       'Mass grading and pad preparation',
       'Underground utility installation (storm, sanitary, water, gas, electric)',

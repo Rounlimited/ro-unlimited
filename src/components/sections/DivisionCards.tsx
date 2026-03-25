@@ -53,43 +53,114 @@ export default function DivisionCards({
   useGSAP(() => {
     if (!spacerRef.current) return;
 
-    // ── Mobile flip mode ───────────────────────────────────────────────
+    // ── Mobile-first reveal system ─────────────────────────────────────
     if (typeof window !== 'undefined') {
       const isMobile = window.matchMedia(MEDIA_QUERIES.mobile).matches;
-      if (isMobile && sectionRef.current?.closest('.page-flip-slide')) {
+      if (isMobile) {
         const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
-        const bodies = allCards
-          .map(c => c.querySelector('.card-body') as HTMLElement)
-          .filter(Boolean);
-        gsap.set(bodies, { height: 0, paddingBottom: 0, opacity: 0 });
+        const cardLinks = allCards
+          .map(c => c.querySelector('.division-link') as HTMLElement | null)
+          .filter(Boolean) as HTMLElement[];
+        const header = sectionRef.current!.querySelector('.division-header') as HTMLElement | null;
+        const headerBadge = sectionRef.current!.querySelector('.division-eyebrow') as HTMLElement | null;
+        const headerTitle = header?.querySelector('h2') as HTMLElement | null;
+        const headerLine = sectionRef.current!.querySelector('.division-line') as HTMLElement | null;
 
-        gsap.set(allCards, { opacity: 0, y: 20 });
-        const header = sectionRef.current!.querySelector('.text-center') as HTMLElement;
-        if (header) gsap.set(header, { opacity: 0, y: -15 });
+        if (headerBadge) gsap.set(headerBadge, { opacity: 0, y: -16 });
+        if (headerTitle) gsap.set(headerTitle, { opacity: 0, y: 30 });
+        if (headerLine) gsap.set(headerLine, { opacity: 0, scaleX: 0, transformOrigin: 'center center' });
 
-        const entranceTl = gsap.timeline({ paused: true });
-        if (header) {
-          entranceTl.fromTo(header,
-            { opacity: 0, y: -15 },
-            { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' },
-            0
-          );
-        }
-        entranceTl.fromTo(allCards,
-          { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, stagger: 0.1, duration: 0.5, ease: 'power2.out' },
-          0.2
-        );
+        cardLinks.forEach((card, index) => {
+          gsap.set(card, {
+            opacity: 0,
+            y: 28,
+            scale: 0.97,
+            clipPath: 'inset(14% 0% 0% 0%)',
+            boxShadow: '0 0 0 rgba(201,168,76,0)',
+          });
 
-        const flipSlide = sectionRef.current!.closest('.page-flip-slide')!;
-        const myIndex = Array.from(document.querySelectorAll('.page-flip-slide')).indexOf(flipSlide);
-        const handler = (e: Event) => {
-          if ((e as CustomEvent).detail?.index === myIndex) {
-            entranceTl.play();
-            window.removeEventListener('flipSlideEnter', handler);
+          const innerBits = card.querySelectorAll('.division-icon, .division-name, .division-audience, .division-desc, .division-tag, .division-arrow');
+          if (innerBits.length) gsap.set(innerBits, { opacity: 0, y: 12 });
+
+          gsap.timeline({
+            scrollTrigger: {
+              trigger: card,
+              start: index < 2 ? 'top 82%' : 'top 78%',
+              toggleActions: 'play none none none',
+              id: `division-card-mobile-${index}`,
+            },
+          })
+            .fromTo(card,
+              {
+                opacity: 0,
+                y: 28,
+                scale: 0.97,
+                clipPath: 'inset(14% 0% 0% 0%)',
+                boxShadow: '0 0 0 rgba(201,168,76,0)',
+              },
+              {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                clipPath: 'inset(0% 0% 0% 0%)',
+                boxShadow: '0 14px 40px rgba(0,0,0,0.25), 0 0 28px rgba(201,168,76,0.08)',
+                duration: 0.6,
+                ease: 'power3.out',
+              }
+            )
+            .fromTo(innerBits,
+              { opacity: 0, y: 12 },
+              { opacity: 1, y: 0, stagger: 0.045, duration: 0.35, ease: 'power2.out' },
+              0.12
+            );
+        });
+
+        const playHeader = () => {
+          const entranceTl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+          if (headerBadge) {
+            entranceTl.fromTo(headerBadge,
+              { opacity: 0, y: -16 },
+              { opacity: 1, y: 0, duration: 0.4 },
+              0
+            );
+          }
+          if (headerTitle) {
+            entranceTl.fromTo(headerTitle,
+              { opacity: 0, y: 30 },
+              { opacity: 1, y: 0, duration: 0.55 },
+              0.08
+            );
+          }
+          if (headerLine) {
+            entranceTl.fromTo(headerLine,
+              { opacity: 0, scaleX: 0, transformOrigin: 'center center' },
+              { opacity: 1, scaleX: 1, duration: 0.35 },
+              0.22
+            );
           }
         };
-        window.addEventListener('flipSlideEnter', handler);
+
+        if (sectionRef.current?.closest('.page-flip-slide')) {
+          const flipSlide = sectionRef.current.closest('.page-flip-slide')!;
+          const myIndex = Array.from(document.querySelectorAll('.page-flip-slide')).indexOf(flipSlide);
+          const handler = (e: Event) => {
+            if ((e as CustomEvent).detail?.index === myIndex) {
+              playHeader();
+              window.removeEventListener('flipSlideEnter', handler);
+            }
+          };
+          window.addEventListener('flipSlideEnter', handler);
+          return () => window.removeEventListener('flipSlideEnter', handler);
+        }
+
+        gsap.timeline({
+          scrollTrigger: {
+            trigger: header || sectionRef.current,
+            start: 'top 72%',
+            toggleActions: 'play none none none',
+            id: 'division-header-mobile',
+          },
+        }).call(playHeader);
         return;
       }
     }
@@ -219,14 +290,14 @@ export default function DivisionCards({
 
         <div className="relative z-10 flex flex-col h-screen px-4 sm:px-6 lg:px-8">
           {/* Section Header */}
-          <div className="pt-12 sm:pt-16 lg:pt-20 pb-4 sm:pb-6 text-center flex-shrink-0">
-            <span className="text-ro-gold text-[11px] sm:text-xs font-mono tracking-[0.3em] uppercase mb-3 block">
+          <div className="division-header pt-12 sm:pt-16 lg:pt-20 pb-4 sm:pb-6 text-center flex-shrink-0">
+            <span className="division-eyebrow text-ro-gold text-[11px] sm:text-xs font-mono tracking-[0.3em] uppercase mb-3 block">
               {eyebrow}
             </span>
             <h2 className="text-ro-white font-heading text-2xl sm:text-3xl md:text-5xl tracking-tight uppercase mb-3">
               {titleBeforeGold} <span className="gradient-text-gold">{titleGold}</span>
             </h2>
-            <div className="mx-auto w-20 h-[2px] bg-ro-gold"
+            <div className="division-line mx-auto w-20 h-[2px] bg-ro-gold"
               style={{ boxShadow: '0 0 8px rgba(201,168,76,0.4)' }}
             />
           </div>
@@ -244,7 +315,7 @@ export default function DivisionCards({
                   >
                     <Link
                       href={division.href}
-                      className="relative w-full bg-ro-gray-900/80 lg:bg-ro-gray-900/60 lg:backdrop-blur-sm overflow-hidden block border border-ro-gold/20 transition-none"
+                      className="division-link relative w-full bg-ro-gray-900/80 lg:bg-ro-gray-900/60 lg:backdrop-blur-sm overflow-hidden block border border-ro-gold/20 transition-none"
                       style={{ willChange: 'box-shadow, border-color' }}
                     >
                       {/* Corner Bolts — desktop only */}
@@ -334,7 +405,7 @@ export default function DivisionCards({
               <div className="mt-3 text-center">
                 <p className="font-mono uppercase tracking-[0.35em] text-[10px] sm:text-[11px]"
                   style={{ color: 'rgba(201,168,76,0.7)' }}>
-                  Ground Up.
+                  Built to Last.
                 </p>
                 <p className="font-mono uppercase tracking-[0.35em] text-[10px] sm:text-[11px] mt-0.5"
                   style={{ color: 'rgba(255,255,255,0.35)' }}>

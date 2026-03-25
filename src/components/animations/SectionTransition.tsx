@@ -27,6 +27,7 @@ export default function SectionTransition({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const beamRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLSpanElement>(null);
+  const scanRef = useRef<HTMLDivElement>(null);
   const sparkLeftRef = useRef<HTMLDivElement>(null);
   const sparkRightRef = useRef<HTMLDivElement>(null);
 
@@ -36,6 +37,7 @@ export default function SectionTransition({
     // Set initial hidden states
     gsap.set(beamRef.current, { opacity: 0 });
     if (labelRef.current) gsap.set(labelRef.current, { opacity: 0 });
+    if (scanRef.current) gsap.set(scanRef.current, { opacity: 0, xPercent: -120 });
 
     const sparkEls = [
       ...Array.from(sparkLeftRef.current?.querySelectorAll('.spark-dot') || []),
@@ -52,19 +54,27 @@ export default function SectionTransition({
       },
     });
 
-    // Beam drops from above with bounce
+    // Beam resolves in with a cleaner engineered sweep
     tl.fromTo(beamRef.current,
-      { y: -80, rotation: -2, opacity: 0 },
-      { y: 0, rotation: 0, opacity: 1, duration: 0.8, ease: 'bounce.out' },
+      { y: 24, opacity: 0, scaleX: 0.92, filter: 'blur(6px)' },
+      { y: 0, opacity: 1, scaleX: 1, filter: 'blur(0px)', duration: 0.7, ease: 'power3.out' },
       0
     );
 
-    // Label stamps in after beam lands
+    if (scanRef.current) {
+      tl.fromTo(scanRef.current,
+        { opacity: 0, xPercent: -120 },
+        { opacity: 0.75, xPercent: 120, duration: 0.6, ease: 'power2.inOut' },
+        0.18
+      ).to(scanRef.current, { opacity: 0, duration: 0.12, ease: 'power1.out' }, '>-0.08');
+    }
+
+    // Label resolves after the sweep
     if (labelRef.current) {
       tl.fromTo(labelRef.current,
-        { scaleY: 0, transformOrigin: 'center center', opacity: 0 },
-        { scaleY: 1, opacity: 1, duration: 0.3, ease: 'back.out(2)' },
-        0.5
+        { y: 10, opacity: 0, letterSpacing: '0.45em' },
+        { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
+        0.34
       );
     }
 
@@ -106,6 +116,10 @@ export default function SectionTransition({
           alt=""
           className="w-full h-full object-cover"
           aria-hidden="true"
+        />
+        <div
+          ref={scanRef}
+          className="absolute top-0 bottom-0 w-1/4 bg-gradient-to-r from-transparent via-ro-gold/50 to-transparent mix-blend-screen pointer-events-none"
         />
 
         {/* Stamped label */}

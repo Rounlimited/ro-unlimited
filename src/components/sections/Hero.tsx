@@ -24,6 +24,9 @@ interface HeroProps {
 
 export default function Hero({ heroVideoUrl }: HeroProps) {
   const sectionRef   = useRef<HTMLDivElement>(null);
+  const ambientLeftRef = useRef<HTMLDivElement>(null);
+  const ambientRightRef = useRef<HTMLDivElement>(null);
+  const shimmerRef = useRef<HTMLDivElement>(null);
   const badgeRef     = useRef<HTMLDivElement>(null);
   const line1Ref     = useRef<HTMLSpanElement>(null);
   const line2Ref     = useRef<HTMLSpanElement>(null);
@@ -52,6 +55,48 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
     if (!sectionRef.current) return;
 
     const mm = gsap.matchMedia();
+    const verticalLines = sectionRef.current.querySelectorAll('.hero-grid-v');
+    const horizontalLines = sectionRef.current.querySelectorAll('.hero-grid-h');
+    const ctaButtons = ctaRef.current ? Array.from(ctaRef.current.children) as HTMLElement[] : [];
+    const cleanupFns: Array<() => void> = [];
+
+    if (ambientLeftRef.current) {
+      gsap.to(ambientLeftRef.current, {
+        xPercent: 10,
+        yPercent: -8,
+        scale: 1.08,
+        duration: 8,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      });
+    }
+
+    if (ambientRightRef.current) {
+      gsap.to(ambientRightRef.current, {
+        xPercent: -8,
+        yPercent: 10,
+        scale: 1.05,
+        duration: 9,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      });
+    }
+
+    if (shimmerRef.current) {
+      gsap.fromTo(shimmerRef.current,
+        { xPercent: -120, opacity: 0 },
+        {
+          xPercent: 120,
+          opacity: 0.55,
+          duration: 2.4,
+          ease: 'power1.inOut',
+          repeat: -1,
+          repeatDelay: 3.5,
+        }
+      );
+    }
 
     // ═══════════════════════════════════════════════════════
     // DESKTOP — Same entrance sequence as mobile:
@@ -60,6 +105,8 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
     mm.add(MEDIA_QUERIES.desktop, () => {
       // Hide everything initially
       gsap.set([badgeRef.current, line2Ref.current, goldLineRef.current], { opacity: 0 });
+      if (verticalLines.length) gsap.set(verticalLines, { scaleY: 0, opacity: 0, transformOrigin: 'center top' });
+      if (horizontalLines.length) gsap.set(horizontalLines, { scaleX: 0, opacity: 0, transformOrigin: 'left center' });
       if (ctaRef.current?.children.length) {
         gsap.set(ctaRef.current.children, { opacity: 0 });
       }
@@ -108,6 +155,22 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
         { scaleX: 1, opacity: 1, duration: 0.35, ease: 'power2.inOut' },
         0.65
       );
+
+      if (verticalLines.length) {
+        tl.fromTo(verticalLines,
+          { scaleY: 0, opacity: 0, transformOrigin: 'center top' },
+          { scaleY: 1, opacity: 0.18, duration: 0.35, stagger: 0.03, ease: 'power2.out' },
+          0.78
+        );
+      }
+
+      if (horizontalLines.length) {
+        tl.fromTo(horizontalLines,
+          { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
+          { scaleX: 1, opacity: 0.18, duration: 0.35, stagger: 0.03, ease: 'power2.out' },
+          0.86
+        );
+      }
 
       // 5. "FROM THE GROUND UP" — chars rise from below
       tl.fromTo(split3.chars,
@@ -166,7 +229,34 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
         );
       }
 
-      return () => { split1.revert(); split3.revert(); splitDesc.revert(); };
+      ctaButtons.forEach((button) => {
+        const xTo = gsap.quickTo(button, 'x', { duration: 0.25, ease: 'power3.out' });
+        const yTo = gsap.quickTo(button, 'y', { duration: 0.25, ease: 'power3.out' });
+        const move = (event: PointerEvent) => {
+          const rect = button.getBoundingClientRect();
+          const x = (event.clientX - rect.left - rect.width / 2) * 0.08;
+          const y = (event.clientY - rect.top - rect.height / 2) * 0.12;
+          xTo(x);
+          yTo(y);
+        };
+        const leave = () => {
+          xTo(0);
+          yTo(0);
+        };
+        button.addEventListener('pointermove', move);
+        button.addEventListener('pointerleave', leave);
+        cleanupFns.push(() => {
+          button.removeEventListener('pointermove', move);
+          button.removeEventListener('pointerleave', leave);
+        });
+      });
+
+      return () => {
+        cleanupFns.forEach((fn) => fn());
+        split1.revert();
+        split3.revert();
+        splitDesc.revert();
+      };
     });
 
     // ═══════════════════════════════════════════════════════
@@ -176,6 +266,8 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
     mm.add(MEDIA_QUERIES.mobile, () => {
       // Hide everything initially
       gsap.set([badgeRef.current, line2Ref.current, goldLineRef.current], { opacity: 0 });
+      if (verticalLines.length) gsap.set(verticalLines, { scaleY: 0, opacity: 0, transformOrigin: 'center top' });
+      if (horizontalLines.length) gsap.set(horizontalLines, { scaleX: 0, opacity: 0, transformOrigin: 'left center' });
       if (ctaRef.current?.children.length) {
         gsap.set(ctaRef.current.children, { opacity: 0 });
       }
@@ -224,6 +316,22 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
         { scaleX: 1, opacity: 1, duration: 0.35, ease: 'power2.inOut' },
         0.65
       );
+
+      if (verticalLines.length) {
+        tl.fromTo(verticalLines,
+          { scaleY: 0, opacity: 0, transformOrigin: 'center top' },
+          { scaleY: 1, opacity: 0.2, duration: 0.35, stagger: 0.03, ease: 'power2.out' },
+          0.78
+        );
+      }
+
+      if (horizontalLines.length) {
+        tl.fromTo(horizontalLines,
+          { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
+          { scaleX: 1, opacity: 0.2, duration: 0.35, stagger: 0.03, ease: 'power2.out' },
+          0.86
+        );
+      }
 
       // 5. "FROM THE GROUND UP" — chars rise from below
       tl.fromTo(split3.chars,
@@ -305,17 +413,20 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
 
         {/* Structural lines */}
         <div className="absolute inset-0 opacity-[0.02] pointer-events-none">
-          <div className="absolute left-[10%] top-0 bottom-0 w-px bg-ro-gold" />
-          <div className="absolute left-[30%] top-0 bottom-0 w-px bg-ro-gold" />
-          <div className="absolute left-[70%] top-0 bottom-0 w-px bg-ro-gold" />
-          <div className="absolute left-[90%] top-0 bottom-0 w-px bg-ro-gold" />
-          <div className="absolute top-[20%] left-0 right-0 h-px bg-ro-gold" />
-          <div className="absolute top-[50%] left-0 right-0 h-px bg-ro-gold" />
-          <div className="absolute top-[80%] left-0 right-0 h-px bg-ro-gold" />
+          <div className="hero-grid-v absolute left-[10%] top-0 bottom-0 w-px bg-ro-gold" />
+          <div className="hero-grid-v absolute left-[30%] top-0 bottom-0 w-px bg-ro-gold" />
+          <div className="hero-grid-v absolute left-[70%] top-0 bottom-0 w-px bg-ro-gold" />
+          <div className="hero-grid-v absolute left-[90%] top-0 bottom-0 w-px bg-ro-gold" />
+          <div className="hero-grid-h absolute top-[20%] left-0 right-0 h-px bg-ro-gold" />
+          <div className="hero-grid-h absolute top-[50%] left-0 right-0 h-px bg-ro-gold" />
+          <div className="hero-grid-h absolute top-[80%] left-0 right-0 h-px bg-ro-gold" />
         </div>
 
         {/* Gradient overlay */}
         <div className="absolute inset-0 z-[2] bg-gradient-to-b from-ro-black/80 via-ro-black/60 to-ro-black/80" />
+        <div ref={ambientLeftRef} className="absolute left-[-10%] top-[12%] z-[1] h-[220px] w-[220px] rounded-full bg-ro-gold/10 blur-3xl pointer-events-none" />
+        <div ref={ambientRightRef} className="absolute right-[-12%] top-[30%] z-[1] h-[260px] w-[260px] rounded-full bg-cyan-400/10 blur-3xl pointer-events-none" />
+        <div ref={shimmerRef} className="absolute inset-y-0 left-0 z-[3] w-1/3 bg-gradient-to-r from-transparent via-ro-gold/12 to-transparent mix-blend-screen pointer-events-none" />
 
         <div className="relative z-[10] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-4 lg:pt-8 lg:pb-8">
           <div className="text-center">
@@ -324,7 +435,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
             <div ref={badgeRef} className="inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/20 bg-ro-gold/5 mb-8">
               <span className="w-2 h-2 bg-ro-gold rounded-full" />
               <span className="text-ro-gold text-xs font-mono tracking-wider uppercase">
-                {COMPANY.experience} Years. Every Day Earned.
+                {COMPANY.experience} Years. Still Raising the Standard.
               </span>
             </div>
 
@@ -337,7 +448,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
                 Commercial
               </span>
               <span ref={line3Ref} className="block text-ro-white font-heading text-3xl sm:text-4xl md:text-5xl tracking-wider uppercase leading-[0.9]">
-                From Pad to CO
+                From the Ground Up
               </span>
             </h1>
 
@@ -348,13 +459,13 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
 
             {/* Description */}
             <p ref={descRef} className="max-w-2xl mx-auto text-ro-gray-400 text-lg sm:text-xl font-body leading-relaxed mb-12 px-1">
-              Commercial construction specialists — QSR, retail, banks, industrial, ground-up. We also build luxury residential, but commercial is where our depth shows: hoods, life safety, shell, and site work across GA, SC, and NC.
+              Ground-up retail, restaurant, financial, industrial, and site-driven work delivered with the control buyers trust and the finish people notice. Across Georgia, South Carolina, and North Carolina, RO brings schedule, systems, and standards under one roof.
             </p>
 
             {/* CTAs */}
             <div ref={ctaRef} className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
               <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300">
-                Send Us Your Project <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                Start Your Project <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </Link>
               <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="group flex items-center gap-3 px-8 py-4 border border-ro-gold/30 text-ro-gold font-heading text-sm tracking-wider uppercase hover:bg-ro-gold/5 hover:border-ro-gold/50 transition-all duration-300">
                 <Phone size={16} />{COMPANY.phone}

@@ -118,7 +118,7 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-ro-gray-500 text-sm leading-relaxed mb-6">
-              {COMPANY.experience} years of complete commercial and residential construction across Georgia, South Carolina, and North Carolina. We show up. We build right. We stand behind it.
+              Commercial and residential construction across Georgia, South Carolina, and North Carolina, delivered with the control serious buyers expect and the finish people remember.
             </p>
             <a href={COMPANY.facebook} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-ro-gray-500 hover:text-ro-gold transition-colors text-sm">
               <Facebook size={16} /><span>Follow us</span>
@@ -162,7 +162,7 @@ export default function Footer() {
 
           {/* Column 4: CTA */}
           <div ref={col4Ref}>
-            <h3 className="footer-gold-heading text-ro-gold font-heading text-sm tracking-[0.2em] uppercase mb-6">Start Your Project</h3>
+            <h3 className="footer-gold-heading text-ro-gold font-heading text-sm tracking-[0.2em] uppercase mb-6">Start the Conversation</h3>
             <p className="text-ro-gray-500 text-sm mb-6">{COMPANY.cta}</p>
 
             {/* Join CTA — ghost badge, scales from left edge */}
@@ -184,8 +184,15 @@ export default function Footer() {
               ref={quoteRef}
               className="inline-block px-6 py-3 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-colors duration-300"
             >
-              Get a Quote
+              Start a Project
             </Link>
+            <a
+              href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`}
+              className="inline-flex items-center gap-2 mt-4 text-ro-gold/80 hover:text-ro-gold transition-colors text-sm"
+            >
+              <Phone size={14} className="text-ro-gold/60" />
+              Call {COMPANY.phone}
+            </a>
           </div>
         </div>
 
