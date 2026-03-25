@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import Link from 'next/link';
-import { COMPANY, DIVISIONS } from '@/lib/constants';
+import { COMPANY, DIVISIONS, FOOTER_COMPANY_LINKS } from '@/lib/constants';
 import { Phone, Mail, MapPin, Facebook, ArrowUp } from 'lucide-react';
 import { gsap, useGSAP } from '@/components/animations/GSAPProvider';
 
@@ -133,6 +133,17 @@ export default function Footer() {
                 <li key={div.id}>
                   <Link href={div.href} className="text-ro-gray-400 hover:text-ro-white transition-colors text-sm flex items-center gap-2">
                     <span className="w-1 h-1 bg-ro-gold/40 rounded-full" />{div.shortName}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <h3 className="footer-gold-heading text-ro-gold font-heading text-sm tracking-[0.2em] uppercase mb-4 mt-8">Company</h3>
+            <ul className="space-y-3">
+              {FOOTER_COMPANY_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="text-ro-gray-400 hover:text-ro-white transition-colors text-sm flex items-center gap-2">
+                    <span className="w-1 h-1 bg-ro-gold/40 rounded-full" />
+                    {link.label}
                   </Link>
                 </li>
               ))}

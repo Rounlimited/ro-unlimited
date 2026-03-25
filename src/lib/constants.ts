@@ -2,7 +2,7 @@ export const COMPANY = {
   name: 'RO Unlimited',
   fullName: 'RO Unlimited Construction & Development',
   phone: '(864) 304-0139',
-  email: 'Rounlimitedco@gmail.com',
+  email: 'build@rounlimited.com',
   tagline: 'Show Up. Build Right. Stand Behind It.',
   heroStatement: '25 Years of Showing Up and Building It Right.',
   cta: 'Send us your project. We\'ll show you what we can do.',
@@ -13,18 +13,13 @@ export const COMPANY = {
   facebook: 'https://www.facebook.com/profile.php?id=61578630061375',
 } as const;
 
+/** Public site: commercial-first order (homepage division cards + footer). */
 export const DIVISIONS = [
   {
     id: 'commercial', name: 'Commercial Division', shortName: 'Commercial', href: '/commercial',
     description: 'Steel builds, retail storefronts, mixed-material construction, and full commercial development.',
     services: ['Commercial Building Development','Steel & Mixed-Material Construction','Modern Retail Storefronts','Problem Solving for Complex Sites','Development Consulting','Large-Scale Commercial Projects'],
     icon: 'building', targetAudience: 'Commercial developers, project managers, general contractors',
-  },
-  {
-    id: 'residential', name: 'Residential Division', shortName: 'Residential', href: '/residential',
-    description: 'Large-scale custom homes, complex structural framing, and luxury interior renovations.',
-    services: ['Custom Home Framing','Ground-Up New Builds','Complex Structural Shells','Luxury Interior Renovations','Modern Industrial Design','Vaulted Ceilings & Complex Gables'],
-    icon: 'home', targetAudience: 'Homeowners, luxury buyers, real estate investors',
   },
   {
     id: 'grading', name: 'Land Grading & Site Prep', shortName: 'Land Grading', href: '/grading',
@@ -38,16 +33,30 @@ export const DIVISIONS = [
     services: ['Architectural Design','Project Planning & Consulting','Permitting & Compliance','Construction Management','Quality Assurance','Final Walkthrough & Delivery'],
     icon: 'hardhat', targetAudience: 'All prospects evaluating capabilities',
   },
+  {
+    id: 'residential', name: 'Residential Division', shortName: 'Residential', href: '/residential',
+    description: 'Large-scale custom homes, complex structural framing, and luxury interior renovations.',
+    services: ['Custom Home Framing','Ground-Up New Builds','Complex Structural Shells','Luxury Interior Renovations','Modern Industrial Design','Vaulted Ceilings & Complex Gables'],
+    icon: 'home', targetAudience: 'Homeowners, luxury buyers, real estate investors',
+  },
 ] as const;
 
+/** Primary navigation — commercial-first IA (Land Grading + Process stay in footer divisions). */
 export const NAV_LINKS = [
   { label: 'Home', href: '/' },
-  { label: 'Residential', href: '/residential' },
   { label: 'Commercial', href: '/commercial' },
-  { label: 'Land Grading', href: '/grading' },
-  { label: 'Our Process', href: '/process' },
-  { label: 'Our Story', href: '/our-story' },
+  { label: 'Capabilities', href: '/capabilities' },
+  { label: 'Projects', href: '/projects' },
+  { label: 'About', href: '/our-story' },
+  { label: 'Residential', href: '/residential' },
   { label: 'Contact', href: '/contact' },
+] as const;
+
+/** Footer: core pages beyond division links (URLs stay stable for SEO). */
+export const FOOTER_COMPANY_LINKS = [
+  { label: 'Capabilities', href: '/capabilities' },
+  { label: 'Projects', href: '/projects' },
+  { label: 'About', href: '/our-story' },
 ] as const;
 
 export const TRUST_STATS = [

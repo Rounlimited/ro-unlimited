@@ -35,6 +35,7 @@ const DIFFERENTIATORS = [
 ];
 
 const CROSS_DIVISIONS = [
+  { id: 'capabilities', label: 'Capabilities', desc: 'Hoods, life safety, shell & site — commercial systems', href: '/capabilities', icon: '◆' },
   { id: 'residential', label: 'Residential Division', desc: 'Custom homes & luxury builds', href: '/residential', icon: '◆' },
   { id: 'grading', label: 'Land Grading & Site Prep', desc: 'Excavation & foundation work', href: '/grading', icon: '◆' },
   { id: 'process', label: 'The Build Process', desc: 'See how we deliver — phase by phase', href: '/process', icon: '◆' },
@@ -608,7 +609,7 @@ export default function CommercialPage() {
             </h2>
             <p className="text-ro-gray-500 text-sm sm:text-base mt-4 max-w-md mx-auto">We don&apos;t sub out what we can do ourselves.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {CROSS_DIVISIONS.map((div) => (
               <Link key={div.id} href={div.href}
                 className="cross-card group relative p-8 border border-ro-gray-800/50 bg-ro-black/40 backdrop-blur-sm hover:border-ro-gold/30 hover:bg-ro-gold/[0.02] transition-all duration-500 text-center">
