@@ -105,6 +105,13 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Public site only: slightly larger default text on phones/tablets for readability */
+  @media (max-width: 1023px) {
+    body:not(.admin-mode) {
+      font-size: 17px;
+    }
+  }
   ::selection { background-color: rgba(201,168,76,0.3); color: #FFFFFF; }
 }
 
