@@ -7,6 +7,7 @@ import {
   RFP_REFERRAL_SOURCES,
   type RfpPayload,
 } from '@/lib/rfp-contact';
+import { sanityWriteClient } from '@/lib/sanity/client';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -117,6 +118,39 @@ export async function POST(req: NextRequest) {
       subject: `Commercial RFP — ${subjectSafe(ptLabel)} — ${subjectSafe(organizationName, 60)}`,
       html,
     });
+
+    const submittedFromHost =
+      req.headers.get('x-forwarded-host')?.split(',')[0]?.trim() ||
+      req.headers.get('host')?.trim() ||
+      '';
+
+    if (process.env.SANITY_API_WRITE_TOKEN) {
+      try {
+        await sanityWriteClient.create({
+          _type: 'commercialRfp',
+          organizationName,
+          contactName,
+          email,
+          phone,
+          projectType,
+          scope,
+          squareFootage,
+          locationCityState,
+          desiredStartDate,
+          budgetRange,
+          description,
+          referralSource,
+          status: 'new',
+          notes: '',
+          submittedAt: new Date().toISOString(),
+          submittedFromHost,
+        });
+      } catch (sanityErr) {
+        console.error('Commercial RFP Sanity create failed:', sanityErr);
+      }
+    } else {
+      console.warn('SANITY_API_WRITE_TOKEN missing; commercial RFP not stored in Sanity');
+    }
 
     if (email) {
       await resend.emails.send({
