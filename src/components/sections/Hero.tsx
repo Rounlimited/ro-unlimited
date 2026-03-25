@@ -37,7 +37,6 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
   const contentDeckRef = useRef<HTMLDivElement>(null);
   const descRef      = useRef<HTMLParagraphElement>(null);
   const ctaRef       = useRef<HTMLDivElement>(null);
-  const statsLabelRef = useRef<HTMLDivElement>(null);
   const statsRef     = useRef<HTMLDivElement>(null);
   const spacerRef    = useRef<HTMLDivElement>(null);
 
@@ -127,7 +126,6 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
       // Hide everything initially
       gsap.set([badgeRef.current, line2Ref.current, goldLineRef.current], { opacity: 0 });
       if (contentDeckRef.current) gsap.set(contentDeckRef.current, CINEMATIC_MOTION.chapterPanel.from);
-      if (statsLabelRef.current) gsap.set(statsLabelRef.current, CINEMATIC_MOTION.chapterCopy.from);
       if (verticalLines.length) gsap.set(verticalLines, { scaleY: 0, opacity: 0, transformOrigin: 'center top' });
       if (horizontalLines.length) gsap.set(horizontalLines, { scaleX: 0, opacity: 0, transformOrigin: 'left center' });
       if (ctaRef.current?.children.length) {
@@ -237,10 +235,6 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
         );
       }
 
-      if (statsLabelRef.current) {
-        tl.fromTo(statsLabelRef.current, CINEMATIC_MOTION.chapterCopy.from, CINEMATIC_MOTION.chapterCopy.to, 1.58);
-      }
-
       tl.call(() => {
         gsap.set([split3.chars, split1.chars], { willChange: 'auto' });
       });
@@ -308,7 +302,6 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
       // Hide everything initially
       gsap.set([badgeRef.current, line2Ref.current, goldLineRef.current], { opacity: 0 });
       if (contentDeckRef.current) gsap.set(contentDeckRef.current, CINEMATIC_MOTION.chapterPanel.from);
-      if (statsLabelRef.current) gsap.set(statsLabelRef.current, CINEMATIC_MOTION.chapterCopy.from);
       if (verticalLines.length) gsap.set(verticalLines, { scaleY: 0, opacity: 0, transformOrigin: 'center top' });
       if (horizontalLines.length) gsap.set(horizontalLines, { scaleX: 0, opacity: 0, transformOrigin: 'left center' });
       if (ctaRef.current?.children.length) {
@@ -415,10 +408,6 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
           { x: 0, opacity: 1, duration: 0.45, ease: 'power3.out' },
           1.46
         );
-      }
-
-      if (statsLabelRef.current) {
-        tl.fromTo(statsLabelRef.current, CINEMATIC_MOTION.chapterCopy.from, CINEMATIC_MOTION.chapterCopy.to, 1.52);
       }
 
       tl.call(() => {
@@ -540,10 +529,6 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
             </div>
 
             {/* Trust Stats */}
-            <div ref={statsLabelRef} className="mb-5 flex items-center gap-3 text-[11px] font-mono uppercase tracking-[0.32em] text-ro-gray-500 lg:mx-auto lg:w-fit">
-              <span className="h-px w-10 bg-gradient-to-r from-ro-gold/0 via-ro-gold/60 to-ro-gold/0" />
-              Operational Trust Markers
-            </div>
             <div ref={statsRef} className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-8 max-w-md lg:max-w-3xl lg:mx-auto">
               {TRUST_STATS.map((stat) => {
                 const { num, suffix } = parseStatValue(stat.value);

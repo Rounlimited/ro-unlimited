@@ -167,56 +167,53 @@ export default function SectionTransition({
   return (
     <div
       ref={wrapperRef}
-      className={`relative overflow-hidden bg-ro-black px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-5 ${className}`}
+      className={`relative overflow-hidden bg-ro-black py-6 sm:py-8 lg:py-5 ${className}`}
     >
+      {/* I-Beam */}
       <div
-        ref={panelRef}
-        className={`relative mx-auto max-w-6xl overflow-hidden border border-ro-gold/15 bg-ro-black/82 backdrop-blur-sm ${featured ? 'min-h-[36vh] sm:min-h-[32vh]' : 'min-h-[28vh] sm:min-h-[24vh]'} lg:min-h-0`}
+        ref={beamRef}
+        className="relative w-full"
+        style={{ height: 40 }}
       >
-        <div ref={glowRef} className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(201,168,76,0.18),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.12),transparent_34%)]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-ro-gold/55 to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-ro-gold/25 to-transparent" />
-        <div ref={pulseRef} className="pointer-events-none absolute right-[-12%] top-1/2 h-40 w-40 -translate-y-1/2 rounded-full border border-ro-gold/20 bg-ro-gold/10 blur-2xl lg:hidden" />
+        <img
+          src="/images/svg/i-beam.svg"
+          alt=""
+          className="h-full w-full object-cover"
+          aria-hidden="true"
+        />
+        <div
+          ref={scanRef}
+          className="absolute top-0 bottom-0 w-1/4 bg-gradient-to-r from-transparent via-ro-gold/50 to-transparent mix-blend-screen pointer-events-none"
+        />
 
-        <div className="relative z-10 flex min-h-full flex-col justify-center gap-6 px-5 py-8 sm:px-8 sm:py-9 lg:px-10 lg:py-7">
-          {/* I-Beam */}
-          <div
-            ref={beamRef}
-            className="relative w-full"
-            style={{ height: 40 }}
+        {label && (
+          <span
+            ref={labelRef}
+            className="absolute inset-0 flex items-center justify-center px-4 text-center font-heading text-[10px] sm:text-xs tracking-[0.34em] uppercase text-ro-black/60"
+            style={{ textShadow: '0 0 4px rgba(201,168,76,0.3)' }}
           >
-            <img
-              src="/images/svg/i-beam.svg"
-              alt=""
-              className="w-full h-full object-cover"
-              aria-hidden="true"
-            />
-            <div
-              ref={scanRef}
-              className="absolute top-0 bottom-0 w-1/4 bg-gradient-to-r from-transparent via-ro-gold/50 to-transparent mix-blend-screen pointer-events-none"
-            />
+            {label}
+          </span>
+        )}
+      </div>
 
-            {/* Stamped label */}
-            {label && (
-              <span
-                ref={labelRef}
-                className="absolute inset-0 flex items-center justify-center font-heading text-[10px] sm:text-xs tracking-[0.34em] uppercase text-ro-black/60"
-                style={{ textShadow: '0 0 4px rgba(201,168,76,0.3)' }}
-              >
-                {label}
-              </span>
-            )}
-          </div>
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div
+          ref={panelRef}
+          className={`relative mx-auto mt-5 max-w-6xl overflow-hidden ${featured ? 'min-h-[14vh]' : 'min-h-[10vh]'} lg:min-h-0`}
+        >
+          <div ref={glowRef} className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(201,168,76,0.18),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.12),transparent_34%)]" />
+          <div ref={pulseRef} className="pointer-events-none absolute right-[-12%] top-1/2 h-40 w-40 -translate-y-1/2 rounded-full border border-ro-gold/20 bg-ro-gold/10 blur-2xl lg:hidden" />
 
           {(title || subtitle) && (
-            <div className="max-w-3xl">
+            <div className="relative z-10 flex min-h-full flex-col justify-center gap-3 px-1 py-2">
               {title && (
-                <h2 ref={titleRef} className={`font-heading uppercase tracking-tight text-ro-white ${featured ? 'text-3xl sm:text-4xl lg:text-3xl' : 'text-2xl sm:text-3xl lg:text-2xl'}`}>
+                <h2 ref={titleRef} className={`font-heading uppercase tracking-tight text-ro-white ${featured ? 'text-2xl sm:text-3xl lg:text-2xl' : 'text-xl sm:text-2xl lg:text-xl'}`}>
                   {title}
                 </h2>
               )}
               {subtitle && (
-                <p ref={subtitleRef} className="mt-3 max-w-2xl text-sm leading-relaxed text-ro-gray-400 sm:text-base">
+                <p ref={subtitleRef} className="max-w-2xl text-sm leading-relaxed text-ro-gray-400 sm:text-base">
                   {subtitle}
                 </p>
               )}

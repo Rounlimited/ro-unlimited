@@ -4,7 +4,6 @@ import { useRef } from 'react';
 import { Shield, Layers, Flame, MapPin } from 'lucide-react';
 import { gsap, ScrollTrigger, SplitText, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
-import { EASES, TIMING } from '@/lib/gsap-config';
 
 const REASONS = [
   { icon: Layers, title: 'Full-scope control', description: 'Site work, shell, interiors, and closeout under one accountable team. Less handoff noise. More control from first mobilization to turnover.' },
@@ -28,7 +27,6 @@ export default function WhyRO() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLSpanElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const introCopyRef = useRef<HTMLParagraphElement>(null);
   const scaffoldRef = useRef<HTMLDivElement>(null);
   const goldLineRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -47,7 +45,6 @@ export default function WhyRO() {
 
       // Set initial hidden states
       gsap.set([badgeRef.current, goldLineRef.current], { opacity: 0 });
-      if (introCopyRef.current) gsap.set(introCopyRef.current, { opacity: 0, y: 18 });
       if (scaffoldRef.current) gsap.set(scaffoldRef.current, { opacity: 0 });
       const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
       allCards.forEach(card => { gsap.set(card, { opacity: 0 }); });
@@ -248,14 +245,6 @@ export default function WhyRO() {
         1.0
       );
 
-      if (introCopyRef.current) {
-        headerTl.fromTo(introCopyRef.current,
-          { opacity: 0, y: 18 },
-          { opacity: 1, y: 0, duration: TIMING.normal, ease: EASES.chapterReveal },
-          1.08
-        );
-      }
-
       // ─── Cards: premium panel reveal with inner stagger ───
       allCards.forEach((card, i) => {
         const innerBits = card.querySelectorAll('.reason-icon, .reason-title, .reason-desc');
@@ -350,9 +339,6 @@ export default function WhyRO() {
             className="mt-4 h-[2px] w-24 bg-ro-gold lg:mx-auto"
             style={{ boxShadow: '0 0 8px rgba(201,168,76,0.4)' }}
           />
-          <p ref={introCopyRef} className="mt-5 max-w-xl text-sm leading-relaxed text-ro-gray-400 sm:text-base lg:mx-auto">
-            This is where the mood shifts from ambition to confidence. The right buyer should feel the difference in control, fluency, and finish before a call is ever made.
-          </p>
         </div>
 
         {/* Cards grid — single column on mobile to keep the pacing cinematic */}

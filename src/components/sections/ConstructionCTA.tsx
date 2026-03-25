@@ -6,13 +6,12 @@ import { COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone } from 'lucide-react';
 import CraneAnimation from '@/components/animations/CraneAnimation';
 import { gsap, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
-import { CINEMATIC_MOTION, EASES, TIMING } from '@/lib/gsap-config';
+import { CINEMATIC_MOTION, EASES } from '@/lib/gsap-config';
 
 export default function ConstructionCTA() {
   const [mounted, setMounted] = useState(false);
   const [useCrane, setUseCrane] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
-  const chapterRef = useRef<HTMLDivElement>(null);
   const ambientTopRef = useRef<HTMLDivElement>(null);
   const ambientBottomRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -43,7 +42,6 @@ export default function ConstructionCTA() {
 
     const actionEls = actionsRef.current ? Array.from(actionsRef.current.children) : [];
     const buttonCleanup: Array<() => void> = [];
-    if (chapterRef.current) gsap.set(chapterRef.current, { opacity: 0, y: 18 });
     gsap.set([ambientTopRef.current, ambientBottomRef.current].filter(Boolean), { opacity: 0, scale: 0.84 });
     gsap.set(panelRef.current, CINEMATIC_MOTION.chapterPanel.from);
     gsap.set([eyebrowRef.current, titleRef.current, copyRef.current], { opacity: 0, y: 18 });
@@ -59,14 +57,6 @@ export default function ConstructionCTA() {
       },
       defaults: { ease: 'power3.out' },
     });
-
-    if (chapterRef.current) {
-      tl.fromTo(chapterRef.current,
-        { opacity: 0, y: 18 },
-        { opacity: 1, y: 0, duration: TIMING.normal, ease: EASES.chapterReveal },
-        0
-      );
-    }
 
     tl.fromTo([ambientTopRef.current, ambientBottomRef.current].filter(Boolean),
       CINEMATIC_MOTION.ambientBloom.from,
@@ -222,10 +212,6 @@ export default function ConstructionCTA() {
       <div ref={ambientBottomRef} className="pointer-events-none absolute right-[-14%] bottom-[8%] h-[280px] w-[280px] rounded-full bg-cyan-400/10 blur-3xl lg:hidden" />
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-ro-gold/30 to-transparent" />
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div ref={chapterRef} className="mb-6 flex items-center gap-3 text-[11px] font-mono uppercase tracking-[0.32em] text-ro-gray-500">
-          <span className="h-px w-10 bg-gradient-to-r from-ro-gold/0 via-ro-gold/60 to-ro-gold/0" />
-          Final Act
-        </div>
         {ctaContent}
       </div>
     </section>

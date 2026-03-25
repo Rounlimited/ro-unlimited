@@ -17,7 +17,7 @@ export default async function HomePage() {
   }
 
   return (
-    <>
+    <main className="overflow-x-hidden bg-ro-black">
       {/*
         Preload the hero video during the splash screen so it's buffered
         and ready to play the instant ro:site-ready fires.
@@ -37,8 +37,7 @@ export default async function HomePage() {
       <Hero heroVideoUrl={heroVideoUrl} />
       <SectionTransition
         label="FLOOR 01"
-        title="Commercial Sectors"
-        subtitle="A stronger handoff into the work mix: restaurants, retail, industrial, and site-led builds staged like their own chapter on mobile."
+        title="Commercial Work"
         featured
         sparks
       />
@@ -52,17 +51,15 @@ export default async function HomePage() {
       <SectionTransition
         label="FLOOR 02"
         title="Why RO"
-        subtitle="After the ambition comes the proof: control, fluency, inspection discipline, and confidence across every moving part."
         sparks
       />
       <WhyRO />
       <SectionTransition
         label="FLOOR 03"
-        title="Final Act"
-        subtitle="The close should land like a payoff scene, not a leftover CTA."
+        title="Start the Conversation"
         sparks
       />
       <ConstructionCTA />
-    </>
+    </main>
   );
 }

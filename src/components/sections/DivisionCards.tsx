@@ -65,17 +65,14 @@ export default function DivisionCards({
         const header = sectionRef.current!.querySelector('.division-header') as HTMLElement | null;
         const headerBadge = sectionRef.current!.querySelector('.division-eyebrow') as HTMLElement | null;
         const headerTitle = header?.querySelector('h2') as HTMLElement | null;
-        const headerCopy = sectionRef.current!.querySelector('.division-copy') as HTMLElement | null;
         const headerLine = sectionRef.current!.querySelector('.division-line') as HTMLElement | null;
 
         if (headerBadge) gsap.set(headerBadge, { opacity: 0, y: -16 });
         if (headerTitle) gsap.set(headerTitle, { opacity: 0, y: 30 });
-        if (headerCopy) gsap.set(headerCopy, { opacity: 0, y: 18 });
         if (headerLine) gsap.set(headerLine, { opacity: 0, scaleX: 0, transformOrigin: 'center center' });
 
         cardLinks.forEach((card, index) => {
           const icon = card.querySelector('.division-icon') as HTMLElement | null;
-          const meta = card.querySelector('.division-meta') as HTMLElement | null;
           const title = card.querySelector('.division-name') as HTMLElement | null;
           const audience = card.querySelector('.division-audience') as HTMLElement | null;
           const desc = card.querySelector('.division-desc') as HTMLElement | null;
@@ -94,7 +91,6 @@ export default function DivisionCards({
             boxShadow: '0 0 0 rgba(201,168,76,0)',
           });
           if (icon) gsap.set(icon, { opacity: 0, scale: 0.72, rotation: -18 });
-          if (meta) gsap.set(meta, { opacity: 0, y: 10 });
           if (title) gsap.set(title, { opacity: 0, y: 14 });
           if (audience) gsap.set(audience, { opacity: 0, y: 10 });
           if (desc) gsap.set(desc, { opacity: 0, y: 14 });
@@ -136,35 +132,30 @@ export default function DivisionCards({
               { opacity: 1, scale: 1, rotation: 0, duration: 0.35, ease: 'back.out(1.8)' },
               0.1
             )
-            .fromTo(meta,
-              { opacity: 0, y: 10 },
-              { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out' },
-              0.14
-            )
             .fromTo(title,
               { opacity: 0, y: 14 },
               { opacity: 1, y: 0, duration: 0.32, ease: 'power2.out' },
-              0.2
+              0.16
             )
             .fromTo(audience,
               { opacity: 0, y: 10 },
               { opacity: 1, y: 0, duration: 0.26, ease: 'power2.out' },
-              0.24
+              0.2
             )
             .fromTo(desc,
               { opacity: 0, y: 14 },
               { opacity: 1, y: 0, duration: 0.32, ease: 'power2.out' },
-              0.28
+              0.24
             )
             .fromTo(tags,
               { opacity: 0, y: 10, scale: 0.96 },
               { opacity: 1, y: 0, scale: 1, stagger: 0.04, duration: 0.25, ease: 'power2.out' },
-              0.34
+              0.3
             )
             .fromTo(arrow,
               { opacity: 0, x: -10 },
               { opacity: 1, x: 0, duration: 0.28, ease: 'power2.out' },
-              0.42
+              0.38
             )
             .fromTo(bottomLine,
               { scaleX: 0, transformOrigin: 'left center', opacity: 0 },
@@ -189,18 +180,11 @@ export default function DivisionCards({
               0.08
             );
           }
-          if (headerCopy) {
-            entranceTl.fromTo(headerCopy,
-              { opacity: 0, y: 18 },
-              { opacity: 1, y: 0, duration: 0.45 },
-              0.16
-            );
-          }
           if (headerLine) {
             entranceTl.fromTo(headerLine,
               { opacity: 0, scaleX: 0, transformOrigin: 'center center' },
               { opacity: 1, scaleX: 1, duration: 0.35 },
-              0.26
+              0.18
             );
           }
         };
@@ -361,10 +345,7 @@ export default function DivisionCards({
             <h2 className="text-ro-white font-heading text-3xl sm:text-4xl md:text-5xl tracking-tight uppercase mb-3">
               {titleBeforeGold} <span className="gradient-text-gold">{titleGold}</span>
             </h2>
-            <p className="division-copy max-w-xl text-sm leading-relaxed text-ro-gray-400 sm:text-base lg:mx-auto">
-              Designed as a premium scroll gallery on mobile: each sector gets room to feel desirable, not just listed.
-            </p>
-            <div className="division-line mt-4 h-[2px] w-20 bg-ro-gold lg:mx-auto"
+            <div className="division-line mt-2 h-[2px] w-20 bg-ro-gold lg:mx-auto"
               style={{ boxShadow: '0 0 8px rgba(201,168,76,0.4)' }}
             />
           </div>
@@ -406,10 +387,6 @@ export default function DivisionCards({
                       <div className={`flex h-full flex-col p-5 sm:p-6 lg:p-6 ${isFeatured ? 'min-h-[63vh] justify-between sm:min-h-[56vh] lg:min-h-0' : 'min-h-[44vh]'}`}>
                         {/* Card Header — always visible */}
                         <div className="card-header">
-                          <div className="division-meta mb-4 flex items-center justify-between text-[11px] font-mono uppercase tracking-[0.28em] text-ro-gray-500">
-                            <span>{isFeatured ? 'Lead sector' : `Sector 0${index + 1}`}</span>
-                            <span className="text-ro-gold/80">{division.services.length} touchpoints</span>
-                          </div>
                           <div className="flex items-center gap-3 sm:gap-4">
                             <div className={`division-icon flex flex-shrink-0 items-center justify-center border border-ro-gold/30 bg-ro-gold/5 text-ro-gold ${isFeatured ? 'h-12 w-12' : 'h-10 w-10 sm:h-10 sm:w-10'}`}>
                               <Icon size={isFeatured ? 22 : 18} className="sm:w-[22px] sm:h-[22px]" />
