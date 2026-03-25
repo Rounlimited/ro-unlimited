@@ -2,6 +2,7 @@ import { defineField, defineType } from 'sanity';
 
 /**
  * Commercial RFP submissions from /contact.
+ * Staff: list/detail in admin at /admin/commercial-rfps (API: /api/admin/commercial-rfps).
  * If your Studio lives elsewhere, import this module into your main schema `types` array.
  */
 export default defineType({

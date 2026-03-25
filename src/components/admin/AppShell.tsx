@@ -13,7 +13,7 @@ import {
   Users, FileText, Clock, Wrench, Package, TrendingUp,
   Settings, LifeBuoy, Lock, Search, X, ChevronDown,
   Briefcase, Shield, UserPlus, Truck, FileCheck, Target,
-  Megaphone, CreditCard, PieChart, Building2, Bell, Sparkles, Zap, LogOut, HardDrive
+  Megaphone, CreditCard, PieChart,   Building2, Bell, Sparkles, Zap, LogOut, HardDrive, ScrollText
 } from 'lucide-react';
 
 interface AppIcon {
@@ -213,6 +213,7 @@ const APP_ICONS: AppIcon[] = [
   { id: 'portfolio', label: 'Portfolio', icon: Camera, href: '/admin/projects', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'settings', label: 'Settings', icon: Settings, href: '/admin/settings', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'leads', label: 'Inbox', icon: MessageCircle, href: '/admin/inbox', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
+  { id: 'commercial-rfps', label: 'RFPs', icon: ScrollText, href: '/admin/commercial-rfps', active: true, color: '#D4772C', bg: 'rgba(212,119,44,0.15)' },
   { id: 'estimates', label: 'Estimates', icon: FileText, href: '/admin/estimates', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'proposals', label: 'Proposals', icon: Briefcase, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'pipeline', label: 'Pipeline', icon: TrendingUp, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },

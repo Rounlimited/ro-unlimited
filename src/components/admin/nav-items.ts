@@ -3,6 +3,7 @@ import {
   MessageCircle, FileText, Users, LifeBuoy, Briefcase, TrendingUp,
   HardHat, CalendarDays, FileCheck, Receipt, BarChart3, CreditCard,
   Clock, Shield, Wrench, Package, Truck, Building2, PieChart, Mail,
+  ScrollText,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -21,6 +22,7 @@ export const NAV_ITEMS: NavItem[] = [
   // Main
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/admin', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'main' },
   { id: 'leads', label: 'Inbox', icon: Mail, href: '/admin/inbox', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', group: 'main' },
+  { id: 'commercial-rfps', label: 'RFPs', icon: ScrollText, href: '/admin/commercial-rfps', active: true, color: '#D4772C', bg: 'rgba(212,119,44,0.15)', group: 'main' },
   { id: 'estimates', label: 'Estimates', icon: FileText, href: '/admin/estimates', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'main' },
   { id: 'portfolio', label: 'Projects', icon: Camera, href: '/admin/projects', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'main' },
 
