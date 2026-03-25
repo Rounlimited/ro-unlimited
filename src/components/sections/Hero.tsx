@@ -508,9 +508,9 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
               style={{ boxShadow: '0 0 8px rgba(201,168,76,0.4), 0 0 16px rgba(201,168,76,0.2)' }}
             />
 
-            <div ref={contentDeckRef} className="relative mb-12 overflow-hidden border border-ro-gold/14 bg-ro-black/38 p-5 backdrop-blur-md shadow-[0_18px_54px_rgba(0,0,0,0.24)] lg:mx-auto lg:max-w-3xl lg:p-7">
+            <div ref={contentDeckRef} className="relative mb-12 overflow-hidden border border-ro-gold/14 bg-gradient-to-br from-ro-black/72 via-ro-black/56 to-ro-black/30 p-5 shadow-[0_18px_54px_rgba(0,0,0,0.24)] lg:mx-auto lg:max-w-3xl lg:p-7">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-ro-gold/45 to-transparent" />
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(201,168,76,0.1),transparent_42%)]" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(201,168,76,0.12),transparent_38%),linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.02))]" />
 
               {/* Description */}
               <p ref={descRef} className="relative max-w-md pr-2 text-[1.05rem] font-body leading-relaxed text-ro-gray-300 sm:text-xl lg:mx-auto lg:max-w-2xl lg:px-1">
