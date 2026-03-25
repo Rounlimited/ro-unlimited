@@ -26,6 +26,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
   const sectionRef   = useRef<HTMLDivElement>(null);
   const ambientLeftRef = useRef<HTMLDivElement>(null);
   const ambientRightRef = useRef<HTMLDivElement>(null);
+  const ambientBottomRef = useRef<HTMLDivElement>(null);
   const shimmerRef = useRef<HTMLDivElement>(null);
   const badgeRef     = useRef<HTMLDivElement>(null);
   const line1Ref     = useRef<HTMLSpanElement>(null);
@@ -78,6 +79,18 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
         yPercent: 10,
         scale: 1.05,
         duration: 9,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      });
+    }
+
+    if (ambientBottomRef.current) {
+      gsap.to(ambientBottomRef.current, {
+        xPercent: 6,
+        yPercent: -10,
+        scale: 1.12,
+        duration: 10,
         repeat: -1,
         yoyo: true,
         ease: 'sine.inOut',
@@ -423,16 +436,18 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
         </div>
 
         {/* Gradient overlay */}
-        <div className="absolute inset-0 z-[2] bg-gradient-to-b from-ro-black/80 via-ro-black/60 to-ro-black/80" />
-        <div ref={ambientLeftRef} className="absolute left-[-10%] top-[12%] z-[1] h-[220px] w-[220px] rounded-full bg-ro-gold/10 blur-3xl pointer-events-none" />
-        <div ref={ambientRightRef} className="absolute right-[-12%] top-[30%] z-[1] h-[260px] w-[260px] rounded-full bg-cyan-400/10 blur-3xl pointer-events-none" />
-        <div ref={shimmerRef} className="absolute inset-y-0 left-0 z-[3] w-1/3 bg-gradient-to-r from-transparent via-ro-gold/12 to-transparent mix-blend-screen pointer-events-none" />
+        <div className="absolute inset-0 z-[2] bg-gradient-to-b from-ro-black/88 via-ro-black/62 to-ro-black/88 lg:bg-gradient-to-b lg:from-ro-black/80 lg:via-ro-black/60 lg:to-ro-black/80" />
+        <div className="absolute inset-0 z-[2] lg:hidden" style={{ background: 'linear-gradient(to right, rgba(8,8,8,0.96) 0%, rgba(8,8,8,0.88) 34%, rgba(8,8,8,0.52) 62%, rgba(8,8,8,0.10) 100%)' }} />
+        <div ref={ambientLeftRef} className="absolute left-[-18%] top-[10%] z-[1] h-[280px] w-[280px] rounded-full bg-ro-gold/18 blur-3xl pointer-events-none lg:left-[-10%] lg:top-[12%] lg:h-[220px] lg:w-[220px] lg:bg-ro-gold/10" />
+        <div ref={ambientRightRef} className="absolute right-[-18%] top-[26%] z-[1] h-[260px] w-[260px] rounded-full bg-cyan-400/16 blur-3xl pointer-events-none lg:right-[-12%] lg:top-[30%] lg:h-[260px] lg:w-[260px] lg:bg-cyan-400/10" />
+        <div ref={ambientBottomRef} className="absolute left-[8%] bottom-[10%] z-[1] h-[220px] w-[220px] rounded-full bg-fuchsia-500/10 blur-3xl pointer-events-none lg:hidden" />
+        <div ref={shimmerRef} className="absolute inset-y-0 left-[-10%] z-[3] w-1/2 lg:w-1/3 bg-gradient-to-r from-transparent via-ro-gold/18 to-transparent mix-blend-screen pointer-events-none" />
 
-        <div className="relative z-[10] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-4 lg:pt-8 lg:pb-8">
-          <div className="text-center">
+        <div className="relative z-[10] w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-4 lg:pt-8 lg:pb-8">
+          <div className="max-w-[430px] text-left lg:max-w-none lg:text-center">
 
             {/* Badge */}
-            <div ref={badgeRef} className="inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/20 bg-ro-gold/5 mb-8">
+            <div ref={badgeRef} className="inline-flex items-center gap-2 self-start lg:self-center px-4 py-1.5 border border-ro-gold/20 bg-ro-gold/5 mb-8">
               <span className="w-2 h-2 bg-ro-gold rounded-full" />
               <span className="text-ro-gold text-xs font-mono tracking-wider uppercase">
                 {COMPANY.experience} Years. Still Raising the Standard.
@@ -441,29 +456,29 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
 
             {/* Heading — builds bottom to top */}
             <h1>
-              <span ref={line1Ref} className="block text-ro-white font-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.9] mb-4">
+              <span ref={line1Ref} className="block text-ro-white font-heading text-[3.2rem] sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.88] mb-3 lg:mb-4">
                 We Build
               </span>
-              <span ref={line2Ref} className="block gradient-text-gold font-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.9] mb-4">
+              <span ref={line2Ref} className="block gradient-text-gold font-heading text-[3.2rem] sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.88] mb-3 lg:mb-4">
                 Commercial
               </span>
-              <span ref={line3Ref} className="block text-ro-white font-heading text-3xl sm:text-4xl md:text-5xl tracking-wider uppercase leading-[0.9]">
+              <span ref={line3Ref} className="block text-ro-white font-heading text-[2.05rem] sm:text-4xl md:text-5xl tracking-[0.12em] uppercase leading-[0.92]">
                 From the Ground Up
               </span>
             </h1>
 
             {/* Gold welding line */}
-            <div ref={goldLineRef} className="mx-auto my-8 w-32 h-[2px] bg-ro-gold"
+            <div ref={goldLineRef} className="my-8 w-32 h-[2px] bg-ro-gold lg:mx-auto"
               style={{ boxShadow: '0 0 8px rgba(201,168,76,0.4), 0 0 16px rgba(201,168,76,0.2)' }}
             />
 
             {/* Description */}
-            <p ref={descRef} className="max-w-2xl mx-auto text-ro-gray-400 text-lg sm:text-xl font-body leading-relaxed mb-12 px-1">
+            <p ref={descRef} className="max-w-md lg:max-w-2xl text-ro-gray-300 text-[1.05rem] sm:text-xl font-body leading-relaxed mb-12 pr-2 lg:mx-auto lg:px-1">
               Ground-up retail, restaurant, financial, industrial, and site-driven work delivered with the control buyers trust and the finish people notice. Across Georgia, South Carolina, and North Carolina, RO brings schedule, systems, and standards under one roof.
             </p>
 
             {/* CTAs */}
-            <div ref={ctaRef} className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+            <div ref={ctaRef} className="flex flex-col sm:flex-row items-start sm:items-center justify-start lg:justify-center gap-4 mb-16">
               <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300 shadow-[0_12px_34px_rgba(201,168,76,0.18)]">
                 Start Your Project <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </Link>
@@ -473,7 +488,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
             </div>
 
             {/* Trust Stats */}
-            <div ref={statsRef} className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
+            <div ref={statsRef} className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-8 max-w-md lg:max-w-3xl lg:mx-auto">
               {TRUST_STATS.map((stat) => {
                 const { num, suffix } = parseStatValue(stat.value);
                 return (
