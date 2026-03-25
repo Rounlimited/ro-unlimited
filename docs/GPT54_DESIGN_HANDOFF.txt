@@ -1,0 +1,42 @@
+GPT-5.4 — RO Unlimited (site2 / site2-staging) visual design handoff
+=====================================================================
+
+GOAL
+----
+Elevate “wow factor” and commercial polish on the PUBLIC site only (site2.rounlimited.com).
+Do NOT change business logic, form field `name`s, API payloads, or GSAP scroll architecture unless explicitly asked.
+
+STACK / CONSTRAINTS
+-------------------
+- Next.js 14 App Router, Tailwind, existing CSS variables in src/styles/globals.css (ro-gold, ro-black, etc.)
+- GSAP: use `useGSAP` from @/components/animations/GSAPProvider, `fromTo`, sticky sections — do NOT add `pin: true` where sticky layout already exists
+- Imports: GSAP plugins only via GSAPProvider — never import from 'gsap' directly in random files
+- Mobile: body font bump for public site is in globals.css (17px base ≤1023px); keep detail text readable (avoid tiny labels on phone)
+
+PRIORITY SURFACES FOR DESIGN PASS
+---------------------------------
+1) Homepage: Hero.tsx, DivisionCards.tsx, WhyRO.tsx, ConstructionCTA.tsx — commercial-first story
+2) /contact — form container `#rfp-contact-form.rfp-contact-form`, hero on same page (data-page="commercial-rfp")
+3) /capabilities — long-form technical sections
+4) /projects — placeholder until portfolio ships; can still improve empty-state drama
+5) Navbar + Footer — density, hierarchy, optional commercial “trust” micro-UI
+
+DO NOT TOUCH (unless separate task)
+-----------------------------------
+- src/app/admin/** (entire admin app)
+- API contracts: POST /api/contact expects JSON keys from RfpPayload in src/lib/rfp-contact.ts
+- Option values in RFP_PROJECT_TYPES, RFP_SCOPES, RFP_BUDGET_RANGES, RFP_REFERRAL_SOURCES (labels may be reworded slightly if UX copy improves; values must stay stable)
+
+DELIVERABLE FROM GPT-5.4
+------------------------
+- Section-by-section notes: spacing, typography scale, color use, borders/glass, imagery treatment
+- Optional Tailwind class suggestions per block
+- One cohesive “commercial construction premium” direction (not a different brand)
+
+REFERENCE
+---------
+- Live staging: https://site2.rounlimited.com
+- Repo branch: site2-staging
+- Commercial pivot content goals: I:\My Drive\Sites\Ro\RO_Unlimited_Commercial_Pivot_Plan.docx (user’s copy)
+
+After the brief exists, implement in Cursor on branch site2-staging and push.
