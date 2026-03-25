@@ -71,21 +71,35 @@ export default function DivisionCards({
         if (headerLine) gsap.set(headerLine, { opacity: 0, scaleX: 0, transformOrigin: 'center center' });
 
         cardLinks.forEach((card, index) => {
+          const icon = card.querySelector('.division-icon') as HTMLElement | null;
+          const title = card.querySelector('.division-name') as HTMLElement | null;
+          const audience = card.querySelector('.division-audience') as HTMLElement | null;
+          const desc = card.querySelector('.division-desc') as HTMLElement | null;
+          const tags = card.querySelectorAll('.division-tag');
+          const arrow = card.querySelector('.division-arrow') as HTMLElement | null;
+          const bottomLine = card.querySelector('.division-bottom-line') as HTMLElement | null;
+
           gsap.set(card, {
             opacity: 0,
-            y: 28,
-            scale: 0.97,
-            clipPath: 'inset(14% 0% 0% 0%)',
+            y: 40,
+            scale: 0.94,
+            rotationX: 10,
+            transformPerspective: 1200,
+            clipPath: 'inset(16% 0% 0% 0%)',
             boxShadow: '0 0 0 rgba(201,168,76,0)',
           });
-
-          const innerBits = card.querySelectorAll('.division-icon, .division-name, .division-audience, .division-desc, .division-tag, .division-arrow');
-          if (innerBits.length) gsap.set(innerBits, { opacity: 0, y: 12 });
+          if (icon) gsap.set(icon, { opacity: 0, scale: 0.72, rotation: -18 });
+          if (title) gsap.set(title, { opacity: 0, y: 14 });
+          if (audience) gsap.set(audience, { opacity: 0, y: 10 });
+          if (desc) gsap.set(desc, { opacity: 0, y: 14 });
+          if (tags.length) gsap.set(tags, { opacity: 0, y: 10, scale: 0.96 });
+          if (arrow) gsap.set(arrow, { opacity: 0, x: -10 });
+          if (bottomLine) gsap.set(bottomLine, { scaleX: 0, transformOrigin: 'left center', opacity: 0 });
 
           gsap.timeline({
             scrollTrigger: {
               trigger: card,
-              start: index < 2 ? 'top 82%' : 'top 78%',
+              start: index === 0 ? 'top 88%' : 'top 82%',
               toggleActions: 'play none none none',
               id: `division-card-mobile-${index}`,
             },
@@ -93,25 +107,58 @@ export default function DivisionCards({
             .fromTo(card,
               {
                 opacity: 0,
-                y: 28,
-                scale: 0.97,
-                clipPath: 'inset(14% 0% 0% 0%)',
+                y: 40,
+                scale: 0.94,
+                rotationX: 10,
+                transformPerspective: 1200,
+                clipPath: 'inset(16% 0% 0% 0%)',
                 boxShadow: '0 0 0 rgba(201,168,76,0)',
               },
               {
                 opacity: 1,
                 y: 0,
                 scale: 1,
+                rotationX: 0,
                 clipPath: 'inset(0% 0% 0% 0%)',
-                boxShadow: '0 14px 40px rgba(0,0,0,0.25), 0 0 28px rgba(201,168,76,0.08)',
-                duration: 0.6,
+                boxShadow: '0 20px 54px rgba(0,0,0,0.34), 0 0 34px rgba(201,168,76,0.12)',
+                duration: 0.72,
                 ease: 'power3.out',
               }
             )
-            .fromTo(innerBits,
-              { opacity: 0, y: 12 },
-              { opacity: 1, y: 0, stagger: 0.045, duration: 0.35, ease: 'power2.out' },
-              0.12
+            .fromTo(icon,
+              { opacity: 0, scale: 0.72, rotation: -18 },
+              { opacity: 1, scale: 1, rotation: 0, duration: 0.35, ease: 'back.out(1.8)' },
+              0.1
+            )
+            .fromTo(title,
+              { opacity: 0, y: 14 },
+              { opacity: 1, y: 0, duration: 0.32, ease: 'power2.out' },
+              0.16
+            )
+            .fromTo(audience,
+              { opacity: 0, y: 10 },
+              { opacity: 1, y: 0, duration: 0.26, ease: 'power2.out' },
+              0.2
+            )
+            .fromTo(desc,
+              { opacity: 0, y: 14 },
+              { opacity: 1, y: 0, duration: 0.32, ease: 'power2.out' },
+              0.24
+            )
+            .fromTo(tags,
+              { opacity: 0, y: 10, scale: 0.96 },
+              { opacity: 1, y: 0, scale: 1, stagger: 0.04, duration: 0.25, ease: 'power2.out' },
+              0.28
+            )
+            .fromTo(arrow,
+              { opacity: 0, x: -10 },
+              { opacity: 1, x: 0, duration: 0.28, ease: 'power2.out' },
+              0.34
+            )
+            .fromTo(bottomLine,
+              { scaleX: 0, transformOrigin: 'left center', opacity: 0 },
+              { scaleX: 1, opacity: 1, duration: 0.36, ease: 'power2.inOut' },
+              0.16
             );
         });
 
@@ -278,17 +325,17 @@ export default function DivisionCards({
   }, { scope: sectionRef });
 
   return (
-    <div ref={spacerRef} className={tallStack ? 'relative z-[30] [height:330vh] lg:[height:600vh]' : 'relative z-[30] [height:220vh] lg:[height:400vh]'}>
+    <div ref={spacerRef} className={tallStack ? 'relative z-[30] py-10 sm:py-14 lg:py-0 lg:[height:600vh]' : 'relative z-[30] py-10 sm:py-14 lg:py-0 lg:[height:400vh]'}>
       <section
         ref={sectionRef}
-        className="sticky top-0 h-screen overflow-hidden bg-ro-black"
+        className="relative min-h-screen overflow-hidden bg-ro-black lg:sticky lg:top-0 lg:h-screen"
       >
         <BlueprintGrid intensity="medium" animate={true} />
 
         {/* Gradient overlays */}
         <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-transparent to-ro-black pointer-events-none z-[1]" />
 
-        <div className="relative z-10 flex flex-col h-screen px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 flex flex-col min-h-screen lg:h-screen px-4 sm:px-6 lg:px-8">
           {/* Section Header */}
           <div className="division-header pt-12 sm:pt-16 lg:pt-20 pb-4 sm:pb-6 text-center flex-shrink-0">
             <span className="division-eyebrow text-ro-gold text-[11px] sm:text-xs font-mono tracking-[0.3em] uppercase mb-3 block">
@@ -304,7 +351,7 @@ export default function DivisionCards({
 
           {/* Card Stage — single col on mobile, 2-col grid on desktop */}
           <div ref={stageRef} className="relative flex-1 max-w-2xl lg:max-w-5xl mx-auto w-full">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 lg:pt-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 lg:pt-2">
               {cards.map((division, index) => {
                 const Icon = ICONS[division.icon] || Building2;
                 return (
@@ -315,9 +362,11 @@ export default function DivisionCards({
                   >
                     <Link
                       href={division.href}
-                      className="division-link relative w-full bg-ro-gray-900/80 lg:bg-ro-gray-900/60 lg:backdrop-blur-sm overflow-hidden block border border-ro-gold/20 transition-none"
+                      className="division-link relative w-full bg-ro-gray-900/85 lg:bg-ro-gray-900/60 lg:backdrop-blur-sm overflow-hidden block border border-ro-gold/20 transition-none"
                       style={{ willChange: 'box-shadow, border-color' }}
                     >
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(201,168,76,0.12),transparent_48%)] pointer-events-none" />
+                      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-ro-gold/40 to-transparent pointer-events-none" />
                       {/* Corner Bolts — desktop only */}
                       <div className="card-bolt absolute top-2 left-2 w-2 h-2 rounded-full hidden lg:block"
                         style={{ background: 'radial-gradient(circle, #D4B965 0%, #C9A84C 60%, #8A7233 100%)', boxShadow: '0 0 4px rgba(201,168,76,0.3)' }}
@@ -333,10 +382,10 @@ export default function DivisionCards({
                       />
 
                       {/* Card Content */}
-                      <div className="p-4 sm:p-5 lg:p-6">
+                      <div className="p-5 sm:p-6 lg:p-6">
                         {/* Card Header — always visible */}
                         <div className="card-header flex items-center gap-3 sm:gap-4">
-                          <div className="division-icon w-8 h-8 sm:w-10 sm:h-10 border border-ro-gold/30 flex items-center justify-center text-ro-gold flex-shrink-0">
+                          <div className="division-icon w-10 h-10 sm:w-10 sm:h-10 border border-ro-gold/30 bg-ro-gold/5 flex items-center justify-center text-ro-gold flex-shrink-0">
                             <Icon size={18} className="sm:w-[22px] sm:h-[22px]" />
                           </div>
                           <h3 className="division-name text-ro-white font-heading text-xl sm:text-xl lg:text-2xl tracking-wider uppercase">
@@ -353,11 +402,11 @@ export default function DivisionCards({
                             <p className="division-desc text-ro-gray-400 text-base sm:text-base lg:text-[15px] leading-relaxed mb-3 sm:mb-4">
                               {division.description}
                             </p>
-                            <div className="division-tags flex flex-wrap gap-2 mb-3 sm:mb-4">
+                            <div className="division-tags flex flex-wrap gap-2.5 mb-3 sm:mb-4">
                               {division.services.slice(0, 3).map(service => (
                                 <span
                                   key={service}
-                                  className="division-tag px-2 sm:px-3 py-1 text-[13px] sm:text-xs font-mono text-ro-gray-500 border border-ro-gray-800"
+                                  className="division-tag px-2.5 sm:px-3 py-1 text-[13px] sm:text-xs font-mono text-ro-gray-400 border border-ro-gray-700/80 bg-ro-black/40"
                                 >
                                   {service}
                                 </span>

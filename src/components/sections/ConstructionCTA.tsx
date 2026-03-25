@@ -38,6 +38,7 @@ export default function ConstructionCTA() {
     if (useCrane || !sectionRef.current || !panelRef.current) return;
 
     const actionEls = actionsRef.current ? Array.from(actionsRef.current.children) : [];
+    const buttonCleanup: Array<() => void> = [];
     gsap.set(panelRef.current, { opacity: 0, y: 34, scale: 0.97, clipPath: 'inset(16% 0% 0% 0%)' });
     gsap.set([eyebrowRef.current, titleRef.current, copyRef.current], { opacity: 0, y: 18 });
     if (lineRef.current) gsap.set(lineRef.current, { opacity: 0, scaleX: 0, transformOrigin: 'left center' });
@@ -90,6 +91,51 @@ export default function ConstructionCTA() {
         0.42
       );
     }
+
+    tl.call(() => {
+      gsap.to(panelRef.current, {
+        y: -8,
+        duration: 2.8,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      });
+
+      if (lineRef.current) {
+        gsap.to(lineRef.current, {
+          boxShadow: '0 0 18px rgba(201,168,76,0.75)',
+          repeat: -1,
+          yoyo: true,
+          duration: 1.6,
+          ease: 'sine.inOut',
+        });
+      }
+
+      actionEls.forEach((button) => {
+        const xTo = gsap.quickTo(button as Element, 'x', { duration: 0.22, ease: 'power3.out' });
+        const yTo = gsap.quickTo(button as Element, 'y', { duration: 0.22, ease: 'power3.out' });
+        const move = (event: PointerEvent) => {
+          const rect = (button as HTMLElement).getBoundingClientRect();
+          const x = (event.clientX - rect.left - rect.width / 2) * 0.08;
+          const y = (event.clientY - rect.top - rect.height / 2) * 0.12;
+          xTo(x);
+          yTo(y);
+        };
+        const leave = () => {
+          xTo(0);
+          yTo(0);
+        };
+        button.addEventListener('pointermove', move);
+        button.addEventListener('pointerleave', leave);
+        buttonCleanup.push(() => {
+          button.removeEventListener('pointermove', move);
+          button.removeEventListener('pointerleave', leave);
+        });
+      });
+    });
+    return () => {
+      buttonCleanup.forEach((fn) => fn());
+    };
   }, { scope: sectionRef, dependencies: [useCrane] });
 
   const ctaContent = (

@@ -464,10 +464,10 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
 
             {/* CTAs */}
             <div ref={ctaRef} className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-              <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300">
+              <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300 shadow-[0_12px_34px_rgba(201,168,76,0.18)]">
                 Start Your Project <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </Link>
-              <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="group flex items-center gap-3 px-8 py-4 border border-ro-gold/30 text-ro-gold font-heading text-sm tracking-wider uppercase hover:bg-ro-gold/5 hover:border-ro-gold/50 transition-all duration-300">
+              <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="group flex items-center gap-3 px-8 py-4 border border-ro-gold/30 text-ro-gold font-heading text-sm tracking-wider uppercase bg-ro-black/25 backdrop-blur-sm hover:bg-ro-gold/5 hover:border-ro-gold/50 transition-all duration-300">
                 <Phone size={16} />{COMPANY.phone}
               </a>
             </div>
@@ -477,11 +477,12 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
               {TRUST_STATS.map((stat) => {
                 const { num, suffix } = parseStatValue(stat.value);
                 return (
-                  <div key={stat.label} className="text-center">
+                  <div key={stat.label} className="text-center border border-ro-gold/10 bg-ro-black/25 backdrop-blur-md px-3 py-4 shadow-[0_10px_26px_rgba(0,0,0,0.18)]">
                     <div className="text-ro-gold font-heading text-3xl sm:text-4xl mb-1">
                       <CountUp end={num} suffix={suffix} duration={2} />
                     </div>
                     <div className="text-ro-gray-500 text-[11px] sm:text-xs tracking-wider uppercase font-body leading-snug px-1">{stat.label}</div>
+                    <div className="mx-auto mt-3 h-px w-8 bg-gradient-to-r from-transparent via-ro-gold/50 to-transparent" />
                   </div>
                 );
               })}
