@@ -1,9 +1,7 @@
 'use client';
 
-import { useRef, useCallback, useEffect } from 'react';
-import Link from 'next/link';
+import { useRef, useCallback } from 'react';
 import { COMPANY, TRUST_STATS } from '@/lib/constants';
-import { ArrowRight, Phone } from 'lucide-react';
 import { gsap, SplitText, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
 import HeroVideo from '@/components/sections/HeroVideo';
@@ -13,8 +11,7 @@ import { CINEMATIC_MOTION, EASES, TIMING } from '@/lib/gsap-config';
 /**
  * HERO — Desktop: pinned scrub-linked construction sequence.
  * Mobile: ROLoader splash ends → video plays 2s → build sequence fires bottom-to-top:
- *   Phone → Gold CTA → Description → Gold line →
- *   FROM THE GROUND UP (chars) → EVERYTHING (scale) → WE BUILD (chars) → Badge
+ *   Description panel → Gold line → headline build → badge.
  *   Stats: ScrollTrigger on scroll.
  *
  * Nothing plays until window dispatches 'ro:site-ready'.
@@ -36,7 +33,6 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
   const goldLineRef  = useRef<HTMLDivElement>(null);
   const contentDeckRef = useRef<HTMLDivElement>(null);
   const descRef      = useRef<HTMLParagraphElement>(null);
-  const ctaRef       = useRef<HTMLDivElement>(null);
   const statsRef     = useRef<HTMLDivElement>(null);
   const spacerRef    = useRef<HTMLDivElement>(null);
 
@@ -60,8 +56,6 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
     const mm = gsap.matchMedia();
     const verticalLines = sectionRef.current.querySelectorAll('.hero-grid-v');
     const horizontalLines = sectionRef.current.querySelectorAll('.hero-grid-h');
-    const ctaButtons = ctaRef.current ? Array.from(ctaRef.current.children) as HTMLElement[] : [];
-    const cleanupFns: Array<() => void> = [];
 
     gsap.set(
       [ambientLeftRef.current, ambientRightRef.current, ambientBottomRef.current, shimmerRef.current].filter(Boolean),
@@ -128,9 +122,6 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
       if (contentDeckRef.current) gsap.set(contentDeckRef.current, CINEMATIC_MOTION.chapterPanel.from);
       if (verticalLines.length) gsap.set(verticalLines, { scaleY: 0, opacity: 0, transformOrigin: 'center top' });
       if (horizontalLines.length) gsap.set(horizontalLines, { scaleX: 0, opacity: 0, transformOrigin: 'left center' });
-      if (ctaRef.current?.children.length) {
-        gsap.set(ctaRef.current.children, { opacity: 0 });
-      }
 
       // SplitText mask reveal
       const split3 = SplitText.create(line3Ref.current!, { type: 'chars', mask: 'chars' });
@@ -216,24 +207,8 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
       tl.fromTo(splitDesc.lines,
         { y: '100%' },
         { y: '0%', stagger: 0.08, duration: 0.5, ease: 'power3.out' },
-        1.3
+        1.28
       );
-
-      if (ctaRef.current?.children[0]) {
-        tl.fromTo(ctaRef.current.children[0],
-          { clipPath: 'inset(0 100% 0 0)', opacity: 0 },
-          { clipPath: 'inset(0 0% 0 0)', opacity: 1, duration: 0.5, ease: 'power3.inOut' },
-          1.42
-        );
-      }
-
-      if (ctaRef.current?.children[1]) {
-        tl.fromTo(ctaRef.current.children[1],
-          { x: 60, opacity: 0 },
-          { x: 0, opacity: 1, duration: 0.45, ease: 'power3.out' },
-          1.52
-        );
-      }
 
       tl.call(() => {
         gsap.set([split3.chars, split1.chars], { willChange: 'auto' });
@@ -264,30 +239,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
         );
       }
 
-      ctaButtons.forEach((button) => {
-        const xTo = gsap.quickTo(button, 'x', { duration: 0.25, ease: 'power3.out' });
-        const yTo = gsap.quickTo(button, 'y', { duration: 0.25, ease: 'power3.out' });
-        const move = (event: PointerEvent) => {
-          const rect = button.getBoundingClientRect();
-          const x = (event.clientX - rect.left - rect.width / 2) * 0.08;
-          const y = (event.clientY - rect.top - rect.height / 2) * 0.12;
-          xTo(x);
-          yTo(y);
-        };
-        const leave = () => {
-          xTo(0);
-          yTo(0);
-        };
-        button.addEventListener('pointermove', move);
-        button.addEventListener('pointerleave', leave);
-        cleanupFns.push(() => {
-          button.removeEventListener('pointermove', move);
-          button.removeEventListener('pointerleave', leave);
-        });
-      });
-
       return () => {
-        cleanupFns.forEach((fn) => fn());
         split1.revert();
         split3.revert();
         splitDesc.revert();
@@ -304,9 +256,6 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
       if (contentDeckRef.current) gsap.set(contentDeckRef.current, CINEMATIC_MOTION.chapterPanel.from);
       if (verticalLines.length) gsap.set(verticalLines, { scaleY: 0, opacity: 0, transformOrigin: 'center top' });
       if (horizontalLines.length) gsap.set(horizontalLines, { scaleX: 0, opacity: 0, transformOrigin: 'left center' });
-      if (ctaRef.current?.children.length) {
-        gsap.set(ctaRef.current.children, { opacity: 0 });
-      }
 
       // SplitText mask reveal — agency-standard char animation
       const split3 = SplitText.create(line3Ref.current!, { type: 'chars', mask: 'chars' });
@@ -391,24 +340,8 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
       tl.fromTo(splitDesc.lines,
         { y: '100%' },
         { y: '0%', stagger: 0.08, duration: 0.5, ease: 'power3.out' },
-        1.24
+        1.22
       );
-
-      if (ctaRef.current?.children[0]) {
-        tl.fromTo(ctaRef.current.children[0],
-          { clipPath: 'inset(0 100% 0 0)', opacity: 0 },
-          { clipPath: 'inset(0 0% 0 0)', opacity: 1, duration: 0.5, ease: 'power3.inOut' },
-          1.36
-        );
-      }
-
-      if (ctaRef.current?.children[1]) {
-        tl.fromTo(ctaRef.current.children[1],
-          { x: 60, opacity: 0 },
-          { x: 0, opacity: 1, duration: 0.45, ease: 'power3.out' },
-          1.46
-        );
-      }
 
       tl.call(() => {
         gsap.set([split3.chars, split1.chars], { willChange: 'auto' });
@@ -516,16 +449,6 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
               <p ref={descRef} className="relative max-w-md pr-2 text-[1.05rem] font-body leading-relaxed text-ro-gray-300 sm:text-xl lg:mx-auto lg:max-w-2xl lg:px-1">
                 Ground-up retail, restaurant, financial, industrial, and site-driven work delivered with the control buyers trust and the finish people notice. Across Georgia, South Carolina, and North Carolina, RO brings schedule, systems, and standards under one roof.
               </p>
-
-              {/* CTAs */}
-              <div ref={ctaRef} className="relative mt-6 flex flex-col items-start justify-start gap-4 sm:flex-row sm:items-center lg:justify-center">
-                <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300 shadow-[0_12px_34px_rgba(201,168,76,0.18)]">
-                  Start Your Project <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="group flex items-center gap-3 px-8 py-4 border border-ro-gold/30 text-ro-gold font-heading text-sm tracking-wider uppercase bg-ro-black/25 backdrop-blur-sm hover:bg-ro-gold/5 hover:border-ro-gold/50 transition-all duration-300">
-                  <Phone size={16} />{COMPANY.phone}
-                </a>
-              </div>
             </div>
 
             {/* Trust Stats */}
