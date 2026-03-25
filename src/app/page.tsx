@@ -35,7 +35,13 @@ export default async function HomePage() {
       )}
 
       <Hero heroVideoUrl={heroVideoUrl} />
-      <SectionTransition label="FLOOR 01" sparks />
+      <SectionTransition
+        label="FLOOR 01"
+        title="Commercial Sectors"
+        subtitle="A stronger handoff into the work mix: restaurants, retail, industrial, and site-led builds staged like their own chapter on mobile."
+        featured
+        sparks
+      />
       <DivisionCards
         items={COMMERCIAL_HOME_CARDS}
         eyebrow="Commercial sectors"
@@ -43,9 +49,19 @@ export default async function HomePage() {
         titleGold="serious work"
         exploreLabel="Explore"
       />
-      <SectionTransition label="FLOOR 02" sparks />
+      <SectionTransition
+        label="FLOOR 02"
+        title="Why RO"
+        subtitle="After the ambition comes the proof: control, fluency, inspection discipline, and confidence across every moving part."
+        sparks
+      />
       <WhyRO />
-      <SectionTransition label="FLOOR 03" sparks />
+      <SectionTransition
+        label="FLOOR 03"
+        title="Final Act"
+        subtitle="The close should land like a payoff scene, not a leftover CTA."
+        sparks
+      />
       <ConstructionCTA />
     </>
   );

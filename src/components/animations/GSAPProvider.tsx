@@ -5,6 +5,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import { useGSAP } from '@gsap/react';
+import { EASES, SCROLL_TRIGGER_DEFAULTS, TIMING } from '@/lib/gsap-config';
 
 // ─── Register ALL plugins ONCE at module level ───
 // 2026 official pattern: centralize registration here,
@@ -28,8 +29,8 @@ export function usePrefersReducedMotion(): boolean {
 
 // Global defaults — construction theme
 const CONSTRUCTION_DEFAULTS = {
-  ease: 'power3.out',
-  duration: 1.2,
+  ease: EASES.chapterReveal,
+  duration: TIMING.slow,
 };
 
 export default function GSAPProvider({ children }: { children: React.ReactNode }) {
@@ -42,6 +43,7 @@ export default function GSAPProvider({ children }: { children: React.ReactNode }
     }
 
     gsap.defaults(CONSTRUCTION_DEFAULTS);
+    ScrollTrigger.defaults(SCROLL_TRIGGER_DEFAULTS);
 
     // ─── ScrollTrigger config — mobile-first optimizations ───
     ScrollTrigger.config({

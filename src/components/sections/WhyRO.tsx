@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { Shield, Layers, Flame, MapPin } from 'lucide-react';
 import { gsap, ScrollTrigger, SplitText, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
+import { EASES, TIMING } from '@/lib/gsap-config';
 
 const REASONS = [
   { icon: Layers, title: 'Full-scope control', description: 'Site work, shell, interiors, and closeout under one accountable team. Less handoff noise. More control from first mobilization to turnover.' },
@@ -27,6 +28,7 @@ export default function WhyRO() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLSpanElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const introCopyRef = useRef<HTMLParagraphElement>(null);
   const scaffoldRef = useRef<HTMLDivElement>(null);
   const goldLineRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -45,6 +47,7 @@ export default function WhyRO() {
 
       // Set initial hidden states
       gsap.set([badgeRef.current, goldLineRef.current], { opacity: 0 });
+      if (introCopyRef.current) gsap.set(introCopyRef.current, { opacity: 0, y: 18 });
       if (scaffoldRef.current) gsap.set(scaffoldRef.current, { opacity: 0 });
       const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
       allCards.forEach(card => { gsap.set(card, { opacity: 0 }); });
@@ -245,6 +248,14 @@ export default function WhyRO() {
         1.0
       );
 
+      if (introCopyRef.current) {
+        headerTl.fromTo(introCopyRef.current,
+          { opacity: 0, y: 18 },
+          { opacity: 1, y: 0, duration: TIMING.normal, ease: EASES.chapterReveal },
+          1.08
+        );
+      }
+
       // ─── Cards: premium panel reveal with inner stagger ───
       allCards.forEach((card, i) => {
         const innerBits = card.querySelectorAll('.reason-icon, .reason-title, .reason-desc');
@@ -292,16 +303,16 @@ export default function WhyRO() {
     <div ref={spacerRef} className="relative lg:z-[20] lg:[height:280vh]">
     <section
       ref={sectionRef}
-      className="lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden bg-ro-black"
+      className="bg-ro-black lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden"
     >
       <BlueprintGrid intensity="medium" animate={true} />
 
       {/* Gradient overlays */}
       <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-transparent to-ro-black pointer-events-none z-[1]" />
 
-      <div className="relative z-10 flex flex-col min-h-screen lg:h-screen px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 flex min-h-[100svh] flex-col px-4 sm:px-6 lg:h-screen lg:min-h-screen lg:px-8">
         {/* Header Area */}
-        <div className="pt-20 pb-4 text-center flex-shrink-0">
+        <div className="flex-shrink-0 pb-6 pt-20 text-left lg:pb-4 lg:text-center">
           {/* Badge */}
           <span
             ref={badgeRef}
@@ -336,20 +347,27 @@ export default function WhyRO() {
           {/* Gold weld line */}
           <div
             ref={goldLineRef}
-            className="mx-auto mt-4 w-24 h-[2px] bg-ro-gold"
+            className="mt-4 h-[2px] w-24 bg-ro-gold lg:mx-auto"
             style={{ boxShadow: '0 0 8px rgba(201,168,76,0.4)' }}
           />
+          <p ref={introCopyRef} className="mt-5 max-w-xl text-sm leading-relaxed text-ro-gray-400 sm:text-base lg:mx-auto">
+            This is where the mood shifts from ambition to confidence. The right buyer should feel the difference in control, fluency, and finish before a call is ever made.
+          </p>
         </div>
 
-        {/* Cards grid — 2×2 on mobile, 4-col on desktop */}
-        <div className="flex-1 flex items-center py-4 lg:py-0">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 w-full max-w-6xl mx-auto">
+        {/* Cards grid — single column on mobile to keep the pacing cinematic */}
+        <div className="flex flex-1 items-start py-4 lg:items-center lg:py-0">
+          <div className="mx-auto grid w-full max-w-xl grid-cols-1 gap-4 sm:gap-5 lg:max-w-6xl lg:grid-cols-4 lg:gap-6">
             {REASONS.map((reason, index) => (
               <div
                 key={reason.title}
                 ref={el => { cardRefs.current[index] = el; }}
-                className="relative p-4 sm:p-6 lg:p-8 border border-ro-gray-800 bg-ro-black/80 lg:bg-ro-black/60 lg:backdrop-blur-sm"
+                className="relative border border-ro-gray-800 bg-ro-black/80 p-5 sm:p-6 lg:bg-ro-black/60 lg:p-8 lg:backdrop-blur-sm"
               >
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(201,168,76,0.08),transparent_38%)] pointer-events-none" />
+                <div className="absolute top-4 right-4 text-[11px] font-mono tracking-[0.28em] uppercase text-ro-gray-600">
+                  0{index + 1}
+                </div>
                 {/* Corner bolt accents */}
                 <div
                   className="reason-bolt absolute top-2 left-2 w-1.5 h-1.5 rounded-full hidden lg:block"

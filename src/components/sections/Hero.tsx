@@ -8,6 +8,7 @@ import { gsap, SplitText, useGSAP, MEDIA_QUERIES } from '@/components/animations
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
 import HeroVideo from '@/components/sections/HeroVideo';
 import CountUp from '@/components/animations/CountUp';
+import { CINEMATIC_MOTION, EASES, TIMING } from '@/lib/gsap-config';
 
 /**
  * HERO — Desktop: pinned scrub-linked construction sequence.
@@ -33,8 +34,10 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
   const line2Ref     = useRef<HTMLSpanElement>(null);
   const line3Ref     = useRef<HTMLSpanElement>(null);
   const goldLineRef  = useRef<HTMLDivElement>(null);
+  const contentDeckRef = useRef<HTMLDivElement>(null);
   const descRef      = useRef<HTMLParagraphElement>(null);
   const ctaRef       = useRef<HTMLDivElement>(null);
+  const statsLabelRef = useRef<HTMLDivElement>(null);
   const statsRef     = useRef<HTMLDivElement>(null);
   const spacerRef    = useRef<HTMLDivElement>(null);
 
@@ -61,15 +64,20 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
     const ctaButtons = ctaRef.current ? Array.from(ctaRef.current.children) as HTMLElement[] : [];
     const cleanupFns: Array<() => void> = [];
 
+    gsap.set(
+      [ambientLeftRef.current, ambientRightRef.current, ambientBottomRef.current, shimmerRef.current].filter(Boolean),
+      { opacity: 0, scale: 0.88 }
+    );
+
     if (ambientLeftRef.current) {
       gsap.to(ambientLeftRef.current, {
         xPercent: 10,
         yPercent: -8,
         scale: 1.08,
-        duration: 8,
+        duration: TIMING.ambient,
         repeat: -1,
         yoyo: true,
-        ease: 'sine.inOut',
+        ease: EASES.ambientFloat,
       });
     }
 
@@ -78,10 +86,10 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
         xPercent: -8,
         yPercent: 10,
         scale: 1.05,
-        duration: 9,
+        duration: TIMING.ambient + 1,
         repeat: -1,
         yoyo: true,
-        ease: 'sine.inOut',
+        ease: EASES.ambientFloat,
       });
     }
 
@@ -90,21 +98,21 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
         xPercent: 6,
         yPercent: -10,
         scale: 1.12,
-        duration: 10,
+        duration: TIMING.ambient + 2,
         repeat: -1,
         yoyo: true,
-        ease: 'sine.inOut',
+        ease: EASES.ambientFloat,
       });
     }
 
     if (shimmerRef.current) {
       gsap.fromTo(shimmerRef.current,
-        { xPercent: -120, opacity: 0 },
+        { xPercent: -120, opacity: 0, scale: 1 },
         {
           xPercent: 120,
           opacity: 0.55,
           duration: 2.4,
-          ease: 'power1.inOut',
+          ease: EASES.chapterSweep,
           repeat: -1,
           repeatDelay: 3.5,
         }
@@ -118,6 +126,8 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
     mm.add(MEDIA_QUERIES.desktop, () => {
       // Hide everything initially
       gsap.set([badgeRef.current, line2Ref.current, goldLineRef.current], { opacity: 0 });
+      if (contentDeckRef.current) gsap.set(contentDeckRef.current, CINEMATIC_MOTION.chapterPanel.from);
+      if (statsLabelRef.current) gsap.set(statsLabelRef.current, CINEMATIC_MOTION.chapterCopy.from);
       if (verticalLines.length) gsap.set(verticalLines, { scaleY: 0, opacity: 0, transformOrigin: 'center top' });
       if (horizontalLines.length) gsap.set(horizontalLines, { scaleX: 0, opacity: 0, transformOrigin: 'left center' });
       if (ctaRef.current?.children.length) {
@@ -137,43 +147,56 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
       mobileTlRef.current = tl;
       tlReadyRef.current = true;
 
-      // 1. Phone number — slides in from right
-      if (ctaRef.current?.children[1]) {
-        tl.fromTo(ctaRef.current.children[1],
-          { x: 60, opacity: 0 },
-          { x: 0, opacity: 1, duration: 0.45, ease: 'power3.out' },
-          0
-        );
-      }
-
-      // 2. Gold CTA — steel beam wipe from left
-      if (ctaRef.current?.children[0]) {
-        tl.fromTo(ctaRef.current.children[0],
-          { clipPath: 'inset(0 100% 0 0)', opacity: 0 },
-          { clipPath: 'inset(0 0% 0 0)', opacity: 1, duration: 0.5, ease: 'power3.inOut' },
-          0.15
-        );
-      }
-
-      // 3. Description — lines rise from behind masks
-      tl.fromTo(splitDesc.lines,
-        { y: '100%' },
-        { y: '0%', stagger: 0.08, duration: 0.5, ease: 'power3.out' },
-        0.5
+      tl.fromTo([ambientLeftRef.current, ambientRightRef.current, ambientBottomRef.current].filter(Boolean),
+        CINEMATIC_MOTION.ambientBloom.from,
+        {
+          ...CINEMATIC_MOTION.ambientBloom.to,
+          opacity: (_index, target) => target === ambientBottomRef.current ? 0.72 : 1,
+          stagger: 0.08,
+        },
+        0
       );
 
-      // 4. Gold weld line draws across
+      tl.fromTo(badgeRef.current,
+        { y: -20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
+        0.12
+      );
+
+      if (shimmerRef.current) {
+        tl.to(shimmerRef.current, { opacity: 0.45, duration: 0.5, ease: EASES.chapterSweep }, 0.18);
+      }
+
+      // Headline choreography
+      tl.fromTo(split1.chars,
+        { y: '-110%' },
+        { y: '0%', stagger: { each: 0.025, from: 'center' }, duration: 0.45, ease: 'back.out(1.5)' },
+        0.34
+      );
+
+      tl.fromTo(line2Ref.current,
+        { scale: 0.3, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(2)' },
+        0.62
+      );
+
+      tl.fromTo(split3.chars,
+        { y: '110%' },
+        { y: '0%', stagger: 0.02, duration: 0.45, ease: 'back.out(1.2)' },
+        0.82
+      );
+
       tl.fromTo(goldLineRef.current,
         { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
         { scaleX: 1, opacity: 1, duration: 0.35, ease: 'power2.inOut' },
-        0.65
+        1.05
       );
 
       if (verticalLines.length) {
         tl.fromTo(verticalLines,
           { scaleY: 0, opacity: 0, transformOrigin: 'center top' },
           { scaleY: 1, opacity: 0.18, duration: 0.35, stagger: 0.03, ease: 'power2.out' },
-          0.78
+          1.08
         );
       }
 
@@ -181,37 +204,42 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
         tl.fromTo(horizontalLines,
           { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
           { scaleX: 1, opacity: 0.18, duration: 0.35, stagger: 0.03, ease: 'power2.out' },
-          0.86
+          1.12
         );
       }
 
-      // 5. "FROM THE GROUND UP" — chars rise from below
-      tl.fromTo(split3.chars,
-        { y: '110%' },
-        { y: '0%', stagger: 0.02, duration: 0.45, ease: 'back.out(1.2)' },
-        0.9
-      );
+      if (contentDeckRef.current) {
+        tl.fromTo(contentDeckRef.current, CINEMATIC_MOTION.chapterPanel.from, {
+          ...CINEMATIC_MOTION.chapterPanel.to,
+          duration: 0.78,
+        }, 1.2);
+      }
 
-      // 6. "EVERYTHING" — scale punch from center
-      tl.fromTo(line2Ref.current,
-        { scale: 0.3, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(2)' },
+      tl.fromTo(splitDesc.lines,
+        { y: '100%' },
+        { y: '0%', stagger: 0.08, duration: 0.5, ease: 'power3.out' },
         1.3
       );
 
-      // 7. "WE BUILD" — chars drop from above, center-out stagger
-      tl.fromTo(split1.chars,
-        { y: '-110%' },
-        { y: '0%', stagger: { each: 0.025, from: 'center' }, duration: 0.45, ease: 'back.out(1.5)' },
-        1.5
-      );
+      if (ctaRef.current?.children[0]) {
+        tl.fromTo(ctaRef.current.children[0],
+          { clipPath: 'inset(0 100% 0 0)', opacity: 0 },
+          { clipPath: 'inset(0 0% 0 0)', opacity: 1, duration: 0.5, ease: 'power3.inOut' },
+          1.42
+        );
+      }
 
-      // 8. Badge — drops in from top
-      tl.fromTo(badgeRef.current,
-        { y: -20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
-        1.9
-      );
+      if (ctaRef.current?.children[1]) {
+        tl.fromTo(ctaRef.current.children[1],
+          { x: 60, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.45, ease: 'power3.out' },
+          1.52
+        );
+      }
+
+      if (statsLabelRef.current) {
+        tl.fromTo(statsLabelRef.current, CINEMATIC_MOTION.chapterCopy.from, CINEMATIC_MOTION.chapterCopy.to, 1.58);
+      }
 
       tl.call(() => {
         gsap.set([split3.chars, split1.chars], { willChange: 'auto' });
@@ -279,6 +307,8 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
     mm.add(MEDIA_QUERIES.mobile, () => {
       // Hide everything initially
       gsap.set([badgeRef.current, line2Ref.current, goldLineRef.current], { opacity: 0 });
+      if (contentDeckRef.current) gsap.set(contentDeckRef.current, CINEMATIC_MOTION.chapterPanel.from);
+      if (statsLabelRef.current) gsap.set(statsLabelRef.current, CINEMATIC_MOTION.chapterCopy.from);
       if (verticalLines.length) gsap.set(verticalLines, { scaleY: 0, opacity: 0, transformOrigin: 'center top' });
       if (horizontalLines.length) gsap.set(horizontalLines, { scaleX: 0, opacity: 0, transformOrigin: 'left center' });
       if (ctaRef.current?.children.length) {
@@ -298,43 +328,55 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
       mobileTlRef.current = tl;
       tlReadyRef.current = true;
 
-      // 1. Phone number — slides in from right
-      if (ctaRef.current?.children[1]) {
-        tl.fromTo(ctaRef.current.children[1],
-          { x: 60, opacity: 0 },
-          { x: 0, opacity: 1, duration: 0.45, ease: 'power3.out' },
-          0
-        );
-      }
-
-      // 2. Gold CTA — steel beam wipe from left
-      if (ctaRef.current?.children[0]) {
-        tl.fromTo(ctaRef.current.children[0],
-          { clipPath: 'inset(0 100% 0 0)', opacity: 0 },
-          { clipPath: 'inset(0 0% 0 0)', opacity: 1, duration: 0.5, ease: 'power3.inOut' },
-          0.15
-        );
-      }
-
-      // 3. Description — lines rise from behind masks
-      tl.fromTo(splitDesc.lines,
-        { y: '100%' },
-        { y: '0%', stagger: 0.08, duration: 0.5, ease: 'power3.out' },
-        0.5
+      tl.fromTo([ambientLeftRef.current, ambientRightRef.current, ambientBottomRef.current].filter(Boolean),
+        CINEMATIC_MOTION.ambientBloom.from,
+        {
+          ...CINEMATIC_MOTION.ambientBloom.to,
+          opacity: (_index, target) => target === ambientBottomRef.current ? 0.78 : 1,
+          stagger: 0.08,
+        },
+        0
       );
 
-      // 4. Gold weld line draws across
+      tl.fromTo(badgeRef.current,
+        { y: -20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
+        0.1
+      );
+
+      if (shimmerRef.current) {
+        tl.to(shimmerRef.current, { opacity: 0.5, duration: 0.45, ease: EASES.chapterSweep }, 0.2);
+      }
+
+      tl.fromTo(split1.chars,
+        { y: '-110%' },
+        { y: '0%', stagger: { each: 0.025, from: 'center' }, duration: 0.45, ease: 'back.out(1.5)' },
+        0.32
+      );
+
+      tl.fromTo(line2Ref.current,
+        { scale: 0.3, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(2)' },
+        0.58
+      );
+
+      tl.fromTo(split3.chars,
+        { y: '110%' },
+        { y: '0%', stagger: 0.02, duration: 0.45, ease: 'back.out(1.2)' },
+        0.78
+      );
+
       tl.fromTo(goldLineRef.current,
         { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
         { scaleX: 1, opacity: 1, duration: 0.35, ease: 'power2.inOut' },
-        0.65
+        0.98
       );
 
       if (verticalLines.length) {
         tl.fromTo(verticalLines,
           { scaleY: 0, opacity: 0, transformOrigin: 'center top' },
           { scaleY: 1, opacity: 0.2, duration: 0.35, stagger: 0.03, ease: 'power2.out' },
-          0.78
+          1.02
         );
       }
 
@@ -342,37 +384,42 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
         tl.fromTo(horizontalLines,
           { scaleX: 0, opacity: 0, transformOrigin: 'left center' },
           { scaleX: 1, opacity: 0.2, duration: 0.35, stagger: 0.03, ease: 'power2.out' },
-          0.86
+          1.08
         );
       }
 
-      // 5. "FROM THE GROUND UP" — chars rise from below
-      tl.fromTo(split3.chars,
-        { y: '110%' },
-        { y: '0%', stagger: 0.02, duration: 0.45, ease: 'back.out(1.2)' },
-        0.9
+      if (contentDeckRef.current) {
+        tl.fromTo(contentDeckRef.current, CINEMATIC_MOTION.chapterPanel.from, {
+          ...CINEMATIC_MOTION.chapterPanel.to,
+          duration: 0.74,
+        }, 1.16);
+      }
+
+      tl.fromTo(splitDesc.lines,
+        { y: '100%' },
+        { y: '0%', stagger: 0.08, duration: 0.5, ease: 'power3.out' },
+        1.24
       );
 
-      // 6. "EVERYTHING" — scale punch from center
-      tl.fromTo(line2Ref.current,
-        { scale: 0.3, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(2)' },
-        1.3
-      );
+      if (ctaRef.current?.children[0]) {
+        tl.fromTo(ctaRef.current.children[0],
+          { clipPath: 'inset(0 100% 0 0)', opacity: 0 },
+          { clipPath: 'inset(0 0% 0 0)', opacity: 1, duration: 0.5, ease: 'power3.inOut' },
+          1.36
+        );
+      }
 
-      // 7. "WE BUILD" — chars drop from above, center-out stagger
-      tl.fromTo(split1.chars,
-        { y: '-110%' },
-        { y: '0%', stagger: { each: 0.025, from: 'center' }, duration: 0.45, ease: 'back.out(1.5)' },
-        1.5
-      );
+      if (ctaRef.current?.children[1]) {
+        tl.fromTo(ctaRef.current.children[1],
+          { x: 60, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.45, ease: 'power3.out' },
+          1.46
+        );
+      }
 
-      // 8. Badge — drops in from top
-      tl.fromTo(badgeRef.current,
-        { y: -20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.35, ease: 'power2.out' },
-        1.9
-      );
+      if (statsLabelRef.current) {
+        tl.fromTo(statsLabelRef.current, CINEMATIC_MOTION.chapterCopy.from, CINEMATIC_MOTION.chapterCopy.to, 1.52);
+      }
 
       tl.call(() => {
         gsap.set([split3.chars, split1.chars], { willChange: 'auto' });
@@ -416,7 +463,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
 
   return (
     <div ref={spacerRef} className="relative">
-      <section ref={sectionRef} className="min-h-screen flex items-center justify-start lg:justify-center overflow-hidden bg-ro-black pt-20">
+      <section ref={sectionRef} className="flex min-h-[100svh] items-center justify-start overflow-hidden bg-ro-black pt-20 lg:min-h-screen lg:justify-center">
 
         {/* Blueprint grid */}
         <BlueprintGrid intensity="low" animate={true} />
@@ -440,14 +487,14 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
         <div className="absolute inset-0 z-[2] lg:hidden" style={{ background: 'linear-gradient(to right, rgba(8,8,8,0.96) 0%, rgba(8,8,8,0.88) 34%, rgba(8,8,8,0.52) 62%, rgba(8,8,8,0.10) 100%)' }} />
         <div ref={ambientLeftRef} className="absolute left-[-18%] top-[10%] z-[1] h-[280px] w-[280px] rounded-full bg-ro-gold/18 blur-3xl pointer-events-none lg:left-[-10%] lg:top-[12%] lg:h-[220px] lg:w-[220px] lg:bg-ro-gold/10" />
         <div ref={ambientRightRef} className="absolute right-[-18%] top-[26%] z-[1] h-[260px] w-[260px] rounded-full bg-cyan-400/16 blur-3xl pointer-events-none lg:right-[-12%] lg:top-[30%] lg:h-[260px] lg:w-[260px] lg:bg-cyan-400/10" />
-        <div ref={ambientBottomRef} className="absolute left-[8%] bottom-[10%] z-[1] h-[220px] w-[220px] rounded-full bg-fuchsia-500/10 blur-3xl pointer-events-none lg:hidden" />
+        <div ref={ambientBottomRef} className="absolute left-[4%] bottom-[8%] z-[1] h-[240px] w-[240px] rounded-full bg-fuchsia-500/12 blur-3xl pointer-events-none lg:hidden" />
         <div ref={shimmerRef} className="absolute inset-y-0 left-[-10%] z-[3] w-1/2 lg:w-1/3 bg-gradient-to-r from-transparent via-ro-gold/18 to-transparent mix-blend-screen pointer-events-none" />
 
-        <div className="relative z-[10] w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-4 lg:pt-8 lg:pb-8">
-          <div className="max-w-[430px] text-left lg:max-w-none lg:text-center">
+        <div className="relative z-[10] mx-auto w-full max-w-7xl px-4 pb-8 pt-6 sm:px-6 lg:px-8 lg:pb-8 lg:pt-8">
+          <div className="max-w-[470px] text-left lg:max-w-none lg:text-center">
 
             {/* Badge */}
-            <div ref={badgeRef} className="inline-flex items-center gap-2 self-start lg:self-center px-4 py-1.5 border border-ro-gold/20 bg-ro-gold/5 mb-8">
+            <div ref={badgeRef} className="mb-8 inline-flex items-center gap-2 self-start border border-ro-gold/20 bg-ro-gold/5 px-4 py-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.18)] lg:self-center">
               <span className="w-2 h-2 bg-ro-gold rounded-full" />
               <span className="text-ro-gold text-xs font-mono tracking-wider uppercase">
                 {COMPANY.experience} Years. Still Raising the Standard.
@@ -460,7 +507,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
                 We Build
               </span>
               <span ref={line2Ref} className="block gradient-text-gold font-heading text-[3.2rem] sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.88] mb-3 lg:mb-4">
-                Commercial
+                What Lasts
               </span>
               <span ref={line3Ref} className="block text-ro-white font-heading text-[2.05rem] sm:text-4xl md:text-5xl tracking-[0.12em] uppercase leading-[0.92]">
                 From the Ground Up
@@ -472,27 +519,36 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
               style={{ boxShadow: '0 0 8px rgba(201,168,76,0.4), 0 0 16px rgba(201,168,76,0.2)' }}
             />
 
-            {/* Description */}
-            <p ref={descRef} className="max-w-md lg:max-w-2xl text-ro-gray-300 text-[1.05rem] sm:text-xl font-body leading-relaxed mb-12 pr-2 lg:mx-auto lg:px-1">
-              Ground-up retail, restaurant, financial, industrial, and site-driven work delivered with the control buyers trust and the finish people notice. Across Georgia, South Carolina, and North Carolina, RO brings schedule, systems, and standards under one roof.
-            </p>
+            <div ref={contentDeckRef} className="relative mb-12 overflow-hidden border border-ro-gold/14 bg-ro-black/38 p-5 backdrop-blur-md shadow-[0_18px_54px_rgba(0,0,0,0.24)] lg:mx-auto lg:max-w-3xl lg:p-7">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-ro-gold/45 to-transparent" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(201,168,76,0.1),transparent_42%)]" />
 
-            {/* CTAs */}
-            <div ref={ctaRef} className="flex flex-col sm:flex-row items-start sm:items-center justify-start lg:justify-center gap-4 mb-16">
-              <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300 shadow-[0_12px_34px_rgba(201,168,76,0.18)]">
-                Start Your Project <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="group flex items-center gap-3 px-8 py-4 border border-ro-gold/30 text-ro-gold font-heading text-sm tracking-wider uppercase bg-ro-black/25 backdrop-blur-sm hover:bg-ro-gold/5 hover:border-ro-gold/50 transition-all duration-300">
-                <Phone size={16} />{COMPANY.phone}
-              </a>
+              {/* Description */}
+              <p ref={descRef} className="relative max-w-md pr-2 text-[1.05rem] font-body leading-relaxed text-ro-gray-300 sm:text-xl lg:mx-auto lg:max-w-2xl lg:px-1">
+                Ground-up retail, restaurant, financial, industrial, and site-driven work delivered with the control buyers trust and the finish people notice. Across Georgia, South Carolina, and North Carolina, RO brings schedule, systems, and standards under one roof.
+              </p>
+
+              {/* CTAs */}
+              <div ref={ctaRef} className="relative mt-6 flex flex-col items-start justify-start gap-4 sm:flex-row sm:items-center lg:justify-center">
+                <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300 shadow-[0_12px_34px_rgba(201,168,76,0.18)]">
+                  Start Your Project <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="group flex items-center gap-3 px-8 py-4 border border-ro-gold/30 text-ro-gold font-heading text-sm tracking-wider uppercase bg-ro-black/25 backdrop-blur-sm hover:bg-ro-gold/5 hover:border-ro-gold/50 transition-all duration-300">
+                  <Phone size={16} />{COMPANY.phone}
+                </a>
+              </div>
             </div>
 
             {/* Trust Stats */}
+            <div ref={statsLabelRef} className="mb-5 flex items-center gap-3 text-[11px] font-mono uppercase tracking-[0.32em] text-ro-gray-500 lg:mx-auto lg:w-fit">
+              <span className="h-px w-10 bg-gradient-to-r from-ro-gold/0 via-ro-gold/60 to-ro-gold/0" />
+              Operational Trust Markers
+            </div>
             <div ref={statsRef} className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-8 max-w-md lg:max-w-3xl lg:mx-auto">
               {TRUST_STATS.map((stat) => {
                 const { num, suffix } = parseStatValue(stat.value);
                 return (
-                  <div key={stat.label} className="text-center border border-ro-gold/10 bg-ro-black/25 backdrop-blur-md px-3 py-4 shadow-[0_10px_26px_rgba(0,0,0,0.18)]">
+                  <div key={stat.label} className="text-center border border-ro-gold/10 bg-ro-black/30 backdrop-blur-md px-3 py-4 shadow-[0_10px_26px_rgba(0,0,0,0.18)]">
                     <div className="text-ro-gold font-heading text-3xl sm:text-4xl mb-1">
                       <CountUp end={num} suffix={suffix} duration={2} />
                     </div>

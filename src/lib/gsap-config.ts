@@ -10,6 +10,9 @@ export const TIMING = {
   normal: 0.6,
   slow: 1.2,
   crawl: 2.0,
+  chapter: 0.85,
+  chapterSlow: 1.1,
+  ambient: 8,
   // Scrub distances (in vh of scroll input)
   scrubShort: '+=50%',
   scrubMedium: '+=100%',
@@ -26,6 +29,40 @@ export const EASES = {
   mechanical: 'steps(12)',
   heavyLand: 'elastic.out(0.5, 0.3)',
   cableLower: 'power1.inOut',
+  chapterReveal: 'power3.out',
+  chapterSweep: 'power2.inOut',
+  ambientFloat: 'sine.inOut',
+} as const;
+
+export const CINEMATIC_MOTION = {
+  chapterPanel: {
+    from: {
+      opacity: 0,
+      y: 28,
+      scale: 0.97,
+      clipPath: 'inset(14% 0% 0% 0%)',
+    },
+    to: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      clipPath: 'inset(0% 0% 0% 0%)',
+      duration: TIMING.chapter,
+      ease: EASES.chapterReveal,
+    },
+  },
+  chapterCopy: {
+    from: { opacity: 0, y: 18 },
+    to: { opacity: 1, y: 0, duration: TIMING.normal, ease: EASES.chapterReveal },
+  },
+  chapterLine: {
+    from: { opacity: 0, scaleX: 0, transformOrigin: 'left center' },
+    to: { opacity: 1, scaleX: 1, duration: TIMING.normal, ease: EASES.chapterSweep },
+  },
+  ambientBloom: {
+    from: { opacity: 0, scale: 0.88 },
+    to: { opacity: 1, scale: 1, duration: TIMING.chapterSlow, ease: EASES.chapterReveal },
+  },
 } as const;
 
 // Animation presets — each has a 'from' state (GSAP animates FROM these values)
