@@ -124,6 +124,7 @@ export async function POST(req: NextRequest) {
       req.headers.get('host')?.trim() ||
       '';
 
+    // Staff review: /admin/commercial-rfps and /api/admin/commercial-rfps
     if (process.env.SANITY_API_WRITE_TOKEN) {
       try {
         await sanityWriteClient.create({
