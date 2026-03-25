@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { DIVISIONS, COMPANY } from '@/lib/constants';
-import { ArrowRight, Phone, Building2, Shield, Layers, MapPin, Clock, CheckCircle2, ChevronRight, ChevronDown, Award, UserCheck, Handshake, Eye, Hammer } from 'lucide-react';
+import { ArrowRight, Phone, Building2, Shield, Layers, MapPin, Clock, CheckCircle2, ChevronDown, Award, UserCheck, Handshake, Eye, Hammer } from 'lucide-react';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { gsap, ScrollTrigger } from '@/components/animations/GSAPProvider';
+import { gsap } from '@/components/animations/GSAPProvider';
 import CountUp from '@/components/animations/CountUp';
 import ServiceDrawer from '@/components/ServiceDrawer';
+import SectionTransition from '@/components/animations/SectionTransition';
 import { COMMERCIAL_SERVICE_DETAILS, PROCESS_DETAILS, VETTING_PILLARS } from '@/lib/commercial-data';
 import type { ServiceDetail } from '@/lib/commercial-data';
 
@@ -22,7 +23,7 @@ const PROOF_STATS = [
 const PROCESS_STEPS = [
   { num: '01', title: 'Consultation', desc: 'Scope, budget, and timeline — defined before a shovel hits dirt.' },
   { num: '02', title: 'Site Evaluation', desc: 'Terrain, access, utilities, and permitting — no surprises.' },
-  { num: '03', title: 'Design-Build Coordination', desc: 'Engineering, architecture, construction, and finish decisions aligned when the project calls for more than a standard spec package.' },
+  { num: '03', title: 'Design-Build Coordination', desc: 'Engineering, architecture, construction, and finish decisions aligned before the field gets expensive.' },
   { num: '04', title: 'Ground-Up Construction', desc: 'Steel, concrete, mixed-material — built to commercial spec.' },
   { num: '05', title: 'Final Delivery', desc: 'Punch list complete. Keys in hand. On time.' },
 ];
@@ -31,7 +32,7 @@ const DIFFERENTIATORS = [
   { icon: Shield, title: 'Single Point of Accountability', desc: 'One company from land grading through final walkthrough. No finger-pointing between subs.' },
   { icon: Layers, title: 'Ground-Up Capability', desc: 'We grade the dirt, pour the foundation, raise the steel, and finish the interior. All in-house.' },
   { icon: Clock, title: '25+ Years of Problem Solving', desc: 'Complex sites, tight timelines, impossible specs — we\'ve built through all of it.' },
-  { icon: MapPin, title: 'Tri-State Knowledge', desc: 'Georgia, South Carolina, North Carolina — soil conditions, permitting, inspectors, suppliers, and the judgment to keep client-facing spaces from feeling generic.' },
+  { icon: MapPin, title: 'Tri-State Knowledge', desc: 'Georgia, South Carolina, North Carolina — local judgment, permitting experience, and enough field sense to keep client-facing spaces from feeling generic.' },
 ];
 
 const CROSS_DIVISIONS = [
@@ -113,11 +114,10 @@ export default function CommercialPage() {
         const h1    = heroRef.current.querySelector('h1');
         const line  = heroRef.current.querySelector('.hero-gold-line');
         const desc  = heroRef.current.querySelector('.hero-desc');
-        const btns  = heroRef.current.querySelector('.hero-btns');
         const stats = heroRef.current.querySelector('.hero-stats');
 
         // Hide everything immediately so nothing flashes in before video plays
-        gsap.set([badge, h1, line, desc, btns, stats], { opacity: 0 });
+        gsap.set([badge, h1, line, desc, stats], { opacity: 0 });
 
         const tl = gsap.timeline({ paused: true, defaults: { ease: 'power3.out' } });
         heroTlRef.current = tl;
@@ -126,8 +126,7 @@ export default function CommercialPage() {
         if (h1)    tl.fromTo(h1,    { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9 }, 0.15);
         if (line)  tl.fromTo(line,  { scaleX: 0, opacity: 0, transformOrigin: 'left center' }, { scaleX: 1, opacity: 1, duration: 0.7, ease: 'power2.inOut' }, 0.55);
         if (desc)  tl.fromTo(desc,  { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7 }, 0.75);
-        if (btns)  tl.fromTo(btns,  { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6 }, 0.95);
-        if (stats) tl.fromTo(stats, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8 }, 1.15);
+        if (stats) tl.fromTo(stats, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8 }, 1.0);
 
         heroTlReadyRef.current = true;
         if (videoFiredRef.current) tl.play();
@@ -243,12 +242,12 @@ export default function CommercialPage() {
   if (!mounted) return <div className="min-h-screen bg-ro-black" />;
 
   return (
-    <div ref={containerRef}>
+    <main ref={containerRef} className="overflow-x-hidden bg-ro-black">
       {/* Service Drawer */}
       <ServiceDrawer service={selectedService} isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       {/* ═══ SECTION 1 — HERO ═══ */}
-      <section ref={heroRef} className="relative min-h-[100vh] flex flex-col overflow-hidden">
+      <section ref={heroRef} className="relative flex min-h-[100svh] flex-col overflow-hidden">
         {videoUrl ? (
           <>
             <video key={videoUrl} src={videoUrl} muted loop playsInline preload="auto"
@@ -290,7 +289,7 @@ export default function CommercialPage() {
         <div className="hidden lg:block absolute top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-ro-gold/25 to-transparent" style={{ left: 'min(460px, 36vw)', zIndex: 3 }} />
 
         {/* ── Left column text ── */}
-        <div className="relative z-10 flex flex-col justify-center flex-1 px-6 sm:px-10 lg:pl-16 lg:pr-0 pt-28 pb-6" style={{ maxWidth: 'min(480px, 100%)' }}>
+        <div className="relative z-10 flex flex-1 flex-col justify-center px-6 pb-6 pt-28 sm:px-10 lg:pl-16 lg:pr-0" style={{ maxWidth: 'min(520px, 100%)' }}>
           <div className="hero-badge inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/30 bg-ro-gold/5 backdrop-blur-sm mb-7 self-start">
             <Building2 size={12} className="text-ro-gold flex-shrink-0" />
             <span className="text-ro-gold text-[10px] font-mono tracking-[0.3em] uppercase">Commercial Division</span>
@@ -298,25 +297,26 @@ export default function CommercialPage() {
 
           <h1 className="text-ro-white font-heading uppercase leading-[0.88] tracking-tight mb-6"
             style={{ fontSize: 'clamp(2.8rem, 5.5vw, 5rem)' }}>
-            Commercial<br />
-            <span className="gradient-text-gold">Grade.</span><br />
-            <span className="text-ro-white/90">Unlimited</span><br />
-            <span className="gradient-text-gold">Scale.</span>
+            Commercial.<br />
+            <span className="text-ro-white/92">Built to</span><br />
+            <span className="gradient-text-gold">Open Strong.</span>
           </h1>
 
           <div className="hero-gold-line w-10 h-[2px] bg-gradient-to-r from-ro-gold to-transparent mb-6" />
 
-          <p className="hero-desc text-ro-gray-400 text-sm sm:text-base leading-relaxed mb-8 max-w-xs">
-            Steel builds, restaurant spaces, retail storefronts, mixed-material construction, and full commercial development. Built with the operational discipline buyers need and the finish quality modern brands notice.
-          </p>
-
-          <div className="hero-btns flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3">
-            <Link href="/contact" className="group inline-flex items-center gap-2 px-6 py-3 bg-ro-gold text-ro-black font-heading text-xs tracking-[0.15em] uppercase hover:bg-ro-gold-light transition-all duration-300 whitespace-nowrap">
-              Discuss Your Project <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="inline-flex items-center gap-2 px-6 py-3 border border-ro-gold/40 text-ro-gold font-heading text-xs tracking-[0.15em] uppercase hover:bg-ro-gold/5 hover:border-ro-gold/60 transition-all duration-300 backdrop-blur-sm whitespace-nowrap">
-              <Phone size={12} /> {COMPANY.phone}
-            </a>
+          <div className="hero-desc relative max-w-md overflow-hidden border border-ro-gold/14 bg-gradient-to-br from-ro-black/70 via-ro-black/54 to-ro-black/26 p-5 shadow-[0_18px_54px_rgba(0,0,0,0.24)]">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-ro-gold/45 to-transparent" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(201,168,76,0.12),transparent_38%),linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.02))]" />
+            <p className="relative text-sm leading-relaxed text-ro-gray-300 sm:text-base">
+              Restaurants, retail, financial, industrial, and ground-up work carried with schedule discipline, site control, and a finish that does not feel generic.
+            </p>
+            <div className="relative mt-4 flex flex-wrap gap-2">
+              {['Restaurants', 'Retail', 'Financial', 'Industrial'].map((item) => (
+                <span key={item} className="border border-ro-gold/15 bg-ro-black/26 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.22em] text-ro-gray-400">
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -336,6 +336,8 @@ export default function CommercialPage() {
         </div>
       </section>
 
+      <SectionTransition label="FLOOR 04" title="Scope & Systems" sparks />
+
       {/* ═══ SECTION 2 — THE SCOPE (clickable panels → drawer) ═══ */}
       <section ref={scopeRef} className="py-28 sm:py-36 relative overflow-hidden">
         <div className="absolute inset-0 blueprint-overlay opacity-20" />
@@ -349,7 +351,7 @@ export default function CommercialPage() {
               </h2>
               <div className="w-20 h-[2px] bg-gradient-to-r from-ro-gold to-transparent mt-6" />
               <p className="text-ro-gray-500 text-sm sm:text-base leading-relaxed mt-6 max-w-md">
-                Especially for restaurant, renovation, and local-business work, the goal is not just to get open. It is to open with a space that feels intentional.
+                The point is not just to get open. It is to open with a build that works, lasts, and still looks like somebody cared.
               </p>
             </div>
           <div className="space-y-4 sm:space-y-6">
@@ -379,6 +381,8 @@ export default function CommercialPage() {
           </div>
         </div>
       </section>
+
+      <SectionTransition label="FLOOR 05" title="Why Builders Choose RO" sparks />
 
       {/* ═══ SECTION 3 — THE PROOF ═══ */}
       <section ref={proofRef} className="py-28 sm:py-36 relative overflow-hidden">
@@ -524,10 +528,10 @@ export default function CommercialPage() {
             </h2>
           </div>
             <p className="text-ro-gray-400 text-center text-sm sm:text-base leading-relaxed max-w-2xl mx-auto mb-4">
-            Every electrician, plumber, framer, concrete crew, and specialty trade that touches an RO project has been vetted to a standard most contractors never think about, especially on spaces where the final impression matters as much as the schedule.
+            Every trade on an RO job is vetted for pace, craft, communication, and the kind of finish quality that holds up when the doors open.
           </p>
           <p className="text-ro-gold/60 text-center text-xs font-mono tracking-[0.2em] uppercase mb-16">
-            This isn&apos;t a staffing agency pulling warm bodies — this is a curated network built over 25 years.
+            A curated network built over 25 years.
           </p>
 
           {/* Vetting pillars */}
@@ -610,7 +614,7 @@ export default function CommercialPage() {
             <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">
               More Than <span className="gradient-text-gold">Commercial</span>
             </h2>
-            <p className="text-ro-gray-500 text-sm sm:text-base mt-4 max-w-md mx-auto">We don&apos;t sub out what we can do ourselves, and we don&apos;t treat client-facing spaces like commodity work.</p>
+            <p className="text-ro-gray-500 text-sm sm:text-base mt-4 max-w-md mx-auto">RO brings site work, shell, systems, and finish together so the whole job feels coordinated, not pieced together.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {CROSS_DIVISIONS.map((div) => (
@@ -628,6 +632,8 @@ export default function CommercialPage() {
         </div>
       </section>
 
+      <SectionTransition label="FLOOR 06" title="Build With RO" sparks />
+
       {/* ═══ SECTION 9 — THE CLOSE ═══ */}
       <section ref={ctaRef} className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-[#111] to-ro-black" />
@@ -638,10 +644,10 @@ export default function CommercialPage() {
             <div className="cta-gold-line w-24 h-[2px] bg-gradient-to-r from-transparent via-ro-gold to-transparent mx-auto mb-12" style={{ transformOrigin: 'center' }} />
             <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-6">Let&apos;s Build</span>
             <h2 className="text-ro-white font-heading text-5xl sm:text-6xl lg:text-7xl tracking-tight uppercase leading-[0.85] mb-8">
-              Ready to<br /><span className="gradient-text-gold">Build?</span>
+              Ready to<br /><span className="gradient-text-gold">Talk Scope?</span>
             </h2>
             <p className="text-ro-gray-400 text-base sm:text-lg leading-relaxed mb-12 max-w-md mx-auto">
-              Send us your project details. Scope calls are direct, fast, and free.
+              Bring the site, the schedule, or the full vision. We will tell you what it takes to move it forward.
             </p>
             <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`}
               className="inline-flex items-center gap-4 text-ro-gold font-heading text-3xl sm:text-4xl lg:text-5xl tracking-tight hover:text-ro-gold-light transition-colors duration-300 mb-10">
@@ -660,6 +666,6 @@ export default function CommercialPage() {
         </div>
       </section>
 
-    </div>
+    </main>
   );
 }
