@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useRef } from 'react';
-import { Shield, Layers, Flame, MapPin } from 'lucide-react';
+import { ArrowRight, Shield, Layers, Flame, MapPin } from 'lucide-react';
 import { gsap, ScrollTrigger, SplitText, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
 
@@ -30,6 +31,7 @@ export default function WhyRO() {
   const scaffoldRef = useRef<HTMLDivElement>(null);
   const goldLineRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const flowRef = useRef<HTMLDivElement>(null);
   const spacerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
@@ -48,6 +50,7 @@ export default function WhyRO() {
       if (scaffoldRef.current) gsap.set(scaffoldRef.current, { opacity: 0 });
       const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
       allCards.forEach(card => { gsap.set(card, { opacity: 0 }); });
+      if (flowRef.current) gsap.set(flowRef.current.querySelectorAll('.flow-link'), { opacity: 0, y: 16 });
 
       // SplitText inside context — auto-reverted when context changes
       const split = SplitText.create(titleRef.current!, { type: 'chars' });
@@ -130,6 +133,14 @@ export default function WhyRO() {
         }
       });
 
+      if (flowRef.current) {
+        tl.fromTo(flowRef.current.querySelectorAll('.flow-link'),
+          { opacity: 0, y: 16 },
+          { opacity: 1, y: 0, stagger: 0.03, duration: 0.05, ease: 'power2.out' },
+          0.985
+        );
+      }
+
       return () => { split.revert(); };
     });
 
@@ -146,6 +157,7 @@ export default function WhyRO() {
       if (scaffoldRef.current) gsap.set(scaffoldRef.current, { opacity: 0 });
       const allCards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
       allCards.forEach(card => { gsap.set(card, { opacity: 0 }); });
+      if (flowRef.current) gsap.set(flowRef.current.querySelectorAll('.flow-link'), { opacity: 0, y: 16 });
 
       // SplitText inside mobile context
       const split = SplitText.create(titleRef.current!, { type: 'chars' });
@@ -283,6 +295,25 @@ export default function WhyRO() {
           );
       });
 
+      if (flowRef.current) {
+        gsap.fromTo(flowRef.current.querySelectorAll('.flow-link'),
+          { opacity: 0, y: 16 },
+          {
+            opacity: 1,
+            y: 0,
+            stagger: 0.08,
+            duration: 0.4,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: flowRef.current,
+              start: 'top 80%',
+              toggleActions: 'play none none none',
+              id: 'whyro-flow-links-mobile',
+            },
+          }
+        );
+      }
+
       return () => { split.revert(); };
     });
 
@@ -394,6 +425,32 @@ export default function WhyRO() {
                 />
               </div>
             ))}
+          </div>
+        </div>
+
+        <div ref={flowRef} className="flex-shrink-0 pb-4">
+          <div className="mx-auto flex w-full max-w-xl flex-col gap-3 lg:max-w-5xl lg:flex-row lg:justify-center">
+            <Link
+              href="/commercial"
+              className="flow-link group flex items-center justify-between border border-ro-gold/16 bg-ro-black/34 px-5 py-4 text-ro-white transition-colors duration-300 hover:border-ro-gold/30 hover:bg-ro-gold/[0.03] lg:min-w-[240px]"
+            >
+              <span className="font-heading text-sm uppercase tracking-[0.16em]">See Commercial</span>
+              <ArrowRight size={16} className="text-ro-gold transition-transform duration-300 group-hover:translate-x-1" />
+            </Link>
+            <Link
+              href="/capabilities"
+              className="flow-link group flex items-center justify-between border border-ro-gold/16 bg-ro-black/34 px-5 py-4 text-ro-white transition-colors duration-300 hover:border-ro-gold/30 hover:bg-ro-gold/[0.03] lg:min-w-[240px]"
+            >
+              <span className="font-heading text-sm uppercase tracking-[0.16em]">View Capabilities</span>
+              <ArrowRight size={16} className="text-ro-gold transition-transform duration-300 group-hover:translate-x-1" />
+            </Link>
+            <Link
+              href="/contact"
+              className="flow-link group flex items-center justify-between border border-ro-gold/16 bg-ro-black/34 px-5 py-4 text-ro-white transition-colors duration-300 hover:border-ro-gold/30 hover:bg-ro-gold/[0.03] lg:min-w-[240px]"
+            >
+              <span className="font-heading text-sm uppercase tracking-[0.16em]">Start the Conversation</span>
+              <ArrowRight size={16} className="text-ro-gold transition-transform duration-300 group-hover:translate-x-1" />
+            </Link>
           </div>
         </div>
 
