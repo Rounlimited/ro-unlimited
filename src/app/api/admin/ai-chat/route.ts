@@ -495,7 +495,8 @@ function selectTools(lastMessage: string, messageCount?: number): typeof ALL_TOO
 
   // Always include these lightweight tools
   if (needs.memory) { tools.push(...READ_TOOLS.filter(t => t.name === 'save_memory' || t.name === 'forget_memory')); }
-  if (needs.web) { tools.push(...READ_TOOLS.filter(t => t.name === 'web_search')); }
+  // web_search always included — AI needs it for prices, codes, regulations; it's read-only and cheap
+  tools.push(...READ_TOOLS.filter(t => t.name === 'web_search'));
   if (needs.property) { tools.push(...READ_TOOLS.filter(t => t.name === 'property_lookup')); }
   if (needs.navigate) { tools.push(...WRITE_TOOLS.filter(t => t.name === 'navigate')); }
   if (needs.tasks) {
