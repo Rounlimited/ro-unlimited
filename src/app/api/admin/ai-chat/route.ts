@@ -5,9 +5,34 @@ import { recalcEstimateTotals } from '@/lib/estimates';
 export const dynamic = 'force-dynamic';
 
 // ═══════════════════════════════════════════
-// WEB SEARCH (DuckDuckGo)
+// SEARCH: Tavily (primary) + DuckDuckGo (fallback)
 // ═══════════════════════════════════════════
-async function webSearch(query: string): Promise<string> {
+async function tavilySearch(query: string): Promise<string | null> {
+  const apiKey = process.env.TAVILY_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const res = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey, query, max_results: 6, include_answer: true, search_depth: 'basic' }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const parts: string[] = [];
+    if (data.answer) parts.push(`**AI Summary:** ${data.answer}\n`);
+    const results = data.results || [];
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      const snippet = r.content ? r.content.slice(0, 300) + (r.content.length > 300 ? '...' : '') : '';
+      parts.push(`${i + 1}. **${r.title}**\n   ${snippet}\n   Source: ${r.url}`);
+    }
+    return parts.length > 0 ? parts.join('\n\n') : null;
+  } catch {
+    return null;
+  }
+}
+
+async function duckDuckGoSearch(query: string): Promise<string> {
   try {
     const encoded = encodeURIComponent(query);
     const res = await fetch(`https://html.duckduckgo.com/html/?q=${encoded}`, {
@@ -16,20 +41,20 @@ async function webSearch(query: string): Promise<string> {
     });
     if (!res.ok) return 'Search failed.';
     const html = await res.text();
-    const results: string[] = [];
-    const snippetRegex = /<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
-    const titleRegex = /<a class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g;
     const titles: { url: string; title: string }[] = [];
+    const snippets: string[] = [];
+    const titleRegex = /<a class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g;
+    const snippetRegex = /<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
     let match;
     while ((match = titleRegex.exec(html)) !== null && titles.length < 6) {
       const url = match[1].replace(/.*uddg=/, '').split('&')[0];
       const title = match[2].replace(/<[^>]*>/g, '').trim();
       try { titles.push({ url: decodeURIComponent(url), title }); } catch { titles.push({ url, title }); }
     }
-    const snippets: string[] = [];
     while ((match = snippetRegex.exec(html)) !== null && snippets.length < 6) {
-      snippets.push(match[1].replace(/<[^>]*>/g, '').trim());
+      snippets.push(match[1].replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').trim());
     }
+    const results: string[] = [];
     for (let i = 0; i < titles.length; i++) {
       results.push(`${i + 1}. **${titles[i].title}**\n   ${snippets[i] || ''}\n   Source: ${titles[i].url}`);
     }
@@ -37,6 +62,12 @@ async function webSearch(query: string): Promise<string> {
   } catch {
     return 'Search failed.';
   }
+}
+
+async function smartSearch(query: string): Promise<string> {
+  const tavily = await tavilySearch(query);
+  if (tavily) return tavily;
+  return duckDuckGoSearch(query);
 }
 
 // ═══════════════════════════════════════════
@@ -59,8 +90,10 @@ const READ_TOOLS = [
     input_schema: { type: 'object' as const, properties: { limit: { type: 'number' }, action_filter: { type: 'string' } } } },
   { name: 'search_cost_library', description: 'Search cost items for pricing.',
     input_schema: { type: 'object' as const, properties: { query: { type: 'string' }, category: { type: 'string', description: 'material|labor|equipment|subcontractor' } }, required: ['query'] } },
-  { name: 'web_search', description: 'Search the web for current info (pricing, codes, specs).',
+  { name: 'web_search', description: 'Search the web (Tavily AI search + DuckDuckGo fallback) for current info — pricing, SC codes, regulations, permits, material costs. Returns AI-summarized answers plus source links.',
     input_schema: { type: 'object' as const, properties: { query: { type: 'string' } }, required: ['query'] } },
+  { name: 'property_lookup', description: 'Look up a property by address. Returns lot size, building sqft, bedrooms, year built, estimated value, assessed value, and features. Use when customer gives a project address and you need real property data.',
+    input_schema: { type: 'object' as const, properties: { address: { type: 'string', description: 'Full property address including city and state (e.g. "123 Main St, Greenville, SC")' } }, required: ['address'] } },
   { name: 'save_memory', description: 'Save to persistent memory. Use when user says "remember".',
     input_schema: { type: 'object' as const, properties: { content: { type: 'string' }, category: { type: 'string', description: 'general|pricing|preferences|projects|codes|materials' } }, required: ['content', 'category'] } },
   { name: 'forget_memory', description: 'Delete a saved memory by keyword.',
@@ -377,11 +410,13 @@ function selectTools(lastMessage: string, messageCount?: number): typeof ALL_TOO
     navigate: /go to|open|navigate|take me|show me.*page|switch to/i.test(msg),
     memory: /remember|forget|memory|save.*note/i.test(msg),
     web: /search.*web|google|look.*up|current.*price|what.*cost|code.*require/i.test(msg),
+    property: /property|lot size|sqft|square feet|address|parcel|acres|assessed value|look up.*address/i.test(msg),
   };
 
   // Always include these lightweight tools
   if (needs.memory) { tools.push(...READ_TOOLS.filter(t => t.name === 'save_memory' || t.name === 'forget_memory')); }
   if (needs.web) { tools.push(...READ_TOOLS.filter(t => t.name === 'web_search')); }
+  if (needs.property) { tools.push(...READ_TOOLS.filter(t => t.name === 'property_lookup')); }
   if (needs.navigate) { tools.push(...WRITE_TOOLS.filter(t => t.name === 'navigate')); }
 
   // Search tools
@@ -534,7 +569,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
     }
 
     case 'web_search': {
-      return { result: await webSearch(input.query) };
+      return { result: await smartSearch(input.query) };
     }
 
     case 'save_memory': {
@@ -1017,6 +1052,99 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (error) return { result: `Error searching disclaimers: ${error.message}` };
       if (!data?.length) return { result: 'No disclaimers found.' };
       return { result: JSON.stringify(data, null, 2) };
+    }
+
+    case 'property_lookup': {
+      if (!input.address) return { result: 'Error: address is required.' };
+      const rentcastKey = process.env.RENTCAST_API_KEY;
+      if (!rentcastKey) return { result: 'Property lookup not configured (no API key).' };
+
+      // Hard cap: 50 calls/month
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      const { count } = await supabase
+        .from('api_usage_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('service', 'rentcast')
+        .gte('created_at', monthStart);
+      const used = count || 0;
+      if (used >= 50) {
+        return { result: `Monthly property lookup limit reached (${used}/50). Estimate based on neighborhood knowledge instead.` };
+      }
+
+      try {
+        const encoded = encodeURIComponent(input.address);
+        const res = await fetch(`https://api.rentcast.io/v1/properties?address=${encoded}`, {
+          headers: { 'X-Api-Key': rentcastKey, Accept: 'application/json' },
+        });
+        if (!res.ok) {
+          const err = await res.text();
+          return { result: `Property lookup failed (${res.status}): ${err.slice(0, 200)}` };
+        }
+        const data = await res.json();
+
+        // Log usage (fail silently if table doesn't exist)
+        await supabase.from('api_usage_log').insert({ service: 'rentcast', endpoint: 'properties' }).then(() => {}).catch(() => {});
+
+        const props = Array.isArray(data) ? data : [data];
+        if (!props.length) return { result: `No property data found for "${input.address}".` };
+
+        const p = props[0];
+        const lotSqft = p.lotSize || p.lotSquareFeet || 0;
+        const lotAcres = lotSqft ? (lotSqft / 43560).toFixed(2) : '?';
+
+        let assessedValue = p.assessedValue || null;
+        let taxAmount = p.taxAmount || null;
+        if (!assessedValue && p.taxAssessments) {
+          const years = Object.keys(p.taxAssessments).sort().reverse();
+          if (years.length) assessedValue = p.taxAssessments[years[0]]?.value;
+        }
+        if (!taxAmount && p.propertyTaxes) {
+          const years = Object.keys(p.propertyTaxes).sort().reverse();
+          if (years.length) taxAmount = p.propertyTaxes[years[0]]?.total;
+        }
+
+        const ownerName = p.ownerName || (p.owner?.names ? p.owner.names.join(', ') : p.owner) || 'N/A';
+
+        let estimatedValue = 'N/A';
+        if (p.lastSalePrice && p.lastSaleDate) {
+          const saleYear = new Date(p.lastSaleDate).getFullYear();
+          const yearsAgo = new Date().getFullYear() - saleYear;
+          const appreciated = Math.round(p.lastSalePrice * Math.pow(1.04, yearsAgo));
+          estimatedValue = `~$${appreciated.toLocaleString()} (based on $${p.lastSalePrice.toLocaleString()} sale in ${saleYear} + ~4%/yr appreciation)`;
+        } else if (assessedValue) {
+          const marketEst = Math.round(assessedValue * 1.2);
+          estimatedValue = `~$${marketEst.toLocaleString()} (est. from $${assessedValue.toLocaleString()} assessed value)`;
+        }
+
+        const features: string[] = [];
+        if (p.features) {
+          if (p.features.cooling) features.push(`Cooling: ${p.features.coolingType || 'Yes'}`);
+          if (p.features.heating) features.push(`Heating: ${p.features.heatingType || 'Yes'}`);
+          if (p.features.garage) features.push(`Garage: ${p.features.garageType || 'Yes'}`);
+          if (p.features.roofType) features.push(`Roof: ${p.features.roofType}`);
+          if (p.features.exteriorType) features.push(`Exterior: ${p.features.exteriorType}`);
+          if (p.features.floorCount) features.push(`Floors: ${p.features.floorCount}`);
+        }
+
+        const lines = [
+          `**Property: ${p.formattedAddress || p.addressLine1 || input.address}**`,
+          `Lot Size: ${lotSqft ? lotSqft.toLocaleString() + ' sqft (' + lotAcres + ' acres)' : 'Not available'}`,
+          `Building: ${p.squareFootage ? p.squareFootage.toLocaleString() + ' sqft' : 'N/A'}`,
+          `Bedrooms: ${p.bedrooms ?? 'N/A'} | Bathrooms: ${p.bathrooms ?? 'N/A'}`,
+          `Year Built: ${p.yearBuilt || 'N/A'}`,
+          `Property Type: ${p.propertyType || 'N/A'}`,
+          `Estimated Value: ${estimatedValue}`,
+          `Assessed Value: ${assessedValue ? '$' + assessedValue.toLocaleString() : 'N/A'}`,
+          `Annual Tax: ${taxAmount ? '$' + taxAmount.toLocaleString() + '/yr' : 'N/A'}`,
+          `Owner: ${ownerName}`,
+          features.length ? `Features: ${features.join(' | ')}` : '',
+          `(API usage: ${used + 1}/50 this month)`,
+        ].filter(Boolean);
+
+        return { result: lines.join('\n') };
+      } catch (err: any) {
+        return { result: `Property lookup error: ${err.message}` };
+      }
     }
 
     case 'navigate': {

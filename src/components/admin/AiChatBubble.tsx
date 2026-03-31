@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 
 interface Message { role: 'user' | 'assistant'; content: string; }
 interface Conversation { id: string; title: string; summary: string | null; token_estimate: number; compacted: boolean; created_at: string; updated_at: string; }
@@ -32,31 +32,126 @@ export default function AiChatBubble() {
   const [tokenEstimate, setTokenEstimate] = useState(0);
   const [compacting, setCompacting] = useState(false);
 
-  // Voice input
+  // Voice input (MediaRecorder → Groq Whisper — works on iPhone)
   const [listening, setListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingVoiceSubmitRef = useRef<string | null>(null);
+  const sendMessageRef = useRef<() => void>(() => {});
 
-  const toggleVoice = () => {
+  // TTS (SpeechSynthesis)
+  const [speakEnabled, setSpeakEnabled] = useState(false);
+  const speakingRef = useRef(false);
+
+  const speakText = useCallback((text: string) => {
+    if (!speakEnabled || typeof window === 'undefined' || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    // Strip markdown symbols for clean speech
+    const clean = text
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/#{1,3}\s/g, '')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/^[-*•]\s/gm, '')
+      .replace(/^\d+\.\s/gm, '')
+      .replace(/---+/g, '')
+      .trim();
+    if (!clean) return;
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.rate = 1.05;
+    utter.pitch = 1;
+    utter.volume = 1;
+    utter.onstart = () => { speakingRef.current = true; };
+    utter.onend = () => { speakingRef.current = false; };
+    utter.onerror = () => { speakingRef.current = false; };
+    window.speechSynthesis.speak(utter);
+  }, [speakEnabled]);
+
+  const stopSpeaking = () => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      speakingRef.current = false;
+    }
+  };
+
+  const getSupportedMimeType = (): string => {
+    const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/ogg'];
+    for (const type of types) {
+      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) return type;
+    }
+    return '';
+  };
+
+  const toggleVoice = async () => {
     if (listening) {
-      recognitionRef.current?.stop();
+      // Stop recording — will trigger onstop → transcribe
+      if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+      mediaRecorderRef.current?.stop();
       setListening(false);
       return;
     }
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) { setToast('Voice input not supported in this browser'); return; }
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results).map((r: any) => r[0].transcript).join('');
-      setInput(transcript);
-    };
-    recognition.onend = () => { setListening(false); };
-    recognition.onerror = () => { setListening(false); };
-    recognitionRef.current = recognition;
-    recognition.start();
-    setListening(true);
+
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+      setToast('Microphone not supported in this browser');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = getSupportedMimeType();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        if (audioChunksRef.current.length === 0) return;
+        setTranscribing(true);
+        try {
+          const blob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
+          const ext = mimeType?.includes('mp4') ? 'mp4' : mimeType?.includes('ogg') ? 'ogg' : 'webm';
+          const form = new FormData();
+          form.append('audio', blob, `recording.${ext}`);
+          const res = await fetch('/api/admin/transcribe', { method: 'POST', body: form });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.transcript?.trim()) {
+              setInput(data.transcript.trim());
+              pendingVoiceSubmitRef.current = data.transcript.trim();
+            }
+          } else {
+            setToast('Could not transcribe audio — try again');
+          }
+        } catch {
+          setToast('Transcription error — try again');
+        }
+        setTranscribing(false);
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start(250); // collect chunks every 250ms
+      setListening(true);
+
+      // Auto-stop after 30 seconds
+      recordingTimeoutRef.current = setTimeout(() => {
+        if (mediaRecorderRef.current?.state === 'recording') {
+          mediaRecorderRef.current.stop();
+          setListening(false);
+        }
+      }, 30000);
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError') {
+        setToast('Microphone permission denied');
+      } else {
+        setToast('Could not access microphone');
+      }
+    }
   };
 
   // Floating window drag state
@@ -105,6 +200,17 @@ export default function AiChatBubble() {
       return () => clearTimeout(t);
     }
   }, [toast]);
+
+  // Keep sendMessageRef current so voice onstop can call it
+  useEffect(() => { sendMessageRef.current = sendMessage; });
+
+  // Auto-submit after voice transcription sets input
+  useEffect(() => {
+    if (input && pendingVoiceSubmitRef.current && input === pendingVoiceSubmitRef.current) {
+      pendingVoiceSubmitRef.current = null;
+      setTimeout(() => sendMessageRef.current(), 150);
+    }
+  }, [input]);
 
   // ── Load conversation list ──
   const fetchConversations = useCallback(async () => {
@@ -244,10 +350,14 @@ export default function AiChatBubble() {
       });
 
       const data = await res.json();
-      const reply: Message = { role: 'assistant', content: data.content || data.error || 'Sorry, something went wrong.' };
+      const replyText = data.content || data.error || 'Sorry, something went wrong.';
+      const reply: Message = { role: 'assistant', content: replyText };
       const finalMessages = [...newMessages, reply];
       setMessages(finalMessages);
       if (displayMode === 'minimized' || !open) setUnread(prev => prev + 1);
+
+      // Speak the response if TTS is enabled
+      speakText(replyText);
 
       // Handle navigation actions
       if (data.actions) {
@@ -510,6 +620,14 @@ export default function AiChatBubble() {
                 {aiModel === 'grok' ? 'Grok' : aiModel === 'claude' ? 'Claude' : 'Groq'}
               </button>
             )}
+            {/* TTS toggle */}
+            {!isFloating && (
+              <button onClick={() => { if (speakEnabled) stopSpeaking(); setSpeakEnabled(prev => !prev); }}
+                className={`p-1.5 rounded-lg transition-colors ${speakEnabled ? 'text-[#C9A84C] bg-[#C9A84C]/10' : 'text-white/20 hover:text-white hover:bg-white/10'}`}
+                title={speakEnabled ? 'Voice responses on (click to mute)' : 'Voice responses off (click to enable)'}>
+                {speakEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              </button>
+            )}
             {/* New chat */}
             <button onClick={startNewChat} className="p-1.5 text-white/20 hover:text-[#C9A84C] hover:bg-white/5 rounded-lg transition-colors" title="New chat">
               <Plus size={isFloating ? 14 : 16} />
@@ -606,16 +724,21 @@ export default function AiChatBubble() {
           <div className="flex gap-2">
             <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-              placeholder={listening ? 'Listening...' : 'Ask anything...'} disabled={loading}
+              placeholder={listening ? 'Recording... tap to stop' : transcribing ? 'Transcribing...' : 'Ask anything...'}
+              disabled={loading || transcribing}
               className={`flex-1 bg-[#1a1a1a] border rounded-xl px-3 text-white placeholder-white/25 focus:outline-none transition-colors ${
-                listening ? 'border-red-500/50 bg-red-500/5' : 'border-white/10 focus:border-[#C9A84C]/50'
+                listening ? 'border-red-500/50 bg-red-500/5' : transcribing ? 'border-[#C9A84C]/30 bg-[#C9A84C]/5' : 'border-white/10 focus:border-[#C9A84C]/50'
               } ${isFloating ? 'py-2 text-[13px]' : isFullscreen ? 'py-3 text-[16px] px-4' : 'py-3 text-[15px] px-4'}`} />
-            <button onClick={toggleVoice} disabled={loading}
+            <button onClick={toggleVoice} disabled={loading || transcribing}
               className={`rounded-xl transition-colors flex-shrink-0 ${
-                listening ? 'bg-red-500 text-white animate-pulse' : 'bg-white/5 text-white/40 hover:text-[#C9A84C] hover:bg-white/10'
+                listening ? 'bg-red-500 text-white animate-pulse' :
+                transcribing ? 'bg-[#C9A84C]/20 text-[#C9A84C]' :
+                'bg-white/5 text-white/40 hover:text-[#C9A84C] hover:bg-white/10'
               } ${isFloating ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}
-              title={listening ? 'Stop listening' : 'Voice input'}>
-              {listening ? <MicOff size={isFloating ? 12 : 16} /> : <Mic size={isFloating ? 12 : 16} />}
+              title={listening ? 'Tap to stop & send' : transcribing ? 'Transcribing...' : 'Voice input (works on iPhone)'}>
+              {transcribing ? <Loader2 size={isFloating ? 12 : 16} className="animate-spin" /> :
+               listening ? <MicOff size={isFloating ? 12 : 16} /> :
+               <Mic size={isFloating ? 12 : 16} />}
             </button>
             <button onClick={sendMessage} disabled={loading || !input.trim()}
               className={`bg-[#C9A84C] text-black rounded-xl hover:bg-[#C9A84C]/90 transition-colors disabled:opacity-30 flex-shrink-0 ${
