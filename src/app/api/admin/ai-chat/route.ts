@@ -87,6 +87,99 @@ async function smartSearch(query: string): Promise<string> {
 }
 
 // ═══════════════════════════════════════════
+// PROPERTY ENRICHMENT — free data sources
+// ═══════════════════════════════════════════
+
+// Geocode address → lat/lon via Nominatim (OSM) — free, no key
+async function geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {
+  try {
+    const encoded = encodeURIComponent(address);
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1`, {
+      headers: { 'User-Agent': 'ROAssistant/1.0 (rounlimited.com)' },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.length) return null;
+    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+  } catch { return null; }
+}
+
+// FEMA flood zone via NFHL ArcGIS REST — free, no key, official source
+async function getFEMAFloodZone(lat: number, lon: number): Promise<string> {
+  try {
+    const params = new URLSearchParams({
+      geometry: `${lon},${lat}`,
+      geometryType: 'esriGeometryPoint',
+      inSR: '4326',
+      spatialRel: 'esriSpatialRelIntersects',
+      outFields: 'FLD_ZONE,SFHA_TF,ZONE_SUBTY',
+      returnGeometry: 'false',
+      f: 'json',
+    });
+    const res = await fetch(
+      `https://hazards.fema.gov/arcgis/rest/services/FIRMette/NFHLREST_FIRMette/MapServer/20/query?${params}`
+    );
+    if (!res.ok) return 'Flood zone: lookup unavailable';
+    const data = await res.json();
+    const attrs = data.features?.[0]?.attributes;
+    if (!attrs) return 'Flood zone: no data for this location';
+    const zone = attrs.FLD_ZONE || 'Unknown';
+    const subtype = attrs.ZONE_SUBTY ? ` (${attrs.ZONE_SUBTY})` : '';
+    const sfha = attrs.SFHA_TF === 'T' ? '⚠️ HIGH RISK — Special Flood Hazard Area' : 'Minimal flood risk';
+    const zoneDesc: Record<string, string> = {
+      'X': 'Zone X — minimal flood hazard (outside 500-yr floodplain)',
+      'AE': 'Zone AE — high risk, base flood elevations determined',
+      'A': 'Zone A — high risk, no base flood elevation',
+      'VE': 'Zone VE — coastal high risk with wave action',
+      'AO': 'Zone AO — shallow flooding/sheet flow',
+    };
+    return `Flood Zone: ${zone}${subtype} — ${zoneDesc[zone] || zone} · ${sfha}`;
+  } catch { return 'Flood zone: lookup error'; }
+}
+
+// OSM Overpass — building/business data near address (free, no key)
+async function getOSMData(lat: number, lon: number): Promise<string | null> {
+  try {
+    const query = `[out:json][timeout:10];(
+      way[building](around:40,${lat},${lon});
+      node[amenity](around:60,${lat},${lon});
+      node[shop](around:60,${lat},${lon});
+    );out tags;`;
+    const res = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `data=${encodeURIComponent(query)}`,
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const elements = data.elements || [];
+    if (!elements.length) return null;
+    const parts: string[] = [];
+    for (const el of elements.slice(0, 3)) {
+      const t = el.tags || {};
+      const info: string[] = [];
+      if (t.building) info.push(`Building type: ${t.building}`);
+      if (t['building:levels']) info.push(`Stories: ${t['building:levels']}`);
+      if (t['roof:material']) info.push(`Roof material: ${t['roof:material']}`);
+      if (t['roof:shape']) info.push(`Roof shape: ${t['roof:shape']}`);
+      if (t.name) info.push(`Name: ${t.name}`);
+      if (t.amenity) info.push(`Type: ${t.amenity}`);
+      if (t['contact:phone'] || t.phone) info.push(`Phone: ${t['contact:phone'] || t.phone}`);
+      if (t.opening_hours) info.push(`Hours: ${t.opening_hours}`);
+      if (t['addr:street']) info.push(`OSM address: ${t['addr:housenumber'] || ''} ${t['addr:street']}`);
+      if (info.length) parts.push(info.join(' · '));
+    }
+    return parts.length ? parts.join('\n') : null;
+  } catch { return null; }
+}
+
+// Satellite map URL — no API key, opens Google Maps satellite view
+function getSatelliteMapUrl(lat: number, lon: number, address: string): string {
+  const encoded = encodeURIComponent(address);
+  return `https://www.google.com/maps?q=${lat},${lon}&t=k&z=19 — or search "${encoded}" in Google Maps (satellite mode)`;
+}
+
+// ═══════════════════════════════════════════
 // TOOL DEFINITIONS (Claude native tool_use)
 // ═══════════════════════════════════════════
 
@@ -108,7 +201,7 @@ const READ_TOOLS = [
     input_schema: { type: 'object' as const, properties: { query: { type: 'string' }, category: { type: 'string', description: 'material|labor|equipment|subcontractor' } }, required: ['query'] } },
   { name: 'web_search', description: 'Search the web (Tavily AI search + DuckDuckGo fallback) for current info — pricing, SC codes, regulations, permits, material costs. Returns AI-summarized answers plus source links.',
     input_schema: { type: 'object' as const, properties: { query: { type: 'string' } }, required: ['query'] } },
-  { name: 'property_lookup', description: 'Look up a property by address. Returns lot size, building sqft, bedrooms, year built, estimated value, assessed value, and features. Use when customer gives a project address and you need real property data.',
+  { name: 'property_lookup', description: 'Look up a property by address. Returns lot size, building sqft, year built, construction features, estimated value, owner, FEMA flood zone, OSM building/business data, and satellite map link. Use for any job site address.',
     input_schema: { type: 'object' as const, properties: { address: { type: 'string', description: 'Full property address including city and state (e.g. "123 Main St, Greenville, SC")' } }, required: ['address'] } },
   { name: 'save_memory', description: 'Save to persistent memory. Use when user says "remember".',
     input_schema: { type: 'object' as const, properties: { content: { type: 'string' }, category: { type: 'string', description: 'general|pricing|preferences|projects|codes|materials' } }, required: ['content', 'category'] } },
@@ -1227,6 +1320,21 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           if (p.features.floorCount) features.push(`Floors: ${p.features.floorCount}`);
         }
 
+        // Enrichment: geocode + FEMA + OSM — all run in parallel
+        const lat = p.latitude || p.lat || null;
+        const lon = p.longitude || p.lon || null;
+        let coords: { lat: number; lon: number } | null = (lat && lon) ? { lat, lon } : null;
+        if (!coords) coords = await geocodeAddress(p.formattedAddress || input.address);
+
+        const [floodZone, osmData] = coords
+          ? await Promise.all([
+              getFEMAFloodZone(coords.lat, coords.lon),
+              getOSMData(coords.lat, coords.lon),
+            ])
+          : ['Flood zone: coordinates unavailable', null];
+
+        const satelliteUrl = coords ? getSatelliteMapUrl(coords.lat, coords.lon, p.formattedAddress || input.address) : null;
+
         const lines = [
           `**Property: ${p.formattedAddress || p.addressLine1 || input.address}**`,
           `Lot Size: ${lotSqft ? lotSqft.toLocaleString() + ' sqft (' + lotAcres + ' acres)' : 'Not available'}`,
@@ -1234,12 +1342,17 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           `Bedrooms: ${p.bedrooms ?? 'N/A'} | Bathrooms: ${p.bathrooms ?? 'N/A'}`,
           `Year Built: ${p.yearBuilt || 'N/A'}`,
           `Property Type: ${p.propertyType || 'N/A'}`,
+          features.length ? `Features: ${features.join(' | ')}` : '',
           `Estimated Value: ${estimatedValue}`,
           `Assessed Value: ${assessedValue ? '$' + assessedValue.toLocaleString() : 'N/A'}`,
           `Annual Tax: ${taxAmount ? '$' + taxAmount.toLocaleString() + '/yr' : 'N/A'}`,
           `Owner: ${ownerName}`,
-          features.length ? `Features: ${features.join(' | ')}` : '',
-          `(API usage: ${used + 1}/50 this month)`,
+          ``,
+          `**Site Intelligence**`,
+          floodZone,
+          osmData ? `OSM Data:\n${osmData}` : '',
+          satelliteUrl ? `Satellite: ${satelliteUrl}` : '',
+          `(Rentcast usage: ${used + 1}/50 this month)`,
         ].filter(Boolean);
 
         return { result: lines.join('\n') };
