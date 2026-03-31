@@ -7,35 +7,37 @@ export const dynamic = 'force-dynamic';
 // ═══════════════════════════════════════════
 // SEARCH: Tavily (primary) + DuckDuckGo (fallback)
 // ═══════════════════════════════════════════
-async function tavilySearch(query: string): Promise<string | null> {
-  const apiKey = process.env.TAVILY_API_KEY;
-  if (!apiKey) { console.log('[tavily] No API key'); return null; }
+async function braveSearch(query: string): Promise<string | null> {
+  const apiKey = process.env.BRAVE_SEARCH_API_KEY;
+  if (!apiKey) { console.log('[brave] No API key'); return null; }
   try {
-    const res = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ api_key: apiKey, query, max_results: 6, include_answer: true, search_depth: 'basic' }),
+    const encoded = encodeURIComponent(query);
+    // Use LLM Context endpoint — returns pre-chunked, ranked content optimized for LLM injection
+    const res = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encoded}&count=5&result_filter=web&extra_snippets=true`, {
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip',
+        'X-Subscription-Token': apiKey,
+      },
     });
     if (!res.ok) {
       const errText = await res.text();
-      console.error('[tavily] HTTP', res.status, errText.slice(0, 200));
+      console.error('[brave] HTTP', res.status, errText.slice(0, 200));
       return null;
     }
     const data = await res.json();
-    const apiError = data.error || data.detail?.error || data.message;
-    if (apiError) { console.error('[tavily] API error:', apiError); return null; }
+    const results = data.web?.results || [];
+    if (!results.length) { console.log('[brave] No results'); return null; }
     const parts: string[] = [];
-    if (data.answer) parts.push(`**AI Summary:** ${data.answer}\n`);
-    const results = data.results || [];
     for (let i = 0; i < results.length; i++) {
       const r = results[i];
-      const snippet = r.content ? r.content.slice(0, 300) + (r.content.length > 300 ? '...' : '') : '';
-      parts.push(`${i + 1}. **${r.title}**\n   ${snippet}\n   Source: ${r.url}`);
+      const snippet = r.extra_snippets?.join(' ') || r.description || '';
+      parts.push(`${i + 1}. **${r.title}**\n   ${snippet.slice(0, 400)}\n   Source: ${r.url}`);
     }
-    console.log('[tavily] OK — results:', results.length, 'answer:', !!data.answer);
-    return parts.length > 0 ? parts.join('\n\n') : null;
+    console.log('[brave] OK — results:', results.length);
+    return parts.join('\n\n');
   } catch (e) {
-    console.error('[tavily] Exception:', e);
+    console.error('[brave] Exception:', e);
     return null;
   }
 }
@@ -79,8 +81,8 @@ async function duckDuckGoSearch(query: string): Promise<string> {
 }
 
 async function smartSearch(query: string): Promise<string> {
-  const tavily = await tavilySearch(query);
-  if (tavily) return tavily;
+  const brave = await braveSearch(query);
+  if (brave) return brave;
   return duckDuckGoSearch(query);
 }
 
