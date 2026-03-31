@@ -453,12 +453,17 @@ export default function AiChatBubble() {
     dragRef.current = null;
   };
 
-  // Satellite tile URL from lat/lon using free Esri World Imagery (no API key)
-  const getSatelliteTileUrl = (lat: number, lon: number, zoom = 18) => {
-    const x = Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
+  // Satellite tile grid info — returns center tile + sub-pixel offset so address is exactly centered
+  const getSatelliteTileInfo = (lat: number, lon: number, zoom = 19) => {
+    const tileCount = Math.pow(2, zoom);
+    const xFrac = (lon + 180) / 360 * tileCount;
     const sinLat = Math.sin(lat * Math.PI / 180);
-    const y = Math.floor((0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * Math.pow(2, zoom));
-    return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${y}/${x}`;
+    const yFrac = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * tileCount;
+    const cx = Math.floor(xFrac);
+    const cy = Math.floor(yFrac);
+    const px = Math.round((xFrac - cx) * 256); // pixel X within center tile (0-255)
+    const py = Math.round((yFrac - cy) * 256); // pixel Y within center tile (0-255)
+    return { cx, cy, px, py, zoom };
   };
 
   // Markdown rendering
@@ -499,20 +504,27 @@ export default function AiChatBubble() {
       if (p.startsWith('> ')) return <div key={i} style={{ borderLeft: '3px solid #C9A84C33', paddingLeft: 12, color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', margin: '4px 0' }} dangerouslySetInnerHTML={{ __html: p.slice(2) }} />;
       // Empty line
       if (!p.trim()) return <div key={i} className="h-2" />;
-      // Satellite map link — render as embedded tile image + open link
+      // Satellite map link — render 3×3 tile grid centered exactly on the address
       const mapMatch = p.match(/https:\/\/www\.google\.com\/maps\?q=([-\d.]+),([-\d.]+)&t=k&z=\d+/);
       if (mapMatch) {
         const lat = parseFloat(mapMatch[1]);
         const lon = parseFloat(mapMatch[2]);
-        const tileUrl = getSatelliteTileUrl(lat, lon, 18);
+        const { cx, cy, px, py, zoom } = getSatelliteTileInfo(lat, lon, 19);
         const mapsUrl = `https://www.google.com/maps?q=${lat},${lon}&t=k&z=19`;
+        // 3×3 grid = 768×768px. Address pixel within grid: (256+px, 256+py).
+        // Shift grid so that pixel lands at center: left=calc(50%-(256+px)px), top=90-(256+py)
+        const gridTop = 90 - (256 + py);
         return (
           <div key={i} className="my-2">
-            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="block rounded-xl overflow-hidden border border-white/10 hover:border-[#C9A84C]/40 transition-colors group">
-              <div className="relative">
-                <img src={tileUrl} alt="Satellite view" className="w-full h-[180px] object-cover" style={{ imageRendering: 'pixelated' }} />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute bottom-2 left-3 flex items-center gap-1.5">
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="block rounded-xl overflow-hidden border border-white/10 hover:border-[#C9A84C]/40 transition-colors">
+              <div className="relative h-[180px]" style={{ overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', left: `calc(50% - ${256 + px}px)`, top: gridTop, display: 'grid', gridTemplateColumns: 'repeat(3, 256px)', width: 768, pointerEvents: 'none' }}>
+                  {([-1, 0, 1] as const).flatMap(dy => ([-1, 0, 1] as const).map(dx => (
+                    <img key={`${dx},${dy}`} src={`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${cy + dy}/${cx + dx}`} width={256} height={256} alt="" style={{ display: 'block' }} />
+                  )))}
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" style={{ zIndex: 1 }} />
+                <div className="absolute bottom-2 left-3 flex items-center gap-1.5" style={{ zIndex: 2 }}>
                   <MapPin size={12} className="text-[#C9A84C]" />
                   <span className="text-[12px] text-white font-medium">Satellite View — tap to open in Maps</span>
                 </div>
