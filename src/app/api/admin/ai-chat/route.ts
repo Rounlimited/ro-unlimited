@@ -22,7 +22,8 @@ async function tavilySearch(query: string): Promise<string | null> {
       return null;
     }
     const data = await res.json();
-    if (data.error) { console.error('[tavily] API error:', data.error); return null; }
+    const apiError = data.error || data.detail?.error || data.message;
+    if (apiError) { console.error('[tavily] API error:', apiError); return null; }
     const parts: string[] = [];
     if (data.answer) parts.push(`**AI Summary:** ${data.answer}\n`);
     const results = data.results || [];
@@ -41,43 +42,38 @@ async function tavilySearch(query: string): Promise<string | null> {
 
 async function duckDuckGoSearch(query: string): Promise<string> {
   try {
-    // Use DDG Instant Answer JSON API — no scraping, no IP blocking
     const encoded = encodeURIComponent(query);
-    const res = await fetch(`https://api.duckduckgo.com/?q=${encoded}&format=json&no_html=1&skip_disambig=1`, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ROAssistant/1.0)' },
+    const res = await fetch(`https://html.duckduckgo.com/html/?q=${encoded}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
       cache: 'no-store',
     });
-    if (!res.ok) return 'Search unavailable.';
-    const data = await res.json();
-    const parts: string[] = [];
-
-    if (data.Abstract) {
-      parts.push(`**${data.AbstractSource || 'Summary'}:** ${data.Abstract}`);
-      if (data.AbstractURL) parts.push(`Source: ${data.AbstractURL}`);
+    if (!res.ok) { console.error('[ddg] HTTP', res.status); return 'Search unavailable.'; }
+    const html = await res.text();
+    const titles: { url: string; title: string }[] = [];
+    const snippets: string[] = [];
+    const titleRegex = /<a class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g;
+    const snippetRegex = /<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+    let match;
+    while ((match = titleRegex.exec(html)) !== null && titles.length < 6) {
+      const url = match[1].replace(/.*uddg=/, '').split('&')[0];
+      const title = match[2].replace(/<[^>]*>/g, '').trim();
+      try { titles.push({ url: decodeURIComponent(url), title }); } catch { titles.push({ url, title }); }
     }
-
-    const topics: Array<{ Text?: string; FirstURL?: string; Topics?: Array<{ Text?: string; FirstURL?: string }> }> = data.RelatedTopics || [];
-    let count = 0;
-    for (const t of topics) {
-      if (count >= 5) break;
-      if (t.Text && t.FirstURL) {
-        parts.push(`- ${t.Text.slice(0, 200)}${t.Text.length > 200 ? '...' : ''}\n  Source: ${t.FirstURL}`);
-        count++;
-      } else if (t.Topics) {
-        for (const sub of t.Topics) {
-          if (count >= 5) break;
-          if (sub.Text && sub.FirstURL) {
-            parts.push(`- ${sub.Text.slice(0, 200)}${sub.Text.length > 200 ? '...' : ''}\n  Source: ${sub.FirstURL}`);
-            count++;
-          }
-        }
-      }
+    while ((match = snippetRegex.exec(html)) !== null && snippets.length < 6) {
+      snippets.push(match[1].replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').trim());
     }
-
-    return parts.length > 0
-      ? parts.join('\n\n')
-      : 'No instant answer found. For full web results, a Tavily API key is needed (TAVILY_API_KEY env var).';
-  } catch {
+    console.log('[ddg] titles:', titles.length, 'snippets:', snippets.length);
+    const results: string[] = [];
+    for (let i = 0; i < titles.length; i++) {
+      results.push(`${i + 1}. **${titles[i].title}**\n   ${snippets[i] || ''}\n   Source: ${titles[i].url}`);
+    }
+    return results.length > 0 ? results.join('\n\n') : 'No results found.';
+  } catch (e) {
+    console.error('[ddg] Exception:', e);
     return 'Search unavailable.';
   }
 }
