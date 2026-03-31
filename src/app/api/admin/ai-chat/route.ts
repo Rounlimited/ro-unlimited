@@ -98,6 +98,10 @@ const READ_TOOLS = [
     input_schema: { type: 'object' as const, properties: { content: { type: 'string' }, category: { type: 'string', description: 'general|pricing|preferences|projects|codes|materials' } }, required: ['content', 'category'] } },
   { name: 'forget_memory', description: 'Delete a saved memory by keyword.',
     input_schema: { type: 'object' as const, properties: { keyword: { type: 'string' } }, required: ['keyword'] } },
+  { name: 'list_tasks', description: 'List tasks. Use for "what\'s on my schedule", "what do I have today", "what\'s overdue", "upcoming tasks", etc.',
+    input_schema: { type: 'object' as const, properties: { filter: { type: 'string', description: 'today|overdue|upcoming|all (default: all)' }, category: { type: 'string', description: 'job_site|customer|vendor|permit|employee|financial|general' }, limit: { type: 'number', description: 'Max results (default 20)' } } } },
+  { name: 'get_daily_briefing', description: 'Get a summary of today\'s tasks, overdue items, upcoming deadlines, and business status. Use when user asks "what\'s going on today", "morning briefing", "give me a rundown", etc.',
+    input_schema: { type: 'object' as const, properties: {} } },
 ];
 
 // ── WRITE TOOLS ──
@@ -376,10 +380,85 @@ const WRITE_TOOLS = [
     input_schema: {
       type: 'object' as const,
       properties: {
-        path: { type: 'string', description: 'The app path to navigate to, e.g. /admin/estimates, /admin/customers, /admin/estimates/[uuid]' },
+        path: { type: 'string', description: 'The app path to navigate to, e.g. /admin/estimates, /admin/customers, /admin/estimates/[uuid], /admin/tasks' },
         description: { type: 'string', description: 'Brief description of what is at this destination, e.g. "Opening the new estimate wizard"' },
       },
       required: ['path'],
+    },
+  },
+  {
+    name: 'create_task',
+    description: 'Create a new task or reminder. Use when user says "remind me", "add a task", "schedule", "don\'t let me forget", "create a reminder", etc. Infer the category, priority, and due_date from context.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        title: { type: 'string', description: 'Task title (required, short and clear)' },
+        description: { type: 'string', description: 'Optional details' },
+        category: { type: 'string', description: 'job_site|customer|vendor|permit|employee|financial|general (infer from context)' },
+        priority: { type: 'string', description: 'low|medium|high|urgent (infer from context, default medium)' },
+        due_date: { type: 'string', description: 'ISO date string YYYY-MM-DD. Infer from "tomorrow", "Friday", "next week", etc.' },
+        due_time: { type: 'string', description: 'HH:MM format (24hr), e.g. "09:00" for 9am' },
+        remind_minutes_before: { type: 'number', description: 'Minutes before due time to send reminder. Common: 15, 30, 60, 1440 (1 day). Omit if no reminder needed.' },
+        recurrence_type: { type: 'string', description: 'none|daily|weekdays|weekly|monthly (default none)' },
+        linked_label: { type: 'string', description: 'What this task is linked to, e.g. "Johnson estimate", "ABC Supply", "permit #12345"' },
+        notes: { type: 'string', description: 'Extra notes to attach to the task' },
+      },
+      required: ['title'],
+    },
+  },
+  {
+    name: 'complete_task',
+    description: 'Mark a task as done/completed. Use when user says "done", "finished", "mark complete", "check off", etc.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        task_id: { type: 'string', description: 'Task UUID. Get from list_tasks first if unknown.' },
+        title_search: { type: 'string', description: 'If no task_id, search by title keyword to find the right task.' },
+      },
+    },
+  },
+  {
+    name: 'snooze_task',
+    description: 'Snooze a task to a later date/time. Use when user says "snooze", "push to tomorrow", "remind me later", "do it later", etc.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        task_id: { type: 'string', description: 'Task UUID. Get from list_tasks first if unknown.' },
+        title_search: { type: 'string', description: 'Search by title keyword if no task_id.' },
+        snooze_until: { type: 'string', description: 'ISO datetime to snooze until (e.g. "2026-04-01T09:00:00"). Infer from "tomorrow morning" = 9am next day, "next week" = next Monday 9am, "this weekend" = Saturday 9am.' },
+      },
+      required: ['snooze_until'],
+    },
+  },
+  {
+    name: 'update_task',
+    description: 'Update a task\'s title, due date, priority, notes, or other fields.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        task_id: { type: 'string', description: 'Task UUID (required). Use list_tasks to find the ID first.' },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        category: { type: 'string', description: 'job_site|customer|vendor|permit|employee|financial|general' },
+        priority: { type: 'string', description: 'low|medium|high|urgent' },
+        due_date: { type: 'string', description: 'ISO date YYYY-MM-DD' },
+        due_time: { type: 'string', description: 'HH:MM 24hr format' },
+        remind_minutes_before: { type: 'number' },
+        notes: { type: 'string' },
+        linked_label: { type: 'string' },
+      },
+      required: ['task_id'],
+    },
+  },
+  {
+    name: 'delete_task',
+    description: 'Delete or cancel a task. Use when user says "cancel", "remove", "delete this task", etc.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        task_id: { type: 'string', description: 'Task UUID. Use list_tasks to find it first.' },
+        title_search: { type: 'string', description: 'Search by title keyword if no task_id.' },
+      },
     },
   },
 ];
@@ -411,6 +490,7 @@ function selectTools(lastMessage: string, messageCount?: number): typeof ALL_TOO
     memory: /remember|forget|memory|save.*note/i.test(msg),
     web: /search.*web|google|look.*up|current.*price|what.*cost|code.*require/i.test(msg),
     property: /property|lot size|sqft|square feet|address|parcel|acres|assessed value|look up.*address/i.test(msg),
+    tasks: /task|remind|schedule|calendar|todo|to.do|due today|overdue|briefing|rundown|what.*today|today.*tasks|don.t.*forget|follow.?up|check in|appointment|meeting|deadline/i.test(msg),
   };
 
   // Always include these lightweight tools
@@ -418,6 +498,10 @@ function selectTools(lastMessage: string, messageCount?: number): typeof ALL_TOO
   if (needs.web) { tools.push(...READ_TOOLS.filter(t => t.name === 'web_search')); }
   if (needs.property) { tools.push(...READ_TOOLS.filter(t => t.name === 'property_lookup')); }
   if (needs.navigate) { tools.push(...WRITE_TOOLS.filter(t => t.name === 'navigate')); }
+  if (needs.tasks) {
+    tools.push(...READ_TOOLS.filter(t => t.name === 'list_tasks' || t.name === 'get_daily_briefing'));
+    tools.push(...WRITE_TOOLS.filter(t => ['create_task', 'complete_task', 'snooze_task', 'update_task', 'delete_task'].includes(t.name)));
+  }
 
   // Search tools
   if (needs.search || needs.customer) tools.push(...READ_TOOLS.filter(t => t.name === 'search_customers'));
@@ -1147,6 +1231,204 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       }
     }
 
+    // ── TASK TOOLS ──
+    case 'list_tasks': {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+      const params = new URLSearchParams();
+      if (input.filter) params.set('filter', input.filter);
+      if (input.category) params.set('category', input.category);
+      if (input.limit) params.set('limit', String(input.limit));
+      try {
+        const res = await fetch(`${siteUrl}/api/admin/tasks?${params}`, {
+          headers: { 'x-push-secret': process.env.PUSH_SECRET || '' },
+        });
+        if (!res.ok) return { result: 'Failed to fetch tasks.' };
+        const data = await res.json();
+        const tasks = data.tasks || [];
+        if (!tasks.length) {
+          const filter = input.filter || 'all';
+          return { result: filter === 'today' ? 'No tasks due today. Great — you\'re all caught up!' : 'No tasks found.' };
+        }
+        const todayStr = new Date().toISOString().split('T')[0];
+        const lines: string[] = [`Found ${tasks.length} task${tasks.length !== 1 ? 's' : ''}:`];
+        tasks.forEach((t: any) => {
+          const isOverdue = t.due_date && t.due_date < todayStr && t.status !== 'done' && t.status !== 'cancelled';
+          const tag = isOverdue ? ' ⚠️ OVERDUE' : '';
+          const due = t.due_date ? ` (due ${t.due_date}${t.due_time ? ' ' + t.due_time : ''})` : '';
+          const linked = t.linked_label ? ` — ${t.linked_label}` : '';
+          lines.push(`- [${t.id}] ${t.title}${tag}${due}${linked} [${t.priority}/${t.category}/${t.status}]`);
+        });
+        if (data.overdue > 0) lines.push(`\n⚠️ ${data.overdue} overdue task${data.overdue !== 1 ? 's' : ''}`);
+        if (data.dueToday > 0) lines.push(`📅 ${data.dueToday} due today`);
+        if (data.upcoming > 0) lines.push(`📆 ${data.upcoming} upcoming this week`);
+        return { result: lines.join('\n') };
+      } catch (err: any) {
+        return { result: `Error fetching tasks: ${err.message}` };
+      }
+    }
+
+    case 'get_daily_briefing': {
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const sevenDaysOut = new Date(now.getTime() + 7 * 86400000).toISOString().split('T')[0];
+      const threeDaysAgo = new Date(now.getTime() - 3 * 86400000).toISOString();
+
+      const [
+        { data: todayTasks },
+        { data: overdueTasks },
+        { data: upcomingTasks },
+        { data: staleEstimates },
+        { data: unreadEmails },
+      ] = await Promise.all([
+        supabase.from('tasks').select('title, priority, category, due_time, linked_label').eq('due_date', todayStr).not('status', 'in', '("done","cancelled")').order('due_time', { ascending: true }),
+        supabase.from('tasks').select('title, due_date').lt('due_date', todayStr).not('status', 'in', '("done","cancelled")'),
+        supabase.from('tasks').select('title, due_date').gt('due_date', todayStr).lte('due_date', sevenDaysOut).not('status', 'in', '("done","cancelled")').order('due_date').limit(5),
+        supabase.from('estimates').select('estimate_number, project_name, total, sent_at, customer:customers(first_name, last_name)').eq('status', 'sent').lt('sent_at', threeDaysAgo).order('sent_at').limit(5),
+        supabase.from('email_messages').select('id').eq('direction', 'inbound').eq('read', false),
+      ]);
+
+      const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
+      const lines: string[] = [`📅 **${dayName} Briefing — ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}**\n`];
+
+      if (todayTasks?.length) {
+        lines.push(`**Tasks Due Today (${todayTasks.length}):**`);
+        todayTasks.forEach((t: any) => {
+          const time = t.due_time ? formatTimeLocal(t.due_time) + ' — ' : '';
+          lines.push(`• ${time}${t.title}${t.linked_label ? ` (${t.linked_label})` : ''} [${t.priority}]`);
+        });
+      } else {
+        lines.push('**No tasks due today** ✅');
+      }
+
+      if (overdueTasks?.length) {
+        lines.push(`\n⚠️ **Overdue: ${overdueTasks.length} task${overdueTasks.length !== 1 ? 's' : ''}**`);
+        overdueTasks.slice(0, 5).forEach((t: any) => {
+          const days = Math.floor((now.getTime() - new Date(t.due_date).getTime()) / 86400000);
+          lines.push(`• ${t.title} (${days}d overdue)`);
+        });
+        if (overdueTasks.length > 5) lines.push(`• ...and ${overdueTasks.length - 5} more`);
+      }
+
+      if (upcomingTasks?.length) {
+        lines.push(`\n**Upcoming This Week:**`);
+        upcomingTasks.forEach((t: any) => {
+          const d = new Date(t.due_date + 'T12:00:00');
+          lines.push(`• ${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}: ${t.title}`);
+        });
+      }
+
+      if (staleEstimates?.length) {
+        lines.push(`\n**Estimates Needing Follow-Up (${staleEstimates.length}):**`);
+        staleEstimates.forEach((e: any) => {
+          const c = e.customer as any;
+          const name = c ? `${c.first_name} ${c.last_name}` : 'Customer';
+          const days = Math.floor((now.getTime() - new Date(e.sent_at).getTime()) / 86400000);
+          lines.push(`• ${e.estimate_number} (${name}) — $${(e.total || 0).toLocaleString()} — ${days}d ago`);
+        });
+      }
+
+      if (unreadEmails?.length) lines.push(`\n📧 **${unreadEmails.length} unread email${unreadEmails.length !== 1 ? 's' : ''} in inbox**`);
+
+      return { result: lines.join('\n') };
+    }
+
+    case 'create_task': {
+      if (!input.title) return { result: 'Error: task title is required.' };
+      const taskBody: any = {
+        title: input.title,
+        description: input.description || null,
+        category: input.category || 'general',
+        priority: input.priority || 'medium',
+        status: 'pending',
+        due_date: input.due_date || null,
+        due_time: input.due_time || null,
+        linked_label: input.linked_label || null,
+        notes: input.notes || null,
+        recurrence_type: input.recurrence_type || 'none',
+      };
+
+      // Compute remind_at
+      if (input.due_date && input.remind_minutes_before != null) {
+        const timeStr = input.due_time || '09:00';
+        const dt = new Date(`${input.due_date}T${timeStr}:00`);
+        dt.setMinutes(dt.getMinutes() - input.remind_minutes_before);
+        taskBody.remind_at = dt.toISOString();
+        taskBody.reminder_sent = false;
+      }
+
+      const { data, error } = await supabase.from('tasks').insert(taskBody).select().single();
+      if (error) return { result: `Error creating task: ${error.message}` };
+
+      const dueStr = data.due_date ? ` due ${data.due_date}${data.due_time ? ' at ' + formatTimeLocal(data.due_time) : ''}` : '';
+      const reminderStr = data.remind_at ? ` (reminder set)` : '';
+      return { result: `✅ Task created: **${data.title}**${dueStr}${reminderStr} [${data.priority} priority]` };
+    }
+
+    case 'complete_task': {
+      let taskId = input.task_id;
+      if (!taskId && input.title_search) {
+        const { data: found } = await supabase.from('tasks').select('id, title').ilike('title', `%${input.title_search}%`).not('status', 'in', '("done","cancelled")').limit(1).single();
+        if (!found) return { result: `No active task found matching "${input.title_search}".` };
+        taskId = found.id;
+      }
+      if (!taskId) return { result: 'Please provide a task_id or title_search to identify the task.' };
+      const { data, error } = await supabase.from('tasks').update({ status: 'done', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', taskId).select().single();
+      if (error) return { result: `Error completing task: ${error.message}` };
+      if (!data) return { result: 'Task not found.' };
+      return { result: `✅ Task completed: **${data.title}**` };
+    }
+
+    case 'snooze_task': {
+      let taskId = input.task_id;
+      if (!taskId && input.title_search) {
+        const { data: found } = await supabase.from('tasks').select('id, title').ilike('title', `%${input.title_search}%`).not('status', 'in', '("done","cancelled")').limit(1).single();
+        if (!found) return { result: `No active task found matching "${input.title_search}".` };
+        taskId = found.id;
+      }
+      if (!taskId) return { result: 'Please provide a task_id or title_search.' };
+      if (!input.snooze_until) return { result: 'Please provide a snooze_until datetime.' };
+      const snoozeDate = input.snooze_until.split('T')[0];
+      const { data, error } = await supabase.from('tasks').update({ status: 'snoozed', snoozed_until: input.snooze_until, due_date: snoozeDate, updated_at: new Date().toISOString() }).eq('id', taskId).select().single();
+      if (error) return { result: `Error snoozing task: ${error.message}` };
+      if (!data) return { result: 'Task not found.' };
+      const snoozeLabel = new Date(input.snooze_until).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      return { result: `💤 Task snoozed: **${data.title}** — see you ${snoozeLabel}` };
+    }
+
+    case 'update_task': {
+      if (!input.task_id) return { result: 'Error: task_id is required. Use list_tasks to find the ID.' };
+      const allowed = ['title', 'description', 'category', 'priority', 'due_date', 'due_time', 'notes', 'linked_label', 'recurrence_type'];
+      const updates: any = { updated_at: new Date().toISOString() };
+      for (const key of allowed) {
+        if (key in input) updates[key] = input[key];
+      }
+      if (input.due_date && input.remind_minutes_before != null) {
+        const timeStr = input.due_time || '09:00';
+        const dt = new Date(`${input.due_date}T${timeStr}:00`);
+        dt.setMinutes(dt.getMinutes() - input.remind_minutes_before);
+        updates.remind_at = dt.toISOString();
+        updates.reminder_sent = false;
+      }
+      const { data, error } = await supabase.from('tasks').update(updates).eq('id', input.task_id).select().single();
+      if (error) return { result: `Error updating task: ${error.message}` };
+      if (!data) return { result: 'Task not found.' };
+      return { result: `✅ Task updated: **${data.title}**` };
+    }
+
+    case 'delete_task': {
+      let taskId = input.task_id;
+      let taskTitle = '';
+      if (!taskId && input.title_search) {
+        const { data: found } = await supabase.from('tasks').select('id, title').ilike('title', `%${input.title_search}%`).limit(1).single();
+        if (!found) return { result: `No task found matching "${input.title_search}".` };
+        taskId = found.id;
+        taskTitle = found.title;
+      }
+      if (!taskId) return { result: 'Please provide a task_id or title_search.' };
+      const { data: t } = await supabase.from('tasks').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', taskId).select('title').single();
+      return { result: `🗑️ Task cancelled: **${t?.title || taskTitle}**` };
+    }
+
     case 'navigate': {
       return {
         result: `Navigation action: taking user to ${input.path}`,
@@ -1197,8 +1479,18 @@ Renovation: Demo → Structural → Plumbing → Electrical → HVAC → Framing
 Commercial: Site Work → Foundation → Steel/Framing → Roofing → Exterior → MEP → Fire Suppression → Insulation → Drywall → Flooring → Paint → ADA → Specialty → Cleanup
 When adding line items, send them in construction sequence order. The array position sets the sort_order. User can ask to reorder at any time using update_line_items with sort_order.
 
+## TASK MANAGEMENT
+- "remind me to..." / "add a task" / "schedule" → use create_task. Infer due_date from natural language ("tomorrow" = next day, "Friday" = next Friday, "next week" = 7 days out). Default time = 09:00 if not specified.
+- "what's on my schedule" / "what do I have today" / "what's due" → use list_tasks with filter=today or filter=all
+- "morning briefing" / "rundown" / "what's going on" → use get_daily_briefing
+- "done"/"finished"/"mark complete" → use complete_task
+- "snooze"/"push to later" → use snooze_task
+- Always use list_tasks first to find IDs before completing/snoozing/updating by title
+- Task categories: job_site (on-site work), customer (client follow-ups), vendor (supply/sub), permit (permits/codes), employee (HR/payroll), financial (invoices/expenses), general (everything else)
+- Current date for relative date math: use today's date from the briefing context or system time
+
 ## NAV PAGES
-/admin (dashboard), /admin/estimates (list+8-step wizard), /admin/inbox (Gmail email), /admin/customers, /admin/vendors, /admin/employees (8 tabs), /admin/intakes, /admin/cost-library, /admin/templates, /admin/disclaimers, /admin/settings
+/admin (dashboard), /admin/estimates (list+8-step wizard), /admin/inbox (Gmail email), /admin/customers, /admin/vendors, /admin/employees (8 tabs), /admin/intakes, /admin/cost-library, /admin/templates, /admin/disclaimers, /admin/settings, /admin/tasks (task manager)
 
 ## DOC TYPES
 Estimate=RO-EST, Proposal=RO-CON, Change Order=RO-CO, Quick Quote=RO-QQ
@@ -1461,4 +1753,11 @@ export async function POST(req: NextRequest) {
     console.error('[ai-chat] error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
+}
+
+function formatTimeLocal(t: string): string {
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const hour = h % 12 || 12;
+  return m === 0 ? `${hour}${ampm}` : `${hour}:${String(m).padStart(2, '0')}${ampm}`;
 }
