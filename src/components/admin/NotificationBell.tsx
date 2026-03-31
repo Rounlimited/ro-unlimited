@@ -101,7 +101,7 @@ export default function NotificationBell({ buildTimestamp }: { buildTimestamp?: 
     setOpen(false);
   };
 
-  const totalBadge = unreadCount + (briefing.length > 0 ? 1 : 0);
+  const totalBadge = unreadCount;
 
   const dropdown = open && mounted ? createPortal(
     <>

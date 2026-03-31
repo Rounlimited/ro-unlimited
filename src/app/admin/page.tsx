@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { gsap } from 'gsap';
 import {
   Video, FileText, ArrowUpRight, CheckCircle2,
-  AlertCircle, Camera, Clock, MessageCircle, Mail, Users, Calculator, HardDrive
+  AlertCircle, Camera, Clock, MessageCircle, Mail, Users, Calculator, HardDrive, CheckSquare
 } from 'lucide-react';
 
 interface SiteSettings { heroVideoUrl?: string; }
@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [estimateCount, setEstimateCount] = useState({ drafts: 0, sent: 0 });
   const [recentActivity, setRecentActivity] = useState<{ action: string; details: string; created_at: string }[]>([]);
+  const [taskStats, setTaskStats] = useState({ dueToday: 0, overdue: 0, upcoming: 0 });
   // briefing moved to NotificationBell
   const emailBtnRef = useRef<HTMLAnchorElement>(null);
 
@@ -65,6 +66,11 @@ export default function AdminDashboard() {
           setUnreadCount(unread);
         }
       })
+      .catch(() => {});
+    // Fetch task stats
+    fetch('/api/admin/tasks?limit=100')
+      .then(r => r.json())
+      .then(d => setTaskStats({ dueToday: d.dueToday || 0, overdue: d.overdue || 0, upcoming: d.upcoming || 0 }))
       .catch(() => {});
     // briefing moved to NotificationBell
     // Poll for new mail every 30s
@@ -323,6 +329,45 @@ export default function AdminDashboard() {
             </div>
             <ArrowUpRight size={16} className="text-[#C9A84C] flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
+        </Link>
+
+        {/* Tasks Widget */}
+        <Link href="/admin/tasks" className="block relative z-10 rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
+          style={{ background: 'linear-gradient(135deg, #1a1508, #120f04)', border: '1px solid rgba(201,168,76,0.2)' }}>
+          <div className="px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'linear-gradient(145deg, #C9A84C, #a8893d)', boxShadow: '0 4px 12px rgba(201,168,76,0.3)' }}>
+                <CheckSquare size={18} className="text-white" />
+              </div>
+              <div>
+                <p className="text-[14px] font-bold text-white leading-tight">Tasks & Reminders</p>
+                <p className="text-[11px] text-white/30 mt-0.5">
+                  {taskStats.overdue > 0
+                    ? `${taskStats.overdue} overdue · ${taskStats.dueToday} today`
+                    : taskStats.dueToday > 0
+                    ? `${taskStats.dueToday} due today · ${taskStats.upcoming} upcoming`
+                    : taskStats.upcoming > 0
+                    ? `All clear · ${taskStats.upcoming} coming up`
+                    : 'All clear'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {taskStats.overdue > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>
+                  {taskStats.overdue} overdue
+                </span>
+              )}
+              {taskStats.dueToday > 0 && taskStats.overdue === 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: 'rgba(201,168,76,0.15)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.25)' }}>
+                  {taskStats.dueToday} today
+                </span>
+              )}
+              <ArrowUpRight size={16} className="text-[#C9A84C]/50" />
+            </div>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #C9A84C, transparent)' }} />
         </Link>
 
         {/* Row 3: Hero buttons — Email + Estimates + Team */}
