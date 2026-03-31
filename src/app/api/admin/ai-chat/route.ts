@@ -1682,7 +1682,7 @@ function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: stri
 // ═══════════════════════════════════════════
 export async function POST(req: NextRequest) {
   try {
-    const { messages, currentPage, projectContext, useModel } = await req.json();
+    const { messages, currentPage, projectContext, useModel, imageData } = await req.json();
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages required' }, { status: 400 });
     }
@@ -1752,13 +1752,35 @@ export async function POST(req: NextRequest) {
       function: { name: t.name, description: t.description, parameters: t.input_schema },
     }));
 
+    // Build API messages — attach image to last user message if present (vision)
+    const buildApiMessages = (msgs: any[], forClaude = false) => {
+      const formatted = msgs.map((m: any) => ({ role: m.role, content: m.content }));
+      if (imageData?.base64 && formatted.length > 0) {
+        const last = formatted[formatted.length - 1];
+        if (last.role === 'user') {
+          if (forClaude) {
+            last.content = [
+              { type: 'image', source: { type: 'base64', media_type: imageData.mimeType || 'image/jpeg', data: imageData.base64 } },
+              { type: 'text', text: last.content || 'Analyze this image for a construction estimate.' },
+            ];
+          } else {
+            last.content = [
+              { type: 'image_url', image_url: { url: `data:${imageData.mimeType || 'image/jpeg'};base64,${imageData.base64}` } },
+              { type: 'text', text: last.content || 'Analyze this image for a construction estimate.' },
+            ];
+          }
+        }
+      }
+      return formatted;
+    };
+
     // ── Priority 1: Grok 4.1 Fast (cheapest + best tool use) ──
     const preferGrok = useModel !== 'claude' && useModel !== 'groq' && !!grokKey;
     if (preferGrok) {
       try {
         const apiMessages = [
           { role: 'system', content: buildSystemPrompt(selectedTools, dynamicContext) },
-          ...messages.map((m: any) => ({ role: m.role, content: m.content })),
+          ...buildApiMessages(messages),
         ];
         const grokTools = selectedTools.length > 0 ? openaiTools(selectedTools) : undefined;
 
@@ -1835,7 +1857,7 @@ export async function POST(req: NextRequest) {
     // ── Priority 2: Claude Haiku fallback (if Grok fails or user selects) ──
     if (!content && claudeKey && useModel !== 'groq') {
       try {
-        const apiMessages = messages.map((m: any) => ({ role: m.role, content: m.content }));
+        const apiMessages = buildApiMessages(messages, true);
         // Cache PROMPT_CORE (never changes). Domain blocks + dynamic context in second block (no cache — varies per query).
         const names = selectedTools.map(t => t.name);
         const hasEstBlocks = names.some(n => ESTIMATE_TOOL_NAMES.has(n));
@@ -1905,7 +1927,7 @@ export async function POST(req: NextRequest) {
         headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'system', content: groqPrompt }, ...messages],
+          messages: [{ role: 'system', content: groqPrompt }, ...buildApiMessages(messages)],
           temperature: 0.7,
           max_tokens: 4000,
         }),

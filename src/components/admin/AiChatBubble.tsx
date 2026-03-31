@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff, Volume2, VolumeX, Camera, MapPin } from 'lucide-react';
 
-interface Message { role: 'user' | 'assistant'; content: string; }
+interface Message { role: 'user' | 'assistant'; content: string; imagePreview?: string; }
 interface Conversation { id: string; title: string; summary: string | null; token_estimate: number; compacted: boolean; created_at: string; updated_at: string; }
 interface NavigationAction { type: 'navigate'; path: string; description: string; }
 
@@ -31,6 +31,10 @@ export default function AiChatBubble() {
   const [showHistory, setShowHistory] = useState(false);
   const [tokenEstimate, setTokenEstimate] = useState(0);
   const [compacting, setCompacting] = useState(false);
+
+  // Photo attachment
+  const [attachedImage, setAttachedImage] = useState<{ base64: string; mimeType: string; preview: string } | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Voice input (MediaRecorder → Groq Whisper — works on iPhone)
   const [listening, setListening] = useState(false);
@@ -158,6 +162,33 @@ export default function AiChatBubble() {
         setToast('Could not access microphone');
       }
     }
+  };
+
+  // Photo attachment handler
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      // Compress: draw onto canvas at max 1024px
+      const img = new Image();
+      img.onload = () => {
+        const maxSize = 1024;
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.82);
+        const base64 = compressed.split(',')[1];
+        setAttachedImage({ base64, mimeType: 'image/jpeg', preview: compressed });
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ''; // reset so same file can be re-selected
   };
 
   // Floating window drag state
@@ -309,13 +340,13 @@ export default function AiChatBubble() {
   // ── Send message ──
   const sendMessage = async () => {
     const text = input.trim();
-    if (!text || loading) return;
+    if ((!text && !attachedImage) || loading) return;
 
     // Create conversation if none active
     if (!activeConvId) {
       const res = await fetch('/api/admin/ai-conversations', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', title: text.slice(0, 60) }),
+        body: JSON.stringify({ action: 'create', title: (text || 'Image analysis').slice(0, 60) }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -324,15 +355,18 @@ export default function AiChatBubble() {
       }
     }
 
-    const userMsg: Message = { role: 'user', content: text };
+    const userMsg: Message = { role: 'user', content: text || 'Analyze this image.', imagePreview: attachedImage?.preview };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput('');
+    const imageToSend = attachedImage;
+    setAttachedImage(null);
     setLoading(true);
 
     // Smart loading status
     const lm = text.toLowerCase();
-    if (lm.includes('search') || lm.includes('look up') || lm.includes('find')) setLoadingStatus('Querying database...');
+    if (imageToSend) setLoadingStatus('Analyzing image...');
+    else if (lm.includes('search') || lm.includes('look up') || lm.includes('find')) setLoadingStatus('Querying database...');
     else if (lm.includes('list') || lm.includes('show') || lm.includes('pull up') || lm.includes('get')) setLoadingStatus('Querying database...');
     else if (lm.includes('create') || lm.includes('make') || lm.includes('new') || lm.includes('add')) setLoadingStatus('Creating...');
     else if (lm.includes('send') || lm.includes('email')) setLoadingStatus('Processing...');
@@ -352,7 +386,13 @@ export default function AiChatBubble() {
 
       const res = await fetch('/api/admin/ai-chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })), currentPage: pathname, projectContext, useModel: aiModel }),
+        body: JSON.stringify({
+          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+          currentPage: pathname,
+          projectContext,
+          useModel: aiModel,
+          imageData: imageToSend ? { base64: imageToSend.base64, mimeType: imageToSend.mimeType } : undefined,
+        }),
       });
 
       const data = await res.json();
@@ -413,6 +453,14 @@ export default function AiChatBubble() {
     dragRef.current = null;
   };
 
+  // Satellite tile URL from lat/lon using free Esri World Imagery (no API key)
+  const getSatelliteTileUrl = (lat: number, lon: number, zoom = 18) => {
+    const x = Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
+    const sinLat = Math.sin(lat * Math.PI / 180);
+    const y = Math.floor((0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * Math.pow(2, zoom));
+    return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${y}/${x}`;
+  };
+
   // Markdown rendering
   const renderContent = (text: string) => {
     // Strip code fences
@@ -451,6 +499,28 @@ export default function AiChatBubble() {
       if (p.startsWith('> ')) return <div key={i} style={{ borderLeft: '3px solid #C9A84C33', paddingLeft: 12, color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', margin: '4px 0' }} dangerouslySetInnerHTML={{ __html: p.slice(2) }} />;
       // Empty line
       if (!p.trim()) return <div key={i} className="h-2" />;
+      // Satellite map link — render as embedded tile image + open link
+      const mapMatch = p.match(/https:\/\/www\.google\.com\/maps\?q=([-\d.]+),([-\d.]+)&t=k&z=\d+/);
+      if (mapMatch) {
+        const lat = parseFloat(mapMatch[1]);
+        const lon = parseFloat(mapMatch[2]);
+        const tileUrl = getSatelliteTileUrl(lat, lon, 18);
+        const mapsUrl = `https://www.google.com/maps?q=${lat},${lon}&t=k&z=19`;
+        return (
+          <div key={i} className="my-2">
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="block rounded-xl overflow-hidden border border-white/10 hover:border-[#C9A84C]/40 transition-colors group">
+              <div className="relative">
+                <img src={tileUrl} alt="Satellite view" className="w-full h-[180px] object-cover" style={{ imageRendering: 'pixelated' }} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-2 left-3 flex items-center gap-1.5">
+                  <MapPin size={12} className="text-[#C9A84C]" />
+                  <span className="text-[12px] text-white font-medium">Satellite View — tap to open in Maps</span>
+                </div>
+              </div>
+            </a>
+          </div>
+        );
+      }
       // Normal text
       return <div key={i} className="py-0.5" dangerouslySetInnerHTML={{ __html: p }} />;
     });
@@ -710,6 +780,9 @@ export default function AiChatBubble() {
               } ${
                 msg.role === 'user' ? 'bg-[#C9A84C]/15 text-white rounded-br-md' : 'bg-[#111] border border-white/5 text-white/80 rounded-bl-md'
               }`}>
+                {msg.imagePreview && (
+                  <img src={msg.imagePreview} alt="Attached" className="rounded-lg mb-2 max-h-48 w-auto" style={{ maxWidth: '100%' }} />
+                )}
                 {msg.role === 'assistant' ? renderContent(msg.content) : msg.content}
               </div>
             </div>
@@ -727,26 +800,49 @@ export default function AiChatBubble() {
 
         {/* Input */}
         <div className={`border-t border-white/10 flex-shrink-0 bg-[#0f0f0f] ${isFloating ? 'px-2 py-2' : isFullscreen ? 'px-6 py-3 max-w-4xl mx-auto w-full' : 'px-3 py-2.5'}`}>
+          {/* Image preview strip */}
+          {attachedImage && (
+            <div className="flex items-center gap-2 mb-2">
+              <div className="relative">
+                <img src={attachedImage.preview} alt="Attached" className="h-14 w-14 rounded-lg object-cover border border-white/20" />
+                <button onClick={() => setAttachedImage(null)} className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-black border border-white/30 rounded-full flex items-center justify-center">
+                  <X size={9} className="text-white" />
+                </button>
+              </div>
+              <span className="text-[12px] text-white/30">Photo attached — ask anything about it</span>
+            </div>
+          )}
           <div className="flex gap-2">
+            {/* Hidden file input — accepts camera + gallery */}
+            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} />
             <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-              placeholder={listening ? 'Recording... tap to stop' : transcribing ? 'Transcribing...' : 'Ask anything...'}
+              placeholder={listening ? 'Recording... tap to stop' : transcribing ? 'Transcribing...' : attachedImage ? 'Describe what you need...' : 'Ask anything...'}
               disabled={loading || transcribing}
               className={`flex-1 bg-[#1a1a1a] border rounded-xl px-3 text-white placeholder-white/25 focus:outline-none transition-colors ${
-                listening ? 'border-red-500/50 bg-red-500/5' : transcribing ? 'border-[#C9A84C]/30 bg-[#C9A84C]/5' : 'border-white/10 focus:border-[#C9A84C]/50'
+                listening ? 'border-red-500/50 bg-red-500/5' : transcribing ? 'border-[#C9A84C]/30 bg-[#C9A84C]/5' : attachedImage ? 'border-[#C9A84C]/30' : 'border-white/10 focus:border-[#C9A84C]/50'
               } ${isFloating ? 'py-2 text-[13px]' : isFullscreen ? 'py-3 text-[16px] px-4' : 'py-3 text-[15px] px-4'}`} />
+            {/* Camera / photo button */}
+            <button onClick={() => photoInputRef.current?.click()} disabled={loading}
+              className={`rounded-xl transition-colors flex-shrink-0 ${
+                attachedImage ? 'bg-[#C9A84C]/20 text-[#C9A84C]' : 'bg-white/5 text-white/40 hover:text-[#C9A84C] hover:bg-white/10'
+              } ${isFloating ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}
+              title="Attach photo (camera or gallery)">
+              <Camera size={isFloating ? 12 : 16} />
+            </button>
+            {/* Voice button */}
             <button onClick={toggleVoice} disabled={loading || transcribing}
               className={`rounded-xl transition-colors flex-shrink-0 ${
                 listening ? 'bg-red-500 text-white animate-pulse' :
                 transcribing ? 'bg-[#C9A84C]/20 text-[#C9A84C]' :
                 'bg-white/5 text-white/40 hover:text-[#C9A84C] hover:bg-white/10'
               } ${isFloating ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}
-              title={listening ? 'Tap to stop & send' : transcribing ? 'Transcribing...' : 'Voice input (works on iPhone)'}>
+              title={listening ? 'Tap to stop & send' : transcribing ? 'Transcribing...' : 'Voice input'}>
               {transcribing ? <Loader2 size={isFloating ? 12 : 16} className="animate-spin" /> :
                listening ? <MicOff size={isFloating ? 12 : 16} /> :
                <Mic size={isFloating ? 12 : 16} />}
             </button>
-            <button onClick={sendMessage} disabled={loading || !input.trim()}
+            <button onClick={sendMessage} disabled={loading || (!input.trim() && !attachedImage)}
               className={`bg-[#C9A84C] text-black rounded-xl hover:bg-[#C9A84C]/90 transition-colors disabled:opacity-30 flex-shrink-0 ${
                 isFloating ? 'px-2.5 py-2' : 'px-3.5 py-2.5'
               }`}>
