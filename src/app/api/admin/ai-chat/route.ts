@@ -173,10 +173,9 @@ async function getOSMData(lat: number, lon: number): Promise<string | null> {
   } catch { return null; }
 }
 
-// Satellite map URL — no API key, opens Google Maps satellite view
-function getSatelliteMapUrl(lat: number, lon: number, address: string): string {
-  const encoded = encodeURIComponent(address);
-  return `https://www.google.com/maps?q=${lat},${lon}&t=k&z=19 — or search "${encoded}" in Google Maps (satellite mode)`;
+// Satellite map URL — returns clean URL only so AI outputs it verbatim (frontend renders as tile)
+function getSatelliteMapUrl(lat: number, lon: number): string {
+  return `https://www.google.com/maps?q=${lat},${lon}&t=k&z=19`;
 }
 
 // ═══════════════════════════════════════════
@@ -1333,7 +1332,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
             ])
           : ['Flood zone: coordinates unavailable', null];
 
-        const satelliteUrl = coords ? getSatelliteMapUrl(coords.lat, coords.lon, p.formattedAddress || input.address) : null;
+        const satelliteUrl = coords ? getSatelliteMapUrl(coords.lat, coords.lon) : null;
 
         const lines = [
           `**Property: ${p.formattedAddress || p.addressLine1 || input.address}**`,
@@ -1351,7 +1350,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           `**Site Intelligence**`,
           floodZone,
           osmData ? `OSM Data:\n${osmData}` : '',
-          satelliteUrl ? `Satellite: ${satelliteUrl}` : '',
+          satelliteUrl ? `[SATELLITE_URL]: ${satelliteUrl}` : '',
           `(Rentcast usage: ${used + 1}/50 this month)`,
         ].filter(Boolean);
 
@@ -1645,7 +1644,7 @@ When given any property address or job site — always call property_lookup AND 
 - property_lookup → official data (lot size, sqft, year built, features, owner, value) + FEMA flood zone + OSM building data + satellite link
 - web_search → county assessor records, parcel ID, business details, permit history, anything not in the API
 
-Present results as a unified report. Always show the satellite link so the user can view the site.
+Present results as a unified report. The tool result contains a [SATELLITE_URL] line — copy that URL verbatim into your response on its own line exactly as: https://www.google.com/maps?q=LAT,LON&t=k&z=19 — do NOT paraphrase it, replace it with coordinates, or change any part of the URL.
 
 SC property tax: Assessed value ≠ market value. SC assesses residential at 4% of FMV, commercial at 6%.
 Example: $18,000 assessed ÷ 0.06 = $300,000 market value. Always calculate and show implied market value.

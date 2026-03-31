@@ -813,8 +813,8 @@ export default function AiChatBubble() {
             </div>
           )}
           <div className="flex gap-2">
-            {/* Hidden file input — accepts camera + gallery */}
-            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} />
+            {/* File input — sr-only instead of hidden so mobile browsers allow programmatic click */}
+            <input id="chat-photo-input" ref={photoInputRef} type="file" accept="image/*" className="sr-only" onChange={handlePhotoSelect} />
             <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
               placeholder={listening ? 'Recording... tap to stop' : transcribing ? 'Transcribing...' : attachedImage ? 'Describe what you need...' : 'Ask anything...'}
@@ -822,14 +822,15 @@ export default function AiChatBubble() {
               className={`flex-1 bg-[#1a1a1a] border rounded-xl px-3 text-white placeholder-white/25 focus:outline-none transition-colors ${
                 listening ? 'border-red-500/50 bg-red-500/5' : transcribing ? 'border-[#C9A84C]/30 bg-[#C9A84C]/5' : attachedImage ? 'border-[#C9A84C]/30' : 'border-white/10 focus:border-[#C9A84C]/50'
               } ${isFloating ? 'py-2 text-[13px]' : isFullscreen ? 'py-3 text-[16px] px-4' : 'py-3 text-[15px] px-4'}`} />
-            {/* Camera / photo button */}
-            <button onClick={() => photoInputRef.current?.click()} disabled={loading}
-              className={`rounded-xl transition-colors flex-shrink-0 ${
-                attachedImage ? 'bg-[#C9A84C]/20 text-[#C9A84C]' : 'bg-white/5 text-white/40 hover:text-[#C9A84C] hover:bg-white/10'
+            {/* Camera / photo button — label for reliable mobile file picker */}
+            <label htmlFor={loading ? undefined : 'chat-photo-input'}
+              className={`rounded-xl transition-colors flex-shrink-0 inline-flex items-center justify-center ${
+                loading ? 'opacity-30 cursor-not-allowed pointer-events-none' : 'cursor-pointer'
+              } ${attachedImage ? 'bg-[#C9A84C]/20 text-[#C9A84C]' : 'bg-white/5 text-white/40 hover:text-[#C9A84C] hover:bg-white/10'
               } ${isFloating ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}
               title="Attach photo (camera or gallery)">
               <Camera size={isFloating ? 12 : 16} />
-            </button>
+            </label>
             {/* Voice button */}
             <button onClick={toggleVoice} disabled={loading || transcribing}
               className={`rounded-xl transition-colors flex-shrink-0 ${
