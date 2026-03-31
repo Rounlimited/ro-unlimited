@@ -9,15 +9,20 @@ export const dynamic = 'force-dynamic';
 // ═══════════════════════════════════════════
 async function tavilySearch(query: string): Promise<string | null> {
   const apiKey = process.env.TAVILY_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) { console.log('[tavily] No API key'); return null; }
   try {
     const res = await fetch('https://api.tavily.com/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ api_key: apiKey, query, max_results: 6, include_answer: true, search_depth: 'basic' }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('[tavily] HTTP', res.status, errText.slice(0, 200));
+      return null;
+    }
     const data = await res.json();
+    if (data.error) { console.error('[tavily] API error:', data.error); return null; }
     const parts: string[] = [];
     if (data.answer) parts.push(`**AI Summary:** ${data.answer}\n`);
     const results = data.results || [];
@@ -26,8 +31,10 @@ async function tavilySearch(query: string): Promise<string | null> {
       const snippet = r.content ? r.content.slice(0, 300) + (r.content.length > 300 ? '...' : '') : '';
       parts.push(`${i + 1}. **${r.title}**\n   ${snippet}\n   Source: ${r.url}`);
     }
+    console.log('[tavily] OK — results:', results.length, 'answer:', !!data.answer);
     return parts.length > 0 ? parts.join('\n\n') : null;
-  } catch {
+  } catch (e) {
+    console.error('[tavily] Exception:', e);
     return null;
   }
 }
@@ -1454,77 +1461,100 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 }
 
 // ═══════════════════════════════════════════
-// SYSTEM PROMPT
+// LAYERED SYSTEM PROMPTS
+// PROMPT_CORE is always sent (cached on Claude).
+// Domain blocks appended only when those tools are active — saves tokens on simple queries.
 // ═══════════════════════════════════════════
-const SYSTEM_PROMPT = `<role>
-You are RO Assistant — the AI for RO Unlimited Construction (Greenville SC, serving SC/GA/NC). If asked who you are, say "RO Assistant." Do not name your underlying model or company.
+
+// Block 1 — always included, always cached
+const PROMPT_CORE = `<role>
+You are RO Assistant — the AI for RO Unlimited Construction (Greenville SC, serving SC/GA/NC). Say "RO Assistant" if asked who you are. Do not name your underlying model or company.
 </role>
 
 <principles>
-Ground all data in tools — never fabricate numbers, names, or IDs. Tools exist so you can give real answers instead of guesses.
-Be concise: bold key terms, use bullet lists, keep replies short. No markdown code blocks (triple backticks) — they render as raw text in this UI.
-When multiple independent tool calls are needed, call them in parallel to save time.
-If you are uncertain about an ID, date, or value, say so and use a tool to look it up rather than guessing.
+- Use tools for all data — never fabricate numbers, names, or IDs.
+- Be concise: bold key terms, use bullet lists. No triple-backtick code blocks (they render as raw text in this UI).
+- Call independent tools in parallel when possible to save time.
+- If uncertain about an ID, date, or value: say so and look it up rather than guessing.
+- Never paste raw URLs or UUIDs in chat. Use the navigate tool for links. Refer to estimates by number (e.g. RO-EST-2026-0005).
+- Confirm before sending emails or changing document status.
+- After creating any record, navigate the user to it.
 </principles>
 
-<estimates>
+<pages>
+/admin · /admin/estimates · /admin/inbox · /admin/customers · /admin/vendors · /admin/employees · /admin/intakes · /admin/cost-library · /admin/templates · /admin/disclaimers · /admin/settings · /admin/tasks
+</pages>`;
+
+// Block 2 — estimates, pricing, doc types (appended when estimate tools are active)
+const PROMPT_ESTIMATES = `<estimates>
 Building a new estimate:
 1. Gather: customer, type, scope, location
-2. Draft in chat — phases, line items (qty × unit_cost = total), subtotals, grand total, payment schedule
-3. Ask "Ready to commit?" and wait
-4. On confirmation: create_estimate → add_line_items → navigate to it
-5. For revisions: update the chat draft and re-present before re-committing
+2. Draft fully in chat — phases, line items (qty × unit_cost = total), subtotals, grand total, payment schedule
+3. Ask "Ready to commit?" — wait for confirmation
+4. Then: create_estimate → add_line_items → navigate to it
+5. Revisions: update the draft in chat and re-present before committing
 
 Editing an existing estimate:
-1. Call get_estimate_details to get current line items with real UUIDs
-2. update_line_items to change price/qty/phase/description/order; delete_line_items to remove; add_line_items to append
-3. Use only the UUID returned by get_estimate_details — never construct or guess an ID
-4. Show updated totals after changes
+1. get_estimate_details → get real UUIDs for all line items
+2. update_line_items (price/qty/phase/desc/order) · delete_line_items to remove · add_line_items to append
+3. Only use UUIDs from get_estimate_details — never guess an ID
+4. Show updated totals after every change
 
-When the user says "the estimate" or "this estimate": check ACTIVE PROJECT CONTEXT below, then conversation history, then call get_estimate_details — in that order.
+"The estimate" / "this estimate" → check ACTIVE PROJECT CONTEXT first → conversation history → then call get_estimate_details
 
-Phase defaults (standard construction sequence — user can adjust):
+Phase sequences (user can adjust — array position sets sort_order):
 - New Construction: Site Prep → Foundation → Framing → Roofing → Exterior → Plumbing → Electrical → HVAC → Insulation → Drywall → Flooring → Paint → Trim → Landscaping → Cleanup
 - Renovation: Demo → Structural → Plumbing → Electrical → HVAC → Framing → Insulation → Drywall → Flooring → Tile → Cabinets → Paint → Fixtures → Cleanup
 - Commercial: Site Work → Foundation → Steel/Framing → Roofing → Exterior → MEP → Fire Suppression → Insulation → Drywall → Flooring → Paint → ADA → Specialty → Cleanup
 
-Send line items in construction sequence — array position sets sort_order. User can reorder via update_line_items.
-</estimates>
+Doc prefixes: Estimate=RO-EST · Proposal=RO-CON · Change Order=RO-CO · Quick Quote=RO-QQ
+Status: draft→sent→viewed→accepted/declined/expired · any→revised
+Divisions: residential, commercial, grading, concrete, foundation, framing, roofing, siding, electrical, plumbing, hvac, painting, flooring, demolition, drywall, landscaping, fencing, other
+Types: new_construction, renovation, repair, addition, remodel, commercial, quick_quote, preliminary, detailed, change_order, time_materials
 
-<tasks>
-Intent → tool mapping:
-- "remind me" / "add a task" / "schedule" → create_task. Parse natural language dates ("tomorrow", "Friday", "next week" = +7 days). Default time 09:00 if unspecified.
+SC pricing (2025–26): Concrete $6-10/sqft · Framing $8-16 · Shingles $4-7 · Metal roof $8-14 · Plumbing $800-1500/fixture · HVAC $3-5K/ton · Electrical $150-300/outlet · Drywall $3-5 · Paint $2-4 · LVP $5-9 · Tile $8-20 · Cabinets $150-350/lnft · Demo $4-10 · Windows $400-1200ea · Insulation $1.50-3.50/sqft
+</estimates>`;
+
+// Block 3 — task management (appended when task tools are active)
+const PROMPT_TASKS = `<tasks>
+Intent → tool:
+- "remind me" / "add task" / "schedule" → create_task (parse natural dates; default 09:00 if no time given)
 - "what's today" / "what's due" → list_tasks(filter=today)
 - "all tasks" / "what do I have" → list_tasks(filter=all)
 - "briefing" / "rundown" / "what's going on" → get_daily_briefing
 - "done" / "finished" / "mark complete" → complete_task
 - "snooze" / "push to later" → snooze_task
-- Always call list_tasks first to get real IDs before completing or snoozing by title.
+Always call list_tasks first to get real IDs before completing or snoozing by title.
+Categories: job_site · customer · vendor · permit · employee · financial · general
+</tasks>`;
 
-Categories: job_site, customer, vendor, permit, employee, financial, general
-</tasks>
+// Block 4 — property data and SC codes (appended when property_lookup is active)
+const PROMPT_PROPERTY = `<property>
+SC property tax: Assessed value ≠ market value. SC assesses residential at 4% of FMV, commercial at 6%.
+Example: $7,350 assessed ÷ 0.04 = ~$183,750 market value. Always show the estimated market value — not just the assessed figure.
+Codes: IBC/IRC 2021 (SC adopted 2023). Lien law: SC 29-5-10, 90-day window.
+Conversions: 1 cu yd = 27 cu ft = 81 sqft @ 4" depth · 1 roofing sq = 100 sqft · 1 ton HVAC = 12,000 BTU/hr
+</property>`;
 
-<output_rules>
-- Use navigate tool for links — never paste raw URLs or UUIDs in chat text. Refer to estimates by number (e.g. RO-EST-2026-0005).
-- Confirm before sending emails or changing document status.
-- After creating any record, navigate the user to it.
-</output_rules>
+// Builds the full system prompt from only the blocks needed for this request
+const ESTIMATE_TOOL_NAMES = new Set(['create_estimate','get_estimate_details','search_estimates','add_line_items','update_line_items','delete_line_items','update_estimate','update_estimate_status','send_estimate','duplicate_estimate','check_estimate_pricing','search_cost_library','search_templates','search_disclaimers','generate_share_link']);
+const TASK_TOOL_NAMES = new Set(['create_task','list_tasks','complete_task','snooze_task','update_task','delete_task','get_daily_briefing']);
 
-<reference>
-Pages: /admin, /admin/estimates, /admin/inbox, /admin/customers, /admin/vendors, /admin/employees, /admin/intakes, /admin/cost-library, /admin/templates, /admin/disclaimers, /admin/settings, /admin/tasks
+function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: string): string {
+  const names = selectedTools.map(t => t.name);
+  const hasEstimates = names.some(n => ESTIMATE_TOOL_NAMES.has(n));
+  const hasTasks = names.some(n => TASK_TOOL_NAMES.has(n));
+  const hasProperty = names.includes('property_lookup');
 
-Doc prefixes: Estimate=RO-EST, Proposal=RO-CON, Change Order=RO-CO, Quick Quote=RO-QQ
-Status flow: draft→sent→viewed→accepted/declined/expired; any→revised
-Divisions: residential, commercial, grading, concrete, foundation, framing, roofing, siding, electrical, plumbing, hvac, painting, flooring, demolition, drywall, landscaping, fencing, other
-Types: new_construction, renovation, repair, addition, remodel, commercial, quick_quote, preliminary, detailed, change_order, time_materials
+  const blocks = [PROMPT_CORE];
+  if (hasEstimates) blocks.push(PROMPT_ESTIMATES);
+  if (hasTasks) blocks.push(PROMPT_TASKS);
+  if (hasProperty) blocks.push(PROMPT_PROPERTY);
+  if (dynamicContext) blocks.push(dynamicContext);
 
-SC pricing (2025–26): Concrete $6-10/sqft · Framing $8-16 · Shingles $4-7 · Metal roof $8-14 · Plumbing $800-1500/fixture · HVAC $3-5K/ton · Electrical $150-300/outlet · Drywall $3-5 · Paint $2-4 · LVP $5-9 · Tile $8-20 · Cabinets $150-350/lnft · Demo $4-10 · Windows $400-1200ea · Insulation $1.50-3.50/sqft
-
-SC codes: IBC/IRC 2021 (adopted 2023). Lien law: SC 29-5-10, 90 days. Conversions: 1 cu yd = 27 cu ft = 81 sqft @ 4" depth · 1 roofing sq = 100 sqft · 1 ton HVAC = 12,000 BTU/hr
-
-SC property tax: Assessed value is NOT market value. SC assesses residential property at 4% of FMV and commercial at 6%. So if assessed value = $7,350, actual market value ≈ $7,350 ÷ 0.04 = $183,750. Always present market value — never just the assessed value — to avoid confusion.
-</reference>
-`;
+  console.log('[ai-chat] Prompt blocks:', ['core', hasEstimates && 'estimates', hasTasks && 'tasks', hasProperty && 'property'].filter(Boolean).join('+'));
+  return blocks.join('\n\n');
+}
 
 // ═══════════════════════════════════════════
 // MAIN HANDLER
@@ -1585,9 +1615,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Build system prompt: static part + dynamic context
+    // Build dynamic context block (memories, current page, active project)
     const dynamicContext = contextParts.length ? '\n' + contextParts.join('\n') : '';
-    const fullSystem = SYSTEM_PROMPT + dynamicContext;
     let content = '';
     let usedModel = '';
     const actions: { type: string; path: string; description: string }[] = [];
@@ -1607,7 +1636,7 @@ export async function POST(req: NextRequest) {
     if (preferGrok) {
       try {
         const apiMessages = [
-          { role: 'system', content: fullSystem },
+          { role: 'system', content: buildSystemPrompt(selectedTools, dynamicContext) },
           ...messages.map((m: any) => ({ role: m.role, content: m.content })),
         ];
         const grokTools = selectedTools.length > 0 ? openaiTools(selectedTools) : undefined;
@@ -1686,10 +1715,18 @@ export async function POST(req: NextRequest) {
     if (!content && claudeKey && useModel !== 'groq') {
       try {
         const apiMessages = messages.map((m: any) => ({ role: m.role, content: m.content }));
+        // Cache PROMPT_CORE (never changes). Domain blocks + dynamic context in second block (no cache — varies per query).
+        const names = selectedTools.map(t => t.name);
+        const hasEstBlocks = names.some(n => ESTIMATE_TOOL_NAMES.has(n));
+        const hasTaskBlocks = names.some(n => TASK_TOOL_NAMES.has(n));
+        const hasPropertyBlock = names.includes('property_lookup');
+        const domainBlocks = [hasEstBlocks && PROMPT_ESTIMATES, hasTaskBlocks && PROMPT_TASKS, hasPropertyBlock && PROMPT_PROPERTY].filter(Boolean).join('\n\n');
         const systemBlocks: any[] = [
-          { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: PROMPT_CORE, cache_control: { type: 'ephemeral' } },
         ];
-        if (dynamicContext) systemBlocks.push({ type: 'text', text: dynamicContext });
+        if (domainBlocks || dynamicContext) {
+          systemBlocks.push({ type: 'text', text: [domainBlocks, dynamicContext].filter(Boolean).join('\n\n') });
+        }
 
         let claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
@@ -1741,7 +1778,7 @@ export async function POST(req: NextRequest) {
 
     // ── Priority 3: Groq fallback (no tool_use) ──
     if (!content && groqKey) {
-      const groqPrompt = fullSystem + '\n\nNote: You do not have database tools in this mode. Answer from context and general knowledge only. Be clear when you are estimating vs stating facts.';
+      const groqPrompt = buildSystemPrompt(selectedTools, dynamicContext) + '\n\nNote: You do not have database tools in this mode. Answer from context and general knowledge only. Be clear when you are estimating vs stating facts.';
       const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
