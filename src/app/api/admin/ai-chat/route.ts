@@ -598,7 +598,7 @@ function selectTools(lastMessage: string, messageCount?: number): typeof ALL_TOO
     navigate: /go to|open|navigate|take me|show me.*page|switch to/i.test(msg),
     memory: /remember|forget|memory|save.*note/i.test(msg),
     web: /search.*web|google|look.*up|current.*price|what.*cost|code.*require/i.test(msg),
-    property: /property|lot size|sqft|square feet|address|parcel|acres|assessed value|look up.*address/i.test(msg),
+    property: /property|lot size|sqft|square feet|address|parcel|acres|assessed value|look up.*address|\d+\s+\w+.*\b(st|ave|rd|blvd|dr|ln|ct|way|pl)\b|flood zone|building.*info|site.*info|tavern|restaurant|business.*address/i.test(msg),
     tasks: /task|remind|schedule|calendar|todo|to.do|due today|overdue|briefing|rundown|what.*today|today.*tasks|don.t.*forget|follow.?up|check in|appointment|meeting|deadline/i.test(msg),
   };
 
@@ -1641,8 +1641,18 @@ Categories: job_site · customer · vendor · permit · employee · financial ·
 
 // Block 4 — property data and SC codes (appended when property_lookup is active)
 const PROMPT_PROPERTY = `<property>
+When given any property address or job site — always call property_lookup AND web_search in parallel:
+- property_lookup → official data (lot size, sqft, year built, features, owner, value) + FEMA flood zone + OSM building data + satellite link
+- web_search → county assessor records, parcel ID, business details, permit history, anything not in the API
+
+Present results as a unified report. Always show the satellite link so the user can view the site.
+
 SC property tax: Assessed value ≠ market value. SC assesses residential at 4% of FMV, commercial at 6%.
-Example: $7,350 assessed ÷ 0.04 = ~$183,750 market value. Always show the estimated market value — not just the assessed figure.
+Example: $18,000 assessed ÷ 0.06 = $300,000 market value. Always calculate and show implied market value.
+
+FEMA flood zones: X = minimal risk · AE/A = high risk (flood insurance required) · VE = coastal high risk
+Flag AE/A/VE zones prominently — they affect foundation type, site work cost, and insurance.
+
 Codes: IBC/IRC 2021 (SC adopted 2023). Lien law: SC 29-5-10, 90-day window.
 Conversions: 1 cu yd = 27 cu ft = 81 sqft @ 4" depth · 1 roofing sq = 100 sqft · 1 ton HVAC = 12,000 BTU/hr
 </property>`;
