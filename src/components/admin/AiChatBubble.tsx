@@ -85,12 +85,47 @@ export default function AiChatBubble() {
     return '';
   };
 
+  // Detect Android native app — uses SpeechRecognition (more reliable than MediaRecorder in WebView)
+  const isNativeAndroid = typeof window !== 'undefined' && typeof (window as any).RONative !== 'undefined';
+  const speechRecogRef = useRef<any>(null);
+
   const toggleVoice = async () => {
     if (listening) {
-      // Stop recording — will trigger onstop → transcribe
+      // Stop — works for both SpeechRecognition and MediaRecorder
+      speechRecogRef.current?.stop();
       if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
       mediaRecorderRef.current?.stop();
       setListening(false);
+      return;
+    }
+
+    // Android WebView: use webkitSpeechRecognition (built-in, reliable)
+    const SpeechRecog = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (isNativeAndroid && SpeechRecog) {
+      try {
+        const recog = new SpeechRecog();
+        recog.continuous = false;
+        recog.interimResults = false;
+        recog.lang = 'en-US';
+        recog.maxAlternatives = 1;
+        recog.onresult = (e: any) => {
+          const transcript = e.results[0]?.[0]?.transcript?.trim();
+          if (transcript) {
+            setInput(transcript);
+            pendingVoiceSubmitRef.current = transcript;
+          }
+        };
+        recog.onerror = (e: any) => {
+          setListening(false);
+          if (e.error !== 'aborted') setToast('Could not hear you — try again');
+        };
+        recog.onend = () => setListening(false);
+        speechRecogRef.current = recog;
+        recog.start();
+        setListening(true);
+      } catch {
+        setToast('Voice not available — type your message');
+      }
       return;
     }
 
