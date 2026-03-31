@@ -30,6 +30,18 @@ interface AppIcon {
 // Feature descriptions for every coming soon + active app
 const FEATURE_INFO: Record<string, { title: string; headline: string; description: string; bullets: string[]; eta?: string }> = {
   // Active apps
+  tasks: {
+    title: 'Tasks & Reminders',
+    headline: 'Never Drop the Ball Again',
+    description: 'Your complete business task manager — built right into the app. Schedule follow-ups, set reminders for permits, track vendor calls, and get a daily AI briefing every morning at 8am. Just ask RO Assistant to add anything.',
+    bullets: ['AI-powered: just say "remind me to..."', 'Push notifications when tasks are due', 'Daily 8am briefing with overdue + upcoming', 'Covers vendors, permits, employees, job sites'],
+  },
+  schedule: {
+    title: 'Schedule',
+    headline: 'Your Calendar & Reminders',
+    description: 'Tasks, deadlines, and reminders all in one place. Powered by the same task system — due dates, recurring tasks, and AI scheduling built in.',
+    bullets: ['Due today, this week, overdue views', 'Recurring tasks (daily, weekly, monthly)', 'AI assistant: "remind me Friday at 9am"', 'Push notifications for every reminder'],
+  },
   checklist: {
     title: 'Launch Checklist',
     headline: 'Your Roadmap to Going Live',
@@ -207,25 +219,25 @@ const FEATURE_INFO: Record<string, { title: string; headline: string; descriptio
 };
 
 const APP_ICONS: AppIcon[] = [
+  { id: 'tasks', label: 'Tasks', icon: CheckSquare, href: '/admin/tasks', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
+  { id: 'estimates', label: 'Estimates', icon: FileText, href: '/admin/estimates', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
+  { id: 'leads', label: 'Inbox', icon: MessageCircle, href: '/admin/inbox', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
+  { id: 'team', label: 'Team', icon: Users, href: '/admin/employees', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
+  { id: 'schedule', label: 'Schedule', icon: CalendarDays, href: '/admin/tasks', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'drive', label: 'RO Drive', icon: HardDrive, href: '/admin/drive', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', badge: 'NEW' },
   { id: 'checklist', label: 'Checklist', icon: ClipboardList, href: '/admin/checklist', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'editor', label: 'Site Editor', icon: Pencil, href: '/admin/site-editor', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'portfolio', label: 'Portfolio', icon: Camera, href: '/admin/projects', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'settings', label: 'Settings', icon: Settings, href: '/admin/settings', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
-  { id: 'leads', label: 'Inbox', icon: MessageCircle, href: '/admin/inbox', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
-  { id: 'estimates', label: 'Estimates', icon: FileText, href: '/admin/estimates', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'proposals', label: 'Proposals', icon: Briefcase, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'pipeline', label: 'Pipeline', icon: TrendingUp, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'jobs', label: 'Jobs', icon: HardHat, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
-  { id: 'tasks', label: 'Tasks', icon: CheckSquare, href: '/admin/tasks', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
-  { id: 'schedule', label: 'Schedule', icon: CalendarDays, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'dailylogs', label: 'Daily Logs', icon: FileCheck, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'documents', label: 'Documents', icon: FileText, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'invoicing', label: 'Invoicing', icon: Receipt, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'budgets', label: 'Budgets', icon: BarChart3, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'payments', label: 'Payments', icon: CreditCard, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'expenses', label: 'Expenses', icon: Receipt, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
-  { id: 'team', label: 'Team', icon: Users, href: '/admin/employees', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'timesheets', label: 'Timesheets', icon: Clock, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'safety', label: 'Safety', icon: Shield, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'equipment', label: 'Equipment', icon: Wrench, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
@@ -238,7 +250,7 @@ const APP_ICONS: AppIcon[] = [
 
 const TABS = [
   { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
-  { id: 'jobs', label: 'Jobs', icon: HardHat },
+  { id: 'tasks', label: 'Tasks', icon: CheckSquare },
   { id: 'menu', label: 'Menu', icon: GripHorizontal },
   { id: 'messages', label: 'Messages', icon: MessageCircle },
 ];
@@ -655,6 +667,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isSuperAdmin = userRole === 'super_admin';
   const [drawerSearch, setDrawerSearch] = useState('');
   const [featureModal, setFeatureModal] = useState<string | null>(null);
+  const [taskCount, setTaskCount] = useState(0);
+
+  // Fetch active task count for badge
+  useEffect(() => {
+    const fetchCount = () => {
+      fetch('/api/admin/tasks/count').then(r => r.json()).then(d => setTaskCount(d.count || 0)).catch(() => {});
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 60000);
+    return () => clearInterval(interval);
+  }, []);
   const [showHint, setShowHint] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -722,6 +745,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (pathname === '/admin' || pathname === '/admin/') setActiveTab('dashboard');
+    else if (pathname?.startsWith('/admin/tasks')) setActiveTab('tasks');
+    else if (pathname?.startsWith('/admin/inbox')) setActiveTab('messages');
     else setActiveTab('dashboard');
   }, [pathname]);
 
@@ -785,6 +810,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (drawerOpen) closeDrawer();
     setActiveTab(tabId);
     if (tabId === 'dashboard') router.push('/admin');
+    else if (tabId === 'tasks') router.push('/admin/tasks');
     else if (tabId === 'messages') router.push('/admin/inbox');
   };
 
@@ -865,10 +891,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {TABS.filter(t => t.id !== 'menu').slice(0, 2).map(tab => {
               const isActive = tab.id === activeTab;
               const Icon = tab.icon;
+              const badge = tab.id === 'tasks' && taskCount > 0 ? taskCount : null;
               return (
                 <button key={tab.id} onClick={() => handleTab(tab.id)} className="flex flex-col items-center gap-0.5 px-4 py-1 transition-all">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isActive ? 'bg-[#C9A84C]/15' : ''}`}>
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all relative ${isActive ? 'bg-[#C9A84C]/15' : ''}`}>
                     <Icon size={24} className={`transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/25'}`} />
+                    {badge && (
+                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">{badge > 99 ? '99+' : badge}</span>
+                    )}
                   </div>
                   <span className={`text-[11px] font-medium transition-colors ${isActive ? 'text-[#C9A84C]' : 'text-white/20'}`}>{tab.label}</span>
                 </button>
