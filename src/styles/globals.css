@@ -112,13 +112,13 @@
 /* Used in AdminInbox and other admin UI. Apply to Lucide icon elements.       */
 /* Hover variants work automatically via Tailwind: hover:neon-cyan etc.        */
 @layer utilities {
-  .neon-cyan   { color: #00D4FF; filter: drop-shadow(0 0 5px rgba(0,212,255,0.9))   drop-shadow(0 0 16px rgba(0,212,255,0.5)); }
-  .neon-gold   { color: #FFD060; filter: drop-shadow(0 0 5px rgba(255,208,96,0.9))  drop-shadow(0 0 16px rgba(255,208,96,0.5)); }
-  .neon-green  { color: #00FF88; filter: drop-shadow(0 0 5px rgba(0,255,136,0.9))   drop-shadow(0 0 16px rgba(0,255,136,0.5)); }
-  .neon-red    { color: #FF4060; filter: drop-shadow(0 0 5px rgba(255,64,96,0.9))   drop-shadow(0 0 16px rgba(255,64,96,0.5)); }
-  .neon-blue   { color: #5599FF; filter: drop-shadow(0 0 5px rgba(85,153,255,0.9))  drop-shadow(0 0 16px rgba(85,153,255,0.5)); }
-  .neon-orange { color: #FF8C22; filter: drop-shadow(0 0 5px rgba(255,140,34,0.9))  drop-shadow(0 0 16px rgba(255,140,34,0.5)); }
-  .neon-purple { color: #CC66FF; filter: drop-shadow(0 0 5px rgba(204,102,255,0.9)) drop-shadow(0 0 16px rgba(204,102,255,0.5)); }
+  .neon-cyan   { color: #00D4FF; filter: drop-shadow(0 0 4px rgba(0,212,255,0.85))   drop-shadow(0 0 10px rgba(0,212,255,0.22)); }
+  .neon-gold   { color: #FFD060; filter: drop-shadow(0 0 4px rgba(255,208,96,0.85))  drop-shadow(0 0 10px rgba(255,208,96,0.22)); }
+  .neon-green  { color: #00FF88; filter: drop-shadow(0 0 4px rgba(0,255,136,0.85))   drop-shadow(0 0 10px rgba(0,255,136,0.22)); }
+  .neon-red    { color: #FF4060; filter: drop-shadow(0 0 4px rgba(255,64,96,0.85))   drop-shadow(0 0 10px rgba(255,64,96,0.22)); }
+  .neon-blue   { color: #5599FF; filter: drop-shadow(0 0 4px rgba(85,153,255,0.85))  drop-shadow(0 0 10px rgba(85,153,255,0.22)); }
+  .neon-orange { color: #FF8C22; filter: drop-shadow(0 0 4px rgba(255,140,34,0.85))  drop-shadow(0 0 10px rgba(255,140,34,0.22)); }
+  .neon-purple { color: #CC66FF; filter: drop-shadow(0 0 4px rgba(204,102,255,0.85)) drop-shadow(0 0 10px rgba(204,102,255,0.22)); }
 }
 
 @layer components {
