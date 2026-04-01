@@ -397,6 +397,19 @@ export default function AdminInbox() {
     fetchThreads();
   };
 
+  const permanentDelete = async (threadIds?: string[]) => {
+    const ids = threadIds || (selectedThread ? [selectedThread.thread_id] : []);
+    if (!ids.length) return;
+    await fetch("/api/email/threads", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ thread_ids: ids, account: activeAccount?.email }),
+    });
+    showToast("Permanently deleted");
+    if (view === "thread") { setView("list"); setSelectedThread(null); }
+    fetchThreads();
+  };
+
   // ── Multi-select helpers ──
   const enterSelectMode = (threadId: string) => {
     setSelectMode(true);
@@ -733,7 +746,7 @@ export default function AdminInbox() {
                   )}
                 </div>
                 <button onClick={() => startCompose("reply", msg)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5"><Reply size={20} /></button>
-                <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/30 hover:text-red-400 hover:bg-white/5" title="Move to Trash"><Trash2 size={20} /></button>
+                <button onClick={() => folder === "trash" ? permanentDelete() : threadAction("trash")} className="p-2 rounded-full text-white/30 hover:text-red-400 hover:bg-white/5" title={folder === "trash" ? "Delete permanently" : "Move to Trash"}><Trash2 size={20} /></button>
                 {/* Per-message three-dot menu */}
                 <div className="relative" ref={msgMenuOpenId === msg.id ? msgMenuRef : undefined}>
                   <button onClick={() => setMsgMenuOpenId(msgMenuOpenId === msg.id ? null : msg.id)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
@@ -948,7 +961,7 @@ export default function AdminInbox() {
                         <p className="text-[12px] text-white/25">to {msg.direction === "outbound" ? msg.to_email : "me"} · {new Date(msg.created_at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p>
                       </div>
                       <button onClick={() => startCompose("reply", msg)} className="p-2 rounded-full text-white/20 hover:text-white hover:bg-white/5"><Reply size={16} /></button>
-                      <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/20 hover:text-red-400 hover:bg-white/5" title="Move to Trash"><Trash2 size={16} /></button>
+                      <button onClick={() => folder === "trash" ? permanentDelete() : threadAction("trash")} className="p-2 rounded-full text-white/20 hover:text-red-400 hover:bg-white/5" title={folder === "trash" ? "Delete permanently" : "Move to Trash"}><Trash2 size={16} /></button>
                     </div>
                     {msg.body_html ? (
                       <div className="text-[14px] text-white/80 leading-relaxed [&_a]:text-[#3b8dd4] [&_img]:max-w-full [&_img]:h-auto"
@@ -1013,11 +1026,18 @@ export default function AdminInbox() {
                     className={`w-full flex items-center gap-3 px-5 py-2 text-left transition-colors border-b border-white/[0.03] group ${
                       thread.unread_count > 0 ? "bg-white/[0.01]" : "hover:bg-white/[0.015]"
                     }`} style={{ height: 44 }}>
-                    {/* Star */}
-                    <button onClick={e => { e.stopPropagation(); threadAction(thread.starred ? "unstar" : "star", [thread.thread_id]); }}
-                      className="shrink-0 p-0.5">
-                      <Star size={16} className={thread.starred ? "fill-[#D4772C] text-[#D4772C]" : "text-white/10 group-hover:text-white/20"} />
-                    </button>
+                    {/* Star / Delete */}
+                    {folder === "trash" ? (
+                      <button onClick={e => { e.stopPropagation(); permanentDelete([thread.thread_id]); }}
+                        className="shrink-0 p-0.5 text-white/10 hover:text-red-400 transition-colors" title="Delete permanently">
+                        <Trash2 size={16} />
+                      </button>
+                    ) : (
+                      <button onClick={e => { e.stopPropagation(); threadAction(thread.starred ? "unstar" : "star", [thread.thread_id]); }}
+                        className="shrink-0 p-0.5">
+                        <Star size={16} className={thread.starred ? "fill-[#D4772C] text-[#D4772C]" : "text-white/10 group-hover:text-white/20"} />
+                      </button>
+                    )}
                     {/* Sender */}
                     <span className={`w-36 shrink-0 truncate text-[14px] ${thread.unread_count > 0 ? "font-bold text-white" : "text-white/60"}`}>
                       {senderName}
@@ -1247,10 +1267,17 @@ export default function AdminInbox() {
                 <p className="text-[14px] text-white/25 truncate mt-0.5">{thread.latest_body_preview}</p>
               </div>
               {!selectMode && (
-                <button onClick={e => { e.stopPropagation(); threadAction(thread.starred ? "unstar" : "star", [thread.thread_id]); }}
-                  className="mt-1.5 shrink-0 p-1">
-                  <Star size={20} className={thread.starred ? "fill-[#D4772C] text-[#D4772C]" : "text-white/10"} />
-                </button>
+                folder === "trash" ? (
+                  <button onClick={e => { e.stopPropagation(); permanentDelete([thread.thread_id]); }}
+                    className="mt-1.5 shrink-0 p-1 text-white/20 hover:text-red-400 transition-colors" title="Delete permanently">
+                    <Trash2 size={20} />
+                  </button>
+                ) : (
+                  <button onClick={e => { e.stopPropagation(); threadAction(thread.starred ? "unstar" : "star", [thread.thread_id]); }}
+                    className="mt-1.5 shrink-0 p-1">
+                    <Star size={20} className={thread.starred ? "fill-[#D4772C] text-[#D4772C]" : "text-white/10"} />
+                  </button>
+                )
               )}
             </button>
           );
