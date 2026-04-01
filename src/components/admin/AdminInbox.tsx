@@ -7,7 +7,7 @@ import {
   X, Check, Loader2, Users, Paperclip, Menu, Pencil,
   MoreVertical, ChevronDown, RefreshCw, Plus, Bold, Italic,
   Underline as UnderlineIcon, Strikethrough, List, ListOrdered, Quote, Link2,
-  EyeOff, CheckSquare, Square, Download, Eye, FileText, Image,
+  EyeOff, CheckSquare, Square, Download, Eye, FileText, Image, RotateCcw,
 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -385,6 +385,7 @@ export default function AdminInbox() {
     });
     const toastMap: Record<string, string> = {
       trash: "Moved to trash",
+      restore: "Restored to inbox",
       star: "Starred",
       unstar: "Unstarred",
       mark_unread: "Marked as unread",
@@ -392,7 +393,7 @@ export default function AdminInbox() {
       mark_read: "Marked as read",
     };
     showToast(toastMap[action] || "Updated");
-    if ((action === "trash" || action === "mark_unread") && view === "thread") setView("list");
+    if ((action === "trash" || action === "restore" || action === "mark_unread") && view === "thread") setView("list");
     fetchThreads();
   };
 
@@ -625,7 +626,11 @@ export default function AdminInbox() {
             <ChevronLeft size={26} />
           </button>
           <div className="flex-1" />
-          <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/40 hover:text-red-400 hover:bg-white/5"><Trash2 size={22} /></button>
+          {folder === "trash" ? (
+            <button onClick={() => threadAction("restore")} className="p-2 rounded-full text-white/40 hover:text-[#C9A84C] hover:bg-white/5" title="Restore to inbox"><RotateCcw size={22} /></button>
+          ) : (
+            <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/40 hover:text-red-400 hover:bg-white/5" title="Move to trash"><Trash2 size={22} /></button>
+          )}
           <button onClick={() => threadAction(selectedThread.starred ? "unstar" : "star")} className="p-2 rounded-full text-white/40 hover:text-[#D4772C] hover:bg-white/5"><MailOpen size={22} /></button>
           {/* Thread three-dot menu */}
           <div className="relative" ref={threadMenuRef}>
@@ -634,6 +639,12 @@ export default function AdminInbox() {
             </button>
             {threadMenuOpen && (
               <div className="absolute right-0 top-full mt-1 w-52 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                {folder === "trash" && (
+                  <button onClick={() => { setThreadMenuOpen(false); threadAction("restore"); }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
+                    <RotateCcw size={18} className="text-white/40" /> Restore to inbox
+                  </button>
+                )}
                 <button onClick={() => { setThreadMenuOpen(false); threadAction("mark_unread"); }}
                   className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
                   <EyeOff size={18} className="text-white/40" /> Mark as unread
@@ -642,10 +653,12 @@ export default function AdminInbox() {
                   className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
                   <AlertOctagon size={18} className="text-white/40" /> Move to spam
                 </button>
-                <button onClick={() => { setThreadMenuOpen(false); threadAction("trash"); }}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
-                  <Trash2 size={18} className="text-white/40" /> Move to trash
-                </button>
+                {folder !== "trash" && (
+                  <button onClick={() => { setThreadMenuOpen(false); threadAction("trash"); }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
+                    <Trash2 size={18} className="text-white/40" /> Move to trash
+                  </button>
+                )}
                 <button onClick={() => { setThreadMenuOpen(false); threadAction(selectedThread.starred ? "unstar" : "star"); }}
                   className="w-full flex items-center gap-3 px-4 py-3.5 text-[15px] text-white/80 hover:bg-white/5 transition-colors">
                   <Star size={18} className="text-white/40" /> {selectedThread.starred ? "Unstar" : "Star"}
@@ -720,6 +733,7 @@ export default function AdminInbox() {
                   )}
                 </div>
                 <button onClick={() => startCompose("reply", msg)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5"><Reply size={20} /></button>
+                <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/30 hover:text-red-400 hover:bg-white/5" title="Move to Trash"><Trash2 size={20} /></button>
                 {/* Per-message three-dot menu */}
                 <div className="relative" ref={msgMenuOpenId === msg.id ? msgMenuRef : undefined}>
                   <button onClick={() => setMsgMenuOpenId(msgMenuOpenId === msg.id ? null : msg.id)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
@@ -826,7 +840,11 @@ export default function AdminInbox() {
                 <h2 className="text-[15px] font-semibold text-white/80 flex-1 truncate">{selectedThread.subject}</h2>
                 <button onClick={() => startCompose("reply", messages[messages.length - 1])} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5" title="Reply"><Reply size={18} /></button>
                 <button onClick={() => startCompose("forward", messages[messages.length - 1])} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5" title="Forward"><Forward size={18} /></button>
-                <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/30 hover:text-red-400 hover:bg-white/5" title="Trash"><Trash2 size={18} /></button>
+                {folder === "trash" ? (
+                  <button onClick={() => threadAction("restore")} className="p-2 rounded-full text-white/30 hover:text-[#C9A84C] hover:bg-white/5" title="Restore to inbox"><RotateCcw size={18} /></button>
+                ) : (
+                  <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/30 hover:text-red-400 hover:bg-white/5" title="Move to Trash"><Trash2 size={18} /></button>
+                )}
               </>
             ) : (
               /* List view — search bar */
@@ -930,6 +948,7 @@ export default function AdminInbox() {
                         <p className="text-[12px] text-white/25">to {msg.direction === "outbound" ? msg.to_email : "me"} · {new Date(msg.created_at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p>
                       </div>
                       <button onClick={() => startCompose("reply", msg)} className="p-2 rounded-full text-white/20 hover:text-white hover:bg-white/5"><Reply size={16} /></button>
+                      <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/20 hover:text-red-400 hover:bg-white/5" title="Move to Trash"><Trash2 size={16} /></button>
                     </div>
                     {msg.body_html ? (
                       <div className="text-[14px] text-white/80 leading-relaxed [&_a]:text-[#3b8dd4] [&_img]:max-w-full [&_img]:h-auto"
@@ -960,7 +979,25 @@ export default function AdminInbox() {
             /* Thread list — Gmail style compact rows */
             <div className="flex-1 overflow-y-auto">
               {/* Folder label */}
-              <div className="px-5 py-2 text-[13px] text-white/20 font-medium capitalize">{folder}</div>
+              <div className="px-5 py-2 flex items-center justify-between">
+                <span className="text-[13px] text-white/20 font-medium capitalize">{folder}</span>
+                {folder === "trash" && (folderCounts.trash || 0) > 0 && (
+                  <button onClick={async () => {
+                    if (!confirm('Permanently delete all emails in trash?')) return;
+                    const trashThreads = threads.map(t => t.thread_id);
+                    if (trashThreads.length) {
+                      await fetch("/api/email/threads", {
+                        method: "DELETE", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ thread_ids: trashThreads, account: activeAccount?.email }),
+                      });
+                      showToast("Trash emptied");
+                      fetchThreads();
+                    }
+                  }} className="flex items-center gap-1.5 text-[13px] font-medium text-red-400 hover:text-red-300 transition-colors">
+                    <Trash2 size={14} /> Empty Trash
+                  </button>
+                )}
+              </div>
               {loading ? (
                 <div className="flex justify-center py-16"><Loader2 size={24} className="text-[#C9A84C] animate-spin" /></div>
               ) : filtered.length === 0 ? (
@@ -1104,9 +1141,15 @@ export default function AdminInbox() {
             className="p-2 rounded-full text-white/40 hover:text-[#D4772C] hover:bg-white/5" title="Star/Unstar">
             <Star size={20} />
           </button>
-          <button onClick={() => batchAction("trash")} className="p-2 rounded-full text-white/40 hover:text-red-400 hover:bg-white/5" title="Trash">
-            <Trash2 size={20} />
-          </button>
+          {folder === "trash" ? (
+            <button onClick={() => batchAction("restore")} className="p-2 rounded-full text-white/40 hover:text-[#C9A84C] hover:bg-white/5" title="Restore to inbox">
+              <RotateCcw size={20} />
+            </button>
+          ) : (
+            <button onClick={() => batchAction("trash")} className="p-2 rounded-full text-white/40 hover:text-red-400 hover:bg-white/5" title="Trash">
+              <Trash2 size={20} />
+            </button>
+          )}
         </div>
       )}
 
@@ -1133,8 +1176,24 @@ export default function AdminInbox() {
 
       {/* Folder label */}
       {!selectMode && (
-        <div className="px-5 py-1.5">
+        <div className="px-5 py-1.5 flex items-center justify-between">
           <span className="text-[15px] font-medium text-white/30 capitalize">{folder}</span>
+          {folder === "trash" && (folderCounts.trash || 0) > 0 && (
+            <button onClick={async () => {
+              if (!confirm('Permanently delete all emails in trash?')) return;
+              const trashThreads = threads.map(t => t.thread_id);
+              if (trashThreads.length) {
+                await fetch("/api/email/threads", {
+                  method: "DELETE", headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ thread_ids: trashThreads, account: activeAccount?.email }),
+                });
+                showToast("Trash emptied");
+                fetchThreads();
+              }
+            }} className="flex items-center gap-1.5 text-[13px] font-medium text-red-400 hover:text-red-300 transition-colors">
+              <Trash2 size={14} /> Empty Trash
+            </button>
+          )}
         </div>
       )}
 
