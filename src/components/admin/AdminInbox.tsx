@@ -37,13 +37,13 @@ type Folder = "inbox" | "sent" | "drafts" | "starred" | "trash" | "spam";
 type ComposeMode = "new" | "reply" | "forward" | null;
 type View = "list" | "thread" | "compose" | "accounts";
 
-const FOLDERS: { key: Folder; label: string; icon: React.ElementType }[] = [
-  { key: "inbox", label: "Inbox", icon: Inbox },
-  { key: "starred", label: "Starred", icon: Star },
-  { key: "sent", label: "Sent", icon: Send },
-  { key: "drafts", label: "Drafts", icon: FileEdit },
-  { key: "trash", label: "Trash", icon: Trash2 },
-  { key: "spam", label: "Spam", icon: AlertOctagon },
+const FOLDERS: { key: Folder; label: string; icon: React.ElementType; neon: string }[] = [
+  { key: "inbox",   label: "Inbox",   icon: Inbox,        neon: "neon-cyan"   },
+  { key: "starred", label: "Starred", icon: Star,         neon: "neon-gold"   },
+  { key: "sent",    label: "Sent",    icon: Send,         neon: "neon-green"  },
+  { key: "drafts",  label: "Drafts",  icon: FileEdit,     neon: "neon-blue"   },
+  { key: "trash",   label: "Trash",   icon: Trash2,       neon: "neon-red"    },
+  { key: "spam",    label: "Spam",    icon: AlertOctagon, neon: "neon-orange" },
 ];
 
 function getInitial(str: string): string { return str.charAt(0).toUpperCase(); }
@@ -640,11 +640,13 @@ export default function AdminInbox() {
           </button>
           <div className="flex-1" />
           {folder === "trash" ? (
-            <button onClick={() => threadAction("restore")} className="p-2 rounded-full text-white/40 hover:text-[#C9A84C] hover:bg-white/5" title="Restore to inbox"><RotateCcw size={22} /></button>
+            <button onClick={() => threadAction("restore")} className="p-2 rounded-full text-white/30 hover:neon-green hover:bg-white/5 transition-all" title="Restore to inbox"><RotateCcw size={22} /></button>
           ) : (
-            <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/40 hover:text-red-400 hover:bg-white/5" title="Move to trash"><Trash2 size={22} /></button>
+            <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/30 hover:neon-red hover:bg-white/5 transition-all" title="Move to trash"><Trash2 size={22} /></button>
           )}
-          <button onClick={() => threadAction(selectedThread.starred ? "unstar" : "star")} className="p-2 rounded-full text-white/40 hover:text-[#D4772C] hover:bg-white/5"><MailOpen size={22} /></button>
+          <button onClick={() => threadAction(selectedThread.starred ? "unstar" : "star")} className="p-2 rounded-full text-white/30 hover:neon-gold hover:bg-white/5 transition-all">
+            <MailOpen size={22} />
+          </button>
           {/* Thread three-dot menu */}
           <div className="relative" ref={threadMenuRef}>
             <button onClick={() => setThreadMenuOpen(!threadMenuOpen)} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
@@ -684,8 +686,8 @@ export default function AdminInbox() {
         <div className="px-5 pt-4 pb-3">
           <div className="flex items-start gap-3">
             <h1 className="flex-1 text-[22px] font-bold text-white leading-tight">{selectedThread.subject}</h1>
-            <button onClick={() => threadAction(selectedThread.starred ? "unstar" : "star")} className="mt-1 shrink-0">
-              <Star size={24} className={selectedThread.starred ? "fill-[#D4772C] text-[#D4772C]" : "text-white/20"} />
+            <button onClick={() => threadAction(selectedThread.starred ? "unstar" : "star")} className="mt-1 shrink-0 transition-all">
+              <Star size={24} className={selectedThread.starred ? "fill-[#FFD060] neon-gold" : "text-white/20 hover:neon-gold"} />
             </button>
           </div>
           <span className="inline-block mt-2 text-[12px] font-semibold text-white/40 bg-white/5 border border-white/10 rounded px-2.5 py-0.5">Inbox</span>
@@ -745,8 +747,8 @@ export default function AdminInbox() {
                     </div>
                   )}
                 </div>
-                <button onClick={() => startCompose("reply", msg)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5"><Reply size={20} /></button>
-                <button onClick={() => folder === "trash" ? permanentDelete() : threadAction("trash")} className="p-2 rounded-full text-white/30 hover:text-red-400 hover:bg-white/5" title={folder === "trash" ? "Delete permanently" : "Move to Trash"}><Trash2 size={20} /></button>
+                <button onClick={() => startCompose("reply", msg)} className="p-2 rounded-full text-white/30 hover:neon-blue hover:bg-white/5 transition-all"><Reply size={20} /></button>
+                <button onClick={() => folder === "trash" ? permanentDelete() : threadAction("trash")} className="p-2 rounded-full text-white/30 hover:neon-red hover:bg-white/5 transition-all" title={folder === "trash" ? "Delete permanently" : "Move to Trash"}><Trash2 size={20} /></button>
                 {/* Per-message three-dot menu */}
                 <div className="relative" ref={msgMenuOpenId === msg.id ? msgMenuRef : undefined}>
                   <button onClick={() => setMsgMenuOpenId(msgMenuOpenId === msg.id ? null : msg.id)} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5">
@@ -786,11 +788,11 @@ export default function AdminInbox() {
 
         <div className="flex items-center gap-3 px-4 py-3 border-t border-white/5" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
           <button onClick={() => startCompose("reply", messages[messages.length - 1])}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-white/5 border border-white/10 rounded-full text-[15px] text-white/60 hover:text-white transition-colors">
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-white/5 border border-white/10 rounded-full text-[15px] text-white/60 hover:neon-blue hover:border-[#5599FF]/30 transition-all">
             <Reply size={18} /> Reply
           </button>
           <button onClick={() => startCompose("forward", messages[messages.length - 1])}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-white/5 border border-white/10 rounded-full text-[15px] text-white/60 hover:text-white transition-colors">
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-white/5 border border-white/10 rounded-full text-[15px] text-white/60 hover:neon-cyan hover:border-[#00D4FF]/30 transition-all">
             <Forward size={18} /> Forward
           </button>
         </div>
@@ -830,7 +832,7 @@ export default function AdminInbox() {
                   className={`w-full flex items-center gap-3 px-4 py-2 rounded-full text-[14px] transition-colors ${
                     folder === f.key ? "bg-[#C9A84C]/10 text-[#C9A84C] font-semibold" : "text-white/50 hover:text-white/70 hover:bg-white/[0.04]"
                   }`}>
-                  <FIcon size={18} />
+                  <FIcon size={18} className={f.neon} />
                   <span className="flex-1 text-left">{f.label}</span>
                   {count > 0 && f.key !== 'sent' && <span className="text-[12px] font-medium">{count}</span>}
                 </button>
@@ -851,19 +853,19 @@ export default function AdminInbox() {
                   <ChevronLeft size={20} />
                 </button>
                 <h2 className="text-[15px] font-semibold text-white/80 flex-1 truncate">{selectedThread.subject}</h2>
-                <button onClick={() => startCompose("reply", messages[messages.length - 1])} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5" title="Reply"><Reply size={18} /></button>
-                <button onClick={() => startCompose("forward", messages[messages.length - 1])} className="p-2 rounded-full text-white/30 hover:text-white hover:bg-white/5" title="Forward"><Forward size={18} /></button>
+                <button onClick={() => startCompose("reply", messages[messages.length - 1])} className="p-2 rounded-full text-white/30 hover:neon-blue hover:bg-white/5 transition-all" title="Reply"><Reply size={18} /></button>
+                <button onClick={() => startCompose("forward", messages[messages.length - 1])} className="p-2 rounded-full text-white/30 hover:neon-cyan hover:bg-white/5 transition-all" title="Forward"><Forward size={18} /></button>
                 {folder === "trash" ? (
-                  <button onClick={() => threadAction("restore")} className="p-2 rounded-full text-white/30 hover:text-[#C9A84C] hover:bg-white/5" title="Restore to inbox"><RotateCcw size={18} /></button>
+                  <button onClick={() => threadAction("restore")} className="p-2 rounded-full text-white/30 hover:neon-green hover:bg-white/5 transition-all" title="Restore to inbox"><RotateCcw size={18} /></button>
                 ) : (
-                  <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/30 hover:text-red-400 hover:bg-white/5" title="Move to Trash"><Trash2 size={18} /></button>
+                  <button onClick={() => threadAction("trash")} className="p-2 rounded-full text-white/30 hover:neon-red hover:bg-white/5 transition-all" title="Move to Trash"><Trash2 size={18} /></button>
                 )}
               </>
             ) : (
               /* List view — search bar */
               <>
                 <div className="flex-1 flex items-center gap-2 px-4 py-2 bg-white/[0.03] rounded-full border border-white/5 max-w-xl">
-                  <Search size={16} className="text-white/25 shrink-0" />
+                  <Search size={16} className="neon-purple shrink-0" />
                   <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search mail..."
                     className="flex-1 bg-transparent text-[14px] text-white placeholder:text-white/20 focus:outline-none" />
                   {search && <button onClick={() => setSearch("")} className="text-white/20 hover:text-white/40"><X size={14} /></button>}
@@ -960,8 +962,8 @@ export default function AdminInbox() {
                         </div>
                         <p className="text-[12px] text-white/25">to {msg.direction === "outbound" ? msg.to_email : "me"} · {new Date(msg.created_at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p>
                       </div>
-                      <button onClick={() => startCompose("reply", msg)} className="p-2 rounded-full text-white/20 hover:text-white hover:bg-white/5"><Reply size={16} /></button>
-                      <button onClick={() => folder === "trash" ? permanentDelete() : threadAction("trash")} className="p-2 rounded-full text-white/20 hover:text-red-400 hover:bg-white/5" title={folder === "trash" ? "Delete permanently" : "Move to Trash"}><Trash2 size={16} /></button>
+                      <button onClick={() => startCompose("reply", msg)} className="p-2 rounded-full text-white/20 hover:neon-blue hover:bg-white/5 transition-all"><Reply size={16} /></button>
+                      <button onClick={() => folder === "trash" ? permanentDelete() : threadAction("trash")} className="p-2 rounded-full text-white/20 hover:neon-red hover:bg-white/5 transition-all" title={folder === "trash" ? "Delete permanently" : "Move to Trash"}><Trash2 size={16} /></button>
                     </div>
                     {msg.body_html ? (
                       <div className="text-[14px] text-white/80 leading-relaxed [&_a]:text-[#3b8dd4] [&_img]:max-w-full [&_img]:h-auto"
@@ -977,11 +979,11 @@ export default function AdminInbox() {
                 {messages.length > 0 && (
                   <div className="flex items-center gap-3 py-3">
                     <button onClick={() => startCompose("reply", messages[messages.length - 1])}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/10 text-[14px] text-white/50 hover:text-white hover:bg-white/5 transition-colors">
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/10 text-[14px] text-white/50 hover:neon-blue hover:border-[#5599FF]/30 hover:bg-white/5 transition-all">
                       <Reply size={16} /> Reply
                     </button>
                     <button onClick={() => startCompose("forward", messages[messages.length - 1])}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/10 text-[14px] text-white/50 hover:text-white hover:bg-white/5 transition-colors">
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/10 text-[14px] text-white/50 hover:neon-cyan hover:border-[#00D4FF]/30 hover:bg-white/5 transition-all">
                       <Forward size={16} /> Forward
                     </button>
                   </div>
@@ -1006,7 +1008,7 @@ export default function AdminInbox() {
                       showToast("Trash emptied");
                       fetchThreads();
                     }
-                  }} className="flex items-center gap-1.5 text-[13px] font-medium text-red-400 hover:text-red-300 transition-colors">
+                  }} className="flex items-center gap-1.5 text-[13px] font-medium neon-red hover:opacity-80 transition-all">
                     <Trash2 size={14} /> Empty Trash
                   </button>
                 )}
@@ -1029,13 +1031,13 @@ export default function AdminInbox() {
                     {/* Star / Delete */}
                     {folder === "trash" ? (
                       <button onClick={e => { e.stopPropagation(); permanentDelete([thread.thread_id]); }}
-                        className="shrink-0 p-0.5 text-white/10 hover:text-red-400 transition-colors" title="Delete permanently">
+                        className="shrink-0 p-0.5 text-white/10 hover:neon-red transition-all" title="Delete permanently">
                         <Trash2 size={16} />
                       </button>
                     ) : (
                       <button onClick={e => { e.stopPropagation(); threadAction(thread.starred ? "unstar" : "star", [thread.thread_id]); }}
-                        className="shrink-0 p-0.5">
-                        <Star size={16} className={thread.starred ? "fill-[#D4772C] text-[#D4772C]" : "text-white/10 group-hover:text-white/20"} />
+                        className="shrink-0 p-0.5 transition-all">
+                        <Star size={16} className={thread.starred ? "fill-[#FFD060] neon-gold" : "text-white/10 group-hover:neon-gold"} />
                       </button>
                     )}
                     {/* Sender */}
@@ -1092,7 +1094,7 @@ export default function AdminInbox() {
           {FOLDERS.map(f => (
             <button key={f.key} onClick={() => { setFolder(f.key); setSidebarOpen(false); setSelectedThread(null); setView("list"); }}
               className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-full text-[16px] font-medium transition-colors mb-0.5 ${folder === f.key ? "bg-[#C9A84C]/10 text-[#C9A84C]" : "text-white/50 hover:bg-white/5"}`}>
-              <f.icon size={22} />
+              <f.icon size={22} className={f.neon} />
               <span className="flex-1 text-left">{f.label}</span>
               {(folderCounts[f.key] || 0) > 0 && <span className="text-[15px]">{folderCounts[f.key]}</span>}
             </button>
@@ -1116,7 +1118,7 @@ export default function AdminInbox() {
                   setSidebarOpen(false);
                   fetchThreads();
                 }
-              }} className="w-full flex items-center gap-4 px-4 py-3.5 rounded-full text-[16px] font-medium text-red-400 hover:bg-red-500/10">
+              }} className="w-full flex items-center gap-4 px-4 py-3.5 rounded-full text-[16px] font-medium neon-red hover:bg-red-500/10 transition-all">
                 <Trash2 size={22} /> <span className="flex-1 text-left">Empty Trash</span>
               </button>
             </>
@@ -1151,22 +1153,22 @@ export default function AdminInbox() {
             {selectedIds.size === filtered.length ? 'None' : 'All'}
           </button>
           <div className="flex-1" />
-          <button onClick={() => batchAction("mark_read")} className="p-2 rounded-full text-white/40 hover:text-[#3b8dd4] hover:bg-white/5" title="Mark read">
+          <button onClick={() => batchAction("mark_read")} className="p-2 rounded-full text-white/40 hover:neon-blue hover:bg-white/5 transition-all" title="Mark read">
             <MailOpen size={20} />
           </button>
-          <button onClick={() => batchAction("mark_unread")} className="p-2 rounded-full text-white/40 hover:text-[#C9A84C] hover:bg-white/5" title="Mark unread">
+          <button onClick={() => batchAction("mark_unread")} className="p-2 rounded-full text-white/40 hover:neon-gold hover:bg-white/5 transition-all" title="Mark unread">
             <EyeOff size={20} />
           </button>
           <button onClick={() => batchAction((() => { const allStarred = filtered.filter(t => selectedIds.has(t.thread_id)).every(t => t.starred); return allStarred ? "unstar" : "star"; })())}
-            className="p-2 rounded-full text-white/40 hover:text-[#D4772C] hover:bg-white/5" title="Star/Unstar">
+            className="p-2 rounded-full text-white/40 hover:neon-gold hover:bg-white/5 transition-all" title="Star/Unstar">
             <Star size={20} />
           </button>
           {folder === "trash" ? (
-            <button onClick={() => batchAction("restore")} className="p-2 rounded-full text-white/40 hover:text-[#C9A84C] hover:bg-white/5" title="Restore to inbox">
+            <button onClick={() => batchAction("restore")} className="p-2 rounded-full text-white/40 hover:neon-green hover:bg-white/5 transition-all" title="Restore to inbox">
               <RotateCcw size={20} />
             </button>
           ) : (
-            <button onClick={() => batchAction("trash")} className="p-2 rounded-full text-white/40 hover:text-red-400 hover:bg-white/5" title="Trash">
+            <button onClick={() => batchAction("trash")} className="p-2 rounded-full text-white/40 hover:neon-red hover:bg-white/5 transition-all" title="Trash">
               <Trash2 size={20} />
             </button>
           )}
@@ -1181,7 +1183,7 @@ export default function AdminInbox() {
           </button>
           <div className="flex-1 relative">
             <div className="flex items-center gap-2.5 px-4 py-3 bg-[#1a1a1a] rounded-full border border-white/5">
-              <Search size={20} className="text-white/30 shrink-0" />
+              <Search size={20} className="neon-purple shrink-0" />
               <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search in mail"
                 className="flex-1 bg-transparent text-[15px] text-white placeholder:text-white/25 focus:outline-none" />
             </div>
@@ -1210,7 +1212,7 @@ export default function AdminInbox() {
                 showToast("Trash emptied");
                 fetchThreads();
               }
-            }} className="flex items-center gap-1.5 text-[13px] font-medium text-red-400 hover:text-red-300 transition-colors">
+            }} className="flex items-center gap-1.5 text-[13px] font-medium neon-red hover:opacity-80 transition-all">
               <Trash2 size={14} /> Empty Trash
             </button>
           )}
@@ -1269,13 +1271,13 @@ export default function AdminInbox() {
               {!selectMode && (
                 folder === "trash" ? (
                   <button onClick={e => { e.stopPropagation(); permanentDelete([thread.thread_id]); }}
-                    className="mt-1.5 shrink-0 p-1 text-white/20 hover:text-red-400 transition-colors" title="Delete permanently">
+                    className="mt-1.5 shrink-0 p-1 text-white/20 hover:neon-red transition-all" title="Delete permanently">
                     <Trash2 size={20} />
                   </button>
                 ) : (
                   <button onClick={e => { e.stopPropagation(); threadAction(thread.starred ? "unstar" : "star", [thread.thread_id]); }}
-                    className="mt-1.5 shrink-0 p-1">
-                    <Star size={20} className={thread.starred ? "fill-[#D4772C] text-[#D4772C]" : "text-white/10"} />
+                    className="mt-1.5 shrink-0 p-1 transition-all">
+                    <Star size={20} className={thread.starred ? "fill-[#FFD060] neon-gold" : "text-white/10 hover:neon-gold"} />
                   </button>
                 )
               )}
