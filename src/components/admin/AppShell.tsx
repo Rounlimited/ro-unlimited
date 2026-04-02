@@ -11,7 +11,7 @@ import {
   LayoutDashboard, HardHat, MessageCircle, GripHorizontal,
   ClipboardList, Pencil, Camera, BarChart3, Receipt, CalendarDays,
   Users, FileText, Clock, Wrench, Package, TrendingUp,
-  Settings, LifeBuoy, Lock, Search, X, ChevronDown,
+  Settings, LifeBuoy, Lock, Search, X, ChevronDown, ChevronLeft,
   Briefcase, Shield, UserPlus, Truck, FileCheck, Target,
   Megaphone, CreditCard, PieChart, Building2, Bell, Sparkles, Zap, LogOut, HardDrive, CheckSquare
 } from 'lucide-react';
@@ -847,13 +847,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex-shrink-0 h-[env(safe-area-inset-top)] bg-[#0a0a0a] relative z-10" />
 
       <header data-admin-header className="flex-shrink-0 px-4 py-2.5 flex items-center justify-between bg-[#0f0f0f] border-b border-white/5 relative z-10">
-        <button
-          onClick={() => { window.location.href = '/admin'; }}
-          className="flex items-center gap-2 bg-transparent border-none cursor-pointer p-0"
-        >
-          <img src="/ro-unlimited-logo.svg" alt="RO Unlimited" className="w-48 h-auto object-contain" />
-          <span className="text-[11px] text-white/20 uppercase tracking-wider border-l border-white/10 pl-2">Admin</span>
-        </button>
+        <div className="flex items-center gap-1">
+          {pathname !== '/admin' && (
+            <button
+              onClick={() => router.back()}
+              className="p-1.5 -ml-1.5 rounded-full text-white/40 hover:text-white active:bg-white/10 transition-colors"
+              title="Go back"
+            >
+              <ChevronLeft size={24} />
+            </button>
+          )}
+          <button
+            onClick={() => { window.location.href = '/admin'; }}
+            className="flex items-center gap-2 bg-transparent border-none cursor-pointer p-0"
+          >
+            <img src="/ro-unlimited-logo.svg" alt="RO Unlimited" className="w-48 h-auto object-contain" />
+            <span className="text-[11px] text-white/20 uppercase tracking-wider border-l border-white/10 pl-2">Admin</span>
+          </button>
+        </div>
         <div className="flex items-center gap-1.5">
           <button id="ai-bubble-header-btn" className="p-1.5 rounded-lg hover:bg-white/5 transition-colors active:scale-95">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center"

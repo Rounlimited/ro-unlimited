@@ -112,8 +112,12 @@
 /* Used in AdminInbox and other admin UI. Apply to Lucide icon elements.       */
 /* Hover variants work automatically via Tailwind: hover:neon-cyan etc.        */
 @layer utilities {
-  /* Safe-area-aware bottom positioning — use instead of bottom-3 on mobile panels */
+  /* Safe-area-aware positioning — use instead of inset-3/top-3/bottom-3 on fixed panels */
   .bottom-safe-3 { bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); }
+  .top-safe-3    { top:    calc(0.75rem + env(safe-area-inset-top,    0px)); }
+  .pt-safe       { padding-top:    env(safe-area-inset-top,    0px); }
+  .pb-safe       { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .h-safe-top    { height: env(safe-area-inset-top, 0px); flex-shrink: 0; }
 
   .neon-cyan   { color: #00D4FF; filter: drop-shadow(0 0 4px rgba(0,212,255,0.85))   drop-shadow(0 0 10px rgba(0,212,255,0.22)); }
   .neon-gold   { color: #FFD060; filter: drop-shadow(0 0 4px rgba(255,208,96,0.85))  drop-shadow(0 0 10px rgba(255,208,96,0.22)); }

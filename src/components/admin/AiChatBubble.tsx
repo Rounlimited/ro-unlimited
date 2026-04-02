@@ -621,7 +621,7 @@ export default function AiChatBubble() {
   const getContainerStyles = (): { className: string; style: React.CSSProperties } => {
     if (displayMode === 'fullscreen') {
       return {
-        className: 'fixed inset-0 z-[100] bg-[#0a0a0a] flex flex-col overflow-hidden',
+        className: 'fixed inset-0 z-[100] bg-[#0a0a0a] flex flex-col overflow-hidden pt-safe',
         style: {},
       };
     }
@@ -639,7 +639,7 @@ export default function AiChatBubble() {
     }
     // full (default panel)
     return {
-      className: 'fixed left-3 right-3 top-3 bottom-safe-3 sm:inset-4 sm:left-auto sm:w-[480px] sm:top-4 sm:bottom-20 z-[90] bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden',
+      className: 'fixed left-3 right-3 top-safe-3 bottom-safe-3 sm:inset-4 sm:left-auto sm:w-[480px] sm:top-4 sm:bottom-20 z-[90] bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden',
       style: { boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 20px rgba(201,168,76,0.1)' },
     };
   };

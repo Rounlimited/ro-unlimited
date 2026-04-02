@@ -161,6 +161,7 @@ function AttachmentPreview({ attachments }: { attachments: Message["attachments"
       {previewAtt && (
         <div className="fixed inset-0 z-[9999] bg-black/90 flex flex-col"
           onClick={() => setPreviewAtt(null)}>
+          <div className="h-safe-top bg-black" />
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-black/50 border-b border-white/10"
             onClick={e => e.stopPropagation()}>
@@ -514,6 +515,7 @@ export default function AdminInbox() {
   if (view === "accounts" && !isDesktop) {
     return (
       <div className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col">
+        <div className="h-safe-top bg-[#0a0a0a]" />
         <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5">
           {activeAccount && (
             <>
@@ -565,6 +567,7 @@ export default function AdminInbox() {
   if (view === "compose" && !isDesktop) {
     return (
       <div className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col">
+        <div className="h-safe-top bg-[#0a0a0a]" />
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
           <button onClick={() => setView(selectedThread ? "thread" : "list")} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
             <X size={24} />
@@ -634,6 +637,7 @@ export default function AdminInbox() {
   if (view === "thread" && selectedThread && !isDesktop) {
     return (
       <div className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col">
+        <div className="h-safe-top bg-[#0a0a0a]" />
         <div className="flex items-center gap-1 px-2 py-2 border-b border-white/5">
           <button onClick={() => { setView("list"); setSelectedThread(null); setThreadMenuOpen(false); }} className="p-2 rounded-full text-white/40 hover:text-white hover:bg-white/5">
             <ChevronLeft size={26} />
@@ -805,7 +809,9 @@ export default function AdminInbox() {
   // ═══════════════════════════════════════════
   if (isDesktop) {
     return (
-      <div className="fixed inset-0 z-[55] flex bg-[#0a0a0a]">
+      <div className="fixed inset-0 z-[55] flex flex-col bg-[#0a0a0a]">
+        <div className="h-safe-top bg-[#0a0a0a]" />
+        <div className="flex flex-1 min-h-0">
         {/* Left: Folder sidebar — Gmail style */}
         <div className="w-56 flex-shrink-0 border-r border-white/5 flex flex-col">
           {/* Logo + back to dashboard */}
@@ -1069,6 +1075,7 @@ export default function AdminInbox() {
             {toast}
           </div>
         )}
+        </div>
       </div>
     );
   }
@@ -1080,6 +1087,7 @@ export default function AdminInbox() {
     <div className="fixed inset-0 z-[60]" onClick={() => setSidebarOpen(false)}>
       <div className="absolute inset-0 bg-black/50" />
       <div className="absolute inset-y-0 left-0 w-[82%] max-w-[320px] bg-[#111] flex flex-col" style={{ animation: "slideInLeft 0.25s ease-out" }} onClick={e => e.stopPropagation()}>
+        <div className="h-safe-top bg-[#111]" />
         <div className="flex items-center justify-between px-5 pt-5 pb-4">
           <span className="font-bold text-[20px] text-[#C9A84C]">RO Mail</span>
           {activeAccount && (
