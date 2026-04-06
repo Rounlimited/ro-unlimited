@@ -60,6 +60,12 @@ const FEATURE_INFO: Record<string, { title: string; headline: string; descriptio
     description: 'Organize your best projects by division with photos, descriptions, and before/after shots. This is what wins contracts while you sleep.',
     bullets: ['Organize by Residential, Commercial, Grading', 'Before & after photo pairing', 'Drag to reorder project showcase'],
   },
+  photos: {
+    title: 'Project Photos',
+    headline: 'Upload. Describe. Done.',
+    description: 'Upload job site photos and tag them with descriptions, job type, and location. Your team fills in the blanks — then we use them across the site, Google, and portfolio.',
+    bullets: ['Multi-photo upload in one tap', 'Fill-in-the-blanks for each photo', 'Track which photos still need descriptions', 'Photos feed into the website and Google Business Profile'],
+  },
   settings: {
     title: 'Settings',
     headline: 'Team & Access Control',
@@ -228,6 +234,7 @@ const APP_ICONS: AppIcon[] = [
   { id: 'checklist', label: 'Checklist', icon: ClipboardList, href: '/admin/checklist', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'editor', label: 'Site Editor', icon: Pencil, href: '/admin/site-editor', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'portfolio', label: 'Portfolio', icon: Camera, href: '/admin/projects', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
+  { id: 'photos', label: 'Photos', icon: Camera, href: '/admin/photos', active: true, color: '#F97316', bg: 'rgba(249,115,22,0.15)', badge: 'NEW' },
   { id: 'settings', label: 'Settings', icon: Settings, href: '/admin/settings', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'proposals', label: 'Proposals', icon: Briefcase, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'pipeline', label: 'Pipeline', icon: TrendingUp, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
