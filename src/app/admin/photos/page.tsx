@@ -176,21 +176,6 @@ export default function PhotosPage() {
       <div className="relative z-10 max-w-2xl mx-auto px-4 pt-3 pb-24">
 
         {/* Upload area */}
-        <input
-          ref={fileInputRef}
-          id="photo-upload-input"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/heic"
-          multiple
-          style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}
-          onChange={e => {
-            if (e.target.files && e.target.files.length > 0) {
-              const copied = Array.from(e.target.files);
-              setTimeout(() => handleFiles(copied), 300);
-            }
-          }}
-        />
-
         {uploading ? (
           <div className="rounded-2xl p-5 text-center mb-4" style={{ background: '#1a0f04', border: '1px solid rgba(249,115,22,0.3)' }}>
             <Loader2 size={24} className="animate-spin mx-auto mb-2" style={{ color: '#F97316' }} />
@@ -203,18 +188,30 @@ export default function PhotosPage() {
             </div>
           </div>
         ) : (
-          <label
-            htmlFor="photo-upload-input"
-            className="w-full rounded-2xl p-5 flex flex-col items-center gap-2 transition-all active:scale-[0.98] mb-4 cursor-pointer block"
+          <div className="relative w-full rounded-2xl p-5 flex flex-col items-center gap-2 mb-4 cursor-pointer active:scale-[0.98] transition-all"
             style={{ background: '#1a0f04', border: '2px dashed rgba(249,115,22,0.4)' }}
           >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/heic"
+              multiple
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}
+              onChange={e => {
+                if (e.target.files && e.target.files.length > 0) {
+                  const copied = Array.from(e.target.files);
+                  handleFiles(copied);
+                  e.target.value = '';
+                }
+              }}
+            />
             <div className="w-14 h-14 rounded-full flex items-center justify-center"
               style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.4)' }}>
               <Plus size={26} style={{ color: '#F97316' }} />
             </div>
             <span className="text-sm font-bold" style={{ color: '#F97316' }}>Upload Photos</span>
             <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>Select multiple — JPG, PNG, WebP, HEIC</span>
-          </label>
+          </div>
         )}
 
         {/* Description progress */}
