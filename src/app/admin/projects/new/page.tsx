@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Home, Building2, Mountain, Check, Loader2,
-  MapPin, Calendar, DollarSign, Ruler, FileText, ChevronRight
+  MapPin, Calendar, DollarSign, Ruler, FileText, ChevronRight, Wrench
 } from 'lucide-react';
 
 const DIVISIONS = [
@@ -36,12 +36,22 @@ const DIVISIONS = [
     neonSoft: 'rgba(52,211,153,0.15)',
     desc: 'Site prep, excavation, earthwork',
   },
+  {
+    id: 'services',
+    label: 'Services',
+    icon: Wrench,
+    color: '#F97316',
+    neon: 'rgba(249,115,22,0.6)',
+    neonSoft: 'rgba(249,115,22,0.15)',
+    desc: 'Roofing, plumbing, electrical, repairs',
+  },
 ];
 
 const SCOPE_PLACEHOLDERS: Record<string, string> = {
   residential: 'e.g. 2,400 sqft custom home — slab foundation, framing, roofing, full interior finish...',
   commercial: 'e.g. 8,000 sqft office build-out — steel framing, HVAC rough-in, electrical...',
   grading: 'e.g. 4-acre site prep — clearing, grading, drainage, pad compaction for future build...',
+  services: 'e.g. Roof replacement — tear-off, new underlayment, architectural shingles, flashing...',
 };
 
 type Step = 'job' | 'where' | 'when' | 'scope';

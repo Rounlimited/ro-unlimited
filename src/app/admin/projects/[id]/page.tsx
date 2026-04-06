@@ -7,8 +7,24 @@ import {
   Loader2, Save, Check, X, Camera, FileText, Home,
   Building2, Mountain, MapPin, Calendar, DollarSign,
   Ruler, ChevronRight, Send, Globe, AlertCircle,
-  Users, Wrench, Lock, CheckCircle2, Image, Sparkles
+  Users, Wrench, Lock, CheckCircle2, Image, Sparkles,
+  Plus, Trash2, ChevronDown
 } from 'lucide-react';
+
+interface PhotoFile {
+  assetId: string;
+  url: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  category: string;
+  uploadedAt: string;
+  provider: string;
+  description?: string;
+  jobType?: string;
+  location?: string;
+  date?: string;
+}
 
 interface Project {
   _id: string;
@@ -26,7 +42,7 @@ interface Project {
   scopeDescription?: string;
   notes?: string;
   vendors?: any[];
-  files?: any[];
+  files?: PhotoFile[];
   publishedToSite?: boolean;
   siteData?: {
     publicTitle?: string;
@@ -41,6 +57,7 @@ const DIVISION_CONFIG: Record<string, { label: string; icon: any; color: string;
   residential: { label: 'Residential', icon: Home,      color: '#4488FF', neon: 'rgba(68,136,255,0.7)',  neonSoft: 'rgba(68,136,255,0.12)' },
   commercial:  { label: 'Commercial',  icon: Building2, color: '#C9A84C', neon: 'rgba(255,208,96,0.7)',  neonSoft: 'rgba(201,168,76,0.12)' },
   grading:     { label: 'Land Grading',icon: Mountain,  color: '#34D399', neon: 'rgba(52,211,153,0.7)', neonSoft: 'rgba(52,211,153,0.12)' },
+  services:    { label: 'Services',    icon: Wrench,    color: '#F97316', neon: 'rgba(249,115,22,0.7)', neonSoft: 'rgba(249,115,22,0.12)' },
 };
 
 const TABS = [
@@ -126,7 +143,7 @@ function DetailsTab({ project, onSave }: { project: Project; onSave: (patch: Par
       {/* Division selector */}
       <div>
         <label style={{ display:'block', fontSize:10, color:'rgba(255,255,255,0.28)', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:10 }}>Division</label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {DIVS.map(([id, d]) => {
             const Icon = d.icon; const sel = division === id;
             return (
@@ -212,14 +229,351 @@ function DetailsTab({ project, onSave }: { project: Project; onSave: (patch: Par
 }
 
 // ── Media Tab ──────────────────────────────────────────────
-function MediaTab({ project }: { project: Project }) {
+
+const JOB_TYPES = [
+  { value: '', label: 'Select type...' },
+  { value: 'roofing', label: 'Roofing' },
+  { value: 'septic', label: 'Septic' },
+  { value: 'electrical', label: 'Electrical' },
+  { value: 'plumbing', label: 'Plumbing' },
+  { value: 'grading', label: 'Land Grading' },
+  { value: 'steel_frame', label: 'Steel Frame' },
+  { value: 'concrete', label: 'Concrete / Foundation' },
+  { value: 'framing', label: 'Wood Framing' },
+  { value: 'residential', label: 'Residential' },
+  { value: 'commercial', label: 'Commercial Build' },
+  { value: 'general_repair', label: 'General Repair' },
+  { value: 'renovation', label: 'Renovation' },
+  { value: 'demolition', label: 'Demolition' },
+  { value: 'underground', label: 'Underground Utilities' },
+  { value: 'other', label: 'Other' },
+];
+
+function MediaTab({ project, onSave }: { project: Project; onSave: (patch: Partial<Project>) => Promise<void> }) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const photos: PhotoFile[] = (project.files || []).filter((f: any) => f.category === 'photo');
+  const describedCount = photos.filter(p => p.description?.trim()).length;
+
+  // Multi-file upload handler
+  const handleFiles = async (fileList: FileList) => {
+    const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+
+    setUploading(true);
+    setUploadProgress({ current: 0, total: files.length });
+
+    const currentFiles = [...(project.files || [])];
+
+    for (let i = 0; i < files.length; i++) {
+      setUploadProgress({ current: i + 1, total: files.length });
+      try {
+        const formData = new FormData();
+        formData.append('file', files[i]);
+        formData.append('type', 'image');
+        formData.append('category', 'photo');
+
+        const res = await fetch('/api/admin/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.error) continue;
+
+        currentFiles.push({
+          assetId: data.assetId,
+          url: data.url,
+          filename: data.originalFilename || files[i].name,
+          mimeType: data.mimeType || files[i].type,
+          size: files[i].size,
+          category: 'photo',
+          uploadedAt: new Date().toISOString(),
+          provider: 'sanity',
+          description: '',
+          jobType: '',
+          location: '',
+          date: '',
+        });
+      } catch (e) {
+        console.error('Upload failed:', files[i].name, e);
+      }
+    }
+
+    await onSave({ files: currentFiles } as any);
+    setUploading(false);
+    setUploadProgress({ current: 0, total: 0 });
+  };
+
+  // Save metadata for a single photo
+  const savePhotoMeta = async (assetId: string, updates: Partial<PhotoFile>) => {
+    setSaving(assetId);
+    const updatedFiles = (project.files || []).map((f: any) =>
+      f.assetId === assetId ? { ...f, ...updates } : f
+    );
+    await onSave({ files: updatedFiles } as any);
+    setSaving(null);
+    setSaved(assetId);
+    setTimeout(() => setSaved(null), 1500);
+  };
+
+  // Delete a photo
+  const deletePhoto = async (assetId: string) => {
+    const updatedFiles = (project.files || []).filter((f: any) => f.assetId !== assetId);
+    await onSave({ files: updatedFiles } as any);
+    setExpandedId(null);
+  };
+
   return (
     <div className="pb-24">
-      <div className="theme-card-navy rounded-2xl p-8 text-center" style={{ background:'#0F1F3D', border:'1px solid rgba(42,74,138,0.3)' }}>
-        <Camera size={32} className="mx-auto mb-3" style={{ color:'rgba(68,136,255,0.3)' }} />
-        <p className="text-sm mb-1" style={{ color:'rgba(255,255,255,0.4)' }}>Media uploads</p>
-        <p className="text-xs" style={{ color:'rgba(255,255,255,0.2)' }}>Photo & video management coming next sprint</p>
+      {/* Upload button + progress bar */}
+      <div className="mb-4">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic"
+          multiple
+          className="hidden"
+          onChange={e => { if (e.target.files) handleFiles(e.target.files); e.target.value = ''; }}
+        />
+
+        {uploading ? (
+          <div className="rounded-2xl p-5 text-center" style={{ background: '#0F1F3D', border: '1px solid rgba(201,168,76,0.3)' }}>
+            <Loader2 size={24} className="animate-spin mx-auto mb-2" style={{ color: '#C9A84C' }} />
+            <p className="text-sm font-semibold text-white mb-2">
+              Uploading {uploadProgress.current} of {uploadProgress.total}...
+            </p>
+            <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div className="h-full rounded-full transition-all duration-300"
+                style={{
+                  width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
+                  background: 'linear-gradient(90deg, #C9A84C, #d4b55a)',
+                }} />
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full rounded-2xl p-5 flex flex-col items-center gap-2 transition-all active:scale-[0.98]"
+            style={{
+              background: '#0F1F3D',
+              border: '2px dashed rgba(68,136,255,0.3)',
+            }}
+          >
+            <div className="w-12 h-12 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(68,136,255,0.15)', border: '1px solid rgba(68,136,255,0.3)' }}>
+              <Plus size={22} style={{ color: '#4488FF' }} />
+            </div>
+            <span className="text-sm font-semibold" style={{ color: '#4488FF' }}>Upload Photos</span>
+            <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>Select multiple — JPG, PNG, WebP</span>
+          </button>
+        )}
       </div>
+
+      {/* Description progress */}
+      {photos.length > 0 && (
+        <div className="mb-4 rounded-xl px-4 py-3" style={{
+          background: describedCount === photos.length ? 'rgba(52,211,153,0.08)' : 'rgba(255,208,96,0.06)',
+          border: describedCount === photos.length ? '1px solid rgba(52,211,153,0.25)' : '1px solid rgba(255,208,96,0.2)',
+        }}>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-semibold" style={{
+              color: describedCount === photos.length ? '#34D399' : '#FFD060',
+            }}>
+              {describedCount === photos.length ? '✓ All photos described' : `${describedCount} of ${photos.length} described`}
+            </span>
+            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+              {photos.length} photo{photos.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="w-full h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <div className="h-full rounded-full transition-all duration-500" style={{
+              width: photos.length ? `${(describedCount / photos.length) * 100}%` : '0%',
+              background: describedCount === photos.length ? '#34D399' : '#FFD060',
+            }} />
+          </div>
+        </div>
+      )}
+
+      {/* Photo grid */}
+      {photos.length === 0 ? (
+        <div className="rounded-2xl p-8 text-center" style={{ background: '#0F1F3D', border: '1px solid rgba(42,74,138,0.3)' }}>
+          <Camera size={32} className="mx-auto mb-3" style={{ color: 'rgba(68,136,255,0.3)' }} />
+          <p className="text-sm mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>No photos yet</p>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>Upload project photos to get started</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {photos.map((photo) => {
+            const expanded = expandedId === photo.assetId;
+            const hasDesc = !!photo.description?.trim();
+            return (
+              <PhotoCard
+                key={photo.assetId}
+                photo={photo}
+                expanded={expanded}
+                saving={saving === photo.assetId}
+                saved={saved === photo.assetId}
+                onToggle={() => setExpandedId(expanded ? null : photo.assetId)}
+                onSaveMeta={(u) => savePhotoMeta(photo.assetId, u)}
+                onDelete={() => deletePhoto(photo.assetId)}
+                hasDesc={hasDesc}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Photo Card with expandable metadata ──────────────────
+function PhotoCard({
+  photo, expanded, saving, saved, onToggle, onSaveMeta, onDelete, hasDesc
+}: {
+  photo: PhotoFile; expanded: boolean; saving: boolean; saved: boolean;
+  onToggle: () => void; onSaveMeta: (u: Partial<PhotoFile>) => void;
+  onDelete: () => void; hasDesc: boolean;
+}) {
+  const [desc, setDesc] = useState(photo.description || '');
+  const [jobType, setJobType] = useState(photo.jobType || '');
+  const [location, setLocation] = useState(photo.location || '');
+  const [date, setDate] = useState(photo.date || '');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const dirty = desc !== (photo.description || '') ||
+    jobType !== (photo.jobType || '') ||
+    location !== (photo.location || '') ||
+    date !== (photo.date || '');
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', background: 'rgba(0,0,0,0.45)',
+    border: '1px solid rgba(42,74,138,0.3)', borderRadius: 10,
+    padding: '10px 14px', fontSize: 13, color: '#fff', outline: 'none',
+    colorScheme: 'dark',
+  };
+
+  return (
+    <div className="rounded-xl overflow-hidden transition-all" style={{
+      background: '#0F1F3D',
+      border: expanded ? '1px solid rgba(68,136,255,0.4)' : '1px solid rgba(42,74,138,0.25)',
+      boxShadow: expanded ? '0 4px 20px rgba(0,0,0,0.4)' : 'none',
+    }}>
+      {/* Thumbnail row — always visible */}
+      <button onClick={onToggle} className="w-full flex items-center gap-3 p-2.5 text-left active:bg-white/[0.02]">
+        <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0" style={{
+          background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <img src={photo.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-white/70 truncate">{photo.filename}</p>
+          {hasDesc ? (
+            <p className="text-[11px] text-white/40 truncate mt-0.5">{photo.description}</p>
+          ) : (
+            <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,208,96,0.6)' }}>Needs description</p>
+          )}
+          {photo.jobType && (
+            <span className="inline-block mt-1 text-[9px] px-2 py-0.5 rounded-full font-semibold"
+              style={{ background: 'rgba(249,115,22,0.12)', color: '#F97316', border: '1px solid rgba(249,115,22,0.3)' }}>
+              {JOB_TYPES.find(j => j.value === photo.jobType)?.label || photo.jobType}
+            </span>
+          )}
+        </div>
+        <div className="flex-shrink-0 flex items-center gap-1.5">
+          {hasDesc && <Check size={12} style={{ color: '#34D399' }} />}
+          <ChevronDown size={14} style={{
+            color: 'rgba(255,255,255,0.2)',
+            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s',
+          }} />
+        </div>
+      </button>
+
+      {/* Expanded metadata form */}
+      {expanded && (
+        <div className="px-3 pb-3 space-y-3 border-t" style={{ borderColor: 'rgba(42,74,138,0.2)' }}>
+          {/* Full image preview */}
+          <div className="mt-3 rounded-lg overflow-hidden" style={{ background: 'rgba(0,0,0,0.3)' }}>
+            <img src={photo.url} alt="" className="w-full h-auto max-h-[300px] object-contain" />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-[10px] text-white/25 uppercase tracking-widest mb-1.5">Description</label>
+            <textarea
+              value={desc} onChange={e => setDesc(e.target.value)}
+              placeholder="What's in this photo? What kind of work?"
+              rows={2}
+              style={{ ...inputStyle, resize: 'none' }}
+            />
+          </div>
+
+          {/* Job Type dropdown */}
+          <div>
+            <label className="block text-[10px] text-white/25 uppercase tracking-widest mb-1.5">Job Type</label>
+            <select value={jobType} onChange={e => setJobType(e.target.value)} style={inputStyle}>
+              {JOB_TYPES.map(j => <option key={j.value} value={j.value}>{j.label}</option>)}
+            </select>
+          </div>
+
+          {/* Location + Date row */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[10px] text-white/25 uppercase tracking-widest mb-1.5">Location</label>
+              <input value={location} onChange={e => setLocation(e.target.value)}
+                placeholder="City, SC" style={inputStyle} />
+            </div>
+            <div>
+              <label className="block text-[10px] text-white/25 uppercase tracking-widest mb-1.5">Date</label>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
+            </div>
+          </div>
+
+          {/* Save + Delete buttons */}
+          <div className="flex gap-2 pt-1">
+            {confirmDelete ? (
+              <div className="flex-1 flex gap-2">
+                <button onClick={() => setConfirmDelete(false)}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-medium"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}>
+                  Cancel
+                </button>
+                <button onClick={onDelete}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold"
+                  style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#EF4444' }}>
+                  Yes, Delete
+                </button>
+              </div>
+            ) : (
+              <>
+                <button onClick={() => setConfirmDelete(true)}
+                  className="px-3 py-2.5 rounded-xl transition-all"
+                  style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                  <Trash2 size={14} style={{ color: 'rgba(239,68,68,0.5)' }} />
+                </button>
+                <button
+                  onClick={() => onSaveMeta({ description: desc, jobType, location, date })}
+                  disabled={!dirty && !saving}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                  style={{
+                    background: dirty ? 'linear-gradient(135deg, #d4b55a, #C9A84C)' : saved ? 'rgba(52,211,153,0.15)' : 'rgba(255,255,255,0.04)',
+                    color: dirty ? '#000' : saved ? '#34D399' : 'rgba(255,255,255,0.2)',
+                    border: dirty ? 'none' : saved ? '1px solid rgba(52,211,153,0.3)' : '1px solid rgba(255,255,255,0.06)',
+                    boxShadow: dirty ? '0 0 16px rgba(201,168,76,0.3)' : 'none',
+                  }}
+                >
+                  {saving ? <><Loader2 size={13} className="animate-spin" /> Saving...</>
+                    : saved ? <><Check size={13} /> Saved</>
+                    : dirty ? <><Save size={13} /> Save Info</>
+                    : <><Check size={13} /> Up to date</>}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -576,7 +930,7 @@ export default function ProjectDetailPage() {
       <div className="relative z-10 px-4 pt-4 max-w-lg mx-auto">
         {tab === 'details' && <DetailsTab project={project} onSave={handleSave} />}
         {tab === 'vendors' && <VendorsTab project={project} />}
-        {tab === 'media'   && <MediaTab project={project} />}
+        {tab === 'media'   && <MediaTab project={project} onSave={handleSave} />}
         {tab === 'docs'    && <DocsTab project={project} />}
         {tab === 'send'    && <SendTab project={project} onSend={handleSend} />}
       </div>

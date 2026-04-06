@@ -7,7 +7,7 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Plus, FolderOpen, MapPin, Calendar, Camera, FileText,
   Globe, Loader2, ChevronRight, Check, X, Home, Building2, Mountain,
-  Clock, Send, AlertCircle
+  Clock, Send, AlertCircle, Wrench
 } from 'lucide-react';
 
 interface ProjectSummary {
@@ -44,6 +44,11 @@ const DIVISION_CONFIG: Record<string, {
     label: 'Land Grading', icon: Mountain,
     color: '#34D399', neon: 'rgba(52,211,153,0.7)', neonSoft: 'rgba(52,211,153,0.12)',
     borderColor: 'rgba(52,211,153,0.6)',
+  },
+  services: {
+    label: 'Services', icon: Wrench,
+    color: '#F97316', neon: 'rgba(249,115,22,0.7)', neonSoft: 'rgba(249,115,22,0.12)',
+    borderColor: 'rgba(249,115,22,0.6)',
   },
 };
 
@@ -88,6 +93,7 @@ const FILTERS = [
   { id: 'residential', label: 'Residential' },
   { id: 'commercial', label: 'Commercial' },
   { id: 'grading', label: 'Grading' },
+  { id: 'services', label: 'Services' },
 ];
 
 export default function ProjectsPage() {
