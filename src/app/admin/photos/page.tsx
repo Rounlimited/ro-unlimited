@@ -49,8 +49,38 @@ export default function PhotosPage() {
   const [saved, setSaved] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const wakeLockRef = useRef<any>(null);
+  const pendingFilesRef = useRef<File[]>([]);
 
   useEffect(() => { fetchPhotos(); }, []);
+
+  // Wake Lock - prevents Samsung from killing the process
+  const acquireWakeLock = async () => {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+      }
+    } catch {}
+  };
+  const releaseWakeLock = () => {
+    try { wakeLockRef.current?.release(); wakeLockRef.current = null; } catch {}
+  };
+
+  // Re-acquire wake lock when page becomes visible again (Samsung kills it on background)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        // If we have pending files that haven't been processed, restart
+        if (pendingFilesRef.current.length > 0 && !uploading) {
+          processFiles(pendingFilesRef.current);
+        }
+        // Re-acquire wake lock
+        if (wakeLockRef.current === null && uploading) acquireWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [uploading]);
 
   const fetchPhotos = async () => {
     setLoading(true);
@@ -63,10 +93,15 @@ export default function PhotosPage() {
   };
 
   // Upload multiple photos
-  const handleFiles = async (fileList: FileList) => {
+  const handleFiles = async (fileList: FileList | File[]) => {
     const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
     if (!files.length) return;
+    pendingFilesRef.current = files;
+    await processFiles(files);
+  };
 
+  const processFiles = async (files: File[]) => {
+    await acquireWakeLock();
     setUploading(true);
     setUploadProgress({ current: 0, total: files.length });
 
@@ -96,6 +131,8 @@ export default function PhotosPage() {
       }
     }
 
+    pendingFilesRef.current = [];
+    releaseWakeLock();
     setUploading(false);
     setUploadProgress({ current: 0, total: 0 });
     fetchPhotos();
@@ -145,7 +182,12 @@ export default function PhotosPage() {
           accept="image/jpeg,image/png,image/webp,image/heic"
           multiple
           className="hidden"
-          onChange={e => { if (e.target.files) handleFiles(e.target.files); e.target.value = ''; }}
+          onChange={e => {
+            if (e.target.files && e.target.files.length > 0) {
+              const copied = Array.from(e.target.files);
+              setTimeout(() => handleFiles(copied), 300);
+            }
+          }}
         />
 
         {uploading ? (
