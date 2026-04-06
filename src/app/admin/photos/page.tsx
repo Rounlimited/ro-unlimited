@@ -178,10 +178,11 @@ export default function PhotosPage() {
         {/* Upload area */}
         <input
           ref={fileInputRef}
+          id="photo-upload-input"
           type="file"
           accept="image/jpeg,image/png,image/webp,image/heic"
           multiple
-          className="hidden"
+          style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}
           onChange={e => {
             if (e.target.files && e.target.files.length > 0) {
               const copied = Array.from(e.target.files);
@@ -202,9 +203,9 @@ export default function PhotosPage() {
             </div>
           </div>
         ) : (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full rounded-2xl p-5 flex flex-col items-center gap-2 transition-all active:scale-[0.98] mb-4"
+          <label
+            htmlFor="photo-upload-input"
+            className="w-full rounded-2xl p-5 flex flex-col items-center gap-2 transition-all active:scale-[0.98] mb-4 cursor-pointer block"
             style={{ background: '#1a0f04', border: '2px dashed rgba(249,115,22,0.4)' }}
           >
             <div className="w-14 h-14 rounded-full flex items-center justify-center"
@@ -213,7 +214,7 @@ export default function PhotosPage() {
             </div>
             <span className="text-sm font-bold" style={{ color: '#F97316' }}>Upload Photos</span>
             <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>Select multiple — JPG, PNG, WebP, HEIC</span>
-          </button>
+          </label>
         )}
 
         {/* Description progress */}
