@@ -75,8 +75,8 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     title: 'Electrical Services',
     tagline: 'Licensed Electrical Work for Homes & Light Commercial',
     icon: 'zap',
-    description: 'Panel upgrades, rewiring, service calls, lighting, and outlet work — all performed by licensed electricians through RO\'s trusted trade network. Safe, code-compliant, and done on schedule.',
-    hero: 'Electrical work isn\'t something you want to cut corners on. RO connects you with licensed, vetted electricians who do the job right — whether it\'s a simple outlet install or a full panel upgrade. Every job is code-compliant and inspected.',
+    description: 'Panel upgrades, rewiring, service calls, lighting, and outlet work — handled by RO\'s licensed electricians. Safe, code-compliant, and done on schedule.',
+    hero: 'Electrical work isn\'t something you want to cut corners on. RO\'s licensed electricians do the job right — whether it\'s a simple outlet install or a full panel upgrade. Every job is code-compliant and inspected.',
     services: [
       'Electrical panel upgrades (100A to 200A+)',
       'Whole-house rewiring',
@@ -87,7 +87,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     ],
     faq: [
       { q: 'How much does an electrical panel upgrade cost?', a: 'A standard 200-amp panel upgrade typically runs $1,500–$3,500 depending on your home\'s wiring condition. We provide free estimates.' },
-      { q: 'Are your electricians licensed?', a: 'Yes. All electrical work is performed by licensed electricians in our trade network, and every job is inspected to meet local code requirements.' },
+      { q: 'Are your electricians licensed?', a: 'Yes. All electrical work is performed by our licensed electricians, and every job is inspected to meet local code requirements.' },
       { q: 'Can you add outlets to an older home?', a: 'Absolutely. We add outlets, upgrade wiring, and bring older homes up to modern electrical standards safely and efficiently.' },
     ],
     seoKeywords: ['electrician Greenville SC', 'electrical panel upgrade', 'electrical contractor Upstate SC'],
@@ -178,7 +178,7 @@ export const SERVICES_DETAIL: Record<string, ServiceDetail> = {
   'Electrical Services': {
     id: 'electrical',
     title: 'Electrical Services',
-    overview: 'All electrical work through RO is performed by licensed electricians in our vetted trade network. Panel upgrades, whole-house rewiring, lighting installs, and generator hookups — every job is code-compliant and inspected.',
+    overview: 'RO\'s licensed electricians handle it all — panel upgrades, whole-house rewiring, lighting installs, and generator hookups. Every job is code-compliant and inspected.',
     includes: [
       'Electrical panel upgrades (100A to 200A+)',
       'Whole-house and partial rewiring',

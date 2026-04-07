@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: 'Licensed electrical services in Upstate SC by RO Unlimited. Panel upgrades, whole-house rewiring, outlet installation, lighting, and generator hookups. Insured and code-compliant. Call (864) 304-0139.',
   openGraph: {
     title: 'Electrical Services — RO Unlimited Services',
-    description: 'Panel upgrades, rewiring, service calls, lighting, and outlet work — all performed by licensed electricians through RO\'s trusted trade network.',
+    description: 'Panel upgrades, rewiring, service calls, lighting, and outlet work — handled by RO\'s licensed electricians. Safe, code-compliant, and done on schedule.',
     url: 'https://rounlimited.com/services/electrical',
     siteName: 'RO Unlimited',
     type: 'website',
