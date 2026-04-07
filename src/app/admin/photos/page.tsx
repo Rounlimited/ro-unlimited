@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Plus, Camera, Loader2, Check, Save, Trash2, ChevronDown,
@@ -48,54 +48,33 @@ export default function PhotosPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const wakeLockRef = useRef<any>(null);
-  const pendingFilesRef = useRef<File[]>([]);
 
   useEffect(() => { fetchPhotos(); }, []);
 
-  // Native DOM event listener for file input — React onChange fails on mobile TWA
-  useEffect(() => {
-    const input = fileInputRef.current;
-    if (!input) return;
-    const handler = () => {
+  // Create a fresh file input each time — prevents mobile "stuck input" bug
+  const openFilePicker = () => {
+    // Remove any existing input
+    const old = document.getElementById('ro-photo-upload');
+    if (old) old.remove();
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.id = 'ro-photo-upload';
+    input.style.display = 'none';
+
+    input.onchange = () => {
       if (input.files && input.files.length > 0) {
-        const copied = Array.from(input.files);
-        input.value = '';
-        handleFiles(copied);
+        const files = Array.from(input.files);
+        processFiles(files);
       }
+      input.remove();
     };
-    input.addEventListener('change', handler);
-    return () => input.removeEventListener('change', handler);
-  });
 
-  // Wake Lock - prevents Samsung from killing the process
-  const acquireWakeLock = async () => {
-    try {
-      if ('wakeLock' in navigator) {
-        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
-      }
-    } catch {}
+    document.body.appendChild(input);
+    input.click();
   };
-  const releaseWakeLock = () => {
-    try { wakeLockRef.current?.release(); wakeLockRef.current = null; } catch {}
-  };
-
-  // Re-acquire wake lock when page becomes visible again (Samsung kills it on background)
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        // If we have pending files that haven't been processed, restart
-        if (pendingFilesRef.current.length > 0 && !uploading) {
-          processFiles(pendingFilesRef.current);
-        }
-        // Re-acquire wake lock
-        if (wakeLockRef.current === null && uploading) acquireWakeLock();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [uploading]);
 
   const fetchPhotos = async () => {
     setLoading(true);
@@ -107,16 +86,8 @@ export default function PhotosPage() {
     finally { setLoading(false); }
   };
 
-  // Upload multiple photos
-  const handleFiles = async (fileList: FileList | File[]) => {
-    const files = Array.from(fileList);
-    if (!files.length) return;
-    pendingFilesRef.current = files;
-    await processFiles(files);
-  };
-
   const processFiles = async (files: File[]) => {
-    await acquireWakeLock();
+    if (!files.length) return;
     setUploading(true);
     setUploadProgress({ current: 0, total: files.length });
 
@@ -146,8 +117,6 @@ export default function PhotosPage() {
       }
     }
 
-    pendingFilesRef.current = [];
-    releaseWakeLock();
     setUploading(false);
     setUploadProgress({ current: 0, total: 0 });
     fetchPhotos();
@@ -203,23 +172,19 @@ export default function PhotosPage() {
             </div>
           </div>
         ) : (
-          <div className="relative w-full rounded-2xl p-5 flex flex-col items-center gap-2 mb-4 cursor-pointer active:scale-[0.98] transition-all"
+          <button
+            type="button"
+            onClick={openFilePicker}
+            className="w-full rounded-2xl p-5 flex flex-col items-center gap-2 mb-4 active:scale-[0.98] transition-all"
             style={{ background: '#1a0f04', border: '2px dashed rgba(249,115,22,0.4)' }}
           >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}
-            />
             <div className="w-14 h-14 rounded-full flex items-center justify-center"
               style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.4)' }}>
               <Plus size={26} style={{ color: '#F97316' }} />
             </div>
             <span className="text-sm font-bold" style={{ color: '#F97316' }}>Upload Photos</span>
-            <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>Select multiple — JPG, PNG, WebP, HEIC</span>
-          </div>
+            <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>Tap to select photos from your gallery</span>
+          </button>
         )}
 
         {/* Description progress */}
