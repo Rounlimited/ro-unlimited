@@ -176,14 +176,23 @@ export default function ServicesPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <ServiceDrawer service={selectedService} isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-      {/* ═══ HERO ═══ */}
+      {/* ═══ HERO — with background image ═══ */}
       <section ref={heroRef} className="relative min-h-[100vh] flex flex-col overflow-hidden">
-        <div className="absolute inset-0 blueprint-overlay opacity-[0.06]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117] via-ro-black to-ro-black" />
-        <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)' }} />
+        {/* Background image */}
+        <img
+          src="/images/services/roofing/roofing-hero.jpg"
+          alt="RO Unlimited Services"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ zIndex: 0 }}
+        />
+        {/* Left-heavy gradient overlay for text legibility */}
+        <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
+        {/* Top/bottom vignette */}
+        <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, transparent 20%, transparent 75%, rgba(10,10,10,0.95) 100%)' }} />
+        <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ zIndex: 2, background: 'radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)' }} />
 
         <div className="relative z-10 flex flex-col justify-center flex-1 px-6 sm:px-10 lg:pl-16 lg:pr-0 pt-28 pb-6" style={{ maxWidth: 'min(520px, 100%)' }}>
-          <div className="hero-badge inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/25 bg-ro-gold/[0.06] backdrop-blur-sm mb-7 self-start">
+          <div className="hero-badge inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/25 bg-ro-black/40 backdrop-blur-sm mb-7 self-start">
             <Wrench size={12} className="text-ro-gold flex-shrink-0" />
             <span className="text-ro-gold text-[10px] font-mono tracking-[0.3em] uppercase">RO Services Division</span>
           </div>
@@ -246,29 +255,42 @@ export default function ServicesPage() {
               const Icon = CATEGORY_ICONS[cat.id] || Wrench;
               return (
                 <Link key={cat.id} href={`/services/${cat.slug}`}
-                  className="category-card group relative p-7 sm:p-8 border border-ro-gray-800/40 bg-ro-gray-900/20 backdrop-blur-sm hover:border-ro-gold/25 hover:bg-ro-gold/[0.03] transition-all duration-700">
-                  <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-ro-gold/20 group-hover:border-ro-gold/50 transition-colors duration-700" />
-                  <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-ro-gold/20 group-hover:border-ro-gold/50 transition-colors duration-700" />
+                  className="category-card group relative p-7 sm:p-8 border border-ro-gray-800/40 overflow-hidden hover:border-ro-gold/25 transition-all duration-700">
+                  {/* Hover-reveal background image */}
+                  {cat.cardImage && (
+                    <>
+                      <img src={cat.cardImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                      <div className="absolute inset-0 bg-ro-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                    </>
+                  )}
+                  {/* Idle background */}
+                  <div className="absolute inset-0 bg-ro-gray-900/20 backdrop-blur-sm group-hover:bg-transparent transition-colors duration-700" />
 
-                  <div className="w-11 h-11 flex items-center justify-center border border-ro-gold/15 bg-ro-gold/[0.04] mb-5 group-hover:border-ro-gold/35 group-hover:bg-ro-gold/[0.08] transition-all duration-700">
-                    <Icon size={20} className="text-ro-gold/70 group-hover:text-ro-gold transition-colors duration-700" />
-                  </div>
+                  {/* Corner accents */}
+                  <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-ro-gold/20 group-hover:border-ro-gold/50 transition-colors duration-700 z-10" />
+                  <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-ro-gold/20 group-hover:border-ro-gold/50 transition-colors duration-700 z-10" />
 
-                  <h3 className="text-ro-white font-heading text-lg tracking-wider uppercase mb-2 group-hover:text-ro-gold-light transition-colors duration-700">
-                    {cat.title}
-                  </h3>
-                  <p className="text-ro-gray-500 text-sm leading-relaxed mb-4">
-                    {cat.description}
-                  </p>
+                  <div className="relative z-10">
+                    <div className="w-11 h-11 flex items-center justify-center border border-ro-gold/15 bg-ro-gold/[0.04] mb-5 group-hover:border-ro-gold/35 group-hover:bg-ro-black/50 transition-all duration-700">
+                      <Icon size={20} className="text-ro-gold/70 group-hover:text-ro-gold transition-colors duration-700" />
+                    </div>
 
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {cat.services.slice(0, 3).map(s => (
-                      <span key={s} className="px-2 py-0.5 text-[10px] font-mono text-ro-gray-600 border border-ro-gray-800/60">{s}</span>
-                    ))}
-                  </div>
+                    <h3 className="text-ro-white font-heading text-lg tracking-wider uppercase mb-2 group-hover:text-ro-gold-light transition-colors duration-700">
+                      {cat.title}
+                    </h3>
+                    <p className="text-ro-gray-500 text-sm leading-relaxed mb-4 group-hover:text-ro-gray-300 transition-colors duration-700">
+                      {cat.description}
+                    </p>
 
-                  <div className="flex items-center gap-2 text-ro-gold/50 text-xs font-mono tracking-wider uppercase group-hover:text-ro-gold transition-colors duration-500">
-                    View Details <ArrowRight size={12} />
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {cat.services.slice(0, 3).map(s => (
+                        <span key={s} className="px-2 py-0.5 text-[10px] font-mono text-ro-gray-600 border border-ro-gray-800/60 group-hover:border-ro-gold/20 group-hover:text-ro-gray-400 transition-colors duration-700">{s}</span>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-ro-gold/50 text-xs font-mono tracking-wider uppercase group-hover:text-ro-gold transition-colors duration-500">
+                      View Details <ArrowRight size={12} />
+                    </div>
                   </div>
                 </Link>
               );
@@ -276,32 +298,56 @@ export default function ServicesPage() {
 
             {/* Small Renovations — inline card that opens drawer */}
             <button onClick={() => openDrawer('Small Renovations')}
-              className="category-card group relative p-7 sm:p-8 border border-ro-gray-800/40 bg-ro-gray-900/20 backdrop-blur-sm hover:border-ro-gold/25 hover:bg-ro-gold/[0.03] transition-all duration-700 text-left cursor-pointer">
-              <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-ro-gold/20 group-hover:border-ro-gold/50 transition-colors duration-700" />
-              <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-ro-gold/20 group-hover:border-ro-gold/50 transition-colors duration-700" />
+              className="category-card group relative p-7 sm:p-8 border border-ro-gray-800/40 overflow-hidden hover:border-ro-gold/25 transition-all duration-700 text-left cursor-pointer">
+              <div className="absolute inset-0 bg-ro-gray-900/20 backdrop-blur-sm group-hover:bg-transparent transition-colors duration-700" />
+              <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-ro-gold/20 group-hover:border-ro-gold/50 transition-colors duration-700 z-10" />
+              <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-ro-gold/20 group-hover:border-ro-gold/50 transition-colors duration-700 z-10" />
 
-              <div className="w-11 h-11 flex items-center justify-center border border-ro-gold/15 bg-ro-gold/[0.04] mb-5 group-hover:border-ro-gold/35 group-hover:bg-ro-gold/[0.08] transition-all duration-700">
-                <Wrench size={20} className="text-ro-gold/70 group-hover:text-ro-gold transition-colors duration-700" />
-              </div>
+              <div className="relative z-10">
+                <div className="w-11 h-11 flex items-center justify-center border border-ro-gold/15 bg-ro-gold/[0.04] mb-5 group-hover:border-ro-gold/35 group-hover:bg-ro-gold/[0.08] transition-all duration-700">
+                  <Wrench size={20} className="text-ro-gold/70 group-hover:text-ro-gold transition-colors duration-700" />
+                </div>
 
-              <h3 className="text-ro-white font-heading text-lg tracking-wider uppercase mb-2 group-hover:text-ro-gold-light transition-colors duration-700">
-                Small Renovations
-              </h3>
-              <p className="text-ro-gray-500 text-sm leading-relaxed mb-4">
-                Bathroom updates, kitchen refreshes, ADA modifications, and room conversions — focused renovations that transform spaces.
-              </p>
+                <h3 className="text-ro-white font-heading text-lg tracking-wider uppercase mb-2 group-hover:text-ro-gold-light transition-colors duration-700">
+                  Small Renovations
+                </h3>
+                <p className="text-ro-gray-500 text-sm leading-relaxed mb-4">
+                  Bathroom updates, kitchen refreshes, ADA modifications, and room conversions — focused renovations that transform spaces.
+                </p>
 
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                <span className="px-2 py-0.5 text-[10px] font-mono text-ro-gray-600 border border-ro-gray-800/60">Bathroom Updates</span>
-                <span className="px-2 py-0.5 text-[10px] font-mono text-ro-gray-600 border border-ro-gray-800/60">Kitchen Refreshes</span>
-                <span className="px-2 py-0.5 text-[10px] font-mono text-ro-gray-600 border border-ro-gray-800/60">ADA Modifications</span>
-              </div>
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  <span className="px-2 py-0.5 text-[10px] font-mono text-ro-gray-600 border border-ro-gray-800/60">Bathroom Updates</span>
+                  <span className="px-2 py-0.5 text-[10px] font-mono text-ro-gray-600 border border-ro-gray-800/60">Kitchen Refreshes</span>
+                  <span className="px-2 py-0.5 text-[10px] font-mono text-ro-gray-600 border border-ro-gray-800/60">ADA Modifications</span>
+                </div>
 
-              <div className="flex items-center gap-2 text-ro-gold/50 text-xs font-mono tracking-wider uppercase group-hover:text-ro-gold transition-colors duration-500">
-                Tap for Details <ArrowRight size={12} />
+                <div className="flex items-center gap-2 text-ro-gold/50 text-xs font-mono tracking-wider uppercase group-hover:text-ro-gold transition-colors duration-500">
+                  Tap for Details <ArrowRight size={12} />
+                </div>
               </div>
             </button>
           </div>
+        </div>
+      </section>
+
+      {/* ═══ CINEMATIC PHOTO BREAK ═══ */}
+      <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden">
+        <img
+          src="/images/services/repairs/repairs-hero.jpg"
+          alt="RO Unlimited crew at work"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-ro-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-transparent to-ro-black" />
+        <div className="relative z-10 text-center px-6 max-w-3xl mx-auto">
+          <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-ro-gold/50 to-transparent mx-auto mb-8" />
+          <p className="text-ro-white font-heading text-2xl sm:text-3xl lg:text-4xl tracking-tight uppercase leading-[1.1]">
+            We don&apos;t just <span className="gradient-text-gold">fix things.</span>
+          </p>
+          <p className="text-ro-white/80 font-heading text-2xl sm:text-3xl lg:text-4xl tracking-tight uppercase leading-[1.1] mt-2">
+            We build <span className="gradient-text-gold">trust.</span>
+          </p>
+          <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-ro-gold/50 to-transparent mx-auto mt-8" />
         </div>
       </section>
 

@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { COMPANY } from '@/lib/constants';
 import { SERVICE_CATEGORIES, SERVICES_DETAIL } from '@/lib/services-data';
 import type { ServiceCategory } from '@/lib/services-data';
 import { ArrowRight, Phone, CheckCircle2, HardHat, Droplets, Zap, Pipette, Wrench, ChevronDown } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
-import { gsap } from '@/components/animations/GSAPProvider';
+import { gsap, ScrollTrigger } from '@/components/animations/GSAPProvider';
 import ServiceDrawer from '@/components/ServiceDrawer';
 import type { ServiceDetail } from '@/lib/commercial-data';
 
@@ -23,7 +24,9 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
   const scopeRef = useRef<HTMLElement>(null);
+  const galleryRef = useRef<HTMLElement>(null);
   const faqRef = useRef<HTMLElement>(null);
+  const crossRef = useRef<HTMLElement>(null);
   const ctaRef = useRef<HTMLElement>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -32,7 +35,6 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
 
   const Icon = CATEGORY_ICONS[category.id] || Wrench;
 
-  // Find the matching SERVICES_DETAIL key
   const detailKey = Object.keys(SERVICES_DETAIL).find(k =>
     SERVICES_DETAIL[k].id === category.id
   );
@@ -44,7 +46,6 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
     }
   };
 
-  // Cross-links: other service categories
   const otherCategories = SERVICE_CATEGORIES.filter(c => c.id !== category.id).slice(0, 3);
 
   useEffect(() => { setMounted(true); }, []);
@@ -52,6 +53,7 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
   useEffect(() => {
     if (!mounted || !containerRef.current) return;
     const ctx = gsap.context(() => {
+      // Hero entrance
       if (heroRef.current) {
         const badge = heroRef.current.querySelector('.hero-badge');
         const h1 = heroRef.current.querySelector('h1');
@@ -68,6 +70,7 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
         if (btns)  tl.fromTo(btns,  { y: 25, opacity: 0 },  { y: 0, opacity: 1, duration: 0.8 }, 1.05);
       }
 
+      // Service items
       if (scopeRef.current) {
         const head = scopeRef.current.querySelector('.section-head');
         if (head) gsap.fromTo(head, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 1,
@@ -80,6 +83,20 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
         });
       }
 
+      // Gallery
+      if (galleryRef.current) {
+        const head = galleryRef.current.querySelector('.section-head');
+        if (head) gsap.fromTo(head, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 1,
+          scrollTrigger: { trigger: head, start: 'top 85%' } });
+        const imgs = galleryRef.current.querySelectorAll('.gallery-item');
+        imgs.forEach((img, i) => {
+          gsap.fromTo(img, { y: 50, opacity: 0, scale: 0.95 },
+            { y: 0, opacity: 1, scale: 1, duration: 0.9, delay: i * 0.1, ease: 'power2.out',
+              scrollTrigger: { trigger: img, start: 'top 90%', toggleActions: 'play none none reverse' } });
+        });
+      }
+
+      // FAQ
       if (faqRef.current) {
         const items = faqRef.current.querySelectorAll('.faq-item');
         items.forEach((item, i) => {
@@ -89,6 +106,15 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
         });
       }
 
+      // Cross-links
+      if (crossRef.current) {
+        const cards = crossRef.current.querySelectorAll('.cross-card');
+        gsap.fromTo(cards, { y: 35, opacity: 0 },
+          { y: 0, opacity: 1, stagger: 0.1, duration: 0.8, ease: 'power2.out',
+            scrollTrigger: { trigger: crossRef.current, start: 'top 80%' } });
+      }
+
+      // CTA
       if (ctaRef.current) {
         gsap.fromTo(ctaRef.current.querySelector('.cta-inner'),
           { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 1.2, ease: 'power2.out',
@@ -98,7 +124,7 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
     return () => ctx.revert();
   }, [mounted]);
 
-  // JSON-LD structured data for SEO
+  // JSON-LD
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Service',
@@ -116,11 +142,7 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
         { '@type': 'State', name: 'Georgia' },
         { '@type': 'State', name: 'North Carolina' },
       ],
-      address: {
-        '@type': 'PostalAddress',
-        addressRegion: 'SC',
-        addressCountry: 'US',
-      },
+      address: { '@type': 'PostalAddress', addressRegion: 'SC', addressCountry: 'US' },
     },
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
@@ -133,7 +155,6 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
     },
   };
 
-  // FAQ structured data
   const faqJsonLd = category.faq.length > 0 ? {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -152,27 +173,46 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
       {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />}
       <ServiceDrawer service={selectedService} isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-      {/* ═══ HERO ═══ */}
-      <section ref={heroRef} className="relative min-h-[85vh] flex flex-col justify-center overflow-hidden">
-        <div className="absolute inset-0 blueprint-overlay opacity-[0.06]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117] via-ro-black to-ro-black" />
-        <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)' }} />
+      {/* ═══ HERO — Full-bleed background image with left-column text ═══ */}
+      <section ref={heroRef} className="relative min-h-[90vh] flex flex-col justify-center overflow-hidden">
+        {/* Background image */}
+        {category.heroImage && (
+          <>
+            <img
+              src={category.heroImage}
+              alt={`${category.title} services by RO Unlimited`}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ zIndex: 0 }}
+            />
+            {/* Left-heavy gradient — text side gets dark, right side shows image */}
+            <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
+            {/* Top/bottom vignette */}
+            <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, transparent 20%, transparent 75%, rgba(10,10,10,0.95) 100%)' }} />
+          </>
+        )}
+        {!category.heroImage && (
+          <>
+            <div className="absolute inset-0 blueprint-overlay opacity-[0.06]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117] via-ro-black to-ro-black" />
+          </>
+        )}
+        <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ zIndex: 2, background: 'radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)' }} />
 
         <div className="relative z-10 px-6 sm:px-10 lg:pl-16 pt-28 pb-16" style={{ maxWidth: 'min(600px, 100%)' }}>
-          <div className="hero-badge inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/25 bg-ro-gold/[0.06] backdrop-blur-sm mb-7 self-start">
+          <div className="hero-badge inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/25 bg-ro-black/40 backdrop-blur-sm mb-7 self-start">
             <Icon size={12} className="text-ro-gold flex-shrink-0" />
             <span className="text-ro-gold text-[10px] font-mono tracking-[0.3em] uppercase">RO Services — {category.title}</span>
           </div>
 
           <h1 className="text-ro-white font-heading uppercase leading-[0.92] tracking-tight mb-6"
-            style={{ fontSize: 'clamp(2.2rem, 4.5vw, 4rem)' }}>
+            style={{ fontSize: 'clamp(2.2rem, 4.5vw, 4rem)', textShadow: '0 2px 20px rgba(0,0,0,0.6)' }}>
             {category.tagline.split(' ').slice(0, 3).join(' ')}<br />
             <span className="gradient-text-gold">{category.tagline.split(' ').slice(3).join(' ')}</span>
           </h1>
 
           <div className="hero-gold-line w-10 h-[2px] bg-gradient-to-r from-ro-gold/80 to-transparent mb-6" />
 
-          <p className="hero-desc text-ro-gray-400 text-sm sm:text-base leading-relaxed mb-8 max-w-md">
+          <p className="hero-desc text-ro-gray-300 text-sm sm:text-base leading-relaxed mb-8 max-w-md" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>
             {category.hero}
           </p>
 
@@ -187,8 +227,8 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
         </div>
       </section>
 
-      {/* ═══ SERVICES INCLUDED ═══ */}
-      <section ref={scopeRef} className="py-32 sm:py-40 relative overflow-hidden">
+      {/* ═══ SERVICES INCLUDED — with thumbnail images per service ═══ */}
+      <section ref={scopeRef} className="py-28 sm:py-36 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-[#0d1117] to-ro-black" />
         <div className="absolute inset-0 blueprint-overlay opacity-[0.04]" />
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -201,18 +241,39 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {category.services.map((service, i) => (
-              <div key={i} className="scope-item group flex items-start gap-4 p-5 sm:p-6 border border-ro-gray-800/30 bg-ro-gray-900/10 hover:border-ro-gold/20 hover:bg-ro-gold/[0.02] transition-all duration-700">
-                <div className="w-8 h-8 flex items-center justify-center border border-ro-gold/20 bg-ro-gold/[0.04] flex-shrink-0 group-hover:border-ro-gold/40 transition-colors duration-700">
-                  <CheckCircle2 size={14} className="text-ro-gold/60 group-hover:text-ro-gold transition-colors duration-700" />
+            {category.services.map((service, i) => {
+              const serviceImg = category.serviceImages[service];
+              return (
+                <div key={i} className="scope-item group relative overflow-hidden border border-ro-gray-800/30 bg-ro-gray-900/10 hover:border-ro-gold/25 transition-all duration-700">
+                  <div className="flex items-stretch">
+                    {/* Thumbnail */}
+                    {serviceImg && (
+                      <div className="relative w-20 sm:w-24 flex-shrink-0 overflow-hidden">
+                        <img
+                          src={serviceImg}
+                          alt={service}
+                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-ro-black/40" />
+                        {/* Gold edge accent */}
+                        <div className="absolute top-0 bottom-0 right-0 w-[1px] bg-ro-gold/15" />
+                      </div>
+                    )}
+                    {/* Content */}
+                    <div className="flex items-center gap-3 p-5 sm:p-6 flex-1">
+                      {!serviceImg && (
+                        <div className="w-8 h-8 flex items-center justify-center border border-ro-gold/20 bg-ro-gold/[0.04] flex-shrink-0 group-hover:border-ro-gold/40 transition-colors duration-700">
+                          <CheckCircle2 size={14} className="text-ro-gold/60 group-hover:text-ro-gold transition-colors duration-700" />
+                        </div>
+                      )}
+                      <h3 className="text-ro-white font-heading text-sm sm:text-base tracking-wider uppercase group-hover:text-ro-gold-light transition-colors duration-700">
+                        {service}
+                      </h3>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-ro-white font-heading text-sm sm:text-base tracking-wider uppercase group-hover:text-ro-gold-light transition-colors duration-700">
-                    {service}
-                  </h3>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {detailKey && (
@@ -225,6 +286,60 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
           )}
         </div>
       </section>
+
+      {/* ═══ PHOTO GALLERY STRIP ═══ */}
+      {category.galleryImages.length > 0 && (
+        <section ref={galleryRef} className="py-24 sm:py-32 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117] to-ro-black" />
+          <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="section-head mb-12 text-center">
+              <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">Our Work</span>
+              <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">
+                {category.title} <span className="gradient-text-gold">in Action</span>
+              </h2>
+              <div className="w-20 h-[2px] bg-gradient-to-r from-transparent via-ro-gold/40 to-transparent mx-auto mt-6" />
+            </div>
+
+            {/* Desktop: masonry-style grid / Mobile: horizontal scroll */}
+            <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 gap-3">
+              {category.galleryImages.map((img, i) => (
+                <div
+                  key={i}
+                  className={`gallery-item group relative overflow-hidden border border-ro-gray-800/20 ${i === 0 ? 'lg:row-span-2' : ''}`}
+                >
+                  <div className={`relative ${i === 0 ? 'aspect-[3/4]' : 'aspect-[4/3]'}`}>
+                    <img
+                      src={img}
+                      alt={`${category.title} work by RO Unlimited`}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
+                    />
+                    {/* Dark bottom gradient with gold tint */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-ro-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    {/* Gold border on hover */}
+                    <div className="absolute inset-0 border-2 border-ro-gold/0 group-hover:border-ro-gold/30 transition-colors duration-500" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Mobile: horizontal scroll */}
+            <div className="sm:hidden flex gap-3 overflow-x-auto snap-x snap-mandatory pb-4 -mx-4 px-4 scrollbar-hide">
+              {category.galleryImages.map((img, i) => (
+                <div key={i} className="gallery-item flex-shrink-0 w-[75vw] snap-center">
+                  <div className="relative aspect-[4/3] overflow-hidden border border-ro-gray-800/20">
+                    <img
+                      src={img}
+                      alt={`${category.title} work by RO Unlimited`}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-ro-black/50 via-transparent to-transparent" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ═══ FAQ ═══ */}
       {category.faq.length > 0 && (
@@ -265,8 +380,8 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
         </section>
       )}
 
-      {/* ═══ OTHER SERVICES ═══ */}
-      <section className="py-28 sm:py-36 relative overflow-hidden">
+      {/* ═══ OTHER SERVICES — with hover-reveal background images ═══ */}
+      <section ref={crossRef} className="py-28 sm:py-36 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117] to-ro-black" />
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -280,14 +395,30 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
               const CatIcon = CATEGORY_ICONS[cat.id] || Wrench;
               return (
                 <Link key={cat.id} href={`/services/${cat.slug}`}
-                  className="group relative p-7 border border-ro-gray-800/30 bg-ro-gray-900/10 hover:border-ro-gold/20 hover:bg-ro-gold/[0.02] transition-all duration-700 text-center">
-                  <div className="w-10 h-10 mx-auto flex items-center justify-center border border-ro-gold/15 bg-ro-gold/[0.04] mb-4 group-hover:border-ro-gold/35 transition-colors duration-700">
-                    <CatIcon size={18} className="text-ro-gold/60 group-hover:text-ro-gold transition-colors duration-700" />
-                  </div>
-                  <h3 className="text-ro-white font-heading text-base tracking-wider uppercase mb-2 group-hover:text-ro-gold-light transition-colors duration-700">{cat.title}</h3>
-                  <p className="text-ro-gray-500 text-xs sm:text-sm leading-relaxed">{cat.description.slice(0, 80)}...</p>
-                  <div className="mt-3 flex items-center justify-center gap-1 text-ro-gold/40 text-xs font-mono tracking-wider uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    View <ArrowRight size={12} />
+                  className="cross-card group relative p-7 border border-ro-gray-800/30 overflow-hidden hover:border-ro-gold/20 transition-all duration-700 text-center">
+                  {/* Hover-reveal background image */}
+                  {cat.cardImage && (
+                    <>
+                      <img
+                        src={cat.cardImage}
+                        alt={cat.title}
+                        className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                      />
+                      <div className="absolute inset-0 bg-ro-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                    </>
+                  )}
+                  {/* Idle background */}
+                  <div className="absolute inset-0 bg-ro-gray-900/10 group-hover:bg-transparent transition-colors duration-700" />
+
+                  <div className="relative z-10">
+                    <div className="w-10 h-10 mx-auto flex items-center justify-center border border-ro-gold/15 bg-ro-gold/[0.04] mb-4 group-hover:border-ro-gold/35 group-hover:bg-ro-black/50 transition-all duration-700">
+                      <CatIcon size={18} className="text-ro-gold/60 group-hover:text-ro-gold transition-colors duration-700" />
+                    </div>
+                    <h3 className="text-ro-white font-heading text-base tracking-wider uppercase mb-2 group-hover:text-ro-gold-light transition-colors duration-700">{cat.title}</h3>
+                    <p className="text-ro-gray-500 text-xs sm:text-sm leading-relaxed group-hover:text-ro-gray-300 transition-colors duration-700">{cat.description.slice(0, 80)}...</p>
+                    <div className="mt-3 flex items-center justify-center gap-1 text-ro-gold/40 text-xs font-mono tracking-wider uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                      View <ArrowRight size={12} />
+                    </div>
                   </div>
                 </Link>
               );
@@ -301,11 +432,17 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
         </div>
       </section>
 
-      {/* ═══ CTA ═══ */}
+      {/* ═══ CTA — with darkened background image ═══ */}
       <section ref={ctaRef} className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-ro-black to-[#0d1117]" />
-        <div className="absolute inset-0 blueprint-overlay opacity-[0.04]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)' }} />
+        {category.heroImage && (
+          <>
+            <img src={category.heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
+            <div className="absolute inset-0 bg-ro-black/88" style={{ zIndex: 1 }} />
+          </>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-ro-black to-[#0d1117]" style={{ zIndex: category.heroImage ? 2 : 0, opacity: category.heroImage ? 0.5 : 1 }} />
+        <div className="absolute inset-0 blueprint-overlay opacity-[0.04]" style={{ zIndex: 3 }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] pointer-events-none" style={{ zIndex: 3, background: 'radial-gradient(circle, rgba(201,168,76,0.05) 0%, transparent 70%)' }} />
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="cta-inner">
             <div className="w-24 h-[2px] bg-gradient-to-r from-transparent via-ro-gold/40 to-transparent mx-auto mb-12" />

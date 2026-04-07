@@ -20,6 +20,10 @@ export interface ServiceCategory {
   services: string[];
   faq: { q: string; a: string }[];
   seoKeywords: string[];
+  heroImage: string;
+  cardImage: string;
+  galleryImages: string[];
+  serviceImages: Record<string, string>;
 }
 
 export const SERVICE_CATEGORIES: ServiceCategory[] = [
@@ -45,6 +49,24 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
       { q: 'What roofing materials do you install?', a: 'Architectural shingles, standing seam metal, TPO/EPDM flat roofing, and more. We\'ll recommend the best option for your building and budget.' },
     ],
     seoKeywords: ['roof repair Greenville SC', 'roofing contractor near me', 'storm damage roof repair', 'roof replacement Upstate SC'],
+    heroImage: '/images/services/roofing/roofing-hero.jpg',
+    cardImage: '/images/services/hub/hub-roofing.jpg',
+    galleryImages: [
+      '/images/services/roofing/storm-damage.jpg',
+      '/images/services/roofing/roofer-working.jpg',
+      '/images/services/roofing/builders-roof.jpg',
+      '/images/services/roofing/shingle-closeup.jpg',
+      '/images/services/roofing/roof-construction.jpg',
+      '/images/services/roofing/gutter-installation.jpg',
+    ],
+    serviceImages: {
+      'Roof repair and patching': '/images/services/roofing/storm-damage.jpg',
+      'Full roof replacement (shingle, metal, flat)': '/images/services/roofing/builders-roof.jpg',
+      'Storm damage assessment and insurance coordination': '/images/services/roofing/roof-construction.jpg',
+      'Roof inspections and maintenance': '/images/services/roofing/roofer-working.jpg',
+      'Gutter installation and repair': '/images/services/roofing/gutter-installation.jpg',
+      'Flashing, soffit, and fascia work': '/images/services/roofing/shingle-closeup.jpg',
+    },
   },
   {
     id: 'septic',
@@ -68,6 +90,20 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
       { q: 'What areas do you serve for septic work?', a: 'We cover Upstate South Carolina and nearby counties in Georgia and North Carolina. Call us to confirm coverage for your location.' },
     ],
     seoKeywords: ['septic repair Greenville SC', 'septic tank installer', 'septic system contractor Upstate SC'],
+    heroImage: '/images/services/septic/septic-hero.jpg',
+    cardImage: '/images/services/hub/hub-septic.jpg',
+    galleryImages: [
+      '/images/services/septic/excavator-digging.jpg',
+      '/images/services/septic/drain-field.jpg',
+      '/images/services/septic/equipment-jobsite.jpg',
+      '/images/services/septic/septic-hero.jpg',
+    ],
+    serviceImages: {
+      'Septic system repair and troubleshooting': '/images/services/septic/equipment-jobsite.jpg',
+      'Full septic system replacement': '/images/services/septic/excavator-digging.jpg',
+      'New septic system installation': '/images/services/septic/septic-hero.jpg',
+      'Drain field repair and installation': '/images/services/septic/drain-field.jpg',
+    },
   },
   {
     id: 'electrical',
@@ -91,6 +127,26 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
       { q: 'Can you add outlets to an older home?', a: 'Absolutely. We add outlets, upgrade wiring, and bring older homes up to modern electrical standards safely and efficiently.' },
     ],
     seoKeywords: ['electrician Greenville SC', 'electrical panel upgrade', 'electrical contractor Upstate SC'],
+    heroImage: '/images/services/electrical/electrical-hero.jpg',
+    cardImage: '/images/services/hub/hub-electrical.jpg',
+    galleryImages: [
+      '/images/services/electrical/switchboard-closeup.jpg',
+      '/images/services/electrical/panel-closeup.jpg',
+      '/images/services/electrical/electrician-panel.jpg',
+      '/images/services/electrical/outlet-installation.jpg',
+      '/images/services/electrical/socket-repair.jpg',
+      '/images/services/electrical/rewiring-work.jpg',
+      '/images/services/electrical/lighting-installation.jpg',
+      '/images/services/electrical/electrician-fusebox.jpg',
+    ],
+    serviceImages: {
+      'Electrical panel upgrades (100A to 200A+)': '/images/services/electrical/panel-closeup.jpg',
+      'Whole-house rewiring': '/images/services/electrical/rewiring-work.jpg',
+      'Outlet and switch installation': '/images/services/electrical/outlet-installation.jpg',
+      'Lighting design and installation': '/images/services/electrical/lighting-installation.jpg',
+      'Ceiling fan installation': '/images/services/electrical/socket-repair.jpg',
+      'Generator hookup and transfer switches': '/images/services/electrical/switchboard-closeup.jpg',
+    },
   },
   {
     id: 'plumbing',
@@ -114,6 +170,20 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
       { q: 'Can you re-pipe an entire house?', a: 'Yes. We re-pipe homes with copper, PEX, or CPVC depending on your needs and budget. Full re-pipes typically take 2–5 days.' },
     ],
     seoKeywords: ['plumber near me', 'plumbing repair Greenville SC', 'emergency plumber Upstate SC'],
+    heroImage: '/images/services/plumbing/plumbing-hero.jpg',
+    cardImage: '/images/services/hub/hub-plumbing.jpg',
+    galleryImages: [
+      '/images/services/plumbing/drain-work.jpg',
+      '/images/services/plumbing/pipe-closeup.jpg',
+      '/images/services/plumbing/faucet-fixture.jpg',
+      '/images/services/plumbing/water-heater.jpg',
+    ],
+    serviceImages: {
+      'Pipe repair and re-piping': '/images/services/plumbing/pipe-closeup.jpg',
+      'Water heater repair and replacement': '/images/services/plumbing/water-heater.jpg',
+      'Fixture installation (faucets, toilets, sinks)': '/images/services/plumbing/faucet-fixture.jpg',
+      'Drain clearing and sewer line work': '/images/services/plumbing/drain-work.jpg',
+    },
   },
   {
     id: 'repairs',
@@ -137,6 +207,21 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
       { q: 'Do you do exterior painting?', a: 'Yes — both interior and exterior. We prep properly, use quality paint, and stand behind the finish.' },
     ],
     seoKeywords: ['handyman Greenville SC', 'home repair contractor', 'deck repair near me', 'fence installation Upstate SC'],
+    heroImage: '/images/services/repairs/repairs-hero.jpg',
+    cardImage: '/images/services/hub/hub-repairs.jpg',
+    galleryImages: [
+      '/images/services/repairs/deck-building.jpg',
+      '/images/services/repairs/drywall-painting.jpg',
+      '/images/services/repairs/fence-installation.jpg',
+      '/images/services/repairs/door-window.jpg',
+    ],
+    serviceImages: {
+      'Drywall repair and installation': '/images/services/repairs/drywall-painting.jpg',
+      'Interior and exterior painting': '/images/services/repairs/drywall-painting.jpg',
+      'Deck building, repair, and staining': '/images/services/repairs/deck-building.jpg',
+      'Fence installation and repair': '/images/services/repairs/fence-installation.jpg',
+      'Door and window replacement': '/images/services/repairs/door-window.jpg',
+    },
   },
 ];
 
