@@ -54,6 +54,21 @@ export default function PhotosPage() {
 
   useEffect(() => { fetchPhotos(); }, []);
 
+  // Native DOM event listener for file input — React onChange fails on mobile TWA
+  useEffect(() => {
+    const input = fileInputRef.current;
+    if (!input) return;
+    const handler = () => {
+      if (input.files && input.files.length > 0) {
+        const copied = Array.from(input.files);
+        input.value = '';
+        handleFiles(copied);
+      }
+    };
+    input.addEventListener('change', handler);
+    return () => input.removeEventListener('change', handler);
+  });
+
   // Wake Lock - prevents Samsung from killing the process
   const acquireWakeLock = async () => {
     try {
@@ -197,15 +212,6 @@ export default function PhotosPage() {
               accept="image/*"
               multiple
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}
-              onChange={e => {
-                const input = e.target;
-                if (input.files && input.files.length > 0) {
-                  const copied = Array.from(input.files);
-                  // Reset immediately so input can be used again
-                  input.value = '';
-                  handleFiles(copied);
-                }
-              }}
             />
             <div className="w-14 h-14 rounded-full flex items-center justify-center"
               style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.4)' }}>
