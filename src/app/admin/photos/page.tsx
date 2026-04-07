@@ -94,7 +94,7 @@ export default function PhotosPage() {
 
   // Upload multiple photos
   const handleFiles = async (fileList: FileList | File[]) => {
-    const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+    const files = Array.from(fileList);
     if (!files.length) return;
     pendingFilesRef.current = files;
     await processFiles(files);
@@ -194,14 +194,16 @@ export default function PhotosPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic"
+              accept="image/*"
               multiple
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}
               onChange={e => {
-                if (e.target.files && e.target.files.length > 0) {
-                  const copied = Array.from(e.target.files);
+                const input = e.target;
+                if (input.files && input.files.length > 0) {
+                  const copied = Array.from(input.files);
+                  // Reset immediately so input can be used again
+                  input.value = '';
                   handleFiles(copied);
-                  e.target.value = '';
                 }
               }}
             />
