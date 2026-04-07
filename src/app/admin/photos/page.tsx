@@ -48,32 +48,17 @@ export default function PhotosPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
+  const [uploadKey, setUploadKey] = useState(0);
 
   useEffect(() => { fetchPhotos(); }, []);
 
-  // Create a fresh file input each time — prevents mobile "stuck input" bug
-  const openFilePicker = () => {
-    // Remove any existing input
-    const old = document.getElementById('ro-photo-upload');
-    if (old) old.remove();
-
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.multiple = true;
-    input.id = 'ro-photo-upload';
-    input.style.display = 'none';
-
-    input.onchange = () => {
-      if (input.files && input.files.length > 0) {
-        const files = Array.from(input.files);
-        processFiles(files);
-      }
-      input.remove();
-    };
-
-    document.body.appendChild(input);
-    input.click();
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files);
+      processFiles(files);
+      // Force React to destroy and recreate the input so it's never "used"
+      setUploadKey(prev => prev + 1);
+    }
   };
 
   const fetchPhotos = async () => {
@@ -172,19 +157,24 @@ export default function PhotosPage() {
             </div>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={openFilePicker}
-            className="w-full rounded-2xl p-5 flex flex-col items-center gap-2 mb-4 active:scale-[0.98] transition-all"
-            style={{ background: '#1a0f04', border: '2px dashed rgba(249,115,22,0.4)' }}
+          <label className="w-full rounded-2xl p-5 flex flex-col items-center gap-2 mb-4 active:scale-[0.98] transition-all cursor-pointer"
+            style={{ background: '#1a0f04', border: '2px dashed rgba(249,115,22,0.4)', display: 'flex' }}
           >
+            <input
+              key={uploadKey}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileChange}
+              style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
+            />
             <div className="w-14 h-14 rounded-full flex items-center justify-center"
               style={{ background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.4)' }}>
               <Plus size={26} style={{ color: '#F97316' }} />
             </div>
             <span className="text-sm font-bold" style={{ color: '#F97316' }}>Upload Photos</span>
             <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.25)' }}>Tap to select photos from your gallery</span>
-          </button>
+          </label>
         )}
 
         {/* Description progress */}
