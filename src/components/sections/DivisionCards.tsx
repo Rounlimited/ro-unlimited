@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import Link from 'next/link';
 import { DIVISIONS } from '@/lib/constants';
-import { ArrowRight, Home, Building2, Mountain, HardHat } from 'lucide-react';
+import { ArrowRight, Home, Building2, Mountain, HardHat, Wrench } from 'lucide-react';
 import { gsap, ScrollTrigger, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
 
@@ -12,6 +12,7 @@ const ICONS: Record<string, any> = {
   home: Home,
   building: Building2,
   mountain: Mountain,
+  wrench: Wrench,
   hardhat: HardHat,
 };
 

@@ -33,6 +33,12 @@ export const DIVISIONS = [
     icon: 'mountain', targetAudience: 'Developers, land owners, project managers',
   },
   {
+    id: 'services', name: 'RO Services', shortName: 'Services', href: '/services',
+    description: 'Roofing, plumbing, electrical, septic, and general repairs \u2014 dedicated crews for every job, big or small.',
+    services: ['Roofing & Storm Damage','Septic Systems','Electrical Services','Plumbing','General Repairs','Small Renovations'],
+    icon: 'wrench', targetAudience: 'Homeowners, property managers, small business owners',
+  },
+  {
     id: 'process', name: 'The Build Process', shortName: 'Our Process', href: '/process',
     description: 'See how we take projects from raw land to finished product \u2014 every phase, every detail.',
     services: ['Architectural Design','Project Planning & Consulting','Permitting & Compliance','Construction Management','Quality Assurance','Final Walkthrough & Delivery'],
@@ -45,6 +51,7 @@ export const NAV_LINKS = [
   { label: 'Residential', href: '/residential' },
   { label: 'Commercial', href: '/commercial' },
   { label: 'Land Grading', href: '/grading' },
+  { label: 'Services', href: '/services' },
   { label: 'Our Process', href: '/process' },
   { label: 'Our Story', href: '/our-story' },
   { label: 'Contact', href: '/contact' },
