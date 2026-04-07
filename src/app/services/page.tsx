@@ -139,10 +139,41 @@ export default function ServicesPage() {
     return () => ctx.revert();
   }, [mounted]);
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: 'RO Unlimited Construction & Development',
+    description: 'Roofing, plumbing, electrical, septic systems, and general repairs across Upstate SC, Georgia, and North Carolina. Licensed, insured, 25+ years experience.',
+    telephone: '(864) 304-0139',
+    email: 'Rounlimitedco@gmail.com',
+    url: 'https://rounlimited.com/services',
+    areaServed: [
+      { '@type': 'State', name: 'South Carolina' },
+      { '@type': 'State', name: 'Georgia' },
+      { '@type': 'State', name: 'North Carolina' },
+    ],
+    address: {
+      '@type': 'PostalAddress',
+      addressRegion: 'SC',
+      addressCountry: 'US',
+    },
+    hasOfferCatalog: {
+      '@type': 'OfferCatalog',
+      name: 'RO Services',
+      itemListElement: SERVICE_CATEGORIES.map((cat, i) => ({
+        '@type': 'OfferCatalog',
+        name: cat.title,
+        url: `https://rounlimited.com/services/${cat.slug}`,
+        position: i + 1,
+      })),
+    },
+  };
+
   if (!mounted) return <div className="min-h-screen bg-ro-black" />;
 
   return (
     <div ref={containerRef}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <ServiceDrawer service={selectedService} isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       {/* ═══ HERO ═══ */}

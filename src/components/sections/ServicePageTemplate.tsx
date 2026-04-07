@@ -98,10 +98,58 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
     return () => ctx.revert();
   }, [mounted]);
 
+  // JSON-LD structured data for SEO
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    name: `${category.title} — RO Unlimited`,
+    description: category.description,
+    url: `https://rounlimited.com/services/${category.slug}`,
+    provider: {
+      '@type': 'LocalBusiness',
+      name: 'RO Unlimited Construction & Development',
+      telephone: '(864) 304-0139',
+      email: 'Rounlimitedco@gmail.com',
+      url: 'https://rounlimited.com',
+      areaServed: [
+        { '@type': 'State', name: 'South Carolina' },
+        { '@type': 'State', name: 'Georgia' },
+        { '@type': 'State', name: 'North Carolina' },
+      ],
+      address: {
+        '@type': 'PostalAddress',
+        addressRegion: 'SC',
+        addressCountry: 'US',
+      },
+    },
+    hasOfferCatalog: {
+      '@type': 'OfferCatalog',
+      name: `${category.title} Services`,
+      itemListElement: category.services.map((s, i) => ({
+        '@type': 'Offer',
+        itemOffered: { '@type': 'Service', name: s },
+        position: i + 1,
+      })),
+    },
+  };
+
+  // FAQ structured data
+  const faqJsonLd = category.faq.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: category.faq.map(f => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  } : null;
+
   if (!mounted) return <div className="min-h-screen bg-ro-black" />;
 
   return (
     <div ref={containerRef}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {faqJsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />}
       <ServiceDrawer service={selectedService} isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
       {/* ═══ HERO ═══ */}
