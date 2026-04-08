@@ -215,7 +215,39 @@
   .gradient-text-gold { @apply bg-clip-text text-transparent bg-gradient-to-r from-ro-gold-dark via-ro-gold to-ro-gold-light; }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* ── Forge / Workshop backgrounds — service pages ── */
+  .forge-bg {
+    background:
+      radial-gradient(ellipse 900px 500px at 15% 35%, rgba(201,168,76,0.10) 0%, transparent 65%),
+      radial-gradient(ellipse 600px 700px at 85% 65%, rgba(160,110,35,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 450px 350px at 60% 5%, rgba(220,180,70,0.06) 0%, transparent 55%),
+      linear-gradient(158deg, #171210 0%, #1e1610 18%, #271d11 38%, #231b0f 58%, #1d1509 78%, #14100a 100%);
+  }
+  .forge-bg-alt {
+    background:
+      radial-gradient(ellipse 750px 550px at 80% 35%, rgba(201,168,76,0.09) 0%, transparent 65%),
+      radial-gradient(ellipse 550px 700px at 8% 70%, rgba(160,110,35,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 600px 350px at 42% 55%, rgba(215,172,65,0.05) 0%, transparent 55%),
+      linear-gradient(168deg, #100f09 0%, #1a1409 22%, #251c0f 42%, #211a0e 62%, #1b1409 80%, #121009 100%);
+  }
+  /* Diagonal light-catch — like sun hitting a steel edge at an angle */
+  .forge-slash {
+    background: linear-gradient(
+      125deg,
+      transparent 0%, transparent 30%,
+      rgba(201,168,76,0.018) 36%, rgba(201,168,76,0.04) 50%, rgba(201,168,76,0.018) 64%,
+      transparent 70%, transparent 100%
+    );
+  }
 }
+
+/* Ember glow — slow ambient breathe for forge sections */
+@keyframes emberBreath {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%       { opacity: 1; transform: scale(1.12); }
+}
+.animate-ember { animation: emberBreath 7s ease-in-out infinite; }
 
 /* ═══════════════════════════════════════
    NEON KEYFRAME ANIMATIONS
@@ -471,6 +503,9 @@
 .light-theme .warm-vignette { background: none !important; }
 .light-theme .warm-gradient-section { background: linear-gradient(180deg, #f8f8f8 0%, #faf6ef 50%, #f8f8f8 100%) !important; }
 .light-theme .warm-gradient-deep { background: linear-gradient(180deg, #f8f8f8 0%, #f5f0e5 50%, #f8f8f8 100%) !important; }
+.light-theme .forge-bg, .light-theme .forge-bg-alt { background: linear-gradient(180deg, #f8f8f8 0%, #faf6ef 50%, #f8f8f8 100%) !important; }
+.light-theme .forge-slash { background: none !important; }
+.light-theme .animate-ember { animation: none !important; }
 
 /* ── Opacity-based accent backgrounds ── */
 .light-theme .bg-\[\#C9A84C\]\/5 { background-color: rgba(201,168,76,0.08) !important; }

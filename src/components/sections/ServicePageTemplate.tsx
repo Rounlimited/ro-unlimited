@@ -229,8 +229,10 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
 
       {/* ═══ SERVICES INCLUDED — with thumbnail images per service ═══ */}
       <section ref={scopeRef} className="py-28 sm:py-36 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-[#0d1117] to-ro-black" />
-        <div className="absolute inset-0 blueprint-overlay opacity-[0.04]" />
+        <div className="absolute inset-0 forge-bg" />
+        <div className="absolute inset-0 blueprint-overlay-warm opacity-[0.11]" />
+        <div className="absolute inset-0 forge-slash pointer-events-none" />
+        <div className="absolute top-1/4 right-0 w-[450px] h-[450px] warm-glow-strong animate-ember pointer-events-none" />
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="section-head mb-16">
             <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">What&apos;s Covered</span>
@@ -244,7 +246,7 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
             {category.services.map((service, i) => {
               const serviceImg = category.serviceImages[service];
               return (
-                <div key={i} className="scope-item group relative overflow-hidden border border-ro-gray-800/30 bg-ro-gray-900/10 hover:border-ro-gold/25 transition-all duration-700">
+                <div key={i} className="scope-item group relative overflow-hidden border border-ro-gray-800/40 bg-[#1a150d]/20 backdrop-blur-sm hover:border-ro-gold/25 hover:bg-ro-gold/[0.03] transition-all duration-700">
                   <div className="flex items-stretch">
                     {/* Thumbnail */}
                     {serviceImg && (
@@ -290,7 +292,10 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
       {/* ═══ PHOTO GALLERY STRIP ═══ */}
       {category.galleryImages.length > 0 && (
         <section ref={galleryRef} className="py-24 sm:py-32 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117] to-ro-black" />
+          <div className="absolute inset-0 forge-bg-alt" />
+          <div className="absolute inset-0 blueprint-overlay-warm opacity-[0.09]" />
+          <div className="absolute inset-0 forge-slash pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[800px] warm-glow-golden animate-ember pointer-events-none" />
           <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="section-head mb-12 text-center">
               <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">Our Work</span>
@@ -305,7 +310,7 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
               {category.galleryImages.map((img, i) => (
                 <div
                   key={i}
-                  className={`gallery-item group relative overflow-hidden border border-ro-gray-800/20 ${i === 0 ? 'lg:row-span-2' : ''}`}
+                  className={`gallery-item group relative overflow-hidden border border-ro-gold/10 ${i === 0 ? 'lg:row-span-2' : ''}`}
                 >
                   <div className={`relative ${i === 0 ? 'aspect-[3/4]' : 'aspect-[4/3]'}`}>
                     <img
@@ -326,7 +331,7 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
             <div className="sm:hidden flex gap-3 overflow-x-auto snap-x snap-mandatory pb-4 -mx-4 px-4 scrollbar-hide">
               {category.galleryImages.map((img, i) => (
                 <div key={i} className="gallery-item flex-shrink-0 w-[75vw] snap-center">
-                  <div className="relative aspect-[4/3] overflow-hidden border border-ro-gray-800/20">
+                  <div className="relative aspect-[4/3] overflow-hidden border border-ro-gold/10">
                     <img
                       src={img}
                       alt={`${category.title} work by RO Unlimited`}
@@ -344,7 +349,10 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
       {/* ═══ FAQ ═══ */}
       {category.faq.length > 0 && (
         <section ref={faqRef} className="py-28 sm:py-36 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-ro-black to-[#0d1117]" />
+          <div className="absolute inset-0 forge-bg" />
+          <div className="absolute inset-0 blueprint-overlay-warm opacity-[0.10]" />
+          <div className="absolute inset-0 forge-slash pointer-events-none" />
+          <div className="absolute bottom-1/3 left-1/3 w-[700px] h-[500px] warm-glow-strong animate-ember pointer-events-none" />
           <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">Common Questions</span>
@@ -356,7 +364,7 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
 
             <div className="space-y-4">
               {category.faq.map((item, i) => (
-                <div key={i} className="faq-item border border-ro-gray-800/30 bg-ro-gray-900/10">
+                <div key={i} className="faq-item border border-ro-gray-800/40 bg-[#1a150d]/20 backdrop-blur-sm hover:border-ro-gold/15 transition-colors duration-500">
                   <button
                     onClick={() => setExpandedFaq(expandedFaq === i ? null : i)}
                     className="w-full flex items-start gap-4 p-5 sm:p-6 text-left cursor-pointer group"
@@ -370,7 +378,7 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
                   </button>
                   {expandedFaq === i && (
                     <div className="px-5 sm:px-6 pb-5 sm:pb-6 -mt-2">
-                      <p className="text-ro-gray-400 text-sm leading-relaxed">{item.a}</p>
+                      <p className="text-ro-gray-300 text-sm leading-relaxed">{item.a}</p>
                     </div>
                   )}
                 </div>
@@ -382,7 +390,9 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
 
       {/* ═══ OTHER SERVICES — with hover-reveal background images ═══ */}
       <section ref={crossRef} className="py-28 sm:py-36 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117] to-ro-black" />
+        <div className="absolute inset-0 forge-bg-alt" />
+        <div className="absolute inset-0 forge-slash pointer-events-none" />
+        <div className="absolute top-1/2 right-1/4 w-[500px] h-[500px] warm-glow-strong animate-ember pointer-events-none opacity-80" />
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">More Services</span>
@@ -415,7 +425,7 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
                       <CatIcon size={18} className="text-ro-gold/60 group-hover:text-ro-gold transition-colors duration-700" />
                     </div>
                     <h3 className="text-ro-white font-heading text-base tracking-wider uppercase mb-2 group-hover:text-ro-gold-light transition-colors duration-700">{cat.title}</h3>
-                    <p className="text-ro-gray-500 text-xs sm:text-sm leading-relaxed group-hover:text-ro-gray-300 transition-colors duration-700">{cat.description.slice(0, 80)}...</p>
+                    <p className="text-ro-gray-400 text-xs sm:text-sm leading-relaxed group-hover:text-ro-gray-200 transition-colors duration-700">{cat.description.slice(0, 80)}...</p>
                     <div className="mt-3 flex items-center justify-center gap-1 text-ro-gold/40 text-xs font-mono tracking-wider uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-500">
                       View <ArrowRight size={12} />
                     </div>
@@ -440,9 +450,10 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
             <div className="absolute inset-0 bg-ro-black/88" style={{ zIndex: 1 }} />
           </>
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-ro-black to-[#0d1117]" style={{ zIndex: category.heroImage ? 2 : 0, opacity: category.heroImage ? 0.5 : 1 }} />
-        <div className="absolute inset-0 blueprint-overlay opacity-[0.04]" style={{ zIndex: 3 }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] pointer-events-none" style={{ zIndex: 3, background: 'radial-gradient(circle, rgba(201,168,76,0.05) 0%, transparent 70%)' }} />
+        <div className="absolute inset-0 warm-gradient-deep" style={{ zIndex: category.heroImage ? 2 : 0, opacity: category.heroImage ? 0.6 : 1 }} />
+        <div className="absolute inset-0 blueprint-overlay-warm opacity-[0.06]" style={{ zIndex: 3 }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] warm-glow-golden pointer-events-none" style={{ zIndex: 3 }} />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] warm-glow-strong pointer-events-none" style={{ zIndex: 3 }} />
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="cta-inner">
             <div className="w-24 h-[2px] bg-gradient-to-r from-transparent via-ro-gold/40 to-transparent mx-auto mb-12" />
@@ -450,7 +461,7 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
             <h2 className="text-ro-white font-heading text-4xl sm:text-5xl lg:text-6xl tracking-tight uppercase leading-[0.85] mb-8">
               Get a<br /><span className="gradient-text-gold">Quote</span>
             </h2>
-            <p className="text-ro-gray-400 text-sm sm:text-base leading-relaxed mb-10 max-w-md mx-auto">
+            <p className="text-ro-gray-300 text-sm sm:text-base leading-relaxed mb-10 max-w-md mx-auto">
               Call us directly or request a quote online. No pressure, no upselling — just honest answers.
             </p>
             <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`}

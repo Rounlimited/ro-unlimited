@@ -239,8 +239,10 @@ export default function ServicesPage() {
 
       {/* ═══ SERVICE CATEGORIES ═══ */}
       <section ref={categoriesRef} className="py-32 sm:py-40 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-[#0d1117] to-ro-black" />
-        <div className="absolute inset-0 blueprint-overlay opacity-[0.04]" />
+        <div className="absolute inset-0 forge-bg" />
+        <div className="absolute inset-0 blueprint-overlay-warm opacity-[0.11]" />
+        <div className="absolute inset-0 forge-slash pointer-events-none" />
+        <div className="absolute top-1/4 right-0 w-[450px] h-[450px] warm-glow-strong animate-ember pointer-events-none" />
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="section-head mb-20">
             <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">What We Handle</span>
@@ -353,8 +355,11 @@ export default function ServicesPage() {
 
       {/* ═══ WHY RO FOR SERVICE WORK ═══ */}
       <section ref={whyRef} className="py-32 sm:py-40 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-ro-black to-[#0d1117]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(201,168,76,0.03) 0%, transparent 70%)' }} />
+        <div className="absolute inset-0 forge-bg-alt" />
+        <div className="absolute inset-0 blueprint-overlay-warm opacity-[0.09]" />
+        <div className="absolute inset-0 forge-slash pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[800px] warm-glow-golden animate-ember pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] warm-glow pointer-events-none opacity-80" />
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
             <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">Why RO</span>
@@ -371,11 +376,11 @@ export default function ServicesPage() {
               { title: 'Licensed & Insured', desc: 'Every trade we touch is covered by proper licensing and insurance. No fly-by-night subs, no liability gaps. Your property is protected.' },
               { title: 'One Call, Everything Handled', desc: 'Roof, plumbing, electrical, septic — one number to call for all of it. We coordinate the trades so you don\'t have to manage multiple contractors.' },
             ].map((item, i) => (
-              <div key={i} className="why-item group relative p-8 sm:p-10 border border-ro-gray-800/30 bg-ro-gray-900/10 hover:border-ro-gold/20 hover:bg-ro-gold/[0.02] transition-all duration-700">
+              <div key={i} className="why-item group relative p-8 sm:p-10 border border-ro-gray-800/40 bg-[#1a150d]/20 backdrop-blur-sm hover:border-ro-gold/25 hover:bg-ro-gold/[0.03] transition-all duration-700">
                 <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-ro-gold/20 group-hover:border-ro-gold/45 transition-colors duration-700" />
                 <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-ro-gold/20 group-hover:border-ro-gold/45 transition-colors duration-700" />
                 <h3 className="text-ro-white font-heading text-lg sm:text-xl tracking-wider uppercase mb-3 group-hover:text-ro-gold-light transition-colors duration-700">{item.title}</h3>
-                <p className="text-ro-gray-400 text-sm sm:text-base leading-relaxed">{item.desc}</p>
+                <p className="text-ro-gray-300 text-sm sm:text-base leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -384,7 +389,10 @@ export default function ServicesPage() {
 
       {/* ═══ HOW IT WORKS (process accordion) ═══ */}
       <section ref={processRef} className="py-32 sm:py-40 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117] to-ro-black" />
+        <div className="absolute inset-0 forge-bg" />
+        <div className="absolute inset-0 blueprint-overlay-warm opacity-[0.09]" />
+        <div className="absolute inset-0 forge-slash pointer-events-none" />
+        <div className="absolute top-1/2 right-1/4 w-[600px] h-[600px] warm-glow-strong pointer-events-none" />
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
             <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">How It Works</span>
@@ -413,7 +421,7 @@ export default function ServicesPage() {
                           <h3 className="text-ro-white font-heading text-xl sm:text-2xl tracking-wider uppercase group-hover:text-ro-gold-light transition-colors">{step.title}</h3>
                           <ChevronDown size={16} className={`text-ro-gold/30 transition-all duration-300 ${isExpanded ? 'rotate-180 text-ro-gold' : ''}`} />
                         </div>
-                        <p className="text-ro-gray-400 text-sm sm:text-base leading-relaxed max-w-lg mt-1">{step.desc}</p>
+                        <p className="text-ro-gray-300 text-sm sm:text-base leading-relaxed max-w-lg mt-1">{step.desc}</p>
                       </div>
                     </button>
                     {isExpanded && detail && (
@@ -429,11 +437,11 @@ export default function ServicesPage() {
                         <div className="pt-2 space-y-2">
                           <div className="flex items-start gap-2">
                             <span className="text-ro-gold/70 text-xs font-mono tracking-wider uppercase flex-shrink-0 mt-0.5">Your Role:</span>
-                            <span className="text-ro-gray-400 text-xs sm:text-sm">{detail.clientRole}</span>
+                            <span className="text-ro-gray-300 text-xs sm:text-sm">{detail.clientRole}</span>
                           </div>
                           <div className="flex items-start gap-2">
                             <span className="text-ro-gold/70 text-xs font-mono tracking-wider uppercase flex-shrink-0 mt-0.5">Deliverable:</span>
-                            <span className="text-ro-gray-400 text-xs sm:text-sm">{detail.deliverable}</span>
+                            <span className="text-ro-gray-300 text-xs sm:text-sm">{detail.deliverable}</span>
                           </div>
                         </div>
                       </div>
@@ -448,22 +456,24 @@ export default function ServicesPage() {
 
       {/* ═══ CROSS-DIVISION ═══ */}
       <section ref={crossRef} className="py-28 sm:py-36 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-ro-black to-[#0d1117]" />
+        <div className="absolute inset-0 forge-bg-alt" />
+        <div className="absolute inset-0 forge-slash pointer-events-none" />
+        <div className="absolute bottom-1/3 right-1/3 w-[500px] h-[500px] warm-glow-strong animate-ember pointer-events-none opacity-70" />
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">Full-Service</span>
             <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">
               More Than <span className="gradient-text-gold">Repairs</span>
             </h2>
-            <p className="text-ro-gray-500 text-sm sm:text-base mt-4 max-w-md mx-auto">A $3K roof repair today can lead to a $200K project tomorrow. One company — total capability.</p>
+            <p className="text-ro-gray-400 text-sm sm:text-base mt-4 max-w-md mx-auto">A $3K roof repair today can lead to a $200K project tomorrow. One company — total capability.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {CROSS_DIVISIONS.map((div) => (
               <Link key={div.id} href={div.href}
-                className="cross-card group relative p-8 border border-ro-gray-800/30 bg-ro-gray-900/10 hover:border-ro-gold/20 hover:bg-ro-gold/[0.02] transition-all duration-700 text-center">
+                className="cross-card group relative p-8 border border-ro-gray-800/40 bg-[#1a150d]/20 hover:border-ro-gold/25 hover:bg-ro-gold/[0.03] transition-all duration-700 text-center">
                 <div className="text-ro-gold/20 text-2xl mb-4 group-hover:text-ro-gold/45 transition-colors duration-700">{div.icon}</div>
                 <h3 className="text-ro-white font-heading text-base sm:text-lg tracking-wider uppercase mb-2 group-hover:text-ro-gold-light transition-colors duration-700">{div.label}</h3>
-                <p className="text-ro-gray-500 text-xs sm:text-sm">{div.desc}</p>
+                <p className="text-ro-gray-400 text-xs sm:text-sm">{div.desc}</p>
                 <div className="mt-4 flex items-center justify-center gap-1 text-ro-gold/40 text-xs font-mono tracking-wider uppercase opacity-0 group-hover:opacity-100 transition-opacity duration-500">
                   Explore <ArrowRight size={12} />
                 </div>
@@ -475,9 +485,12 @@ export default function ServicesPage() {
 
       {/* ═══ CTA ═══ */}
       <section ref={ctaRef} className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117] to-ro-black" />
-        <div className="absolute inset-0 blueprint-overlay opacity-[0.04]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)' }} />
+        <div className="absolute inset-0 forge-bg-alt" />
+        <div className="absolute inset-0 blueprint-overlay-warm opacity-[0.06]" />
+        <div className="absolute inset-0 forge-slash pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] warm-glow-golden animate-ember pointer-events-none" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] warm-glow-strong pointer-events-none" />
+        <div className="absolute inset-0 warm-vignette pointer-events-none" />
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="cta-inner">
             <div className="w-24 h-[2px] bg-gradient-to-r from-transparent via-ro-gold/40 to-transparent mx-auto mb-12" />
@@ -485,7 +498,7 @@ export default function ServicesPage() {
             <h2 className="text-ro-white font-heading text-5xl sm:text-6xl lg:text-7xl tracking-tight uppercase leading-[0.85] mb-8">
               Need a<br /><span className="gradient-text-gold">Fix?</span>
             </h2>
-            <p className="text-ro-gray-400 text-base sm:text-lg leading-relaxed mb-12 max-w-md mx-auto">
+            <p className="text-ro-gray-300 text-base sm:text-lg leading-relaxed mb-12 max-w-md mx-auto">
               Tell us what&apos;s going on. We&apos;ll give you a straight answer and a fair price.
             </p>
             <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`}
