@@ -2,7 +2,8 @@
 
 import { useParams } from 'next/navigation';
 import { ROOFING_SUB_SERVICES } from '@/lib/roofing-data';
-import RoofingSubServicePage from '@/components/sections/RoofingSubServicePage';
+import SubServicePage from '@/components/sections/SubServicePage';
+import { HardHat } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RoofingSubPage() {
@@ -24,5 +25,13 @@ export default function RoofingSubPage() {
     );
   }
 
-  return <RoofingSubServicePage subService={subService} />;
+  return (
+    <SubServicePage
+      subService={subService}
+      parentSlug="roofing"
+      parentLabel="Roofing"
+      icon={HardHat}
+      allSubServices={ROOFING_SUB_SERVICES}
+    />
+  );
 }

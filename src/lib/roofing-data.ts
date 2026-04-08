@@ -3,49 +3,9 @@
 //  8 detailed sub-service pages for /services/roofing/[sub]
 // ═══════════════════════════════════════════════════════════════
 
-export interface OverviewBlock {
-  heading: string;
-  content: string;
-}
-
-export interface WarningSign {
-  trigger: string;
-  detail: string;
-}
-
-export interface MaintenanceTip {
-  tip: string;
-  detail: string;
-}
-
-export interface ProcessStep {
-  num: string;
-  title: string;
-  description: string;
-}
-
-export interface CostRow {
-  item: string;
-  cost: string;
-  lifespan: string;
-}
-
-export interface RoofingSubService {
-  id: string;
-  slug: string;
-  title: string;
-  tagline: string;
-  heroDescription: string;
-  heroImage: string;
-  cardImage: string;
-  overview: OverviewBlock[];
-  warningSigns: WarningSign[];
-  maintenanceTips: MaintenanceTip[];
-  processSteps: ProcessStep[];
-  faq: { q: string; a: string }[];
-  costData: CostRow[];
-  seoKeywords: string[];
-}
+import type { SubService } from './sub-service-types';
+export type RoofingSubService = SubService;
+export type { OverviewBlock, WarningSign, MaintenanceTip, ProcessStep, CostRow } from './sub-service-types';
 
 export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
   // ═══ 1. SHINGLE ROOFING ═══
