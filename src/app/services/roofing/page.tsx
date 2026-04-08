@@ -119,10 +119,8 @@ export default function RoofingPage() {
       {/* ═══ HERO ═══ */}
       <section ref={heroRef} className="relative min-h-[100vh] flex flex-col overflow-hidden">
         <img src={category.heroImage} alt="RO Unlimited Roofing" className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
-        {/* Mobile: heavy full-width darken so text is always readable */}
-        <div className="absolute inset-0 sm:hidden" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.88) 0%, rgba(10,10,10,0.82) 40%, rgba(10,10,10,0.75) 70%, rgba(10,10,10,0.95) 100%)' }} />
-        {/* Desktop: left-heavy gradient — dark text side, image peeks through on right */}
-        <div className="absolute inset-0 hidden sm:block" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
+        {/* Left-heavy gradient — dark on text side, image peeks through on right */}
+        <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, transparent 20%, transparent 75%, rgba(10,10,10,0.95) 100%)' }} />
         <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ zIndex: 2, background: 'radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)' }} />
 
@@ -132,17 +130,17 @@ export default function RoofingPage() {
             <span className="text-ro-gold text-[10px] font-mono tracking-[0.3em] uppercase">RO Roofing Division</span>
           </div>
 
-          <h1 className="text-ro-white font-heading uppercase leading-[0.88] tracking-tight mb-6"
+          <h1 className="font-heading uppercase leading-[0.88] tracking-tight mb-6"
             style={{ fontSize: 'clamp(2.6rem, 5vw, 4.5rem)' }}>
-            Every Roof<br />
+            <span className="hero-text-fade">Every Roof</span><br />
             <span className="gradient-text-gold">Tells a Story.</span><br />
-            We Make Sure<br />
+            <span className="hero-text-fade">We Make Sure</span><br />
             <span className="gradient-text-gold">It&apos;s a Good One.</span>
           </h1>
 
           <div className="hero-gold-line w-10 h-[2px] bg-gradient-to-r from-ro-gold/80 to-transparent mb-6" />
 
-          <p className="hero-desc text-ro-gray-400 text-sm sm:text-base leading-relaxed mb-8 max-w-sm">
+          <p className="hero-desc text-sm sm:text-base leading-relaxed mb-8 max-w-sm hero-text-fade-subtle">
             {category.hero}
           </p>
 

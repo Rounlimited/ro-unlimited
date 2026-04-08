@@ -213,6 +213,35 @@
   }
   .border-gold-glow { box-shadow: 0 0 15px rgba(201,168,76,0.15), inset 0 0 15px rgba(201,168,76,0.05); }
   .gradient-text-gold { @apply bg-clip-text text-transparent bg-gradient-to-r from-ro-gold-dark via-ro-gold to-ro-gold-light; }
+
+  /* Hero text that fades from white → dark as it extends into the bright image area */
+  .hero-text-fade {
+    background: linear-gradient(to right, rgba(255,255,255,1) 0%, rgba(255,255,255,0.95) 45%, rgba(255,255,255,0.55) 75%, rgba(30,25,20,0.9) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero-text-fade-subtle {
+    background: linear-gradient(to right, rgba(160,160,170,1) 0%, rgba(160,160,170,0.95) 40%, rgba(140,140,145,0.7) 65%, rgba(30,25,20,0.85) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  /* Desktop: text stays in left column so no fade needed */
+  @media (min-width: 640px) {
+    .hero-text-fade {
+      background: none;
+      -webkit-background-clip: unset;
+      background-clip: unset;
+      -webkit-text-fill-color: white;
+    }
+    .hero-text-fade-subtle {
+      background: none;
+      -webkit-background-clip: unset;
+      background-clip: unset;
+      -webkit-text-fill-color: rgb(156 163 175); /* ro-gray-400 */
+    }
+  }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
