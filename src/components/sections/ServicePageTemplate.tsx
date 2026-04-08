@@ -19,7 +19,7 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   repairs: Wrench,
 };
 
-export default function ServicePageTemplate({ category }: { category: ServiceCategory }) {
+export default function ServicePageTemplate({ category, serviceLinks }: { category: ServiceCategory; serviceLinks?: Record<string, string> }) {
   const [mounted, setMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
@@ -245,8 +245,11 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {category.services.map((service, i) => {
               const serviceImg = category.serviceImages[service];
+              const linkHref = serviceLinks?.[service];
+              const Wrapper = linkHref ? Link : 'div' as const;
+              const wrapperProps = linkHref ? { href: linkHref } : {};
               return (
-                <div key={i} className="scope-item group relative overflow-hidden border border-ro-gray-800/40 bg-[#1a150d]/20 backdrop-blur-sm hover:border-ro-gold/25 hover:bg-ro-gold/[0.03] transition-all duration-700">
+                <Wrapper key={i} {...wrapperProps as Record<string, string>} className="scope-item group relative overflow-hidden border border-ro-gray-800/40 bg-[#1a150d]/20 backdrop-blur-sm hover:border-ro-gold/25 hover:bg-ro-gold/[0.03] transition-all duration-700">
                   <div className="flex items-stretch">
                     {/* Thumbnail */}
                     {serviceImg && (
@@ -257,7 +260,6 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
                           className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         />
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent to-ro-black/40" />
-                        {/* Gold edge accent */}
                         <div className="absolute top-0 bottom-0 right-0 w-[1px] bg-ro-gold/15" />
                       </div>
                     )}
@@ -271,9 +273,12 @@ export default function ServicePageTemplate({ category }: { category: ServiceCat
                       <h3 className="text-ro-white font-heading text-sm sm:text-base tracking-wider uppercase group-hover:text-ro-gold-light transition-colors duration-700">
                         {service}
                       </h3>
+                      {linkHref && (
+                        <ArrowRight size={14} className="text-ro-gold/0 group-hover:text-ro-gold/60 transition-all duration-500 ml-auto flex-shrink-0" />
+                      )}
                     </div>
                   </div>
-                </div>
+                </Wrapper>
               );
             })}
           </div>
