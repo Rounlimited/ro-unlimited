@@ -17,6 +17,14 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     heroDescription: 'Your electrical panel is the heart of your home\'s power system. If it can\'t keep up with modern demands — EV chargers, heat pumps, smart appliances — everything downstream suffers. RO\'s licensed electricians handle upgrades from 100A to 200A and beyond, with full permitting, inspection, and code compliance.',
     heroImage: '/images/services/electrical/subs/panel-upgrades-hero.jpg',
     cardImage: '/images/services/electrical/subs/panel-upgrades-card.jpg',
+    galleryImages: [
+      '/images/services/electrical/subs/panel-upgrades-hero.jpg',
+      '/images/services/electrical/subs/electrician-switchboard.jpg',
+      '/images/services/electrical/subs/panel-color-wiring.jpg',
+      '/images/services/electrical/subs/electrician-working-panel.jpg',
+      '/images/services/electrical/panel-closeup.jpg',
+      '/images/services/electrical/electrician-panel.jpg',
+    ],
     overview: [
       {
         heading: 'What It Is',
@@ -85,6 +93,14 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     heroDescription: 'Homes with knob-and-tube or aluminum wiring are ticking clocks. Aluminum wiring makes a home 55 times more likely to develop fire-hazard conditions. RO\'s licensed electricians replace outdated wiring with modern copper systems — bringing your home up to code, satisfying insurance requirements, and eliminating hidden dangers behind your walls.',
     heroImage: '/images/services/electrical/subs/rewiring-hero.jpg',
     cardImage: '/images/services/electrical/subs/rewiring-card.jpg',
+    galleryImages: [
+      '/images/services/electrical/subs/rewiring-exposed.jpg',
+      '/images/services/electrical/rewiring-work.jpg',
+      '/images/services/electrical/subs/electrician-working-panel.jpg',
+      '/images/services/electrical/subs/electrician-outlet-work.jpg',
+      '/images/services/electrical/outlet-installation.jpg',
+      '/images/services/electrical/subs/panel-color-wiring.jpg',
+    ],
     overview: [
       {
         heading: 'What It Is',
@@ -150,6 +166,14 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     heroDescription: 'When severe weather knocks out power across the Upstate, a standby generator kicks in automatically — within seconds. RO installs whole-house generators from Generac, Kohler, and Briggs & Stratton, complete with automatic transfer switches, concrete pads, and full electrical integration. No extension cords, no manual startup, no worry.',
     heroImage: '/images/services/electrical/subs/generator-hero.jpg',
     cardImage: '/images/services/electrical/subs/generator-card.jpg',
+    galleryImages: [
+      '/images/services/electrical/subs/home-generator.jpg',
+      '/images/services/electrical/subs/generator-hero.jpg',
+      '/images/services/electrical/subs/electrician-switchboard.jpg',
+      '/images/services/electrical/switchboard-closeup.jpg',
+      '/images/services/electrical/subs/panel-color-wiring.jpg',
+      '/images/services/electrical/electrician-fusebox.jpg',
+    ],
     overview: [
       {
         heading: 'What It Is',
@@ -216,6 +240,14 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     heroDescription: 'A Level 2 home charger delivers 25–50 miles of range per hour — a full overnight charge while you sleep. RO installs Tesla Wall Connectors, ChargePoint, JuiceBox, and universal NEMA 14-50 outlets with dedicated 240V circuits, panel capacity verification, and full code compliance. Stop paying for public charging.',
     heroImage: '/images/services/electrical/subs/ev-charger-hero.jpg',
     cardImage: '/images/services/electrical/subs/ev-charger-card.jpg',
+    galleryImages: [
+      '/images/services/electrical/subs/ev-charger-hero.jpg',
+      '/images/services/electrical/subs/ev-charger-wall.jpg',
+      '/images/services/electrical/subs/ev-charger-closeup.jpg',
+      '/images/services/electrical/subs/ev-plugged-in.jpg',
+      '/images/services/electrical/subs/ev-charger-card.jpg',
+      '/images/services/electrical/subs/electrician-working-panel.jpg',
+    ],
     overview: [
       {
         heading: 'What It Is',
@@ -281,6 +313,14 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     heroDescription: 'Solar panels cut your electric bill. Battery storage keeps your power on when the grid fails. Together, they\'re the most significant upgrade you can make to your home\'s energy independence. RO installs complete solar-plus-storage systems — Tesla Powerwall, Enphase, and Generac PWRcell — with licensed electrical integration from panel to rooftop.',
     heroImage: '/images/services/electrical/subs/solar-battery-hero.jpg',
     cardImage: '/images/services/electrical/subs/solar-battery-card.jpg',
+    galleryImages: [
+      '/images/services/electrical/subs/solar-panels-roof.jpg',
+      '/images/services/electrical/subs/solar-installation-closeup.jpg',
+      '/images/services/electrical/subs/solar-worker-roof.jpg',
+      '/images/services/electrical/subs/solar-battery-hero.jpg',
+      '/images/services/electrical/subs/solar-battery-card.jpg',
+      '/images/services/electrical/subs/electrician-switchboard.jpg',
+    ],
     overview: [
       {
         heading: 'Solar Basics',
@@ -347,6 +387,14 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     heroDescription: 'Smart electrical panels, whole-home energy monitoring, and automation systems that let you control, schedule, and optimize every circuit in your home from a single app. RO installs SPAN Panels, Lutron systems, energy monitors, and smart wiring infrastructure — the backbone that makes everything else work together.',
     heroImage: '/images/services/electrical/subs/smart-home-hero.jpg',
     cardImage: '/images/services/electrical/subs/smart-home-card.jpg',
+    galleryImages: [
+      '/images/services/electrical/subs/smart-home-tablet.jpg',
+      '/images/services/electrical/subs/smart-home-living.jpg',
+      '/images/services/electrical/subs/smart-home-hero.jpg',
+      '/images/services/electrical/subs/modern-lighting-interior.jpg',
+      '/images/services/electrical/subs/panel-color-wiring.jpg',
+      '/images/services/electrical/subs/electrician-working-panel.jpg',
+    ],
     overview: [
       {
         heading: 'Smart Electrical Panels',
@@ -412,6 +460,14 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     heroDescription: 'From LED retrofits that cut energy use 75% to landscape lighting that transforms your property after dark — RO\'s electricians handle every aspect of residential and light commercial lighting. Design, installation, smart controls, and low-voltage exterior systems. We wire it, aim it, and make it work with your automation.',
     heroImage: '/images/services/electrical/subs/lighting-hero.jpg',
     cardImage: '/images/services/electrical/subs/lighting-card.jpg',
+    galleryImages: [
+      '/images/services/electrical/subs/landscape-lighting-path.jpg',
+      '/images/services/electrical/subs/exterior-lighting-home.jpg',
+      '/images/services/electrical/subs/modern-lighting-interior.jpg',
+      '/images/services/electrical/lighting-installation.jpg',
+      '/images/services/electrical/subs/smart-home-living.jpg',
+      '/images/services/electrical/subs/lighting-hero.jpg',
+    ],
     overview: [
       {
         heading: 'Interior Lighting',
@@ -477,6 +533,14 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     heroDescription: 'A single lightning strike delivers up to 300 million volts. Your home experiences 20+ smaller power surges every day from appliance cycling alone. RO installs whole-house surge protectors, GFCI/AFCI protection, smoke and CO detectors, and performs comprehensive electrical safety inspections. Protection you can\'t see — until you need it.',
     heroImage: '/images/services/electrical/subs/surge-protection-hero.jpg',
     cardImage: '/images/services/electrical/subs/surge-protection-card.jpg',
+    galleryImages: [
+      '/images/services/electrical/subs/surge-protector-strip.jpg',
+      '/images/services/electrical/subs/electrician-outlet-work.jpg',
+      '/images/services/electrical/subs/electrician-switchboard.jpg',
+      '/images/services/electrical/subs/panel-color-wiring.jpg',
+      '/images/services/electrical/outlet-installation.jpg',
+      '/images/services/electrical/socket-repair.jpg',
+    ],
     overview: [
       {
         heading: 'Whole-House Surge Protection',

@@ -39,6 +39,7 @@ export interface SubService {
   heroImage: string;
   cardImage: string;
   overview: OverviewBlock[];
+  galleryImages?: string[];
   warningSigns: WarningSign[];
   maintenanceTips: MaintenanceTip[];
   processSteps: ProcessStep[];

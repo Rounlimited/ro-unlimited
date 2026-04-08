@@ -222,7 +222,7 @@
     -webkit-text-fill-color: transparent;
   }
   .hero-text-fade-subtle {
-    background: linear-gradient(to right, rgba(160,160,170,1) 0%, rgba(160,160,170,0.95) 40%, rgba(140,140,145,0.7) 65%, rgba(30,25,20,0.85) 100%);
+    background: linear-gradient(to right, rgba(215,215,220,1) 0%, rgba(210,210,215,0.95) 45%, rgba(180,180,185,0.7) 70%, rgba(30,25,20,0.85) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;

@@ -23,6 +23,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
   const overviewRef = useRef<HTMLElement>(null);
+  const subGalleryRef = useRef<HTMLElement>(null);
   const warningsRef = useRef<HTMLElement>(null);
   const maintenanceRef = useRef<HTMLElement>(null);
   const processRef = useRef<HTMLElement>(null);
@@ -69,6 +70,18 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
           gsap.fromTo(b, { y: 50, opacity: 0, scale: 0.97 },
             { y: 0, opacity: 1, scale: 1, duration: 1, delay: i * 0.12, ease: 'power2.out',
               scrollTrigger: { trigger: b, start: 'top 88%', toggleActions: 'play none none reverse' } });
+        });
+      }
+
+      // Sub-service gallery — staggered fade + scale
+      if (subGalleryRef.current) {
+        const head = subGalleryRef.current.querySelector('.section-head');
+        if (head) gsap.fromTo(head, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 1, scrollTrigger: { trigger: head, start: 'top 85%' } });
+        const imgs = subGalleryRef.current.querySelectorAll('.gallery-item');
+        imgs.forEach((img, i) => {
+          gsap.fromTo(img, { y: 50, opacity: 0, scale: 0.95 },
+            { y: 0, opacity: 1, scale: 1, duration: 0.9, delay: i * 0.08, ease: 'power2.out',
+              scrollTrigger: { trigger: img, start: 'top 90%', toggleActions: 'play none none reverse' } });
         });
       }
 
@@ -264,6 +277,50 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
           </div>
         </div>
       </section>
+
+      {/* ═══ PHOTO GALLERY — inline media for this specialty ═══ */}
+      {subService.galleryImages && subService.galleryImages.length > 0 && (
+        <section ref={subGalleryRef} className="py-24 sm:py-32 relative overflow-hidden">
+          <div className="absolute inset-0 forge-bg-alt" />
+          <div className="absolute inset-0 blueprint-overlay-warm opacity-[0.08]" />
+          <div className="absolute inset-0 forge-slash pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[700px] warm-glow-golden animate-ember pointer-events-none" />
+          <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="section-head mb-12 text-center">
+              <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">See the Work</span>
+              <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">
+                {subService.title} <span className="gradient-text-gold">Gallery</span>
+              </h2>
+              <div className="w-20 h-[2px] bg-gradient-to-r from-transparent via-ro-gold/40 to-transparent mx-auto mt-6" />
+            </div>
+
+            {/* Desktop: masonry-style grid */}
+            <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 gap-3">
+              {subService.galleryImages.map((img, i) => (
+                <div key={i} className={`gallery-item group relative overflow-hidden border border-ro-gold/10 ${i === 0 ? 'lg:row-span-2' : ''}`}>
+                  <div className={`relative ${i === 0 ? 'aspect-[3/4]' : 'aspect-[4/3]'}`}>
+                    <img src={img} alt={`${subService.title} by RO Unlimited`} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-ro-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="absolute inset-0 border-2 border-ro-gold/0 group-hover:border-ro-gold/25 transition-colors duration-500" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Mobile: horizontal scroll with snap */}
+            <div className="sm:hidden flex gap-3 overflow-x-auto snap-x snap-mandatory pb-4 -mx-4 px-4 scrollbar-hide">
+              {subService.galleryImages.map((img, i) => (
+                <div key={i} className="gallery-item flex-shrink-0 w-[80vw] snap-center">
+                  <div className="relative aspect-[4/3] overflow-hidden border border-ro-gold/10">
+                    <img src={img} alt={`${subService.title} by RO Unlimited`} className="absolute inset-0 w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-ro-black/40 via-transparent to-transparent" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ═══ WARNING SIGNS — "Call Us If You See..." ═══ */}
       <section ref={warningsRef} className="py-28 sm:py-36 relative overflow-hidden">
