@@ -119,7 +119,10 @@ export default function RoofingPage() {
       {/* ═══ HERO ═══ */}
       <section ref={heroRef} className="relative min-h-[100vh] flex flex-col overflow-hidden">
         <img src={category.heroImage} alt="RO Unlimited Roofing" className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
-        <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
+        {/* Mobile: heavy full-width darken so text is always readable */}
+        <div className="absolute inset-0 sm:hidden" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.88) 0%, rgba(10,10,10,0.82) 40%, rgba(10,10,10,0.75) 70%, rgba(10,10,10,0.95) 100%)' }} />
+        {/* Desktop: left-heavy gradient — dark text side, image peeks through on right */}
+        <div className="absolute inset-0 hidden sm:block" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, transparent 20%, transparent 75%, rgba(10,10,10,0.95) 100%)' }} />
         <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ zIndex: 2, background: 'radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)' }} />
 
