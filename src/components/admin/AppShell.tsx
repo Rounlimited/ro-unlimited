@@ -235,6 +235,7 @@ const APP_ICONS: AppIcon[] = [
   { id: 'editor', label: 'Site Editor', icon: Pencil, href: '/admin/site-editor', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'portfolio', label: 'Portfolio', icon: Camera, href: '/admin/projects', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'photos', label: 'Photos', icon: Camera, href: '/admin/photos', active: true, color: '#F97316', bg: 'rgba(249,115,22,0.15)', badge: 'NEW' },
+  { id: 'service-media', label: 'Service Media', icon: Zap, href: '/admin/service-media', active: true, color: '#F97316', bg: 'rgba(249,115,22,0.15)', badge: 'NEW' },
   { id: 'settings', label: 'Settings', icon: Settings, href: '/admin/settings', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'proposals', label: 'Proposals', icon: Briefcase, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'pipeline', label: 'Pipeline', icon: TrendingUp, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },

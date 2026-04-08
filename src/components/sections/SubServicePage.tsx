@@ -18,8 +18,11 @@ interface SubServicePageProps {
   allSubServices: SubService[];
 }
 
+interface DynamicImages { hero?: string; card?: string; gallery: string[] }
+
 export default function SubServicePage({ subService, parentSlug, parentLabel, icon: Icon, allSubServices }: SubServicePageProps) {
   const [mounted, setMounted] = useState(false);
+  const [dynImages, setDynImages] = useState<DynamicImages | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
   const overviewRef = useRef<HTMLElement>(null);
@@ -36,6 +39,24 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
   const [expandedTip, setExpandedTip] = useState<number | null>(null);
 
   const otherServices = allSubServices.filter(s => s.id !== subService.id);
+
+  // Fetch custom images from Supabase (if any uploaded via admin)
+  useEffect(() => {
+    fetch(`/api/admin/service-images?division=${parentSlug}&serviceId=${subService.id}`)
+      .then(r => r.ok ? r.json() : [])
+      .then((data: Array<{ image_type: string; image_url: string; sort_order: number }>) => {
+        if (!Array.isArray(data) || data.length === 0) return;
+        const hero = data.find(d => d.image_type === 'hero')?.image_url;
+        const card = data.find(d => d.image_type === 'card')?.image_url;
+        const gallery = data.filter(d => d.image_type === 'gallery').sort((a, b) => a.sort_order - b.sort_order).map(d => d.image_url);
+        setDynImages({ hero, card, gallery });
+      })
+      .catch(() => {});
+  }, [parentSlug, subService.id]);
+
+  // Resolved images: DB overrides > hardcoded defaults
+  const heroImage = dynImages?.hero || subService.heroImage;
+  const galleryImgs = (dynImages?.gallery && dynImages.gallery.length > 0) ? dynImages.gallery : (subService.galleryImages || []);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -203,7 +224,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
       {/* ═══ HERO ═══ */}
       <section ref={heroRef} className="relative min-h-[90vh] flex flex-col justify-center overflow-hidden">
         <img
-          src={subService.heroImage}
+          src={heroImage}
           alt={`${subService.title} by RO Unlimited`}
           className="absolute inset-0 w-full h-full object-cover"
           style={{ zIndex: 0 }}
@@ -279,7 +300,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
       </section>
 
       {/* ═══ PHOTO GALLERY — inline media for this specialty ═══ */}
-      {subService.galleryImages && subService.galleryImages.length > 0 && (
+      {galleryImgs.length > 0 && (
         <section ref={subGalleryRef} className="py-24 sm:py-32 relative overflow-hidden">
           <div className="absolute inset-0 forge-bg-alt" />
           <div className="absolute inset-0 blueprint-overlay-warm opacity-[0.08]" />
@@ -296,7 +317,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
 
             {/* Desktop: masonry-style grid */}
             <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 gap-3">
-              {subService.galleryImages.map((img, i) => (
+              {galleryImgs.map((img, i) => (
                 <div key={i} className={`gallery-item group relative overflow-hidden border border-ro-gold/10 ${i === 0 ? 'lg:row-span-2' : ''}`}>
                   <div className={`relative ${i === 0 ? 'aspect-[3/4]' : 'aspect-[4/3]'}`}>
                     <img src={img} alt={`${subService.title} by RO Unlimited`} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
@@ -309,7 +330,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
 
             {/* Mobile: horizontal scroll with snap */}
             <div className="sm:hidden flex gap-3 overflow-x-auto snap-x snap-mandatory pb-4 -mx-4 px-4 scrollbar-hide">
-              {subService.galleryImages.map((img, i) => (
+              {galleryImgs.map((img, i) => (
                 <div key={i} className="gallery-item flex-shrink-0 w-[80vw] snap-center">
                   <div className="relative aspect-[4/3] overflow-hidden border border-ro-gold/10">
                     <img src={img} alt={`${subService.title} by RO Unlimited`} className="absolute inset-0 w-full h-full object-cover" />
@@ -608,7 +629,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
 
       {/* ═══ CTA ═══ */}
       <section ref={ctaRef} className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
-        <img src={subService.heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
+        <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
         <div className="absolute inset-0 bg-ro-black/88" style={{ zIndex: 1 }} />
         <div className="absolute inset-0 forge-bg-alt" style={{ zIndex: 2, opacity: 0.6 }} />
         <div className="absolute inset-0 forge-slash pointer-events-none" style={{ zIndex: 3 }} />

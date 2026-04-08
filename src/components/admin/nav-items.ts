@@ -46,6 +46,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'settings', label: 'Settings', icon: Settings, href: '/admin/settings', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'config' },
   { id: 'checklist', label: 'Checklist', icon: ClipboardList, href: '/admin/checklist', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'config' },
   { id: 'editor', label: 'Site Editor', icon: Pencil, href: '/admin/site-editor', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'config' },
+  { id: 'service-media', label: 'Service Media', icon: Camera, href: '/admin/service-media', active: true, color: '#F97316', bg: 'rgba(249,115,22,0.15)', group: 'config' },
   { id: 'support', label: 'Help', icon: LifeBuoy, href: '/admin/help', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'config' },
 ];
 
