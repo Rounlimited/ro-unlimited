@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { ROOFING_SUB_SERVICES } from '@/lib/roofing-data';
 import { ELECTRICAL_SUB_SERVICES } from '@/lib/electrical-data';
+import { PLUMBING_SUB_SERVICES } from '@/lib/plumbing-data';
 import {
   Plus, Loader2, Trash2, Image as ImageIcon, Upload, GripVertical,
-  Zap, HardHat, ChevronDown, Check, X, ArrowLeft,
+  Zap, HardHat, Pipette, ChevronDown, Check, X, ArrowLeft,
 } from 'lucide-react';
 
 interface ServiceImage {
@@ -21,6 +22,7 @@ interface ServiceImage {
 const DIVISIONS = [
   { id: 'roofing', label: 'Roofing', icon: HardHat, services: ROOFING_SUB_SERVICES },
   { id: 'electrical', label: 'Electrical', icon: Zap, services: ELECTRICAL_SUB_SERVICES },
+  { id: 'plumbing', label: 'Plumbing', icon: Pipette, services: PLUMBING_SUB_SERVICES },
 ];
 
 export default function ServiceMediaPage() {

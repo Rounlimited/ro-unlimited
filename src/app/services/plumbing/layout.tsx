@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Plumbing Repair & Installation | RO Unlimited Services',
-  description: 'Fast, reliable plumbing repair and installation in Upstate SC. Pipe repair, water heater replacement, fixture installs, drain clearing, and emergency service by RO Unlimited. Call (864) 304-0139.',
+  title: 'Plumbing Services — Repairs, Water Heaters, Drains & More | RO Unlimited',
+  description: 'Licensed plumbing services in Upstate SC by RO Unlimited. Pipe repair & re-piping, water heater installation, drain cleaning, gas lines, water filtration, emergency plumbing. Call (864) 304-0139.',
   openGraph: {
-    title: 'Plumbing Repair & Installation — RO Unlimited Services',
-    description: 'From leaking pipes to water heater failures, RO\'s plumbing crew responds fast and fixes it right. No hourly padding, no surprise charges.',
+    title: 'Plumbing Services — RO Unlimited',
+    description: 'Pipe repair, water heaters, drain cleaning, gas lines, water filtration, renovation plumbing, and 24hr emergency service — fast response, honest pricing.',
     url: 'https://rounlimited.com/services/plumbing',
     siteName: 'RO Unlimited',
     type: 'website',
