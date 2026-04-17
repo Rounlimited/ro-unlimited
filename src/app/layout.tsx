@@ -4,9 +4,69 @@ import GSAPProvider from '@/components/animations/GSAPProvider';
 import ROLoader from '@/components/animations/ROLoader';
 import '@/styles/globals.css';
 
+const SITE_URL = 'https://rounlimited.com';
+
 export const metadata: Metadata = {
-  title: `${COMPANY.fullName} | ${COMPANY.serviceArea}`,
-  description: `${COMPANY.experience} years of commercial and residential construction in ${COMPANY.serviceArea}. Land grading, custom homes, commercial builds, and full development services.`,
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${COMPANY.fullName} | ${COMPANY.serviceArea}`,
+    template: `%s | ${COMPANY.name}`,
+  },
+  description: `${COMPANY.experience} years of commercial and residential construction in ${COMPANY.serviceArea}. Land grading, custom homes, commercial builds, roofing, electrical, plumbing, septic, and full-service repairs.`,
+  applicationName: COMPANY.name,
+  authors: [{ name: COMPANY.fullName, url: SITE_URL }],
+  creator: COMPANY.fullName,
+  publisher: COMPANY.fullName,
+  alternates: { canonical: SITE_URL },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: SITE_URL,
+    siteName: COMPANY.name,
+    title: `${COMPANY.fullName} | ${COMPANY.serviceArea}`,
+    description: `${COMPANY.experience} years of construction across the tri-state. Custom homes, commercial builds, roofing, electrical, plumbing, septic, and repairs.`,
+    images: [{ url: `${SITE_URL}/og-default.jpg`, width: 1200, height: 630, alt: COMPANY.fullName }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: COMPANY.fullName,
+    description: `${COMPANY.experience} years of construction in the tri-state. Custom homes, commercial, roofing, electrical, plumbing, septic, repairs.`,
+    images: [`${SITE_URL}/og-default.jpg`],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 },
+  },
+  icons: {
+    icon: '/icons/icon-192x192.png',
+    apple: '/icons/icon-192x192.png',
+  },
+};
+
+const organizationJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'GeneralContractor',
+  '@id': `${SITE_URL}/#organization`,
+  name: COMPANY.fullName,
+  alternateName: COMPANY.name,
+  url: SITE_URL,
+  telephone: COMPANY.phone,
+  email: COMPANY.email,
+  description: `${COMPANY.experience} years of commercial and residential construction in ${COMPANY.serviceArea}.`,
+  areaServed: [
+    { '@type': 'State', name: 'South Carolina' },
+    { '@type': 'State', name: 'Georgia' },
+    { '@type': 'State', name: 'North Carolina' },
+  ],
+  sameAs: [COMPANY.facebook],
+  logo: `${SITE_URL}/icons/icon-512x512.png`,
+  image: `${SITE_URL}/og-default.jpg`,
+  knowsAbout: [
+    'Residential Construction', 'Commercial Construction', 'Land Grading', 'Site Preparation',
+    'Roofing', 'Electrical Services', 'Plumbing', 'Septic Systems', 'Drywall Repair',
+    'Deck Building', 'Fence Installation', 'Concrete Work',
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -23,6 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
       </head>
       <body className="font-body antialiased">
         <GSAPProvider>

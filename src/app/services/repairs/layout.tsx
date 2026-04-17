@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     url: 'https://rounlimited.com/services/repairs',
     siteName: 'RO Unlimited',
     type: 'website',
+    images: [{ url: 'https://rounlimited.com/images/services/repairs/repairs-hero.jpg', width: 1200, height: 630 }],
   },
   alternates: {
     canonical: 'https://rounlimited.com/services/repairs',

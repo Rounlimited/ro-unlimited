@@ -214,12 +214,24 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
     })),
   };
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://rounlimited.com/' },
+      { '@type': 'ListItem', position: 2, name: 'Services', item: 'https://rounlimited.com/services' },
+      { '@type': 'ListItem', position: 3, name: parentLabel, item: `https://rounlimited.com/services/${parentSlug}` },
+      { '@type': 'ListItem', position: 4, name: subService.title, item: `https://rounlimited.com/services/${parentSlug}/${subService.slug}` },
+    ],
+  };
+
   if (!mounted) return <div className="min-h-screen bg-ro-black" />;
 
   return (
     <div ref={containerRef}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       {/* ═══ HERO ═══ */}
       <section ref={heroRef} className="relative min-h-[90vh] flex flex-col justify-center overflow-hidden">
@@ -234,6 +246,18 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
         <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ zIndex: 2, background: 'radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)' }} />
 
         <div className="relative z-10 px-6 sm:px-10 lg:pl-16 pt-28 pb-16" style={{ maxWidth: 'min(620px, 100%)' }}>
+          <nav aria-label="Breadcrumb" className="mb-5">
+            <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-mono tracking-wider uppercase text-ro-gray-400">
+              <li><Link href="/" className="hover:text-ro-gold transition-colors">Home</Link></li>
+              <li className="text-ro-gold/30">/</li>
+              <li><Link href="/services" className="hover:text-ro-gold transition-colors">Services</Link></li>
+              <li className="text-ro-gold/30">/</li>
+              <li><Link href={`/services/${parentSlug}`} className="hover:text-ro-gold transition-colors">{parentLabel}</Link></li>
+              <li className="text-ro-gold/30">/</li>
+              <li className="text-ro-gold/80" aria-current="page">{subService.title}</li>
+            </ol>
+          </nav>
+
           <div className="hero-badge inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/25 bg-ro-black/40 backdrop-blur-sm mb-7 self-start">
             <Icon size={12} className="text-ro-gold flex-shrink-0" />
             <span className="text-ro-gold text-[10px] font-mono tracking-[0.3em] uppercase">RO {parentLabel} — {subService.title}</span>
@@ -629,7 +653,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
 
       {/* ═══ CTA ═══ */}
       <section ref={ctaRef} className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
-        <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
+        <img src={heroImage} alt={`${subService.title} — RO Unlimited`} className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
         <div className="absolute inset-0 bg-ro-black/88" style={{ zIndex: 1 }} />
         <div className="absolute inset-0 forge-bg-alt" style={{ zIndex: 2, opacity: 0.6 }} />
         <div className="absolute inset-0 forge-slash pointer-events-none" style={{ zIndex: 3 }} />

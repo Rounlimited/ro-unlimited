@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     url: 'https://rounlimited.com/services/septic',
     siteName: 'RO Unlimited',
     type: 'website',
+    images: [{ url: 'https://rounlimited.com/images/services/septic/septic-hero.jpg', width: 1200, height: 630 }],
   },
   alternates: {
     canonical: 'https://rounlimited.com/services/septic',

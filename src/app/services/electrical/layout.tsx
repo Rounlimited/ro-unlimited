@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     url: 'https://rounlimited.com/services/electrical',
     siteName: 'RO Unlimited',
     type: 'website',
+    images: [{ url: 'https://rounlimited.com/images/services/electrical/electrical-hero.jpg', width: 1200, height: 630 }],
   },
   alternates: {
     canonical: 'https://rounlimited.com/services/electrical',
