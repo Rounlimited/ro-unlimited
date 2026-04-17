@@ -6,9 +6,10 @@ import { ROOFING_SUB_SERVICES } from '@/lib/roofing-data';
 import { ELECTRICAL_SUB_SERVICES } from '@/lib/electrical-data';
 import { PLUMBING_SUB_SERVICES } from '@/lib/plumbing-data';
 import { SEPTIC_SUB_SERVICES } from '@/lib/septic-data';
+import { REPAIRS_SUB_SERVICES } from '@/lib/repairs-data';
 import {
   Plus, Loader2, Trash2, Image as ImageIcon, Upload, GripVertical,
-  Zap, HardHat, Pipette, Droplets, ChevronDown, Check, X, ArrowLeft,
+  Zap, HardHat, Pipette, Droplets, Wrench, ChevronDown, Check, X, ArrowLeft,
 } from 'lucide-react';
 
 interface ServiceImage {
@@ -25,6 +26,7 @@ const DIVISIONS = [
   { id: 'electrical', label: 'Electrical', icon: Zap, services: ELECTRICAL_SUB_SERVICES },
   { id: 'plumbing', label: 'Plumbing', icon: Pipette, services: PLUMBING_SUB_SERVICES },
   { id: 'septic', label: 'Septic', icon: Droplets, services: SEPTIC_SUB_SERVICES },
+  { id: 'repairs', label: 'Repairs', icon: Wrench, services: REPAIRS_SUB_SERVICES },
 ];
 
 export default function ServiceMediaPage() {

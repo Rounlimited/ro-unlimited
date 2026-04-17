@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Home & Property Repairs — Drywall, Decks, Fencing & More | RO Unlimited',
-  description: 'General home and property repairs in Upstate SC by RO Unlimited. Drywall, painting, deck building, fence installation, door and window replacement, concrete work. No job too small. Call (864) 304-0139.',
+  title: 'Repair Services — Drywall, Painting, Decks, Fences, Doors, Concrete & More | RO Unlimited',
+  description: 'Repair and handyman services in Upstate SC by RO Unlimited. Drywall repair, interior and exterior painting, deck building, fence installation, door and window replacement, concrete patchwork, and punch-list handyman service. Call (864) 304-0139.',
   openGraph: {
-    title: 'General Repairs — RO Unlimited Services',
-    description: 'Drywall, painting, decks, fencing, concrete patchwork, doors, windows, and everything in between. RO handles the small jobs with the same quality as a full build.',
+    title: 'Repair Services — RO Unlimited',
+    description: 'Drywall, painting, decks, fences, doors, windows, concrete, and punch-list handyman service — all done with the same quality and care as a full build.',
     url: 'https://rounlimited.com/services/repairs',
     siteName: 'RO Unlimited',
     type: 'website',

@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v11'; // septic rebuild + new images
+const CACHE_NAME = 'ro-admin-v12'; // repairs rebuild + new images
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',
