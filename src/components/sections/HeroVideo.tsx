@@ -14,7 +14,7 @@ interface HeroVideoProps {
  * - Starts buffering immediately on mount (preload="auto") so video is
  *   ready during the ROLoader splash — no stutter on play.
  * - Does NOT autoplay. Waits for 'ro:site-ready' event before calling play().
- * - After playing for 2s, fires onReady() so Hero can start its build sequence.
+ * - Fires onReady() shortly after play starts so Hero can build immediately.
  * - If no video, fires onReady immediately when site-ready fires.
  */
 export default function HeroVideo({ videoUrl, onReady }: HeroVideoProps) {
@@ -39,13 +39,13 @@ export default function HeroVideo({ videoUrl, onReady }: HeroVideoProps) {
     const startPlayback = () => {
       if (firedRef.current) return;
       video.play().catch(() => {});
-      // Let video breathe for 2s, then trigger the text build sequence
+      // Brief frame so video is visible, then kick off text build immediately
       setTimeout(() => {
         if (!firedRef.current) {
           firedRef.current = true;
           onReady?.();
         }
-      }, 2000);
+      }, 250);
     };
 
     const onSiteReady = () => {

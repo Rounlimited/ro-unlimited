@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v14'; // Splash speedup
+const CACHE_NAME = 'ro-admin-v15'; // Hero build fires sooner
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',
