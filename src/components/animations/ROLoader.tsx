@@ -31,9 +31,12 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Only show splash on the FIRST visit this session.
-    // Back button, internal navigation, and page switches skip it.
-    const alreadyPlayed = (window as any).__roSplashPlayed || false;
+    // Only show splash on the FIRST visit this tab session.
+    // Refresh, back button, internal nav, and page switches all skip it.
+    let alreadyPlayed = (window as any).__roSplashPlayed || false;
+    try {
+      if (sessionStorage.getItem('roSplashPlayed') === '1') alreadyPlayed = true;
+    } catch {}
     if (alreadyPlayed) {
       setDone(true);
       (window as any).__roSplashPlayed = true;
@@ -42,25 +45,21 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Mark splash as played for the rest of this page session
+    // Mark splash as played for this tab session (survives refresh)
     (window as any).__roSplashPlayed = true;
+    try { sessionStorage.setItem('roSplashPlayed', '1'); } catch {}
 
     const ctx = gsap.context(() => {
-      gsap.set(roRef.current, { opacity: 0, scale: 0.88 });
+      gsap.set(roRef.current, { opacity: 0, scale: 0.92 });
       gsap.set(splashRef.current, { opacity: 1 });
 
       gsap.timeline()
         .to(roRef.current, {
-          opacity: 0.85, scale: 1,
-          duration: 1.1, ease: 'power2.out',
-        })
-        .to(roRef.current, {
-          scale: 1.05, opacity: 0.95,
-          duration: 1.3, ease: 'sine.inOut',
-          yoyo: true, repeat: 1,
+          opacity: 0.95, scale: 1,
+          duration: 0.35, ease: 'power2.out',
         })
         .to(splashRef.current, {
-          opacity: 0, duration: 0.7, ease: 'power2.inOut',
+          opacity: 0, duration: 0.35, ease: 'power2.inOut',
           onComplete: () => {
             setDone(true);
             if (splashRef.current) splashRef.current.style.display = 'none';
@@ -68,7 +67,7 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
             (window as any).__roSiteReady = true;
             window.dispatchEvent(new Event('ro:site-ready'));
           },
-        }, '+=0.1');
+        }, '+=0.35');
     });
 
     return () => ctx.revert();
