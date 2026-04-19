@@ -272,10 +272,12 @@ export default function CommercialPage() {
                 transformOrigin: 'center center',
                 background: '#000',
               }} />
-            {/* Left-heavy gradient — fades left col, leaves right video clean */}
-            <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.96) 0%, rgba(10,10,10,0.88) 28%, rgba(10,10,10,0.55) 48%, rgba(10,10,10,0.0) 70%)' }} />
+            {/* Mobile: full dark overlay so centered text is readable everywhere */}
+            <div className="absolute inset-0 lg:hidden" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.85) 0%, rgba(10,10,10,0.7) 40%, rgba(10,10,10,0.92) 100%)' }} />
+            {/* Desktop: left-heavy gradient — fades left col, leaves right video clean */}
+            <div className="absolute inset-0 hidden lg:block" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.96) 0%, rgba(10,10,10,0.88) 28%, rgba(10,10,10,0.55) 48%, rgba(10,10,10,0.0) 70%)' }} />
             {/* Top/bottom edge vignette */}
-            <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.7) 0%, transparent 18%, transparent 72%, rgba(10,10,10,0.9) 100%)' }} />
+            <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.5) 0%, transparent 18%, transparent 72%, rgba(10,10,10,0.9) 100%)' }} />
             <div className="absolute inset-0 blueprint-overlay opacity-10" style={{ zIndex: 1 }} />
           </>
         ) : (
@@ -288,9 +290,9 @@ export default function CommercialPage() {
         {/* ── Vertical gold rule — desktop only ── */}
         <div className="hidden lg:block absolute top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-ro-gold/25 to-transparent" style={{ left: 'min(460px, 36vw)', zIndex: 3 }} />
 
-        {/* ── Left column text ── */}
-        <div className="relative z-10 flex flex-col justify-center flex-1 px-6 sm:px-10 lg:pl-16 lg:pr-0 pt-28 pb-6" style={{ maxWidth: 'min(480px, 100%)' }}>
-          <div className="hero-badge inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/30 bg-ro-gold/5 backdrop-blur-sm mb-7 self-start">
+        {/* ── Hero text — centered on mobile, left column on desktop ── */}
+        <div className="relative z-10 flex flex-col justify-center flex-1 px-6 sm:px-10 lg:pl-16 lg:pr-0 pt-28 pb-6 w-full max-w-xl mx-auto items-center text-center lg:mx-0 lg:items-start lg:text-left lg:max-w-[480px]">
+          <div className="hero-badge inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/30 bg-ro-gold/5 backdrop-blur-sm mb-7">
             <Building2 size={12} className="text-ro-gold flex-shrink-0" />
             <span className="text-ro-gold text-[10px] font-mono tracking-[0.3em] uppercase">Commercial Division</span>
           </div>
@@ -303,13 +305,13 @@ export default function CommercialPage() {
             <span className="gradient-text-gold">Scale.</span>
           </h1>
 
-          <div className="hero-gold-line w-10 h-[2px] bg-gradient-to-r from-ro-gold to-transparent mb-6" />
+          <div className="hero-gold-line w-10 h-[2px] bg-gradient-to-r from-ro-gold to-transparent mb-6 mx-auto lg:mx-0" />
 
-          <p className="hero-desc text-ro-gray-400 text-sm sm:text-base leading-relaxed mb-8 max-w-xs">
+          <p className="hero-desc text-ro-white/90 text-base sm:text-lg leading-relaxed tracking-wide mb-8 max-w-md drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]">
             Steel builds, retail storefronts, mixed-material construction, and full commercial development. One company — ground up.
           </p>
 
-          <div className="hero-btns flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3">
+          <div className="hero-btns flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3 items-center lg:items-start">
             <Link href="/contact" className="group inline-flex items-center gap-2 px-6 py-3 bg-ro-gold text-ro-black font-heading text-xs tracking-[0.15em] uppercase hover:bg-ro-gold-light transition-all duration-300 whitespace-nowrap">
               Discuss Your Project <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
             </Link>

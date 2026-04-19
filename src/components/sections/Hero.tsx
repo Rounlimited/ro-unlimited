@@ -347,10 +347,8 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
             />
 
             {/* Description */}
-            <p ref={descRef} className="max-w-2xl mx-auto text-ro-white text-xl sm:text-2xl font-body font-medium leading-relaxed mb-12 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
-              <span className="text-ro-gold font-semibold">Commercial.</span>{' '}
-              <span className="text-ro-gold font-semibold">Residential.</span>{' '}
-              Land grading to luxury finishes. <span className="text-ro-gold font-semibold">One company</span> that shows up, builds right, and stands behind every job.
+            <p ref={descRef} className="max-w-2xl mx-auto text-ro-white/90 text-lg sm:text-xl font-body leading-relaxed tracking-wide mb-12 drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]">
+              Commercial. Residential. Land grading to luxury finishes. One company that shows up, builds right, and stands behind every job.
             </p>
 
             {/* CTAs */}
