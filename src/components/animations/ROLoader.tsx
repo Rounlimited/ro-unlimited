@@ -56,14 +56,14 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
       gsap.timeline()
         .to(roRef.current, {
           opacity: 0.95, scale: 1,
-          duration: 0.7, ease: 'power2.out',
+          duration: 0.85, ease: 'power2.out',
         })
         .to(roRef.current, {
-          scale: 1.02,
-          duration: 0.5, ease: 'sine.inOut',
+          scale: 1.03,
+          duration: 0.7, ease: 'sine.inOut',
         }, '>-0.05')
         .to(splashRef.current, {
-          opacity: 0, duration: 0.55, ease: 'power2.inOut',
+          opacity: 0, duration: 0.7, ease: 'power2.inOut',
           onComplete: () => {
             setDone(true);
             if (splashRef.current) splashRef.current.style.display = 'none';
@@ -71,7 +71,7 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
             (window as any).__roSiteReady = true;
             window.dispatchEvent(new Event('ro:site-ready'));
           },
-        }, '>+0.15');
+        }, '>+0.3');
     });
 
     return () => ctx.revert();

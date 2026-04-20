@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v20'; // Hero copy: full builder framing
+const CACHE_NAME = 'ro-admin-v21'; // Splash slightly longer
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',
