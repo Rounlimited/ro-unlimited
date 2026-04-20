@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v18'; // Splash + hero pacing tune
+const CACHE_NAME = 'ro-admin-v19'; // Hero copy: add Builder
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',
