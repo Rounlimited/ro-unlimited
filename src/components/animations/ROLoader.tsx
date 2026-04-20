@@ -50,16 +50,20 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
     try { sessionStorage.setItem('roSplashPlayed', '1'); } catch {}
 
     const ctx = gsap.context(() => {
-      gsap.set(roRef.current, { opacity: 0, scale: 0.92 });
+      gsap.set(roRef.current, { opacity: 0, scale: 0.9 });
       gsap.set(splashRef.current, { opacity: 1 });
 
       gsap.timeline()
         .to(roRef.current, {
           opacity: 0.95, scale: 1,
-          duration: 0.35, ease: 'power2.out',
+          duration: 0.7, ease: 'power2.out',
         })
+        .to(roRef.current, {
+          scale: 1.02,
+          duration: 0.5, ease: 'sine.inOut',
+        }, '>-0.05')
         .to(splashRef.current, {
-          opacity: 0, duration: 0.35, ease: 'power2.inOut',
+          opacity: 0, duration: 0.55, ease: 'power2.inOut',
           onComplete: () => {
             setDone(true);
             if (splashRef.current) splashRef.current.style.display = 'none';
@@ -67,7 +71,7 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
             (window as any).__roSiteReady = true;
             window.dispatchEvent(new Event('ro:site-ready'));
           },
-        }, '+=0.35');
+        }, '>+0.15');
     });
 
     return () => ctx.revert();

@@ -39,13 +39,13 @@ export default function HeroVideo({ videoUrl, onReady }: HeroVideoProps) {
     const startPlayback = () => {
       if (firedRef.current) return;
       video.play().catch(() => {});
-      // Brief frame so video is visible, then kick off text build immediately
+      // Let the video settle in briefly before the text build begins
       setTimeout(() => {
         if (!firedRef.current) {
           firedRef.current = true;
           onReady?.();
         }
-      }, 250);
+      }, 900);
     };
 
     const onSiteReady = () => {

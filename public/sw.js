@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v17'; // Hero elegance + commercial centering
+const CACHE_NAME = 'ro-admin-v18'; // Splash + hero pacing tune
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',
