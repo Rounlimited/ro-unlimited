@@ -348,7 +348,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
 
             {/* Description */}
             <p ref={descRef} className="max-w-2xl mx-auto text-ro-white/90 text-lg sm:text-xl font-body leading-relaxed tracking-wide mb-12 drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]">
-              Commercial. Residential. Builder. Land grading to luxury finishes. One company that shows up, builds right, and stands behind every job.
+              Commercial. Residential. Ground-up construction &mdash; from site prep to luxury finishes. One company that shows up, builds right, and stands behind every job.
             </p>
 
             {/* CTAs */}
