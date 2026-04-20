@@ -207,7 +207,7 @@ export default function ServicesPage() {
 
           <div className="hero-gold-line w-10 h-[2px] bg-gradient-to-r from-ro-gold/80 to-transparent mb-6" />
 
-          <p className="hero-desc text-ro-gray-400 text-sm sm:text-base leading-relaxed mb-8 max-w-sm">
+          <p className="hero-desc text-ro-white/90 text-sm sm:text-base leading-relaxed tracking-wide mb-8 max-w-sm drop-shadow-[0_1px_6px_rgba(0,0,0,0.6)]">
             {division.description}
           </p>
 

@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v22'; // Hero build fires immediately on site-ready
+const CACHE_NAME = 'ro-admin-v23'; // Services hero desc legibility
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',
