@@ -23,6 +23,13 @@ const SANITY_URL =
   `?query=${encodeURIComponent(QUERY)}`;
 
 async function isMaintenanceOn(): Promise<boolean> {
+  // Env override — the operator kill-switch. Set MAINTENANCE_MODE=on in Vercel
+  // to force the site offline regardless of the Sanity flag (e.g. when the
+  // Sanity write token isn't available to drive the in-panel toggle).
+  const envFlag = (process.env.MAINTENANCE_MODE || '').toLowerCase();
+  if (envFlag === 'on' || envFlag === 'true' || envFlag === '1') return true;
+  if (envFlag === 'off' || envFlag === 'false' || envFlag === '0') return false;
+
   try {
     const res = await fetch(SANITY_URL, {
       // Short revalidate so flipping the switch takes effect within ~20s,
