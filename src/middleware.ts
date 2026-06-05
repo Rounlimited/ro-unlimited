@@ -9,36 +9,35 @@ import type { NextRequest } from 'next/server';
  * (/api) and the maintenance page itself stay fully reachable so the site can
  * always be brought back online from the admin panel.
  *
- * The flag is read from the Sanity CDN (fast, globally cached) and FAILS OPEN —
- * if Sanity is unreachable we serve the site rather than risk a false outage.
+ * The flag lives in Supabase (`app_settings.maintenance_mode`) and is read via
+ * the service-role key. It FAILS OPEN — if Supabase is unreachable we serve the
+ * site rather than risk a false outage.
  */
 
-const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || '3at2yyx0';
-const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production';
-const apiVersion = process.env.NEXT_PUBLIC_SANITY_API_VERSION || '2024-01-01';
-
-const QUERY = '*[_id == "siteSettings"][0]{maintenanceMode}';
-const SANITY_URL =
-  `https://${projectId}.apicdn.sanity.io/v${apiVersion}/data/query/${dataset}` +
-  `?query=${encodeURIComponent(QUERY)}`;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 async function isMaintenanceOn(): Promise<boolean> {
-  // Env override — the operator kill-switch. Set MAINTENANCE_MODE=on in Vercel
-  // to force the site offline regardless of the Sanity flag (e.g. when the
-  // Sanity write token isn't available to drive the in-panel toggle).
+  // Env override — emergency operator kill-switch. Set MAINTENANCE_MODE=on/off
+  // in Vercel to force a state regardless of the Supabase flag.
   const envFlag = (process.env.MAINTENANCE_MODE || '').toLowerCase();
   if (envFlag === 'on' || envFlag === 'true' || envFlag === '1') return true;
   if (envFlag === 'off' || envFlag === 'false' || envFlag === '0') return false;
 
+  if (!SUPABASE_URL || !SERVICE_KEY) return false;
   try {
-    const res = await fetch(SANITY_URL, {
-      // Short revalidate so flipping the switch takes effect within ~20s,
-      // without hitting Sanity on every single request.
-      next: { revalidate: 20 },
-    });
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/app_settings?key=eq.maintenance_mode&select=value`,
+      {
+        headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+        // Short revalidate so flipping the switch takes effect within ~15s,
+        // without querying Supabase on every single request.
+        next: { revalidate: 15 },
+      }
+    );
     if (!res.ok) return false;
-    const json = await res.json();
-    return json?.result?.maintenanceMode === true;
+    const rows = (await res.json()) as Array<{ value: unknown }>;
+    return rows?.[0]?.value === true;
   } catch {
     return false; // fail open
   }
