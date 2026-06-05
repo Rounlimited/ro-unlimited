@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sanityClient, sanityWriteClient } from '@/lib/sanity/client';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, getServerUser, roleOf } from '@/lib/supabase/server';
+
+const unauth = () => NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+const forbidden = () => NextResponse.json({ error: 'Forbidden — admin access required' }, { status: 403 });
 
 // Maintenance mode lives in Supabase (app_settings) because the Sanity token is
 // read-only. Map the camelCase API fields to the app_settings keys.
@@ -26,7 +29,11 @@ async function readMaintenance() {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Any signed-in admin user can read settings; block anonymous access.
+  const user = await getServerUser(req);
+  if (!user) return unauth();
+
   let settings: Record<string, any> = {};
   try {
     settings = await sanityClient.fetch(
@@ -55,6 +62,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getServerUser(req);
+  if (!user) return unauth();
+  if (roleOf(user) === 'employee') return forbidden();
   try {
     const body = await req.json();
 
@@ -87,6 +97,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const user = await getServerUser(req);
+  if (!user) return unauth();
+  if (roleOf(user) === 'employee') return forbidden();
   try {
     const body = await req.json();
     const { field, value, assetRef } = body;
