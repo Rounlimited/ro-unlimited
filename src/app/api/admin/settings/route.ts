@@ -17,7 +17,9 @@ export async function GET() {
         heroOverlayOpacity,
         heroHeadline,
         heroSubheadline,
-        heroDescription
+        heroDescription,
+        maintenanceMode,
+        maintenanceMessage
       }`
     );
     return NextResponse.json(settings || {});

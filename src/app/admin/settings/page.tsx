@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { createClient } from '@/lib/supabase/client';
-import { UserPlus, Trash2, Copy, Check, Shield, User, Loader2, X, Clock, ShieldCheck, Link2, Share2, Zap, Mail, Plus, Edit3, Sun, Moon, Monitor } from 'lucide-react';
+import { UserPlus, Trash2, Copy, Check, Shield, User, Loader2, X, Clock, ShieldCheck, Link2, Share2, Zap, Mail, Plus, Edit3, Sun, Moon, Monitor, Power, Globe, AlertTriangle } from 'lucide-react';
 import { usePreferences } from '@/components/admin/UserPreferencesProvider';
 
 interface AdminUser {
@@ -54,8 +54,16 @@ export default function SettingsPage() {
   const [creatingEmail, setCreatingEmail] = useState(false);
   const [editingEmail, setEditingEmail] = useState<string | null>(null);
 
+  // Maintenance mode (take the public site offline)
+  const [maintenance, setMaintenance] = useState(false);
+  const [maintenanceMsg, setMaintenanceMsg] = useState('');
+  const [maintenanceMsgDraft, setMaintenanceMsgDraft] = useState('');
+  const [savingMaintenance, setSavingMaintenance] = useState(false);
+  const [savingMsg, setSavingMsg] = useState(false);
+
   const supabase = createClient();
   const isNexa = currentUser?.role === 'super_admin';
+  const canToggleMaintenance = isNexa || currentUser?.role === 'admin';
 
   useEffect(() => {
     const init = async () => {
@@ -77,7 +85,60 @@ export default function SettingsPage() {
     init();
     // Fetch email accounts
     fetch('/api/admin/email-accounts').then(r => r.json()).then(d => { if (Array.isArray(d)) setEmailAccounts(d); }).catch(() => {});
+    // Fetch current site status (maintenance mode)
+    fetch('/api/admin/settings').then(r => r.json()).then(d => {
+      setMaintenance(d?.maintenanceMode === true);
+      setMaintenanceMsg(d?.maintenanceMessage || '');
+      setMaintenanceMsgDraft(d?.maintenanceMessage || '');
+    }).catch(() => {});
   }, [supabase]);
+
+  // Toggle the public website on/off
+  const toggleMaintenance = async (next: boolean) => {
+    if (next && !confirm('Take the PUBLIC website offline now?\n\nVisitors will see a "temporarily under maintenance" page. The admin portal stays available so you can bring it back online anytime.')) return;
+    setSavingMaintenance(true);
+    setMessage(null);
+    setMaintenance(next); // optimistic
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field: 'maintenanceMode', value: next }),
+      });
+      if (!res.ok) throw new Error('Request failed');
+      setMessage({
+        type: 'success',
+        text: next
+          ? 'Public site is now OFFLINE — visitors see the maintenance page. Takes effect within ~20s.'
+          : 'Public site is back ONLINE. Takes effect within ~20s.',
+      });
+    } catch (e: any) {
+      setMaintenance(!next); // revert
+      setMessage({ type: 'error', text: 'Could not update site status. Try again.' });
+    } finally {
+      setSavingMaintenance(false);
+    }
+  };
+
+  // Save the custom maintenance message
+  const saveMaintenanceMsg = async () => {
+    setSavingMsg(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field: 'maintenanceMessage', value: maintenanceMsgDraft }),
+      });
+      if (!res.ok) throw new Error('Request failed');
+      setMaintenanceMsg(maintenanceMsgDraft);
+      setMessage({ type: 'success', text: 'Maintenance message saved.' });
+    } catch (e: any) {
+      setMessage({ type: 'error', text: 'Could not save the message.' });
+    } finally {
+      setSavingMsg(false);
+    }
+  };
 
   // Generate invite link (for adding new users)
   const generateInviteLink = async () => {
@@ -192,6 +253,71 @@ export default function SettingsPage() {
             <div className="flex items-center gap-2">{message.type === 'success' ? <Check size={14} /> : <X size={14} />}{message.text}</div>
             <button onClick={() => setMessage(null)} className="opacity-50 hover:opacity-100"><X size={14} /></button>
           </div>
+        )}
+
+        {/* ── Site Status: take the public website online / offline ───────── */}
+        {canToggleMaintenance && (
+          <section className={`rounded-xl overflow-hidden mb-6 border transition-colors ${maintenance ? 'bg-red-500/[0.06] border-red-500/30' : 'bg-[#111] border-white/5'}`}>
+            <div className="px-6 py-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${maintenance ? 'bg-red-500/15' : 'bg-green-500/10'}`}>
+                  {maintenance ? <Power size={16} className="text-red-400" /> : <Globe size={16} className="text-green-400" />}
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold flex items-center gap-2">
+                    Site Status
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${maintenance ? 'bg-red-500/15 text-red-400 border border-red-500/25' : 'bg-green-500/10 text-green-400 border border-green-500/20'}`}>
+                      {maintenance ? 'OFFLINE' : 'LIVE'}
+                    </span>
+                  </h2>
+                  <p className="text-[11px] text-white/25">
+                    {maintenance ? 'Public site shows a maintenance page' : 'Public site is visible to everyone'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => toggleMaintenance(!maintenance)}
+                disabled={savingMaintenance}
+                aria-label="Toggle site online/offline"
+                className="flex items-center gap-2 disabled:opacity-50"
+              >
+                {savingMaintenance && <Loader2 size={14} className="animate-spin text-white/40" />}
+                <div className={`w-12 h-7 rounded-full relative transition-colors ${maintenance ? 'bg-red-500' : 'bg-green-500/80'}`}>
+                  <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${maintenance ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                </div>
+              </button>
+            </div>
+
+            {maintenance && (
+              <div className="px-6 py-3 bg-red-500/[0.04] border-t border-red-500/15 flex items-start gap-2">
+                <AlertTriangle size={13} className="text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-[12px] text-red-300/80">
+                  The public website is offline. The admin portal stays available — flip this back to bring the site online.
+                </p>
+              </div>
+            )}
+
+            {/* Custom maintenance message */}
+            <div className="px-6 py-4 border-t border-white/5">
+              <label className="block text-[12px] text-white/30 mb-1.5">Message shown to visitors</label>
+              <textarea
+                value={maintenanceMsgDraft}
+                onChange={e => setMaintenanceMsgDraft(e.target.value)}
+                rows={2}
+                placeholder="Our website is temporarily under maintenance. We'll be back shortly."
+                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white/80 focus:outline-none focus:border-[#C9A84C]/40 resize-none"
+              />
+              {maintenanceMsgDraft !== maintenanceMsg && (
+                <button
+                  onClick={saveMaintenanceMsg}
+                  disabled={savingMsg}
+                  className="mt-2 px-3 py-1.5 text-[11px] font-medium text-[#C9A84C] bg-[#C9A84C]/10 hover:bg-[#C9A84C]/20 border border-[#C9A84C]/20 rounded-lg transition-all disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {savingMsg ? <><Loader2 size={11} className="animate-spin" /> Saving...</> : <><Check size={11} /> Save Message</>}
+                </button>
+              )}
+            </div>
+          </section>
         )}
 
         {/* ── DEVELOPER ONLY: 24-hr Access Link ───────────────────────────── */}

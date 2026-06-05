@@ -19,14 +19,15 @@ import Footer from '@/components/layout/Footer';
 export default function ROLoader({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin');
+  const isBare = isAdmin || pathname?.startsWith('/maintenance');
 
   const splashRef = useRef<HTMLDivElement>(null);
   const roRef = useRef<HTMLImageElement>(null);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    // Admin has its own splash — skip entirely
-    if (isAdmin) {
+    // Admin & maintenance pages have no splash — skip entirely
+    if (isBare) {
       setDone(true);
       return;
     }
@@ -75,10 +76,10 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
     });
 
     return () => ctx.revert();
-  }, [isAdmin]);
+  }, [isBare]);
 
-  // Admin: pass through with no chrome at all
-  if (isAdmin) {
+  // Admin & maintenance: pass through with no chrome at all
+  if (isBare) {
     return <>{children}</>;
   }
 
