@@ -404,8 +404,10 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
           <div className="hero-grid-h absolute top-[80%] left-0 right-0 h-px bg-ro-gold" />
         </div>
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 z-[2] bg-gradient-to-b from-ro-black/88 via-ro-black/62 to-ro-black/88 lg:bg-gradient-to-b lg:from-ro-black/80 lg:via-ro-black/60 lg:to-ro-black/80" />
+        {/* Gradient overlay — darker through the center where the headline sits (esp. desktop) */}
+        <div className="absolute inset-0 z-[2] bg-gradient-to-b from-ro-black/88 via-ro-black/68 to-ro-black/88 lg:bg-gradient-to-b lg:from-ro-black/85 lg:via-ro-black/72 lg:to-ro-black/85" />
+        {/* Desktop radial scrim — concentrates contrast directly behind the headline */}
+        <div className="absolute inset-0 z-[2] hidden lg:block pointer-events-none" style={{ background: 'radial-gradient(ellipse 62% 56% at 50% 44%, rgba(8,8,8,0.50) 0%, rgba(8,8,8,0) 68%)' }} />
         <div className="absolute inset-0 z-[2] lg:hidden" style={{ background: 'linear-gradient(to right, rgba(8,8,8,0.96) 0%, rgba(8,8,8,0.88) 34%, rgba(8,8,8,0.52) 62%, rgba(8,8,8,0.10) 100%)' }} />
         <div ref={ambientLeftRef} className="absolute left-[-18%] top-[10%] z-[1] h-[280px] w-[280px] rounded-full bg-ro-gold/18 blur-3xl pointer-events-none lg:left-[-10%] lg:top-[12%] lg:h-[220px] lg:w-[220px] lg:bg-ro-gold/10" />
         <div ref={ambientRightRef} className="absolute right-[-18%] top-[26%] z-[1] h-[260px] w-[260px] rounded-full bg-cyan-400/16 blur-3xl pointer-events-none lg:right-[-12%] lg:top-[30%] lg:h-[260px] lg:w-[260px] lg:bg-cyan-400/10" />
@@ -425,13 +427,13 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
 
             {/* Heading — builds bottom to top */}
             <h1>
-              <span ref={line1Ref} className="block text-ro-white font-heading text-[3.2rem] sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.88] mb-3 lg:mb-4">
+              <span ref={line1Ref} className="block text-ro-white font-heading text-[3.2rem] sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.88] mb-3 lg:mb-4 drop-shadow-[0_2px_16px_rgba(0,0,0,0.9)]">
                 We Build
               </span>
-              <span ref={line2Ref} className="block gradient-text-gold font-heading text-[3.2rem] sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.88] mb-3 lg:mb-4">
+              <span ref={line2Ref} className="block gradient-text-gold font-heading text-[3.2rem] sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.88] mb-3 lg:mb-4 drop-shadow-[0_2px_14px_rgba(0,0,0,0.75)]">
                 What Lasts
               </span>
-              <span ref={line3Ref} className="block text-ro-white font-heading text-[2.05rem] sm:text-4xl md:text-5xl tracking-[0.12em] uppercase leading-[0.92]">
+              <span ref={line3Ref} className="block text-ro-white font-heading text-[2.05rem] sm:text-4xl md:text-5xl tracking-[0.12em] uppercase leading-[0.92] drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
                 From the Ground Up
               </span>
             </h1>
