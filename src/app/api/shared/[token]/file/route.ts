@@ -36,10 +36,12 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   if (!fileRes.ok) return new NextResponse('Download failed', { status: 502 });
 
   const original = share.file.original_filename || 'download';
+  // Bare filename only — Android's URLUtil.guessFileName needs the filename at the end
+  // with no `filename*=` after it (otherwise the app saves as "file.bin").
   const ascii = original.replace(/[\r\n"\\]/g, '').replace(/[/]/g, '_');
   const headers: Record<string, string> = {
     'Content-Type': fileRes.headers.get('content-type') || 'application/octet-stream',
-    'Content-Disposition': `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(original)}`,
+    'Content-Disposition': `attachment; filename="${ascii}"`,
     'Cache-Control': 'private, max-age=0',
   };
   if (tgData.result.file_size) headers['Content-Length'] = String(tgData.result.file_size);

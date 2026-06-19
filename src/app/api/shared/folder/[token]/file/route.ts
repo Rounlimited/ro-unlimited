@@ -40,9 +40,10 @@ export async function GET(req: NextRequest) {
       'Cache-Control': 'public, max-age=3600',
     };
     if (download === '1') {
+      // Bare filename only — Android's URLUtil.guessFileName needs the filename at the
+      // end with no `filename*=` after it (otherwise the app saves as "file.bin").
       const ascii = (filename || 'download').replace(/[\r\n"\\]/g, '').replace(/[/]/g, '_');
-      headers['Content-Disposition'] =
-        `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename || 'download')}`;
+      headers['Content-Disposition'] = `attachment; filename="${ascii}"`;
     }
     return new NextResponse(fileRes.body, { headers });
   }

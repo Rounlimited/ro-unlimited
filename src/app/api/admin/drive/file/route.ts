@@ -34,10 +34,11 @@ export async function GET(req: NextRequest) {
     };
     if (contentLength) headers['Content-Length'] = contentLength;
     if (asDownload) {
-      // Sanitize to prevent header injection; provide both ASCII and UTF-8 names.
+      // Bare `filename="..."` only — Android's URLUtil.guessFileName regex requires the
+      // filename at the very end with nothing after it, so no `filename*=` suffix (it
+      // would make the app save as "file.bin"). Sanitize to prevent header injection.
       const ascii = (filename || 'download').replace(/[\r\n"\\]/g, '').replace(/[/]/g, '_');
-      headers['Content-Disposition'] =
-        `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename || 'download')}`;
+      headers['Content-Disposition'] = `attachment; filename="${ascii}"`;
     }
 
     // Stream the response body directly — no buffering
