@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v28'; // Share-link downloads stream with correct filename
+const CACHE_NAME = 'ro-admin-v29'; // App download via location.href + share sheet above preview (z-index)
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',

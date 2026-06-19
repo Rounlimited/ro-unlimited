@@ -541,12 +541,11 @@ export default function DrivePage() {
     }
     const proxyUrl = `/api/admin/drive/file?download=1&filename=${encodeURIComponent(file.original_filename)}&url=${encodeURIComponent(rawUrl)}`;
 
-    // window.open is the trigger that already worked in this app — keep it, just point it
-    // at the proxy so the download gets the correct name + extension (Content-Disposition).
-    // Fall back to a same-tab navigation if the popup is blocked (an attachment downloads
-    // without navigating the page away).
-    const win = window.open(proxyUrl, '_blank');
-    if (!win) window.location.href = proxyUrl;
+    // Navigate to the proxy URL — same mechanism that works for public share links.
+    // The proxy responds with Content-Disposition: attachment, so the browser/TWA
+    // downloads it (correct name + extension) WITHOUT navigating the page away.
+    // (window.open is unreliable in the standalone TWA; direct navigation is not.)
+    window.location.href = proxyUrl;
   };
 
   // ── Delete file ──
@@ -1572,8 +1571,8 @@ export default function DrivePage() {
         {/* ── Share options sheet ── */}
         {shareSheet && (
           <>
-            <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setShareSheet(null)} />
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#141414] border-t border-white/10 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto"
+            <div className="fixed inset-0 z-[70] bg-black/40" onClick={() => setShareSheet(null)} />
+            <div className="fixed bottom-0 left-0 right-0 z-[71] bg-[#141414] border-t border-white/10 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto"
               style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}>
               <div className="w-10 h-1 bg-white/10 rounded-full mx-auto mt-3 mb-2" />
 
