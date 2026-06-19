@@ -23,9 +23,15 @@ export async function GET(req: NextRequest) {
   // Stream the actual file bytes when stream=1 (large files) or download=1 (force a
   // proper download with the real filename instead of Telegram's "file_NNN").
   if (stream === '1' || download === '1') {
-    const TELEGRAM_API_BASE = process.env.TELEGRAM_API_URL || 'https://api.telegram.org';
-    const internalUrl = `${TELEGRAM_API_BASE}/file/bot${TELEGRAM_TOKEN}/${filePath}`;
-    const fileRes = await fetch(internalUrl);
+    // Download from the SAME host getFile used (public Telegram CDN) — the file lives on
+    // Telegram's cloud, not the Oracle server (TELEGRAM_API_URL).
+    const internalUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${filePath}`;
+    let fileRes: Response;
+    try {
+      fileRes = await fetch(internalUrl);
+    } catch {
+      return NextResponse.json({ error: 'File download failed' }, { status: 502 });
+    }
     if (!fileRes.ok) return NextResponse.json({ error: 'File download failed' }, { status: 500 });
     const contentType = fileRes.headers.get('content-type') || 'application/octet-stream';
     const headers: Record<string, string> = {
