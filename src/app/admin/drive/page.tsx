@@ -541,14 +541,10 @@ export default function DrivePage() {
     }
     const proxyUrl = `/api/admin/drive/file?download=1&filename=${encodeURIComponent(file.original_filename)}&url=${encodeURIComponent(rawUrl)}`;
 
-    // Same-origin proxy → the `download` attribute is honored and Content-Disposition
-    // guarantees the right name even if it weren't.
-    const a = document.createElement('a');
-    a.href = proxyUrl;
-    a.download = file.original_filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    // window.open (not a synthetic <a download> click — Android WebView ignores those)
+    // triggers the download; the proxy's Content-Disposition: attachment gives it the
+    // correct name + extension.
+    window.open(proxyUrl, '_blank');
   };
 
   // ── Delete file ──
