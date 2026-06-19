@@ -528,9 +528,27 @@ export default function DrivePage() {
 
   // ── Download file ──
   const handleDownload = async (file: UserFile) => {
-    const url = previewUrl || await getFileUrl(file.id);
-    if (url) window.open(url, '_blank');
-    else setToast('Failed to get download link');
+    const resolved = previewUrl || await getFileUrl(file.id);
+    if (!resolved) { setToast('Failed to get download link'); return; }
+
+    // get_download_url returns either a direct Telegram/Oracle URL (small files) or an
+    // already-wrapped proxy URL (large files). Unwrap so we always hit the proxy once,
+    // and force a real download with the correct filename + extension.
+    let rawUrl = resolved;
+    if (resolved.startsWith('/api/admin/drive/file')) {
+      const qs = new URLSearchParams(resolved.split('?')[1] || '');
+      rawUrl = decodeURIComponent(qs.get('url') || '');
+    }
+    const proxyUrl = `/api/admin/drive/file?download=1&filename=${encodeURIComponent(file.original_filename)}&url=${encodeURIComponent(rawUrl)}`;
+
+    // Same-origin proxy → the `download` attribute is honored and Content-Disposition
+    // guarantees the right name even if it weren't.
+    const a = document.createElement('a');
+    a.href = proxyUrl;
+    a.download = file.original_filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   // ── Delete file ──

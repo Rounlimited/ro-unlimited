@@ -6,6 +6,10 @@ export const dynamic = 'force-dynamic';
 // Streams the response — no size limit, no buffering
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url');
+  // When `download` is present, force a save dialog with the real filename + extension
+  // (otherwise the browser would name the file after the proxy/Telegram URL with no extension).
+  const asDownload = req.nextUrl.searchParams.get('download');
+  const filename = req.nextUrl.searchParams.get('filename');
   if (!url) return new NextResponse('Missing url', { status: 400 });
 
   const allowed = [
@@ -29,6 +33,12 @@ export async function GET(req: NextRequest) {
       'Cache-Control': 'public, max-age=3600',
     };
     if (contentLength) headers['Content-Length'] = contentLength;
+    if (asDownload) {
+      // Sanitize to prevent header injection; provide both ASCII and UTF-8 names.
+      const ascii = (filename || 'download').replace(/[\r\n"\\]/g, '').replace(/[/]/g, '_');
+      headers['Content-Disposition'] =
+        `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename || 'download')}`;
+    }
 
     // Stream the response body directly — no buffering
     return new NextResponse(res.body, { headers });
