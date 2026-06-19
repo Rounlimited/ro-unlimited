@@ -172,8 +172,11 @@ export default function SharedFolderPage({ params }: { params: { token: string }
   }, [currentPath, previewFile, data]);
 
   const handleDownload = async (file: SharedFile) => {
-    const url = previewUrl || await getUrl(file);
-    if (url) window.open(url, '_blank');
+    // Stream through our route with download=1 so it saves with the real filename +
+    // extension (Telegram serves it as "file_NNN" with no extension otherwise).
+    const dl = `/api/shared/folder/${params.token}/file?file_id=${file.telegram_file_id}&download=1&filename=${encodeURIComponent(file.original_filename)}`;
+    const win = window.open(dl, '_blank');
+    if (!win) window.location.href = dl;
   };
 
   // Derive folder contents

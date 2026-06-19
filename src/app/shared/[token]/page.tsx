@@ -91,10 +91,11 @@ export default async function SharedFilePage({ params }: { params: { token: stri
         )}
       </div>
 
-      {/* Download button */}
+      {/* Download button — stream through our route so it saves with the real filename.
+          (Linking straight to the Telegram URL downloads as "file_NNN" with no extension.) */}
       {downloadUrl && (
         <div className="px-5 pb-6">
-          <a href={downloadUrl} download={file.original_filename} target="_blank" rel="noopener noreferrer"
+          <a href={`/api/shared/${token}/file`} download={file.original_filename}
             className="block w-full py-4 bg-[#3b8dd4] text-white text-center font-bold text-[16px] rounded-2xl hover:bg-[#3b8dd4]/90 transition-colors">
             Download File
           </a>

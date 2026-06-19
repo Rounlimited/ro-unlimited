@@ -5,6 +5,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   const fileId = req.nextUrl.searchParams.get('file_id');
   const stream = req.nextUrl.searchParams.get('stream');
+  const download = req.nextUrl.searchParams.get('download');
+  const filename = req.nextUrl.searchParams.get('filename');
   if (!fileId) return NextResponse.json({ error: 'file_id required' }, { status: 400 });
 
   const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -18,20 +20,25 @@ export async function GET(req: NextRequest) {
   const filePath = tgData.result.file_path;
   const fileSize = tgData.result.file_size || 0;
 
-  // If stream=1, proxy the actual file bytes (for large files)
-  if (stream === '1') {
+  // Stream the actual file bytes when stream=1 (large files) or download=1 (force a
+  // proper download with the real filename instead of Telegram's "file_NNN").
+  if (stream === '1' || download === '1') {
     const TELEGRAM_API_BASE = process.env.TELEGRAM_API_URL || 'https://api.telegram.org';
     const internalUrl = `${TELEGRAM_API_BASE}/file/bot${TELEGRAM_TOKEN}/${filePath}`;
     const fileRes = await fetch(internalUrl);
     if (!fileRes.ok) return NextResponse.json({ error: 'File download failed' }, { status: 500 });
     const contentType = fileRes.headers.get('content-type') || 'application/octet-stream';
-    return new NextResponse(fileRes.body, {
-      headers: {
-        'Content-Type': contentType,
-        ...(fileSize ? { 'Content-Length': String(fileSize) } : {}),
-        'Cache-Control': 'public, max-age=3600',
-      },
-    });
+    const headers: Record<string, string> = {
+      'Content-Type': contentType,
+      ...(fileSize ? { 'Content-Length': String(fileSize) } : {}),
+      'Cache-Control': 'public, max-age=3600',
+    };
+    if (download === '1') {
+      const ascii = (filename || 'download').replace(/[\r\n"\\]/g, '').replace(/[/]/g, '_');
+      headers['Content-Disposition'] =
+        `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename || 'download')}`;
+    }
+    return new NextResponse(fileRes.body, { headers });
   }
 
   // Files under 20MB: direct Telegram CDN URL (fast, no proxy)

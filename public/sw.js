@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v27'; // Drive download: restore window.open(proxy) — proven trigger + correct name
+const CACHE_NAME = 'ro-admin-v28'; // Share-link downloads stream with correct filename
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',
