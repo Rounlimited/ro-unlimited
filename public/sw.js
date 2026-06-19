@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v26'; // Drive download: blob/objectURL for Android PWA compat
+const CACHE_NAME = 'ro-admin-v27'; // Drive download: restore window.open(proxy) — proven trigger + correct name
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',

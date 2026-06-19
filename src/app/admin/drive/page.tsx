@@ -541,31 +541,12 @@ export default function DrivePage() {
     }
     const proxyUrl = `/api/admin/drive/file?download=1&filename=${encodeURIComponent(file.original_filename)}&url=${encodeURIComponent(rawUrl)}`;
 
-    // Large files: navigate so the browser streams it (don't buffer GBs in memory).
-    // Content-Disposition: attachment makes the browser download instead of navigating away.
-    if ((file.file_size || 0) > 100 * 1024 * 1024) { window.location.href = proxyUrl; return; }
-
-    // Everything else: fetch as a blob and download via an object URL. The `download`
-    // attribute IS honored for same-origin blob: URLs even in standalone Android PWAs,
-    // where synthetic <a> clicks on http URLs and window.open() are both no-ops.
-    try {
-      setToast('Preparing download…');
-      const res = await fetch(proxyUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
-      const objUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = objUrl;
-      a.download = file.original_filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(objUrl), 30000);
-      setToast(null);
-    } catch {
-      // Fallback for any environment that blocks blob downloads.
-      window.location.href = proxyUrl;
-    }
+    // window.open is the trigger that already worked in this app — keep it, just point it
+    // at the proxy so the download gets the correct name + extension (Content-Disposition).
+    // Fall back to a same-tab navigation if the popup is blocked (an attachment downloads
+    // without navigating the page away).
+    const win = window.open(proxyUrl, '_blank');
+    if (!win) window.location.href = proxyUrl;
   };
 
   // ── Delete file ──
