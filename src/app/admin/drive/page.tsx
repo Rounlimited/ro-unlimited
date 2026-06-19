@@ -541,10 +541,31 @@ export default function DrivePage() {
     }
     const proxyUrl = `/api/admin/drive/file?download=1&filename=${encodeURIComponent(file.original_filename)}&url=${encodeURIComponent(rawUrl)}`;
 
-    // window.open (not a synthetic <a download> click — Android WebView ignores those)
-    // triggers the download; the proxy's Content-Disposition: attachment gives it the
-    // correct name + extension.
-    window.open(proxyUrl, '_blank');
+    // Large files: navigate so the browser streams it (don't buffer GBs in memory).
+    // Content-Disposition: attachment makes the browser download instead of navigating away.
+    if ((file.file_size || 0) > 100 * 1024 * 1024) { window.location.href = proxyUrl; return; }
+
+    // Everything else: fetch as a blob and download via an object URL. The `download`
+    // attribute IS honored for same-origin blob: URLs even in standalone Android PWAs,
+    // where synthetic <a> clicks on http URLs and window.open() are both no-ops.
+    try {
+      setToast('Preparing download…');
+      const res = await fetch(proxyUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl;
+      a.download = file.original_filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objUrl), 30000);
+      setToast(null);
+    } catch {
+      // Fallback for any environment that blocks blob downloads.
+      window.location.href = proxyUrl;
+    }
   };
 
   // ── Delete file ──
