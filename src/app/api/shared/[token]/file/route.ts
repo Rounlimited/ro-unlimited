@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { mimeFromFilename } from '@/lib/mime';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,8 +40,11 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   // Bare filename only — Android's URLUtil.guessFileName needs the filename at the end
   // with no `filename*=` after it (otherwise the app saves as "file.bin").
   const ascii = original.replace(/[\r\n"\\]/g, '').replace(/[/]/g, '_');
+  // Use the stored mime_type / extension-derived MIME so the client keeps the real
+  // extension (Telegram serves octet-stream → app would save ".bin").
+  const contentType = share.file.mime_type || mimeFromFilename(original) || fileRes.headers.get('content-type') || 'application/octet-stream';
   const headers: Record<string, string> = {
-    'Content-Type': fileRes.headers.get('content-type') || 'application/octet-stream',
+    'Content-Type': contentType,
     'Content-Disposition': `attachment; filename="${ascii}"`,
     'Cache-Control': 'private, max-age=0',
   };

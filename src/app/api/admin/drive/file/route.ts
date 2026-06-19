@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { mimeFromFilename } from '@/lib/mime';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,9 @@ export async function GET(req: NextRequest) {
     const res = await fetch(url);
     if (!res.ok) return new NextResponse('File not found', { status: 404 });
 
-    const contentType = res.headers.get('content-type') || 'application/octet-stream';
+    // Prefer a MIME type derived from the filename's extension — Telegram serves
+    // octet-stream, which makes Android rewrite the saved extension to ".bin".
+    const contentType = (asDownload && mimeFromFilename(filename)) || res.headers.get('content-type') || 'application/octet-stream';
     const contentLength = res.headers.get('content-length');
 
     const headers: Record<string, string> = {

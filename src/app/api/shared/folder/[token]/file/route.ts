@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { mimeFromFilename } from '@/lib/mime';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'File download failed' }, { status: 502 });
     }
     if (!fileRes.ok) return NextResponse.json({ error: 'File download failed' }, { status: 500 });
-    const contentType = fileRes.headers.get('content-type') || 'application/octet-stream';
+    // Prefer a MIME from the filename's extension so Android keeps the real extension
+    // (Telegram serves octet-stream → app would save ".bin").
+    const contentType = (download === '1' && mimeFromFilename(filename)) || fileRes.headers.get('content-type') || 'application/octet-stream';
     const headers: Record<string, string> = {
       'Content-Type': contentType,
       ...(fileSize ? { 'Content-Length': String(fileSize) } : {}),
