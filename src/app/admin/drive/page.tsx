@@ -541,16 +541,21 @@ export default function DrivePage() {
     }
     const proxyUrl = `/api/admin/drive/file?download=1&filename=${encodeURIComponent(file.original_filename)}&url=${encodeURIComponent(rawUrl)}`;
 
-    // iOS (Safari/standalone web app): a direct navigation often does nothing — open in a
-    // Safari context where iOS shows the file with "Save to Files" (correct name).
-    // Android WebView / desktop: navigate (triggers the WebView DownloadListener / browser
-    // download) WITHOUT leaving the page, since the proxy responds with attachment.
-    const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent)
-      || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-    if (isIOS) {
-      window.open(proxyUrl, '_blank');
-    } else {
+    // Android native WebView: navigate so its DownloadListener fires (a synthetic <a>
+    // click and window.open are no-ops there). Everywhere else (iOS Safari/standalone,
+    // desktop): a download-attribute anchor saves the file WITHOUT navigating the page —
+    // critical on iOS standalone, where window.open/location.href white-screen the app.
+    const isAndroidApp = !!(window as any).RONative?.isNativeApp?.();
+    if (isAndroidApp) {
       window.location.href = proxyUrl;
+    } else {
+      const a = document.createElement('a');
+      a.href = proxyUrl;
+      a.download = file.original_filename || 'download';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     }
   };
 
