@@ -1,7 +1,6 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v30'; // iOS download path (window.open) + correct Content-Type
+const CACHE_NAME = 'ro-admin-v31'; // network-only navigations (no stale app-shell / white screen)
 const PRECACHE_URLS = [
-  '/admin',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/ro-mark-icon.png',
@@ -72,17 +71,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation/pages: network-first with cache fallback
+  // Navigation/pages: NETWORK-ONLY. Never cache the HTML app-shell — a stale shell
+  // references JS chunks that a later deploy deletes, which white-screens the app
+  // (especially iOS standalone web apps that freeze/resume). Always fetch fresh.
   if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(request)
-        .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return res;
-        })
-        .catch(() => caches.match(request))
-    );
+    event.respondWith(fetch(request));
     return;
   }
 });

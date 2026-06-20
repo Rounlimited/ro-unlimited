@@ -18,6 +18,32 @@ function useServiceWorker() {
   }, []);
 }
 
+// ── Self-heal on stale chunk / missing script ──
+// After a deploy, an old cached app-shell (esp. an iOS standalone web app that
+// freezes/resumes) can reference JS chunks that no longer exist → white screen.
+// Detect that failure, purge caches, and hard-reload once (loop-guarded).
+function useChunkErrorRecovery() {
+  useEffect(() => {
+    const isChunkError = (msg?: string) =>
+      !!msg && /Loading chunk|ChunkLoadError|importing a module script failed|dynamically imported module|Failed to fetch dynamically imported|Unexpected token '<'/i.test(msg);
+    const recover = () => {
+      const KEY = 'ro-chunk-reload-ts';
+      const last = Number(sessionStorage.getItem(KEY) || 0);
+      if (Date.now() - last < 20000) return; // avoid reload loops
+      sessionStorage.setItem(KEY, String(Date.now()));
+      const done = () => location.reload();
+      if ('caches' in window) {
+        caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k)))).finally(done);
+      } else { done(); }
+    };
+    const onErr = (e: ErrorEvent) => { if (isChunkError(e.message) || isChunkError((e.error as any)?.message)) recover(); };
+    const onRej = (e: PromiseRejectionEvent) => { const r: any = e.reason; if (isChunkError(typeof r === 'string' ? r : r?.message)) recover(); };
+    window.addEventListener('error', onErr);
+    window.addEventListener('unhandledrejection', onRej);
+    return () => { window.removeEventListener('error', onErr); window.removeEventListener('unhandledrejection', onRej); };
+  }, []);
+}
+
 // ── Install Prompt ──
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -33,6 +59,8 @@ export default function PWAInstall() {
 
   // Register service worker
   useServiceWorker();
+  // Auto-recover from stale-chunk white screens (esp. iOS standalone)
+  useChunkErrorRecovery();
 
   // Check if already installed
   useEffect(() => {
