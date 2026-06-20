@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v33'; // iOS download via blob (never navigates / no stuck page)
+const CACHE_NAME = 'ro-admin-v34'; // global back button never strands (history fallback to /admin)
 const PRECACHE_URLS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',

@@ -858,7 +858,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-1">
           {pathname !== '/admin' && (
             <button
-              onClick={() => router.back()}
+              onClick={() => {
+                // Prefer history, but never leave the user stranded: if there's nothing to
+                // go back to (deep link / fresh load on iOS), go to the dashboard.
+                if (typeof window !== 'undefined' && window.history.length > 1) router.back();
+                else router.push('/admin');
+              }}
               className="p-1.5 -ml-1.5 rounded-full text-white/40 hover:text-white active:bg-white/10 transition-colors"
               title="Go back"
             >
