@@ -541,11 +541,17 @@ export default function DrivePage() {
     }
     const proxyUrl = `/api/admin/drive/file?download=1&filename=${encodeURIComponent(file.original_filename)}&url=${encodeURIComponent(rawUrl)}`;
 
-    // Navigate to the proxy URL — same mechanism that works for public share links.
-    // The proxy responds with Content-Disposition: attachment, so the browser/TWA
-    // downloads it (correct name + extension) WITHOUT navigating the page away.
-    // (window.open is unreliable in the standalone TWA; direct navigation is not.)
-    window.location.href = proxyUrl;
+    // iOS (Safari/standalone web app): a direct navigation often does nothing — open in a
+    // Safari context where iOS shows the file with "Save to Files" (correct name).
+    // Android WebView / desktop: navigate (triggers the WebView DownloadListener / browser
+    // download) WITHOUT leaving the page, since the proxy responds with attachment.
+    const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent)
+      || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    if (isIOS) {
+      window.open(proxyUrl, '_blank');
+    } else {
+      window.location.href = proxyUrl;
+    }
   };
 
   // ── Delete file ──

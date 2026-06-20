@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v29'; // App download via location.href + share sheet above preview (z-index)
+const CACHE_NAME = 'ro-admin-v30'; // iOS download path (window.open) + correct Content-Type
 const PRECACHE_URLS = [
   '/admin',
   '/icons/icon-192x192.png',
