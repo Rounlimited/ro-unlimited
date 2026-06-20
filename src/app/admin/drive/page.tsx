@@ -541,21 +541,33 @@ export default function DrivePage() {
     }
     const proxyUrl = `/api/admin/drive/file?download=1&filename=${encodeURIComponent(file.original_filename)}&url=${encodeURIComponent(rawUrl)}`;
 
-    // Android native WebView: navigate so its DownloadListener fires (a synthetic <a>
-    // click and window.open are no-ops there). Everywhere else (iOS Safari/standalone,
-    // desktop): a download-attribute anchor saves the file WITHOUT navigating the page —
-    // critical on iOS standalone, where window.open/location.href white-screen the app.
+    // Android native WebView: navigate so its DownloadListener fires (synthetic <a> clicks
+    // and window.open are no-ops there).
     const isAndroidApp = !!(window as any).RONative?.isNativeApp?.();
     if (isAndroidApp) {
       window.location.href = proxyUrl;
-    } else {
+      return;
+    }
+
+    // iOS / desktop: download via an in-memory blob URL. This NEVER navigates the page —
+    // critical on iOS standalone, where navigating to the file URL destroys the whole app
+    // UI (no header, no back button → stuck). The blob saves to Files / Downloads instead.
+    try {
+      setToast('Preparing download…');
+      const res = await fetch(proxyUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = proxyUrl;
+      a.href = objUrl;
       a.download = file.original_filename || 'download';
-      a.rel = 'noopener';
       document.body.appendChild(a);
       a.click();
       a.remove();
+      setTimeout(() => URL.revokeObjectURL(objUrl), 30000);
+      setToast(null);
+    } catch {
+      setToast('Download failed');
     }
   };
 

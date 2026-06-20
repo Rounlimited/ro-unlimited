@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v32'; // iOS download via download-attribute anchor (no navigation / white screen)
+const CACHE_NAME = 'ro-admin-v33'; // iOS download via blob (never navigates / no stuck page)
 const PRECACHE_URLS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
