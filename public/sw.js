@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v34'; // global back button never strands (history fallback to /admin)
+const CACHE_NAME = 'ro-admin-v35'; // safe-area top padding on full-screen overlays (back button clears status bar)
 const PRECACHE_URLS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',

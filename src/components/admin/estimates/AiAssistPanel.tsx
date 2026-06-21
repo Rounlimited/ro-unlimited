@@ -123,7 +123,7 @@ export default function AiAssistPanel({ open, onClose, onAddItems, context }: Pr
   return (
     <div className="fixed inset-0 z-[150] flex justify-end" onClick={onClose}>
       <div
-        className="w-full max-w-lg h-full bg-[#0a0a0a] border-l border-white/10 flex flex-col shadow-2xl"
+        className="w-full max-w-lg h-full bg-[#0a0a0a] border-l border-white/10 flex flex-col shadow-2xl pt-safe"
         onClick={e => e.stopPropagation()}
       >
         {/* Header — sticky so X is always reachable */}

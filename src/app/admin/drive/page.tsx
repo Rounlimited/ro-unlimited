@@ -1381,7 +1381,7 @@ export default function DrivePage() {
 
         {/* ── File Preview/Info Screen ── */}
         {previewFile && (
-          <div className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col">
+          <div className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
             {/* Preview header */}
             <div className="flex items-center gap-2 px-2 py-2 border-b border-white/5">
               <button onClick={() => window.history.back()} className="w-11 h-11 flex items-center justify-center rounded-full text-white/50 hover:text-white hover:bg-white/5 active:bg-white/10">
