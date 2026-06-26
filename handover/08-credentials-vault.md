@@ -1,11 +1,12 @@
 # RO Unlimited — Owner Manual & Technical Handover
 ## Chapter 8 — Credentials & Access Vault (POINTER — secrets intentionally NOT in git)
 
-> 🔐 The **full credential vault with real secret values is kept in two places only:**
+> 🔐 The **full credential vault with real secret values is kept in these places only:**
 > 1. The owner-only Google **NotebookLM** notebook ("RO Unlimited Website Owner Manual", id `8dbd855d-59d5-49f8-8bd5-480a4fbe07fa`), Chapter 8.
 > 2. The repo's **`.env.local`** (gitignored — never committed).
+> 3. **`handover/ro-unlimited-credentials.zip`** — an **AES‑256 password‑protected** archive committed to this repo, containing `ROU_CREDENTIALS.md` + `.env.local`. The encryption is opaque to git/GitHub secret scanning, so the blob is safe to store here; it can only be opened with the **owner's vault password** (NOT stored anywhere in the repo). Open it with **7‑Zip** or **WinRAR** (Windows Explorer's built‑in unzip cannot open AES/password zips). On Windows: `& "C:\Program Files\7-Zip\7z.exe" x handover\ro-unlimited-credentials.zip -p<password>`.
 >
-> Raw secrets are deliberately **excluded from this committed file** so they never enter git history. This file lists *what exists and where to get it*; for the actual values, open the NotebookLM manual or `.env.local`.
+> Raw secrets are deliberately **excluded from the plaintext of this committed file** so they never enter git history. This file lists *what exists and where to get it*; for the actual values, open the NotebookLM manual, `.env.local`, or the encrypted zip above.
 
 ### Accounts & where the secrets live
 | Service | What you need | Source of the value |
