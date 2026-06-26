@@ -30,6 +30,8 @@
 RO owns everything, so a new dev needs: (1) this manual; (2) login to GitHub/Vercel/Sanity/Supabase/GoDaddy/Cloudflare/Oracle with the master account; (3) `.env.local` (Chapter 8.16).
 Revoke when NexaVision departs (optional): remove `admin@nexavisiongroup.com` from Supabase; remove NexaVision from Vercel team / Sanity members; rotate GitHub PAT, Vercel token, Sanity token; decide whether to migrate the shared Cloudflare account + Brave key. None required for the site to keep running — it already runs entirely on RO's own infrastructure.
 
+**Backup contact if NexaVision is unavailable:** **Kris — (864) 325-9634**, a local IT contact who can pick this project up. He works with **Claude** (Claude Code) as his AI assistant — point him at **Chapter 10 (AI Dev Handoff)** and the bootstrap JSON, and this whole manual, and he can get oriented and make changes.
+
 ### 9.7 Known issues & pending work
 - RO Drive files >20 MB can't download — Oracle `telegram-bot-api` needs `--local` (Ch 6.7).
 - Sanity write token may be read-only — create an Editor token (Ch 7.2).
@@ -49,3 +51,4 @@ Revoke when NexaVision departs (optional): remove `admin@nexavisiongroup.com` fr
 ### 9.9 Quick contacts
 - RO Unlimited (owner): (864) 304-0139 · `rounlimitedco@gmail.com` · Upstate SC.
 - NexaVision Group (developer): Den Chai · `info@nexavisiongroup.com`.
+- **Backup IT contact (if NexaVision is unavailable):** Kris · (864) 325-9634 — an IT contact who can take this on using Claude (Claude Code) as his assistant; start him on Chapter 10.
