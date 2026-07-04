@@ -239,7 +239,8 @@ export default function CommercialPage() {
     return () => window.removeEventListener('ro:site-ready', fire);
   }, [videoUrl, handleVideoReady]);
 
-  if (!mounted) return <div className="min-h-screen bg-ro-black" />;
+  // NOTE: no !mounted gate here — the full page must be in the SSR HTML for SEO.
+  // GSAP entrance animations still run post-mount via the mounted-gated effects.
 
   return (
     <div ref={containerRef}>
