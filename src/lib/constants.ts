@@ -10,6 +10,7 @@ export const COMPANY = {
   serviceArea: 'Georgia, South Carolina & North Carolina',
   areaCode: '864',
   serviceAreaShort: 'Tri-State (GA, SC, NC)',
+  hours: 'Mon–Sat 7am–6pm',
   facebook: 'https://www.facebook.com/profile.php?id=61578630061375',
 } as const;
 

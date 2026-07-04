@@ -8,7 +8,9 @@ import { REPAIRS_SUB_SERVICES } from '@/lib/repairs-data';
 const BASE = 'https://rounlimited.com';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date();
+  // Bump manually when page content meaningfully changes — a lastmod that
+  // changes on every request teaches Google to ignore it.
+  const lastModified = new Date('2026-07-04');
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${BASE}/`, lastModified, changeFrequency: 'weekly', priority: 1.0 },

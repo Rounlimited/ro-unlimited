@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import Link from 'next/link';
 import { COMPANY, DIVISIONS } from '@/lib/constants';
-import { Phone, Mail, MapPin, Facebook, ArrowUp } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Facebook, ArrowUp } from 'lucide-react';
 import { gsap, useGSAP } from '@/components/animations/GSAPProvider';
 
 export default function Footer() {
@@ -146,6 +146,7 @@ export default function Footer() {
               <li><a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="flex items-center gap-3 text-ro-gray-400 hover:text-ro-gold transition-colors text-sm"><Phone size={14} className="text-ro-gold/60" />{COMPANY.phone}</a></li>
               <li><a href={`mailto:${COMPANY.email}`} className="flex items-center gap-3 text-ro-gray-400 hover:text-ro-gold transition-colors text-sm"><Mail size={14} className="text-ro-gold/60" />{COMPANY.email}</a></li>
               <li className="flex items-center gap-3 text-ro-gray-400 text-sm"><MapPin size={14} className="text-ro-gold/60" />{COMPANY.serviceArea}</li>
+              <li className="flex items-center gap-3 text-ro-gray-400 text-sm"><Clock size={14} className="text-ro-gold/60" />{COMPANY.hours}</li>
             </ul>
           </div>
 
