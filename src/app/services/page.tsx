@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { DIVISIONS, COMPANY } from '@/lib/constants';
 import { SERVICE_CATEGORIES, SERVICES_DETAIL, SERVICES_PROCESS } from '@/lib/services-data';
 import { ArrowRight, Phone, Wrench, HardHat, Droplets, Zap, Pipette, CheckCircle2, ChevronDown } from 'lucide-react';
@@ -179,10 +180,13 @@ export default function ServicesPage() {
       {/* ═══ HERO — with background image ═══ */}
       <section ref={heroRef} className="relative min-h-[100vh] flex flex-col overflow-hidden">
         {/* Background image */}
-        <img
+        <Image
           src="/images/services/roofing/roofing-hero.jpg"
           alt="RO Unlimited Services"
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          priority
+          className="object-cover"
+          sizes="100vw"
           style={{ zIndex: 0 }}
         />
         {/* Left-heavy gradient overlay for text legibility */}
@@ -261,7 +265,7 @@ export default function ServicesPage() {
                   {/* Hover-reveal background image */}
                   {cat.cardImage && (
                     <>
-                      <img src={cat.cardImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                      <Image src={cat.cardImage} alt="" fill className="object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700" sizes="(max-width: 1023px) 100vw, 33vw" />
                       <div className="absolute inset-0 bg-ro-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                     </>
                   )}
@@ -334,10 +338,12 @@ export default function ServicesPage() {
 
       {/* ═══ CINEMATIC PHOTO BREAK ═══ */}
       <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden">
-        <img
+        <Image
           src="/images/services/repairs/repairs-hero.jpg"
           alt="RO Unlimited crew at work"
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          className="object-cover"
+          sizes="100vw"
         />
         <div className="absolute inset-0 bg-ro-black/60" />
         <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-transparent to-ro-black" />

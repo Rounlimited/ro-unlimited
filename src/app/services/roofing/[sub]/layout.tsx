@@ -3,6 +3,10 @@ import { ROOFING_SUB_SERVICES } from '@/lib/roofing-data';
 
 type Props = { params: Promise<{ sub: string }> };
 
+export function generateStaticParams() {
+  return ROOFING_SUB_SERVICES.map(s => ({ sub: s.slug }));
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { sub } = await params;
   const svc = ROOFING_SUB_SERVICES.find(s => s.slug === sub);

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { COMPANY } from '@/lib/constants';
 import { SERVICE_CATEGORIES } from '@/lib/services-data';
 import { ROOFING_SUB_SERVICES } from '@/lib/roofing-data';
@@ -118,7 +119,7 @@ export default function RoofingPage() {
 
       {/* ═══ HERO ═══ */}
       <section ref={heroRef} className="relative min-h-[100vh] flex flex-col overflow-hidden">
-        <img src={category.heroImage} alt="RO Unlimited Roofing" className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
+        <Image src={category.heroImage} alt="RO Unlimited Roofing" fill priority className="object-cover" sizes="100vw" style={{ zIndex: 0 }} />
         {/* Left-heavy gradient — dark on text side, image peeks through on right */}
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, transparent 20%, transparent 75%, rgba(10,10,10,0.95) 100%)' }} />
@@ -194,7 +195,7 @@ export default function RoofingPage() {
               <Link key={svc.id} href={`/services/roofing/${svc.slug}`}
                 className="guide-card group relative overflow-hidden border border-ro-gray-800/40 hover:border-ro-gold/25 transition-all duration-700">
                 {/* Background image — always visible on mobile, hover-reveal on desktop */}
-                <img src={svc.cardImage} alt={svc.title} className="absolute inset-0 w-full h-full object-cover opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-700" />
+                <Image src={svc.cardImage} alt={svc.title} fill className="object-cover opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-700" sizes="(max-width: 1023px) 100vw, 33vw" />
                 <div className="absolute inset-0 bg-ro-black/75 sm:bg-ro-black/80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-700" />
                 {/* Idle background — hidden on mobile since image is showing */}
                 <div className="absolute inset-0 bg-transparent sm:bg-ro-gray-900/10 sm:group-hover:bg-transparent transition-colors duration-700" />
@@ -241,7 +242,7 @@ export default function RoofingPage() {
             {category.galleryImages.map((img, i) => (
               <div key={i} className={`gallery-item group relative overflow-hidden border border-ro-gold/10 ${i === 0 ? 'lg:row-span-2' : ''}`}>
                 <div className={`relative ${i === 0 ? 'aspect-[3/4]' : 'aspect-[4/3]'}`}>
-                  <img src={img} alt="RO Unlimited roofing work" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
+                  <Image src={img} alt="RO Unlimited roofing work" fill className="object-cover group-hover:scale-105 transition-transform duration-1000" sizes="(max-width: 1023px) 100vw, 33vw" />
                   <div className="absolute inset-0 bg-gradient-to-t from-ro-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="absolute inset-0 border-2 border-ro-gold/0 group-hover:border-ro-gold/30 transition-colors duration-500" />
                 </div>
@@ -253,7 +254,7 @@ export default function RoofingPage() {
             {category.galleryImages.map((img, i) => (
               <div key={i} className="gallery-item flex-shrink-0 w-[75vw] snap-center">
                 <div className="relative aspect-[4/3] overflow-hidden border border-ro-gold/10">
-                  <img src={img} alt="RO Unlimited roofing work" className="absolute inset-0 w-full h-full object-cover" />
+                  <Image src={img} alt="RO Unlimited roofing work" fill className="object-cover" sizes="(max-width: 1023px) 100vw, 33vw" />
                 </div>
               </div>
             ))}
@@ -327,7 +328,7 @@ export default function RoofingPage() {
 
       {/* ═══ CTA ═══ */}
       <section ref={ctaRef} className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
-        <img src={category.heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
+        <Image src={category.heroImage} alt="" fill className="object-cover" sizes="100vw" style={{ zIndex: 0 }} />
         <div className="absolute inset-0 bg-ro-black/88" style={{ zIndex: 1 }} />
         <div className="absolute inset-0 forge-bg-alt" style={{ zIndex: 2, opacity: 0.6 }} />
         <div className="absolute inset-0 forge-slash pointer-events-none" style={{ zIndex: 3 }} />

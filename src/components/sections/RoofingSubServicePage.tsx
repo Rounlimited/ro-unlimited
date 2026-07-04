@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { COMPANY } from '@/lib/constants';
 import { ROOFING_SUB_SERVICES } from '@/lib/roofing-data';
 import type { RoofingSubService } from '@/lib/roofing-data';
@@ -194,10 +195,13 @@ export default function RoofingSubServicePage({ subService }: { subService: Roof
 
       {/* ═══ HERO ═══ */}
       <section ref={heroRef} className="relative min-h-[90vh] flex flex-col justify-center overflow-hidden">
-        <img
+        <Image
           src={subService.heroImage}
           alt={`${subService.title} by RO Unlimited`}
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          priority
+          className="object-cover"
+          sizes="100vw"
           style={{ zIndex: 0 }}
         />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
@@ -524,7 +528,7 @@ export default function RoofingSubServicePage({ subService }: { subService: Roof
                 className="cross-card group relative p-6 border border-ro-gray-800/30 overflow-hidden hover:border-ro-gold/20 transition-all duration-700 text-center">
                 {svc.cardImage && (
                   <>
-                    <img src={svc.cardImage} alt={svc.title} className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                    <Image src={svc.cardImage} alt={svc.title} fill className="object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700" sizes="(max-width: 1023px) 100vw, 33vw" />
                     <div className="absolute inset-0 bg-ro-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                   </>
                 )}
@@ -568,7 +572,7 @@ export default function RoofingSubServicePage({ subService }: { subService: Roof
 
       {/* ═══ CTA ═══ */}
       <section ref={ctaRef} className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
-        <img src={subService.heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
+        <Image src={subService.heroImage} alt="" fill className="object-cover" sizes="100vw" style={{ zIndex: 0 }} />
         <div className="absolute inset-0 bg-ro-black/88" style={{ zIndex: 1 }} />
         <div className="absolute inset-0 forge-bg-alt" style={{ zIndex: 2, opacity: 0.6 }} />
         <div className="absolute inset-0 forge-slash pointer-events-none" style={{ zIndex: 3 }} />

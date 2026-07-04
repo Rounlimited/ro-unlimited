@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { COMPANY } from '@/lib/constants';
 import type { SubService } from '@/lib/sub-service-types';
 import {
@@ -235,10 +236,13 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
 
       {/* ═══ HERO ═══ */}
       <section ref={heroRef} className="relative min-h-[90vh] flex flex-col justify-center overflow-hidden">
-        <img
+        <Image
           src={heroImage}
           alt={`${subService.title} by RO Unlimited`}
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          priority
+          className="object-cover"
+          sizes="100vw"
           style={{ zIndex: 0 }}
         />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
@@ -344,7 +348,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
               {galleryImgs.map((img, i) => (
                 <div key={i} className={`gallery-item group relative overflow-hidden border border-ro-gold/10 ${i === 0 ? 'lg:row-span-2' : ''}`}>
                   <div className={`relative ${i === 0 ? 'aspect-[3/4]' : 'aspect-[4/3]'}`}>
-                    <img src={img} alt={`${subService.title} by RO Unlimited`} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
+                    <Image src={img} alt={`${subService.title} by RO Unlimited`} fill className="object-cover group-hover:scale-105 transition-transform duration-1000" sizes="(max-width: 1023px) 100vw, 33vw" />
                     <div className="absolute inset-0 bg-gradient-to-t from-ro-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     <div className="absolute inset-0 border-2 border-ro-gold/0 group-hover:border-ro-gold/25 transition-colors duration-500" />
                   </div>
@@ -357,7 +361,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
               {galleryImgs.map((img, i) => (
                 <div key={i} className="gallery-item flex-shrink-0 w-[80vw] snap-center">
                   <div className="relative aspect-[4/3] overflow-hidden border border-ro-gold/10">
-                    <img src={img} alt={`${subService.title} by RO Unlimited`} className="absolute inset-0 w-full h-full object-cover" />
+                    <Image src={img} alt={`${subService.title} by RO Unlimited`} fill className="object-cover" sizes="(max-width: 1023px) 100vw, 33vw" />
                     <div className="absolute inset-0 bg-gradient-to-t from-ro-black/40 via-transparent to-transparent" />
                   </div>
                 </div>
@@ -609,7 +613,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
                 className="cross-card group relative p-6 border border-ro-gray-800/30 overflow-hidden hover:border-ro-gold/20 transition-all duration-700 text-center">
                 {svc.cardImage && (
                   <>
-                    <img src={svc.cardImage} alt={svc.title} className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                    <Image src={svc.cardImage} alt={svc.title} fill className="object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700" sizes="(max-width: 1023px) 100vw, 33vw" />
                     <div className="absolute inset-0 bg-ro-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                   </>
                 )}
@@ -653,7 +657,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
 
       {/* ═══ CTA ═══ */}
       <section ref={ctaRef} className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
-        <img src={heroImage} alt={`${subService.title} — RO Unlimited`} className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
+        <Image src={heroImage} alt={`${subService.title} — RO Unlimited`} fill className="object-cover" sizes="100vw" style={{ zIndex: 0 }} />
         <div className="absolute inset-0 bg-ro-black/88" style={{ zIndex: 1 }} />
         <div className="absolute inset-0 forge-bg-alt" style={{ zIndex: 2, opacity: 0.6 }} />
         <div className="absolute inset-0 forge-slash pointer-events-none" style={{ zIndex: 3 }} />

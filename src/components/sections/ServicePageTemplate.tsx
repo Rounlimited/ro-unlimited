@@ -178,10 +178,13 @@ export default function ServicePageTemplate({ category, serviceLinks }: { catego
         {/* Background image */}
         {category.heroImage && (
           <>
-            <img
+            <Image
               src={category.heroImage}
               alt={`${category.title} services by RO Unlimited`}
-              className="absolute inset-0 w-full h-full object-cover"
+              fill
+              priority
+              className="object-cover"
+              sizes="100vw"
               style={{ zIndex: 0 }}
             />
             {/* Left-heavy gradient — text side gets dark, right side shows image */}
@@ -254,10 +257,12 @@ export default function ServicePageTemplate({ category, serviceLinks }: { catego
                     {/* Thumbnail */}
                     {serviceImg && (
                       <div className="relative w-20 sm:w-24 flex-shrink-0 overflow-hidden">
-                        <img
+                        <Image
                           src={serviceImg}
                           alt={service}
-                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform duration-700"
+                          sizes="(max-width: 1023px) 100vw, 33vw"
                         />
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent to-ro-black/40" />
                         <div className="absolute top-0 bottom-0 right-0 w-[1px] bg-ro-gold/15" />
@@ -318,10 +323,12 @@ export default function ServicePageTemplate({ category, serviceLinks }: { catego
                   className={`gallery-item group relative overflow-hidden border border-ro-gold/10 ${i === 0 ? 'lg:row-span-2' : ''}`}
                 >
                   <div className={`relative ${i === 0 ? 'aspect-[3/4]' : 'aspect-[4/3]'}`}>
-                    <img
+                    <Image
                       src={img}
                       alt={`${category.title} work by RO Unlimited`}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-1000"
+                      sizes="(max-width: 1023px) 100vw, 33vw"
                     />
                     {/* Dark bottom gradient with gold tint */}
                     <div className="absolute inset-0 bg-gradient-to-t from-ro-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -337,10 +344,12 @@ export default function ServicePageTemplate({ category, serviceLinks }: { catego
               {category.galleryImages.map((img, i) => (
                 <div key={i} className="gallery-item flex-shrink-0 w-[75vw] snap-center">
                   <div className="relative aspect-[4/3] overflow-hidden border border-ro-gold/10">
-                    <img
+                    <Image
                       src={img}
                       alt={`${category.title} work by RO Unlimited`}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 1023px) 100vw, 33vw"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-ro-black/50 via-transparent to-transparent" />
                   </div>
@@ -414,10 +423,12 @@ export default function ServicePageTemplate({ category, serviceLinks }: { catego
                   {/* Hover-reveal background image */}
                   {cat.cardImage && (
                     <>
-                      <img
+                      <Image
                         src={cat.cardImage}
                         alt={cat.title}
-                        className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                        fill
+                        className="object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                        sizes="(max-width: 1023px) 100vw, 33vw"
                       />
                       <div className="absolute inset-0 bg-ro-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                     </>
@@ -451,7 +462,7 @@ export default function ServicePageTemplate({ category, serviceLinks }: { catego
       <section ref={ctaRef} className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
         {category.heroImage && (
           <>
-            <img src={category.heroImage} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }} />
+            <Image src={category.heroImage} alt="" fill className="object-cover" sizes="100vw" style={{ zIndex: 0 }} />
             <div className="absolute inset-0 bg-ro-black/88" style={{ zIndex: 1 }} />
           </>
         )}

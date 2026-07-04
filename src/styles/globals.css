@@ -15,9 +15,7 @@
     --neon-gold: #FFD060;
     --neon-blue: #00D4FF;
     --neon-navy: #4488FF;
-    --font-heading: 'Oswald', sans-serif;
-    --font-body: 'Barlow', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    /* --font-heading / --font-body / --font-mono are injected on <html> by next/font (src/app/layout.tsx) */
   }
   html { scroll-behavior: auto; }
 
