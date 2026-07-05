@@ -88,6 +88,27 @@ function EditorToolbar({ editor }: { editor: any }) {
   );
 }
 
+// ── Email body (Gmail-style) ──
+// HTML emails are authored assuming a WHITE background (inline color:#000
+// etc.), so rendering them on the dark theme produces black-on-dark text.
+// Like Gmail, render HTML bodies on a white "paper" surface; plain-text
+// bodies are ours to style, so they stay on the dark theme.
+function EmailBody({ html, text, compact }: { html: string | null; text: string | null; compact?: boolean }) {
+  if (html) {
+    return (
+      <div className={`bg-white rounded-xl ${compact ? "px-3 py-3" : "px-4 py-4"} overflow-x-auto max-w-full`}
+        style={{ colorScheme: "light" }}>
+        <div
+          className="text-[15px] leading-relaxed [&_a]:text-[#1a73e8] [&_a]:underline [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full [&_td]:break-words [&_div]:max-w-full [&_pre]:max-w-full [&_pre]:overflow-x-auto"
+          style={{ color: "#202124", wordBreak: "break-word", overflowWrap: "break-word" }}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </div>
+    );
+  }
+  return <pre className="text-[15px] text-white/80 whitespace-pre-wrap font-sans leading-relaxed">{text || "(no content)"}</pre>;
+}
+
 // ── Attachment Preview (Gmail-style inline preview + download) ──
 function AttachmentPreview({ attachments }: { attachments: Message["attachments"] }) {
   const [previewAtt, setPreviewAtt] = useState<Message["attachments"][0] | null>(null);
@@ -697,11 +718,11 @@ export default function AdminInbox() {
           <span className="inline-block mt-2 text-[12px] font-semibold text-white/40 bg-white/5 border border-white/10 rounded px-2.5 py-0.5">Inbox</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-2 pb-4 space-y-3">
           {loadingThread ? (
             <div className="flex justify-center py-16"><Loader2 size={28} className="text-[#C9A84C] animate-spin" /></div>
           ) : messages.map(msg => (
-            <div key={msg.id} className="bg-[#111]/60 rounded-2xl p-5">
+            <div key={msg.id} className="bg-[#111]/60 rounded-2xl px-2.5 pt-4 pb-3">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-11 h-11 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0" style={{ backgroundColor: avatarColor(msg.from_email) + "30", color: avatarColor(msg.from_email) }}>
                   {getInitial(msg.from_email)}
@@ -776,13 +797,7 @@ export default function AdminInbox() {
                   )}
                 </div>
               </div>
-              {msg.body_html ? (
-                <div className="text-[15px] text-white/80 leading-relaxed overflow-x-auto overflow-y-hidden max-w-full [&_a]:text-[#3b8dd4] [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full [&_table]:table-fixed [&_td]:break-words [&_div]:max-w-full [&_pre]:max-w-full [&_pre]:overflow-x-auto"
-                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                  dangerouslySetInnerHTML={{ __html: msg.body_html }} />
-              ) : (
-                <pre className="text-[15px] text-white/80 whitespace-pre-wrap font-sans leading-relaxed">{msg.body_text || "(no content)"}</pre>
-              )}
+              <EmailBody html={msg.body_html} text={msg.body_text} compact />
               {msg.attachments?.length > 0 && (
                 <AttachmentPreview attachments={msg.attachments} />
               )}
@@ -971,13 +986,7 @@ export default function AdminInbox() {
                       <button onClick={() => startCompose("reply", msg)} className="p-2 rounded-full text-white/20 hover:neon-blue hover:bg-white/5 transition-all"><Reply size={16} /></button>
                       <button onClick={() => folder === "trash" ? permanentDelete() : threadAction("trash")} className="p-2 rounded-full text-white/20 hover:neon-red hover:bg-white/5 transition-all" title={folder === "trash" ? "Delete permanently" : "Move to Trash"}><Trash2 size={16} /></button>
                     </div>
-                    {msg.body_html ? (
-                      <div className="text-[14px] text-white/80 leading-relaxed [&_a]:text-[#3b8dd4] [&_img]:max-w-full [&_img]:h-auto"
-                        style={{ wordBreak: 'break-word' }}
-                        dangerouslySetInnerHTML={{ __html: msg.body_html }} />
-                    ) : (
-                      <pre className="text-[14px] text-white/80 whitespace-pre-wrap font-sans leading-relaxed">{msg.body_text || "(no content)"}</pre>
-                    )}
+                    <EmailBody html={msg.body_html} text={msg.body_text} />
                     {msg.attachments?.length > 0 && <AttachmentPreview attachments={msg.attachments} />}
                   </div>
                 ))}
@@ -1058,6 +1067,8 @@ export default function AdminInbox() {
                       </span>
                       <span className="text-[13px] text-white/20 truncate"> — {thread.latest_body_preview}</span>
                     </div>
+                    {/* Attachment indicator */}
+                    {thread.has_attachments && <Paperclip size={13} className="shrink-0 text-white/35" />}
                     {/* Date */}
                     <span className={`shrink-0 text-[12px] ${thread.unread_count > 0 ? "text-white/60 font-semibold" : "text-white/20"}`}>
                       {timeAgo(thread.latest_message)}
@@ -1268,6 +1279,7 @@ export default function AdminInbox() {
                     {senderName}
                   </span>
                   {thread.message_count > 1 && <span className="text-[13px] text-white/25">{thread.message_count}</span>}
+                  {thread.has_attachments && <Paperclip size={13} className="text-white/35 shrink-0" />}
                   <span className="ml-auto text-[13px] text-white/25 shrink-0">{timeAgo(thread.latest_message)}</span>
                   {thread.unread_count > 0 && <div className="w-2.5 h-2.5 rounded-full bg-[#C9A84C] shrink-0" />}
                 </div>

@@ -7,30 +7,33 @@ function parseEmail(raw: string): string {
   return match ? match[1].toLowerCase() : raw.toLowerCase().trim();
 }
 
-const SANITY_PROJECT_ID = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || '3at2yyx0';
-const SANITY_DATASET = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production';
-const SANITY_TOKEN = process.env.SANITY_API_WRITE_TOKEN || '';
+// Attachments live in Supabase Storage (bucket: email-attachments).
+// Previously they went to Sanity, but SANITY_API_WRITE_TOKEN is read-only so
+// every upload 403'd and attachments were silently dropped (has_attachments
+// stayed true with zero rows in email_attachments).
+const ATTACHMENT_BUCKET = 'email-attachments';
 
-async function uploadToSanity(buffer: Buffer, contentType: string): Promise<string | null> {
+async function uploadAttachment(
+  supabase: ReturnType<typeof createAdminClient>,
+  messageId: string,
+  filename: string,
+  buffer: Buffer,
+  contentType: string,
+): Promise<string | null> {
   try {
-    const ext = contentType.split('/')[1]?.split('+')[0] || 'bin';
-    const isImage = contentType.startsWith('image/');
-    const assetType = isImage ? 'images' : 'files';
-    const res = await fetch(
-      `https://${SANITY_PROJECT_ID}.api.sanity.io/v2024-01-01/assets/${assetType}/${SANITY_DATASET}`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${SANITY_TOKEN}`,
-          'Content-Type': contentType,
-        },
-        body: buffer,
-      }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.document?.url || null;
-  } catch {
+    const safeName = filename.replace(/[^\w.\-]+/g, '_').slice(-100);
+    const path = `${messageId}/${Date.now()}_${safeName}`;
+    const { error } = await supabase.storage
+      .from(ATTACHMENT_BUCKET)
+      .upload(path, buffer, { contentType, upsert: false });
+    if (error) {
+      console.error('[inbound] Storage upload failed:', error.message);
+      return null;
+    }
+    const { data } = supabase.storage.from(ATTACHMENT_BUCKET).getPublicUrl(path);
+    return data?.publicUrl || null;
+  } catch (err) {
+    console.error('[inbound] Storage upload exception:', err);
     return null;
   }
 }
@@ -150,8 +153,18 @@ export async function POST(req: NextRequest) {
       read: isKnownRecipient ? false : true,
     });
 
-    // Process attachments — download from Resend, upload to Sanity, save to DB
-    if (logged?.id && attachmentsMeta.length > 0 && apiKey && SANITY_TOKEN) {
+    // Store the Resend email id — enables attachment re-fetch/recovery and
+    // better reply threading (was never saved for inbound before)
+    if (logged?.id) {
+      await supabase.from('email_messages')
+        .update({ resend_message_id: email_id })
+        .eq('id', logged.id)
+        .then(() => {}, () => {});
+    }
+
+    // Process attachments — download from Resend, upload to Supabase Storage, save to DB
+    let attachmentsSaved = 0;
+    if (logged?.id && attachmentsMeta.length > 0 && apiKey) {
       for (const att of attachmentsMeta) {
         try {
           // Get download URL from Resend
@@ -159,31 +172,37 @@ export async function POST(req: NextRequest) {
             `https://api.resend.com/emails/receiving/${email_id}/attachments/${att.id}`,
             { headers: { Authorization: `Bearer ${apiKey}` } }
           );
-          if (!attResp.ok) continue;
+          if (!attResp.ok) { console.error('[inbound] Resend attachment meta fetch failed:', attResp.status, att.filename); continue; }
           const attData = await attResp.json();
-          if (!attData.download_url) continue;
+          if (!attData.download_url) { console.error('[inbound] No download_url for attachment:', att.filename); continue; }
 
           // Download the file
           const fileResp = await fetch(attData.download_url);
-          if (!fileResp.ok) continue;
+          if (!fileResp.ok) { console.error('[inbound] Attachment download failed:', fileResp.status, att.filename); continue; }
           const buffer = Buffer.from(await fileResp.arrayBuffer());
 
-          // Upload to Sanity
-          const sanityUrl = await uploadToSanity(buffer, att.content_type);
-          if (!sanityUrl) continue;
+          // Upload to Supabase Storage
+          const publicUrl = await uploadAttachment(supabase, logged.id, att.filename, buffer, att.content_type);
+          if (!publicUrl) continue;
 
           // Save to email_attachments
-          await supabase.from('email_attachments').insert({
+          const { error: insErr } = await supabase.from('email_attachments').insert({
             message_id: logged.id,
             filename: att.filename,
             content_type: att.content_type,
             size_bytes: att.size || buffer.length,
-            s3_key: `sanity:${att.filename}`,
-            s3_url: sanityUrl,
+            s3_key: `supabase:${att.filename}`,
+            s3_url: publicUrl,
           });
+          if (insErr) { console.error('[inbound] email_attachments insert failed:', insErr.message); continue; }
+          attachmentsSaved++;
         } catch (attErr) {
           console.error(`Failed to process attachment ${att.filename}:`, attErr);
         }
+      }
+      // Keep the flag honest if every attachment failed to store
+      if (attachmentsSaved === 0) {
+        console.error('[inbound] ALL attachments failed to store for message', logged.id);
       }
     }
 
@@ -211,7 +230,8 @@ export async function POST(req: NextRequest) {
       success: true,
       message_id: logged?.id,
       thread_id: logged?.thread_id,
-      attachments_saved: attachmentsMeta.length,
+      attachments_found: attachmentsMeta.length,
+      attachments_saved: attachmentsSaved,
     });
   } catch (err: unknown) {
     console.error('Inbound route error:', err);
