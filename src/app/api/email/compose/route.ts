@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
-import { logEmail, buildEmailHtml, stripHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL } from '@/lib/email';
+import { logEmail, buildEmailHtml, stripHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, loadOutboundAttachments, saveOutboundAttachmentRows } from '@/lib/email';
 import { randomUUID } from 'crypto';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createAdminClient();
     const body = await req.json();
-    const { to_email, to_name, subject, body: emailBody, body_html: richHtml, lead_id, draft_id, cc_emails, bcc_emails, from_email } = body;
+    const { to_email, to_name, subject, body: emailBody, body_html: richHtml, lead_id, draft_id, cc_emails, bcc_emails, from_email, attachments } = body;
 
     const accounts = await fetchEmailAccounts();
     if (!to_email || !subject || (!emailBody && !richHtml)) {
@@ -32,6 +32,10 @@ export async function POST(req: NextRequest) {
     };
     if (cc_emails?.length) params.cc = cc_emails;
     if (bcc_emails?.length) params.bcc = bcc_emails;
+
+    // Attachments were pre-uploaded to Supabase Storage by the client
+    const { resendAttachments, records } = await loadOutboundAttachments(supabase, attachments);
+    if (resendAttachments.length) params.attachments = resendAttachments;
 
     const { data, error } = await r.emails.send(params);
     if (error) {
@@ -57,7 +61,10 @@ export async function POST(req: NextRequest) {
       folder: 'sent',
       cc_emails: cc_emails || [],
       bcc_emails: bcc_emails || [],
+      has_attachments: records.length > 0,
     });
+
+    if (logged?.id) await saveOutboundAttachmentRows(supabase, logged.id, records);
 
     return NextResponse.json({ success: true, thread_id, message_id: logged?.id, resend_id: resendMessageId });
   } catch (err: unknown) {

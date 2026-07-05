@@ -278,3 +278,55 @@ export function stripHtml(html: string): string {
     .replace(/&gt;/gi, '>')
     .trim();
 }
+
+// ── Outbound attachments ──
+// The client uploads files DIRECTLY to Supabase Storage (bucket
+// email-attachments, prefix outbound/) to dodge Vercel's ~4.5MB request
+// body cap, then passes these refs to compose/reply. The server downloads
+// the bytes for Resend and records email_attachments rows.
+export interface OutboundAttachmentRef {
+  path: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+}
+
+const OUTBOUND_TOTAL_LIMIT = 35 * 1024 * 1024; // Resend caps emails at 40MB
+
+export async function loadOutboundAttachments(
+  supabase: any,
+  refs: OutboundAttachmentRef[] | undefined,
+): Promise<{ resendAttachments: { filename: string; content: Buffer }[]; records: OutboundAttachmentRef[] & { url?: string }[] }> {
+  const resendAttachments: { filename: string; content: Buffer }[] = [];
+  const records: any[] = [];
+  if (!refs?.length) return { resendAttachments, records };
+
+  let total = 0;
+  for (const ref of refs.slice(0, 10)) {
+    // Only accept paths the client is allowed to have written
+    if (!ref?.path || !ref.path.startsWith('outbound/') || ref.path.includes('..')) continue;
+    const { data, error } = await supabase.storage.from('email-attachments').download(ref.path);
+    if (error || !data) { console.error('[email] attachment download failed:', ref.path, error?.message); continue; }
+    const buffer = Buffer.from(await data.arrayBuffer());
+    total += buffer.length;
+    if (total > OUTBOUND_TOTAL_LIMIT) { console.error('[email] attachment total exceeds limit, skipping rest'); break; }
+    resendAttachments.push({ filename: ref.filename || 'attachment', content: buffer });
+    const { data: pub } = supabase.storage.from('email-attachments').getPublicUrl(ref.path);
+    records.push({ ...ref, size_bytes: buffer.length, url: pub?.publicUrl });
+  }
+  return { resendAttachments, records };
+}
+
+export async function saveOutboundAttachmentRows(supabase: any, messageId: string, records: any[]): Promise<void> {
+  if (!messageId || !records.length) return;
+  const rows = records.map(r => ({
+    message_id: messageId,
+    filename: r.filename || 'attachment',
+    content_type: r.content_type || 'application/octet-stream',
+    size_bytes: r.size_bytes || 0,
+    s3_key: `supabase:${r.path}`,
+    s3_url: r.url,
+  }));
+  const { error } = await supabase.from('email_attachments').insert(rows);
+  if (error) console.error('[email] outbound attachment rows insert failed:', error.message);
+}

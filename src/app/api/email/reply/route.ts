@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
-import { logEmail, buildEmailHtml, stripHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL } from '@/lib/email';
+import { logEmail, buildEmailHtml, stripHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, loadOutboundAttachments, saveOutboundAttachmentRows } from '@/lib/email';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createAdminClient();
     const body = await req.json();
-    const { thread_id, to_email, to_name, subject, reply_body, reply_html, lead_id, from_email } = body;
+    const { thread_id, to_email, to_name, subject, reply_body, reply_html, lead_id, from_email, attachments } = body;
     const accounts = await fetchEmailAccounts();
 
     if (!thread_id || !to_email || (!reply_body && !reply_html)) {
@@ -47,6 +47,10 @@ export async function POST(req: NextRequest) {
       params.headers = { 'In-Reply-To': inReplyToHeader, 'References': inReplyToHeader };
     }
 
+    // Attachments were pre-uploaded to Supabase Storage by the client
+    const { resendAttachments, records } = await loadOutboundAttachments(supabase, attachments);
+    if (resendAttachments.length) params.attachments = resendAttachments;
+
     const { data, error } = await r.emails.send(params);
     if (error) {
       console.error('Resend error:', JSON.stringify(error));
@@ -64,7 +68,10 @@ export async function POST(req: NextRequest) {
       body_text: plainText,
       resend_message_id: data?.id,
       folder: 'sent',
+      has_attachments: records.length > 0,
     });
+
+    if (logged?.id) await saveOutboundAttachmentRows(supabase, logged.id, records);
 
     return NextResponse.json({ success: true, message_id: logged?.id, resend_id: data?.id });
   } catch (err: unknown) {

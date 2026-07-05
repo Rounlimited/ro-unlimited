@@ -16,6 +16,7 @@ import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { createClient } from "@/lib/supabase/client";
 import { useDeviceContext } from "@/components/animations/useMediaQuery";
+import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 
 // ── Types ──
 interface Thread {
@@ -346,6 +347,8 @@ export default function AdminInbox() {
   const [search, setSearch] = useState("");
 
   const [composeMode, setComposeMode] = useState<ComposeMode>(null);
+  const [composeAtts, setComposeAtts] = useState<{ path: string; filename: string; content_type: string; size_bytes: number }[]>([]);
+  const [uploadingAtt, setUploadingAtt] = useState(false);
   const [composeTo, setComposeTo] = useState("");
   const [composeSubject, setComposeSubject] = useState("");
   const [composeCc, setComposeCc] = useState("");
@@ -600,7 +603,34 @@ export default function AdminInbox() {
   };
 
   // ── Compose ──
+  // ── Outbound attachments — uploaded straight to Supabase Storage from the
+  // browser (dodges Vercel's ~4.5MB request cap), refs passed to the API ──
+  const attachFileInputRef = useRef<HTMLInputElement>(null);
+  const handleAttachFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+    const MAX_FILE = 15 * 1024 * 1024;
+    const MAX_TOTAL = 30 * 1024 * 1024;
+    let total = composeAtts.reduce((s, a) => s + a.size_bytes, 0);
+    setUploadingAtt(true);
+    const supa = createBrowserSupabase();
+    for (const file of files) {
+      if (file.size > MAX_FILE) { showToast(`${file.name} is over 15MB — too large`); continue; }
+      if (total + file.size > MAX_TOTAL) { showToast("Attachment limit is 30MB total"); break; }
+      const safe = file.name.replace(/[^\w.\-]+/g, "_").slice(-90);
+      const path = `outbound/${crypto.randomUUID()}/${safe}`;
+      const { error } = await supa.storage.from("email-attachments").upload(path, file, { contentType: file.type || "application/octet-stream" });
+      if (error) { console.error("attach upload:", error.message); showToast(`Upload failed: ${file.name}`); continue; }
+      total += file.size;
+      setComposeAtts(prev => [...prev, { path, filename: file.name, content_type: file.type || "application/octet-stream", size_bytes: file.size }]);
+    }
+    setUploadingAtt(false);
+  };
+  const fmtSize = (b: number) => b > 1048576 ? `${(b / 1048576).toFixed(1)}MB` : `${Math.max(1, Math.round(b / 1024))}KB`;
+
   const startCompose = (mode: ComposeMode, replyMsg?: Message) => {
+    setComposeAtts([]);
     setComposeMode(mode);
     setFromAccount(activeAccount?.email || accounts[0]?.email || "");
     if (mode === "new") {
@@ -628,11 +658,11 @@ export default function AdminInbox() {
     const isReply = composeMode === "reply" && selectedThread;
     const endpoint = isReply ? "/api/email/reply" : "/api/email/compose";
     const payload = isReply
-      ? { thread_id: selectedThread!.thread_id, to_email: composeTo, subject: composeSubject, reply_html: html, reply_body: text, from_email: fromAccount }
-      : { to_email: composeTo, subject: composeSubject, body_html: html, body: text, from_email: fromAccount, cc_emails: composeCc ? composeCc.split(",").map(e => e.trim()) : [], bcc_emails: composeBcc ? composeBcc.split(",").map(e => e.trim()) : [] };
+      ? { thread_id: selectedThread!.thread_id, to_email: composeTo, subject: composeSubject, reply_html: html, reply_body: text, from_email: fromAccount, attachments: composeAtts }
+      : { to_email: composeTo, subject: composeSubject, body_html: html, body: text, from_email: fromAccount, cc_emails: composeCc ? composeCc.split(",").map(e => e.trim()) : [], bcc_emails: composeBcc ? composeBcc.split(",").map(e => e.trim()) : [], attachments: composeAtts };
     const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     setSending(false);
-    if (res.ok) { showToast("Email sent"); setView("list"); fetchThreads(); } else { showToast("Failed to send"); }
+    if (res.ok) { showToast("Email sent"); setComposeAtts([]); setView("list"); fetchThreads(); } else { showToast("Failed to send"); }
   };
 
   const filtered = threads.filter(t => {
@@ -707,7 +737,7 @@ export default function AdminInbox() {
           <h2 className="font-semibold text-[17px] text-white flex-1">
             {composeMode === "new" ? "Compose" : composeMode === "reply" ? "Reply" : "Forward"}
           </h2>
-          <button onClick={handleSend} disabled={sending || !composeTo || !composeSubject}
+          <button onClick={handleSend} disabled={sending || uploadingAtt || !composeTo || !composeSubject}
             className="px-6 py-2 bg-[#C9A84C] text-black font-bold text-[15px] rounded-full disabled:opacity-40 transition-opacity">
             {sending ? <Loader2 size={18} className="animate-spin" /> : "Send"}
           </button>
@@ -750,12 +780,27 @@ export default function AdminInbox() {
           <EditorToolbar editor={editor} />
           <EditorContent editor={editor} />
           {/* Attachment bar */}
-          <div className="px-4 py-2 border-t border-white/5 flex items-center gap-2">
+          <div className="px-4 py-2 border-t border-white/5">
+            {composeAtts.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {composeAtts.map(att => (
+                  <span key={att.path} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 rounded-lg bg-[#C9A84C]/10 border border-[#C9A84C]/25 text-[12px] text-[#C9A84C] max-w-full">
+                    <Paperclip size={11} className="shrink-0" />
+                    <span className="truncate max-w-[160px]">{att.filename}</span>
+                    <span className="text-[#C9A84C]/50 shrink-0">{fmtSize(att.size_bytes)}</span>
+                    <button onClick={() => setComposeAtts(prev => prev.filter(a => a.path !== att.path))}
+                      className="p-0.5 rounded hover:bg-white/10 shrink-0"><X size={12} /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <input ref={attachFileInputRef} type="file" multiple className="sr-only" onChange={handleAttachFiles} />
             <button
-              onClick={() => showToast("Attachments coming soon — storage integration pending")}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors text-[13px]">
-              <Paperclip size={16} />
-              Attach file
+              onClick={() => attachFileInputRef.current?.click()}
+              disabled={uploadingAtt}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors text-[13px] disabled:opacity-50">
+              {uploadingAtt ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
+              {uploadingAtt ? "Uploading..." : "Attach file"}
             </button>
           </div>
         </div>
@@ -1064,12 +1109,31 @@ export default function AdminInbox() {
                     </div>
                   </div>
                   <EditorContent editor={editor} className="prose prose-invert max-w-none min-h-[300px] px-5 py-4 text-[14px] [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[300px]" />
+                  {composeAtts.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 px-5 pb-2">
+                      {composeAtts.map(att => (
+                        <span key={att.path} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 rounded-lg bg-[#C9A84C]/10 border border-[#C9A84C]/25 text-[12px] text-[#C9A84C]">
+                          <Paperclip size={11} className="shrink-0" />
+                          <span className="truncate max-w-[200px]">{att.filename}</span>
+                          <span className="text-[#C9A84C]/50 shrink-0">{fmtSize(att.size_bytes)}</span>
+                          <button onClick={() => setComposeAtts(prev => prev.filter(a => a.path !== att.path))}
+                            className="p-0.5 rounded hover:bg-white/10 shrink-0"><X size={12} /></button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex items-center gap-3 px-5 py-3 border-t border-white/5">
-                    <button onClick={handleSend} disabled={sending}
+                    <button onClick={handleSend} disabled={sending || uploadingAtt}
                       className="flex items-center gap-2 px-6 py-2.5 rounded-full text-[14px] font-semibold transition-all"
                       style={{ background: 'linear-gradient(135deg, #C9A84C, #D4772C)', color: '#000' }}>
                       {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Send
                     </button>
+                    <button onClick={() => attachFileInputRef.current?.click()} disabled={uploadingAtt}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors text-[13px] disabled:opacity-50">
+                      {uploadingAtt ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} />}
+                      {uploadingAtt ? "Uploading..." : "Attach"}
+                    </button>
+                    <input ref={attachFileInputRef} type="file" multiple className="sr-only" onChange={handleAttachFiles} />
                   </div>
                 </div>
               </div>
