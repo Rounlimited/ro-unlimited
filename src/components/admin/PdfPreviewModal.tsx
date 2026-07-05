@@ -1,27 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { renderPdfToImages, downloadPdfBlob } from "@/lib/pdf-preview";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174";
-
-let pdfjsLoaded: Promise<any> | null = null;
-function loadPdfJs(): Promise<any> {
-  if (pdfjsLoaded) return pdfjsLoaded;
-  pdfjsLoaded = new Promise((resolve, reject) => {
-    if ((window as any).pdfjsLib) { resolve((window as any).pdfjsLib); return; }
-    const s = document.createElement("script");
-    s.src = `${PDFJS_CDN}/pdf.min.js`;
-    s.onload = () => {
-      const lib = (window as any).pdfjsLib;
-      lib.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.js`;
-      resolve(lib);
-    };
-    s.onerror = reject;
-    document.head.appendChild(s);
-  });
-  return pdfjsLoaded;
-}
 
 interface PdfPreviewModalProps {
   pdfUrl: string | null;
@@ -76,12 +58,19 @@ export default function PdfPreviewModal({ pdfUrl, loading, onClose, filename, es
     setZoomLevel(1);
   }, [applyTransform]);
 
-  const handleDownload = () => {
-    if (estimateId) {
-      // Open PDF API URL directly — avoids blob URL crash in PWA/standalone mode
-      window.open(`/api/admin/estimates/${estimateId}/pdf`, '_blank');
-    } else if (pdfUrl) {
-      window.open(pdfUrl, '_blank');
+  const handleDownload = async () => {
+    const apiUrl = estimateId ? `/api/admin/estimates/${estimateId}/pdf` : pdfUrl;
+    if (!apiUrl) return;
+    try {
+      // pdfUrl is usually a blob: URL we already hold — fetch turns it back
+      // into a Blob without another server round-trip
+      const res = await fetch(pdfUrl || apiUrl);
+      const blob = await res.blob();
+      // iOS PWA: share sheet (Save to Files / Print); elsewhere: file download
+      await downloadPdfBlob(blob, filename || 'estimate.pdf', apiUrl);
+    } catch (err) {
+      console.error('Download failed:', err);
+      window.open(apiUrl, '_blank');
     }
   };
 
@@ -181,31 +170,18 @@ export default function PdfPreviewModal({ pdfUrl, loading, onClose, filename, es
     };
   }, [pages.length, applyTransform]);
 
-  // Render PDF pages to canvas images using pdf.js
+  // Render PDF pages progressively — keeps the UI (Close button!) responsive
+  // and stays inside iOS canvas memory limits on large estimates
   const renderPdf = useCallback(async (url: string) => {
     setRendering(true);
     setRenderError(false);
     setPages([]);
 
     try {
-      const pdfjsLib = await loadPdfJs();
-      const pdf = await pdfjsLib.getDocument(url).promise;
-      const pageImages: string[] = [];
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 2 });
-
-        const canvas = document.createElement("canvas");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext("2d")!;
-
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        pageImages.push(canvas.toDataURL("image/png"));
-      }
-
-      setPages(pageImages);
+      await renderPdfToImages(url, (dataUrl) => {
+        setPages(prev => [...prev, dataUrl]);
+        setRendering(false); // show pages as soon as the first one is ready
+      });
     } catch (err) {
       console.error("PDF render error:", err);
       setRenderError(true);
@@ -230,7 +206,8 @@ export default function PdfPreviewModal({ pdfUrl, loading, onClose, filename, es
         background: "rgba(0,0,0,0.92)",
         backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        padding: 16,
+        // Keep the header (Close button) clear of the iPhone notch/Dynamic Island
+        padding: "max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)) 16px",
         animation: "pdfFadeIn 0.25s ease",
       }}
     >

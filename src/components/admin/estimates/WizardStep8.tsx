@@ -68,7 +68,12 @@ export default function WizardStep8({
       // Small delay to ensure DB write is committed before PDF fetch
       await new Promise(r => setTimeout(r, 500));
     } catch (err) {
+      // Do NOT navigate — the preview would show stale data and the user's
+      // inputs (payment schedule etc.) would not be in the DB yet.
       console.error('Save before preview failed:', err);
+      setSavingForPreview(false);
+      alert('Could not save the estimate — check your connection and tap Preview again. Your inputs are still on this screen.');
+      return;
     }
     setSavingForPreview(false);
     window.location.href = `/admin/estimates/${estimateId}/preview`;

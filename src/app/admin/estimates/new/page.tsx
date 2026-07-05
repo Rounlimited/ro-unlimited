@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ChevronLeft, ChevronRight, Check, Save, LogOut,
@@ -140,8 +140,14 @@ export default function NewEstimateWizard() {
 
   /* ─── Load existing draft ──────────────────────────────────── */
 
+  // Saves are blocked until the existing draft has loaded. The schedule/line
+  // APIs are bulk-replace (delete-all + insert), so saving the initial empty
+  // state would silently WIPE data already in the DB (the iPhone
+  // lost-payment-schedule bug).
+  const draftReadyRef = useRef(false);
+
   useEffect(() => {
-    if (!editId) return;
+    if (!editId) { draftReadyRef.current = true; return; }
     let cancelled = false;
 
     async function loadDraft() {
@@ -242,6 +248,8 @@ export default function NewEstimateWizard() {
         if (data.disclaimer_ids?.length || data.exclusions) completed.add(7);
         setCompletedSteps(completed);
 
+        draftReadyRef.current = true;
+
       } catch (err) {
         console.error('Failed to load draft:', err);
         setError('Failed to load estimate draft');
@@ -309,7 +317,7 @@ export default function NewEstimateWizard() {
   };
 
   const patchEstimate = async (fields: Record<string, any>) => {
-    if (!estimateId) return;
+    if (!estimateId || !draftReadyRef.current) return;
     try {
       const res = await fetch(`/api/admin/estimates/${estimateId}`, {
         method: 'PATCH',
@@ -319,14 +327,16 @@ export default function NewEstimateWizard() {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error('PATCH estimate failed:', res.status, err);
+        throw new Error('Estimate failed to save');
       }
     } catch (err) {
       console.error('PATCH estimate error:', err);
+      throw err; // callers show the error and stop navigation — never lose data silently
     }
   };
 
   const saveLineItems = async () => {
-    if (!estimateId) return;
+    if (!estimateId || !draftReadyRef.current) return;
     const items = lineItems.map((item, idx) => ({
       ...(item.id ? { id: item.id } : {}),
       phase: item.phase,
@@ -346,7 +356,7 @@ export default function NewEstimateWizard() {
       });
       if (!res.ok) {
         console.error('Save line items failed:', res.status, await res.text().catch(() => ''));
-        return;
+        throw new Error('Line items failed to save');
       }
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -359,11 +369,12 @@ export default function NewEstimateWizard() {
       }
     } catch (err) {
       console.error('Save line items error:', err);
+      throw err; // callers show the error and stop navigation — never lose data silently
     }
   };
 
   const savePaymentSchedule = async () => {
-    if (!estimateId) return;
+    if (!estimateId || !draftReadyRef.current) return;
     const items = milestones.map((m, idx) => ({
       milestone: m.milestone,
       description: m.description,
@@ -379,9 +390,11 @@ export default function NewEstimateWizard() {
       });
       if (!res.ok) {
         console.error('Save payment schedule failed:', res.status, await res.text().catch(() => ''));
+        throw new Error('Payment schedule failed to save');
       }
     } catch (err) {
       console.error('Save payment schedule error:', err);
+      throw err; // callers show the error and stop navigation — never lose data silently
     }
   };
 
@@ -574,21 +587,36 @@ export default function NewEstimateWizard() {
           await patchEstimate({ disclaimer_ids: disclaimerIds, exclusions, inclusions });
           break;
       }
-    } catch {}
+    } catch (err) {
+      console.error('saveCurrentStep error:', err);
+      throw err;
+    }
   };
 
   const goToStep = async (step: number) => {
     // Can go to completed steps, current step, or one beyond completed
     if (step <= currentStep || completedSteps.has(step) || completedSteps.has(step - 1)) {
       // Auto-save current step before jumping
-      await saveCurrentStep();
+      try {
+        await saveCurrentStep();
+      } catch {
+        setError('Failed to save this step — check your connection and try again.');
+        return; // don't leave the step; changes would be lost
+      }
+      setError('');
       setCurrentStep(step);
     }
   };
 
   const handleSaveAndExit = async () => {
     setSaving(true);
-    await saveCurrentStep();
+    try {
+      await saveCurrentStep();
+    } catch {
+      setSaving(false);
+      setError('Failed to save — check your connection and try again. (Exit anyway with the browser back button.)');
+      return; // exiting now would silently lose this step's changes
+    }
     setSaving(false);
     router.push('/admin/estimates');
   };
@@ -632,6 +660,8 @@ export default function NewEstimateWizard() {
       }
     } catch (err) {
       console.error('handleSaveDraft error:', err);
+      setSaving(false);
+      throw err; // WizardStep8 blocks the preview navigation on failure
     }
     setSaving(false);
   };
