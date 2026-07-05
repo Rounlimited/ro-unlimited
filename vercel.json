@@ -17,6 +17,9 @@
     "src/app/api/admin/upload/route.ts": {
       "maxDuration": 60
     },
+    "src/app/api/admin/ai-chat/route.ts": {
+      "maxDuration": 90
+    },
     "src/app/api/admin/drive/route.ts": {
       "maxDuration": 300
     },

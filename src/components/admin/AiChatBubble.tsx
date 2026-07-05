@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff, Volume2, VolumeX, Camera, MapPin } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff, Volume2, VolumeX, Camera, MapPin, HelpCircle } from 'lucide-react';
 
 interface Message { role: 'user' | 'assistant'; content: string; imagePreview?: string; }
 interface Conversation { id: string; title: string; summary: string | null; token_estimate: number; compacted: boolean; created_at: string; updated_at: string; }
@@ -53,6 +53,7 @@ export default function AiChatBubble() {
     if (!speakEnabled || typeof window === 'undefined') return;
     // Strip markdown for clean speech
     const clean = text
+      .replace(/^\s*CHOICES:.*$/gm, '')
       .replace(/\*\*(.+?)\*\*/g, '$1')
       .replace(/\*(.+?)\*/g, '$1')
       .replace(/#{1,3}\s/g, '')
@@ -338,8 +339,8 @@ export default function AiChatBubble() {
   };
 
   // ── Send message ──
-  const sendMessage = async () => {
-    const text = input.trim();
+  const sendMessage = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
     if ((!text && !attachedImage) || loading) return;
 
     // Create conversation if none active
@@ -391,23 +392,67 @@ export default function AiChatBubble() {
           currentPage: pathname,
           projectContext,
           useModel: aiModel,
+          stream: true,
           imageData: imageToSend ? { base64: imageToSend.base64, mimeType: imageToSend.mimeType } : undefined,
         }),
       });
 
-      const data = await res.json();
-      const replyText = data.content || data.error || 'Sorry, something went wrong.';
-      const reply: Message = { role: 'assistant', content: replyText };
-      const finalMessages = [...newMessages, reply];
-      setMessages(finalMessages);
+      let replyText = '';
+      let responseActions: NavigationAction[] | undefined;
+
+      if (res.headers.get('content-type')?.includes('ndjson') && res.body) {
+        // Streaming NDJSON: {type:'delta'|'status'|'done'|'error'}
+        // Append a live assistant message and grow it as deltas arrive
+        setMessages([...newMessages, { role: 'assistant', content: '' }]);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const evt = JSON.parse(line);
+              if (evt.type === 'delta' && evt.text) {
+                replyText += evt.text;
+                const snapshot = replyText;
+                setMessages([...newMessages, { role: 'assistant', content: snapshot }]);
+              } else if (evt.type === 'status' && evt.label) {
+                setLoadingStatus(evt.label);
+              } else if (evt.type === 'done') {
+                responseActions = evt.actions;
+              } else if (evt.type === 'error') {
+                replyText = replyText || evt.error || 'Sorry, something went wrong.';
+                setMessages([...newMessages, { role: 'assistant', content: replyText }]);
+              }
+            } catch { /* skip malformed line */ }
+          }
+        }
+        if (!replyText) {
+          replyText = 'Sorry, something went wrong.';
+          setMessages([...newMessages, { role: 'assistant', content: replyText }]);
+        }
+      } else {
+        // Legacy JSON response (fallback providers)
+        const data = await res.json();
+        replyText = data.content || data.error || 'Sorry, something went wrong.';
+        responseActions = data.actions;
+        setMessages([...newMessages, { role: 'assistant', content: replyText }]);
+      }
+
+      const finalMessages: Message[] = [...newMessages, { role: 'assistant', content: replyText }];
       if (displayMode === 'minimized' || !open) setUnread(prev => prev + 1);
 
       // Speak the response if TTS is enabled
       speakText(replyText);
 
       // Handle navigation actions
-      if (data.actions) {
-        handleActions(data.actions);
+      if (responseActions) {
+        handleActions(responseActions);
       }
 
       // Auto-save
@@ -466,8 +511,21 @@ export default function AiChatBubble() {
     return { cx, cy, px, py, zoom };
   };
 
+  // ── Guided-mode choices ──
+  // The AI ends questions with a "CHOICES: A | B | C" line; we strip it from
+  // the text and render the options as tap buttons under the last message.
+  const parseChoices = (text: string): string[] => {
+    const m = text.match(/^\s*CHOICES:\s*(.+?)\s*$/m);
+    if (!m) return [];
+    return m[1].split('|').map(s => s.trim()).filter(Boolean).slice(0, 4);
+  };
+  const stripChoices = (text: string) => text.replace(/^\s*CHOICES:.*$/gm, '').trimEnd();
+
+  const HELP_PROMPT = "I need help. I'm not sure how to use this — walk me through it step by step, one question at a time.";
+
   // Markdown rendering
   const renderContent = (text: string) => {
+    text = stripChoices(text);
     // Strip code fences
     let cleaned = text.replace(/```[\s\S]*?```/g, (m) => {
       const inner = m.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
@@ -716,6 +774,13 @@ export default function AiChatBubble() {
                 {speakEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
               </button>
             )}
+            {/* Help — restarts guided mode anytime */}
+            {!isFloating && (
+              <button onClick={() => sendMessage(HELP_PROMPT)} disabled={loading}
+                className="p-1.5 text-[#C9A84C]/60 hover:text-[#C9A84C] hover:bg-[#C9A84C]/10 rounded-lg transition-colors disabled:opacity-30" title="Help — walk me through it">
+                <HelpCircle size={16} />
+              </button>
+            )}
             {/* New chat */}
             <button onClick={startNewChat} className="p-1.5 text-white/20 hover:text-[#C9A84C] hover:bg-white/5 rounded-lg transition-colors" title="New chat">
               <Plus size={isFloating ? 14 : 16} />
@@ -750,34 +815,40 @@ export default function AiChatBubble() {
           {messages.length === 0 && (
             <div className={`text-center ${isFloating ? 'py-4' : 'py-6'}`}>
               <Sparkles size={isFloating ? 24 : 32} className="text-[#C9A84C]/30 mx-auto mb-2" />
-              <p className={`text-white/50 mb-1 ${isFloating ? 'text-[14px]' : 'text-[16px]'}`}>How can I help?</p>
-              <p className={`text-white/25 mb-3 ${isFloating ? 'text-[12px]' : 'text-[14px]'}`}>Ask about customers, estimates, codes, or your projects</p>
+              <p className={`text-white/50 mb-1 ${isFloating ? 'text-[14px]' : 'text-[16px]'}`}>What would you like to do?</p>
+              <p className={`text-white/25 mb-4 ${isFloating ? 'text-[12px]' : 'text-[14px]'}`}>Tap a button — I&apos;ll walk you through the rest, one step at a time</p>
               {!isFloating && (
-                <div className="flex flex-wrap gap-1.5 justify-center">
-                  {[
-                    "Pull up Sherry's estimate",
-                    'Show all unpaid estimates',
-                    'Create a new customer',
-                    'Take me to estimates',
-                    'SC permit requirements',
-                  ].map(q => (
-                    <button key={q} onClick={() => { setInput(q); inputRef.current?.focus(); }}
-                      className="px-3 py-2 text-[13px] bg-white/5 text-white/40 rounded-lg hover:bg-white/10 hover:text-white/60 transition-colors">
-                      {q}
+                <div className="flex flex-col gap-2 max-w-[340px] mx-auto">
+                  {/* Guided help — the front door for non-technical users */}
+                  <button onClick={() => sendMessage(HELP_PROMPT)}
+                    className="w-full px-4 py-3.5 rounded-xl text-[15px] font-bold text-black active:scale-[0.98] transition-transform"
+                    style={{ background: 'linear-gradient(135deg, #C9A84C, #D4772C)' }}>
+                    👋 Help me get started
+                  </button>
+                  {([
+                    ['📄 Create an estimate or invoice', 'I want to create a new estimate. Walk me through it step by step, one question at a time, and give me choices to tap.'],
+                    ['🔍 Check on an estimate', 'Help me find an estimate and see where it stands. Ask me which customer or project, with choices if you can.'],
+                    ['👤 Add a new customer', 'I want to add a new customer. Ask me for their details one question at a time.'],
+                    ['✉️ Send an estimate to a customer', 'Help me send an estimate to a customer. Walk me through it one step at a time.'],
+                  ] as const).map(([label, prompt]) => (
+                    <button key={label} onClick={() => sendMessage(prompt)}
+                      className="w-full px-4 py-3 rounded-xl text-[14px] font-semibold text-left bg-white/5 border border-white/10 text-white/70 hover:bg-[#C9A84C]/10 hover:border-[#C9A84C]/30 hover:text-white active:scale-[0.98] transition-all">
+                      {label}
                     </button>
                   ))}
+                  <p className="text-[12px] text-white/20 mt-1">…or type or tap the mic 🎤 and just say what you need</p>
                 </div>
               )}
               {isFloating && (
                 <div className="flex flex-wrap gap-1 justify-center">
                   {[
-                    "Sherry's estimate",
-                    'New customer',
-                    'Go to estimates',
-                  ].map(q => (
-                    <button key={q} onClick={() => { setInput(q); inputRef.current?.focus(); }}
+                    ['Help me', HELP_PROMPT],
+                    ['New estimate', 'I want to create a new estimate. Walk me through it step by step.'],
+                    ['Find estimate', 'Help me find an estimate.'],
+                  ].map(([label, prompt]) => (
+                    <button key={label} onClick={() => sendMessage(prompt)}
                       className="px-2 py-1.5 text-[12px] bg-white/5 text-white/40 rounded-lg hover:bg-white/10 hover:text-white/60 transition-colors">
-                      {q}
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -785,20 +856,37 @@ export default function AiChatBubble() {
             </div>
           )}
 
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`rounded-2xl px-3 py-2 leading-relaxed ${
-                isFloating ? 'max-w-[95%] text-[13px]' : isFullscreen ? 'max-w-[80%] text-[16px]' : 'max-w-[90%] text-[15px]'
-              } ${
-                msg.role === 'user' ? 'bg-[#C9A84C]/15 text-white rounded-br-md' : 'bg-[#111] border border-white/5 text-white/80 rounded-bl-md'
-              }`}>
-                {msg.imagePreview && (
-                  <img src={msg.imagePreview} alt="Attached" className="rounded-lg mb-2 max-h-48 w-auto" style={{ maxWidth: '100%' }} />
-                )}
-                {msg.role === 'assistant' ? renderContent(msg.content) : msg.content}
+          {messages.map((msg, idx) => {
+            const isLastAssistant = msg.role === 'assistant' && idx === messages.length - 1 && !loading;
+            const choices = isLastAssistant ? parseChoices(msg.content) : [];
+            return (
+            <div key={idx}>
+              <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`rounded-2xl px-3 py-2 leading-relaxed ${
+                  isFloating ? 'max-w-[95%] text-[13px]' : isFullscreen ? 'max-w-[80%] text-[16px]' : 'max-w-[90%] text-[15px]'
+                } ${
+                  msg.role === 'user' ? 'bg-[#C9A84C]/15 text-white rounded-br-md' : 'bg-[#111] border border-white/5 text-white/80 rounded-bl-md'
+                }`}>
+                  {msg.imagePreview && (
+                    <img src={msg.imagePreview} alt="Attached" className="rounded-lg mb-2 max-h-48 w-auto" style={{ maxWidth: '100%' }} />
+                  )}
+                  {msg.role === 'assistant' ? renderContent(msg.content) : msg.content}
+                </div>
               </div>
+              {/* Guided-mode tap choices */}
+              {choices.length > 0 && (
+                <div className={`flex flex-wrap gap-2 mt-2 ${isFullscreen ? 'max-w-[80%]' : ''}`}>
+                  {choices.map(choice => (
+                    <button key={choice} onClick={() => sendMessage(choice)}
+                      className={`px-4 py-2.5 rounded-xl border border-[#C9A84C]/35 bg-[#C9A84C]/10 text-[#C9A84C] font-semibold hover:bg-[#C9A84C]/20 active:scale-95 transition-all ${isFloating ? 'text-[13px] px-3 py-2' : 'text-[15px]'}`}>
+                      {choice}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
+            );
+          })}
 
           {loading && (
             <div className="flex justify-start">
@@ -856,7 +944,7 @@ export default function AiChatBubble() {
                listening ? <MicOff size={isFloating ? 12 : 16} /> :
                <Mic size={isFloating ? 12 : 16} />}
             </button>
-            <button onClick={sendMessage} disabled={loading || (!input.trim() && !attachedImage)}
+            <button onClick={() => sendMessage()} disabled={loading || (!input.trim() && !attachedImage)}
               className={`bg-[#C9A84C] text-black rounded-xl hover:bg-[#C9A84C]/90 transition-colors disabled:opacity-30 flex-shrink-0 ${
                 isFloating ? 'px-2.5 py-2' : 'px-3.5 py-2.5'
               }`}>

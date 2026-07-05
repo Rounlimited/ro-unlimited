@@ -1334,7 +1334,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         const data = await res.json();
 
         // Log usage (fail silently if table doesn't exist)
-        await supabase.from('api_usage_log').insert({ service: 'rentcast', endpoint: 'properties' }).then(() => {}).catch(() => {});
+        await supabase.from('api_usage_log').insert({ service: 'rentcast', endpoint: 'properties' }).then(() => {}, () => {});
 
         const props = Array.isArray(data) ? data : [data];
         if (!props.length) return { result: `No property data found for "${input.address}".` };
@@ -1647,7 +1647,15 @@ You are RO Assistant — the AI for RO Unlimited Construction (Greenville SC, se
 - Never paste raw URLs or UUIDs in chat. Use the navigate tool for links. Refer to estimates by number (e.g. RO-EST-2026-0005).
 - Confirm before sending emails or changing document status.
 - After creating any record, navigate the user to it.
+- When the user states a lasting fact or preference (pricing rules, markup habits, how they like things done), call save_memory proactively — don't wait to be asked.
 </principles>
+
+<guided>
+Some users know construction but not computers. Whenever you ask a question and the sensible answers are enumerable, end your message with ONE final line exactly in this format:
+CHOICES: First option | Second option | Third option
+Rules: max 4 options, each under 6 words, plain language. The app renders them as tap buttons. Use for yes/no too: CHOICES: Yes, go ahead | No, change something
+When a user asks for help, seems lost, or says they don't know what to do: switch to GUIDED MODE — ask exactly ONE short question at a time, no jargon (say "What kind of work is this?" not "Which division?"), ALWAYS end with CHOICES, and walk them step-by-step to the finished result (e.g. estimate created, priced, payment schedule set, sent to the customer). Never show them UUIDs or technical terms. Celebrate progress briefly ("Great — that's saved.").
+</guided>
 
 <pages>
 /admin · /admin/estimates · /admin/inbox · /admin/customers · /admin/vendors · /admin/employees · /admin/intakes · /admin/cost-library · /admin/templates · /admin/disclaimers · /admin/settings · /admin/tasks
@@ -1737,6 +1745,98 @@ function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: stri
 }
 
 // ═══════════════════════════════════════════
+// STREAMING SUPPORT
+// ═══════════════════════════════════════════
+
+// Friendly labels shown in the UI while a tool runs
+const TOOL_STATUS_LABELS: Record<string, string> = {
+  search_customers: 'Searching customers…', search_estimates: 'Searching estimates…',
+  get_estimate_details: 'Pulling up the estimate…', search_employees: 'Searching employees…',
+  search_vendors: 'Searching vendors…', get_activity_log: 'Checking recent activity…',
+  search_cost_library: 'Checking cost library…', web_search: 'Searching the web…',
+  property_lookup: 'Looking up the property…', save_memory: 'Saving that…',
+  list_tasks: 'Checking your tasks…', get_daily_briefing: 'Building your briefing…',
+  create_customer: 'Creating the customer…', update_customer: 'Updating the customer…',
+  create_estimate: 'Creating the estimate…', update_estimate: 'Updating the estimate…',
+  add_line_items: 'Adding line items…', update_line_items: 'Updating line items…',
+  delete_line_items: 'Removing line items…', set_payment_schedule: 'Setting the payment schedule…',
+  update_estimate_status: 'Updating status…', send_estimate: 'Sending the estimate…',
+  generate_share_link: 'Creating a share link…', duplicate_estimate: 'Duplicating the estimate…',
+  check_estimate_pricing: 'Checking the pricing…', compose_email: 'Sending the email…',
+  search_templates: 'Checking templates…', search_disclaimers: 'Checking disclaimers…',
+  create_task: 'Creating the task…', complete_task: 'Marking it done…',
+  snooze_task: 'Snoozing the task…', update_task: 'Updating the task…', delete_task: 'Deleting the task…',
+};
+const toolStatusLabel = (name: string) => TOOL_STATUS_LABELS[name] || 'Working on it…';
+
+type StreamEmit = (evt: Record<string, any>) => void;
+
+// One streamed Grok round: emits text deltas live, accumulates any tool calls.
+async function grokStreamRound(
+  apiMessages: any[], tools: any[] | undefined, grokKey: string, emit: StreamEmit,
+): Promise<{ text: string; toolCalls: any[]; finishReason: string } | null> {
+  const res = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${grokKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'grok-4-1-fast',
+      max_tokens: 4000,
+      messages: apiMessages,
+      stream: true,
+      ...(tools?.length ? { tools } : {}),
+    }),
+  });
+  if (!res.ok || !res.body) {
+    console.error('[ai-chat] Grok stream error:', res.status, await res.text().catch(() => ''));
+    return null;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let text = '';
+  let finishReason = '';
+  // OpenAI-style streaming splits tool calls across chunks — accumulate by index
+  const toolCallsAcc: Record<number, { id: string; type: 'function'; function: { name: string; arguments: string } }> = {};
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const payload = trimmed.slice(5).trim();
+      if (payload === '[DONE]') continue;
+      try {
+        const chunk = JSON.parse(payload);
+        const choice = chunk.choices?.[0];
+        if (!choice) continue;
+        if (choice.finish_reason) finishReason = choice.finish_reason;
+        const delta = choice.delta || {};
+        if (delta.content) {
+          text += delta.content;
+          emit({ type: 'delta', text: delta.content });
+        }
+        if (delta.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const idx = tc.index ?? 0;
+            if (!toolCallsAcc[idx]) toolCallsAcc[idx] = { id: tc.id || `call_${idx}`, type: 'function', function: { name: '', arguments: '' } };
+            if (tc.id) toolCallsAcc[idx].id = tc.id;
+            if (tc.function?.name) toolCallsAcc[idx].function.name += tc.function.name;
+            if (tc.function?.arguments) toolCallsAcc[idx].function.arguments += tc.function.arguments;
+          }
+        }
+      } catch { /* ignore malformed keepalive chunks */ }
+    }
+  }
+
+  return { text, toolCalls: Object.values(toolCallsAcc), finishReason };
+}
+
+// ═══════════════════════════════════════════
 // MAIN HANDLER
 // ═══════════════════════════════════════════
 export async function POST(req: NextRequest) {
@@ -1745,7 +1845,7 @@ export async function POST(req: NextRequest) {
     const user = await getServerUser(req);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { messages, currentPage, projectContext, useModel, imageData } = await req.json();
+    const { messages, currentPage, projectContext, useModel, imageData, stream } = await req.json();
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages required' }, { status: 400 });
     }
@@ -1761,12 +1861,37 @@ export async function POST(req: NextRequest) {
     const supabase = createAdminClient();
 
     // Load persistent memories
-    const { data: memories } = await supabase
+    const { data: allMemories } = await supabase
       .from('ai_memories')
       .select('content, category')
-      .order('category')
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(200);
+
+    // Relevance-filter memories against the conversation instead of dumping
+    // the newest 50: preferences/pricing always ride along (they shape every
+    // answer); the rest are scored by word overlap with recent user messages.
+    const recentUserText = messages
+      .filter((m: any) => m.role === 'user')
+      .slice(-3)
+      .map((m: any) => (typeof m.content === 'string' ? m.content : ''))
+      .join(' ')
+      .toLowerCase();
+    const queryWords = new Set(recentUserText.split(/\W+/).filter((w: string) => w.length > 3));
+    const scoreMemory = (m: any) => {
+      const words = (m.content || '').toLowerCase().split(/\W+/);
+      return words.reduce((s: number, w: string) => s + (queryWords.has(w) ? 1 : 0), 0);
+    };
+    let memories = allMemories || [];
+    if (memories.length > 25) {
+      const always = memories.filter((m: any) => m.category === 'preferences' || m.category === 'pricing');
+      const rest = memories
+        .filter((m: any) => m.category !== 'preferences' && m.category !== 'pricing')
+        .map((m: any) => ({ m, score: scoreMemory(m) }))
+        .sort((a: any, b: any) => b.score - a.score)
+        .slice(0, 15)
+        .map((x: any) => x.m);
+      memories = [...always, ...rest];
+    }
 
     // Build context additions
     const contextParts: string[] = [];
@@ -1846,6 +1971,58 @@ export async function POST(req: NextRequest) {
       return formatted;
     };
 
+    // ═══ STREAMING MODE — NDJSON events: {type:'delta'|'status'|'done'|'error'} ═══
+    const preferGrokStream = useModel !== 'claude' && useModel !== 'groq' && !!grokKey;
+    if (stream === true && preferGrokStream) {
+      const encoder = new TextEncoder();
+      const ndjson = new ReadableStream({
+        async start(controller) {
+          const emit: StreamEmit = (evt) => controller.enqueue(encoder.encode(JSON.stringify(evt) + '\n'));
+          try {
+            const apiMessages: any[] = [
+              { role: 'system', content: buildSystemPrompt(selectedTools, dynamicContext) },
+              ...buildApiMessages(messages),
+            ];
+            let tools = selectedTools.length > 0 ? openaiTools(selectedTools) : undefined;
+            let round = await grokStreamRound(apiMessages, tools, grokKey!, emit);
+
+            let rounds = 0;
+            while (round && round.finishReason === 'tool_calls' && round.toolCalls.length > 0 && rounds < 8) {
+              rounds++;
+              apiMessages.push({
+                role: 'assistant',
+                content: round.text || null,
+                tool_calls: round.toolCalls,
+              });
+              for (const tc of round.toolCalls) {
+                emit({ type: 'status', label: toolStatusLabel(tc.function.name) });
+                let args: any = {};
+                try { args = typeof tc.function.arguments === 'string' ? JSON.parse(tc.function.arguments || '{}') : tc.function.arguments; } catch {}
+                const { result, action } = await executeTool(tc.function.name, args, supabase);
+                if (action) actions.push(action);
+                apiMessages.push({ role: 'tool', tool_call_id: tc.id, content: typeof result === 'string' ? result : JSON.stringify(result) });
+              }
+              tools = openaiTools(ALL_TOOLS);
+              round = await grokStreamRound(apiMessages, tools, grokKey!, emit);
+            }
+
+            if (!round) {
+              emit({ type: 'error', error: 'AI service error — try again.' });
+            } else {
+              emit({ type: 'done', model: 'grok-4-1-fast', ...(actions.length ? { actions } : {}) });
+            }
+          } catch (err: any) {
+            console.error('[ai-chat] stream error:', err);
+            emit({ type: 'error', error: 'AI service error — try again.' });
+          }
+          controller.close();
+        },
+      });
+      return new Response(ndjson, {
+        headers: { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' },
+      });
+    }
+
     // ── Priority 1: Grok 4.1 Fast (cheapest + best tool use) ──
     const preferGrok = useModel !== 'claude' && useModel !== 'groq' && !!grokKey;
     if (preferGrok) {
@@ -1875,7 +2052,7 @@ export async function POST(req: NextRequest) {
 
           // Tool use loop (max 5 rounds)
           let rounds = 0;
-          while (grokData.choices?.[0]?.finish_reason === 'tool_calls' && rounds < 5) {
+          while (grokData.choices?.[0]?.finish_reason === 'tool_calls' && rounds < 8) {
             rounds++;
             const toolCalls = grokData.choices[0].message.tool_calls || [];
             const assistantMsg = grokData.choices[0].message;
@@ -1960,7 +2137,7 @@ export async function POST(req: NextRequest) {
         } else {
           let claudeData = await claudeRes.json();
           let rounds = 0;
-          while (claudeData.stop_reason === 'tool_use' && rounds < 5) {
+          while (claudeData.stop_reason === 'tool_use' && rounds < 8) {
             rounds++;
             const toolBlocks = claudeData.content.filter((b: any) => b.type === 'tool_use');
             const toolResults: any[] = [];
