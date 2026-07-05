@@ -32,6 +32,12 @@ export default function AiChatBubble() {
   const [tokenEstimate, setTokenEstimate] = useState(0);
   const [compacting, setCompacting] = useState(false);
 
+  // Viewing other users' chat boxes (dev sees everyone; admins see employees)
+  const [viewableUsers, setViewableUsers] = useState<{ id: string; email: string | null; name: string; role: string }[]>([]);
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null); // null = my chats
+  const [readOnly, setReadOnly] = useState(false);
+  const viewingUserName = viewingUserId ? (viewableUsers.find(u => u.id === viewingUserId)?.name || 'user') : null;
+
   // Photo attachment
   const [attachedImage, setAttachedImage] = useState<{ base64: string; mimeType: string; preview: string } | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -250,12 +256,22 @@ export default function AiChatBubble() {
     }
   }, [input]);
 
-  // ── Load conversation list ──
-  const fetchConversations = useCallback(async () => {
-    const res = await fetch('/api/admin/ai-conversations');
+  // ── Load conversation list (optionally another user's box) ──
+  const fetchConversations = useCallback(async (view?: string | null) => {
+    const url = view ? `/api/admin/ai-conversations?view=${encodeURIComponent(view)}` : '/api/admin/ai-conversations';
+    const res = await fetch(url);
     if (res.ok) { const data = await res.json(); setConversations(data.conversations || []); }
   }, []);
-  useEffect(() => { if (open) fetchConversations(); }, [open, fetchConversations]);
+  useEffect(() => { if (open) fetchConversations(viewingUserId); }, [open, fetchConversations, viewingUserId]);
+
+  // ── Load list of users whose chat boxes I'm allowed to view ──
+  useEffect(() => {
+    if (!open) return;
+    fetch('/api/admin/ai-conversations?users=1')
+      .then(r => r.ok ? r.json() : { users: [] })
+      .then(d => setViewableUsers(d.users || []))
+      .catch(() => {});
+  }, [open]);
 
   // ── Auto-save messages to active conversation ──
   const saveMessages = useCallback(async (msgs: Message[], convId: string | null) => {
@@ -271,6 +287,8 @@ export default function AiChatBubble() {
   const startNewChat = async () => {
     setMessages([]);
     setTokenEstimate(0);
+    setViewingUserId(null);
+    setReadOnly(false);
     const res = await fetch('/api/admin/ai-conversations', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'create', title: 'New Chat' }),
@@ -294,6 +312,7 @@ export default function AiChatBubble() {
       setMessages(data.conversation.messages || []);
       setActiveConvId(id);
       setTokenEstimate(data.conversation.token_estimate || 0);
+      setReadOnly(!!data.readOnly);
     }
     setShowHistory(false);
   };
@@ -340,6 +359,7 @@ export default function AiChatBubble() {
 
   // ── Send message ──
   const sendMessage = async (overrideText?: string) => {
+    if (readOnly) return; // viewing someone else's chat — no sending
     const text = (overrideText ?? input).trim();
     if ((!text && !attachedImage) || loading) return;
 
@@ -657,9 +677,29 @@ export default function AiChatBubble() {
         <span className="text-[16px] font-semibold text-white">Chat History</span>
         <button onClick={() => setShowHistory(false)} className="p-1.5 text-white/30 hover:text-white"><X size={18} /></button>
       </div>
-      <button onClick={startNewChat} className="flex items-center gap-2 mx-3 mt-3 mb-2 px-4 py-2.5 bg-[#C9A84C]/10 border border-[#C9A84C]/20 rounded-xl text-[#C9A84C] text-[14px] font-semibold hover:bg-[#C9A84C]/15 transition-colors">
+      {/* Whose chats — dev sees everyone, admins see employees */}
+      {viewableUsers.length > 0 && (
+        <div className="mx-3 mt-3">
+          <select
+            value={viewingUserId || 'me'}
+            onChange={e => { const v = e.target.value; setViewingUserId(v === 'me' ? null : v); }}
+            className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2.5 text-[14px] text-white focus:outline-none focus:border-[#C9A84C]/50"
+          >
+            <option value="me">👤 My chats</option>
+            {viewableUsers.map(u => (
+              <option key={u.id} value={u.id}>📁 {u.name}{u.email ? ` (${u.email})` : ''}</option>
+            ))}
+          </select>
+        </div>
+      )}
+      {!viewingUserId && (
+        <button onClick={startNewChat} className="flex items-center gap-2 mx-3 mt-3 mb-2 px-4 py-2.5 bg-[#C9A84C]/10 border border-[#C9A84C]/20 rounded-xl text-[#C9A84C] text-[14px] font-semibold hover:bg-[#C9A84C]/15 transition-colors">
         <Plus size={16} /> New Chat
       </button>
+      )}
+      {viewingUserId && (
+        <p className="mx-3 mt-2 mb-1 text-[12px] text-[#C9A84C]/70">Viewing {viewingUserName}&apos;s chats — open one to read it</p>
+      )}
       <div className="flex-1 overflow-y-auto px-3 pb-3">
         {conversations.length === 0 ? (
           <p className="text-center text-white/20 text-[14px] py-8">No saved chats yet</p>
@@ -862,7 +902,7 @@ export default function AiChatBubble() {
           )}
 
           {messages.map((msg, idx) => {
-            const isLastAssistant = msg.role === 'assistant' && idx === messages.length - 1 && !loading;
+            const isLastAssistant = msg.role === 'assistant' && idx === messages.length - 1 && !loading && !readOnly;
             const choices = isLastAssistant ? parseChoices(msg.content) : [];
             return (
             <div key={idx}>
@@ -903,7 +943,22 @@ export default function AiChatBubble() {
           )}
         </div>
 
+        {/* Read-only banner — viewing another user's chat */}
+        {readOnly && (
+          <div className="border-t border-[#C9A84C]/20 flex-shrink-0 bg-[#C9A84C]/5 px-4 py-3 flex items-center justify-between gap-3"
+            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+            <span className="text-[13px] text-[#C9A84C]/80">
+              👁 Viewing {viewingUserName || 'another user'}&apos;s chat — read only
+            </span>
+            <button onClick={startNewChat}
+              className="px-3 py-2 rounded-lg bg-[#C9A84C]/15 border border-[#C9A84C]/30 text-[#C9A84C] text-[13px] font-semibold whitespace-nowrap">
+              My chats
+            </button>
+          </div>
+        )}
+
         {/* Input */}
+        {!readOnly && (
         <div className={`border-t border-white/10 flex-shrink-0 bg-[#0f0f0f] ${isFloating ? 'px-2 py-2' : isFullscreen ? 'px-6 pt-3 max-w-4xl mx-auto w-full' : 'px-3 pt-2.5'}`}
           style={!isFloating ? { paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom, 0px))' } : undefined}>
           {/* Image preview strip */}
@@ -957,6 +1012,7 @@ export default function AiChatBubble() {
             </button>
           </div>
         </div>
+        )}
       </div>
     </>
   );
