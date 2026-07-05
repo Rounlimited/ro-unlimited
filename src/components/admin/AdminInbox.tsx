@@ -99,6 +99,20 @@ function EmailBody({ html, text, compact }: { html: string | null; text: string 
   const wrapRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const [spacerH, setSpacerH] = useState<number | undefined>(undefined);
+  // Auto-fit scale (from content width) × user pinch-zoom on top of it
+  const fitScaleRef = useRef(1);
+  const zoomRef = useRef(1);
+  const txRef = useRef(0);
+  const tyRef = useRef(0);
+
+  const applyTransform = useCallback(() => {
+    const inner = innerRef.current;
+    if (!inner) return;
+    const s = fitScaleRef.current * zoomRef.current;
+    // translate is post-scale in this order, so divide by s to pan in screen px
+    inner.style.transform = `scale(${s}) translate(${txRef.current / s}px, ${tyRef.current / s}px)`;
+    inner.style.transformOrigin = "top left";
+  }, []);
 
   useEffect(() => {
     if (!html) return;
@@ -108,17 +122,18 @@ function EmailBody({ html, text, compact }: { html: string | null; text: string 
       // Reset to natural layout to measure the email's real width
       inner.style.transform = "";
       inner.style.width = "";
+      zoomRef.current = 1; txRef.current = 0; tyRef.current = 0;
       const avail = wrap.clientWidth;
       const natural = inner.scrollWidth;
       if (natural > avail + 2 && avail > 0) {
-        const s = avail / natural;
+        fitScaleRef.current = avail / natural;
         inner.style.width = `${natural}px`;
-        inner.style.transform = `scale(${s})`;
-        inner.style.transformOrigin = "top left";
-        setSpacerH(inner.scrollHeight * s);
+        setSpacerH(inner.scrollHeight * fitScaleRef.current);
       } else {
+        fitScaleRef.current = 1;
         setSpacerH(undefined);
       }
+      applyTransform();
     };
     fit();
     // Re-fit after images/fonts load shift the layout
@@ -126,7 +141,66 @@ function EmailBody({ html, text, compact }: { html: string | null; text: string 
     const t2 = setTimeout(fit, 1500);
     window.addEventListener("resize", fit);
     return () => { clearTimeout(t1); clearTimeout(t2); window.removeEventListener("resize", fit); };
-  }, [html]);
+  }, [html, applyTransform]);
+
+  // Pinch-to-zoom + pan (same gesture model as the PDF preview)
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap || !html) return;
+    const g = { pinching: false, panning: false, startDist: 0, startZoom: 1, panX: 0, panY: 0, startTx: 0, startTy: 0, lastTap: 0 };
+    const dist = (t: TouchList) => Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY);
+
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        g.pinching = true; g.panning = false;
+        g.startDist = dist(e.touches);
+        g.startZoom = zoomRef.current;
+      } else if (e.touches.length === 1) {
+        // double-tap resets zoom
+        const now = Date.now();
+        if (now - g.lastTap < 300 && zoomRef.current > 1.05) {
+          zoomRef.current = 1; txRef.current = 0; tyRef.current = 0;
+          applyTransform();
+        }
+        g.lastTap = now;
+        if (zoomRef.current > 1.05) {
+          g.panning = true;
+          g.panX = e.touches[0].clientX; g.panY = e.touches[0].clientY;
+          g.startTx = txRef.current; g.startTy = tyRef.current;
+        }
+      }
+    };
+    const onMove = (e: TouchEvent) => {
+      if (g.pinching && e.touches.length === 2) {
+        e.preventDefault();
+        zoomRef.current = Math.min(4, Math.max(1, g.startZoom * (dist(e.touches) / g.startDist)));
+        if (zoomRef.current <= 1.02) { txRef.current = 0; tyRef.current = 0; }
+        applyTransform();
+      } else if (g.panning && e.touches.length === 1 && zoomRef.current > 1.05) {
+        e.preventDefault();
+        txRef.current = g.startTx + (e.touches[0].clientX - g.panX);
+        tyRef.current = g.startTy + (e.touches[0].clientY - g.panY);
+        applyTransform();
+      }
+    };
+    const onEnd = () => {
+      if (g.pinching && zoomRef.current < 1.05) {
+        zoomRef.current = 1; txRef.current = 0; tyRef.current = 0;
+        applyTransform();
+      }
+      g.pinching = false; g.panning = false;
+    };
+
+    wrap.addEventListener("touchstart", onStart, { passive: false });
+    wrap.addEventListener("touchmove", onMove, { passive: false });
+    wrap.addEventListener("touchend", onEnd);
+    return () => {
+      wrap.removeEventListener("touchstart", onStart);
+      wrap.removeEventListener("touchmove", onMove);
+      wrap.removeEventListener("touchend", onEnd);
+    };
+  }, [html, applyTransform]);
 
   if (html) {
     return (
