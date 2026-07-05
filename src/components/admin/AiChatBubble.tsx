@@ -343,15 +343,21 @@ export default function AiChatBubble() {
     const text = (overrideText ?? input).trim();
     if ((!text && !attachedImage) || loading) return;
 
-    // Create conversation if none active
-    if (!activeConvId) {
+    // Create conversation if none active.
+    // IMPORTANT: track the id in a local variable — setActiveConvId is async,
+    // so reading activeConvId later in this closure would still be null and
+    // the first message of every new chat silently never saved to the DB
+    // (the "titles sync across devices but messages are empty" bug).
+    let convId = activeConvId;
+    if (!convId) {
       const res = await fetch('/api/admin/ai-conversations', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'create', title: (text || 'Image analysis').slice(0, 60) }),
       });
       if (res.ok) {
         const data = await res.json();
-        setActiveConvId(data.conversation.id);
+        convId = data.conversation.id;
+        setActiveConvId(convId);
         fetchConversations();
       }
     }
@@ -455,8 +461,7 @@ export default function AiChatBubble() {
         handleActions(responseActions);
       }
 
-      // Auto-save
-      const convId = activeConvId;
+      // Auto-save (convId is the local variable — valid even on the first message)
       if (convId) {
         const title = newMessages.length <= 1 ? text.slice(0, 60) : undefined;
         await fetch('/api/admin/ai-conversations', {

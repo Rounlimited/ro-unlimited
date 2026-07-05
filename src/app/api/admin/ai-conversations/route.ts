@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, getServerUser } from '@/lib/supabase/server';
 
 // Rough token estimate: ~4 chars per token
 function estimateTokens(messages: any[]): number {
   return Math.ceil(JSON.stringify(messages).length / 4);
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const user = await getServerUser(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('ai_conversations')
@@ -18,6 +20,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getServerUser(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const supabase = createAdminClient();
   const body = await req.json();
   const { action } = body;
