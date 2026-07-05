@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, getServerUser } from '@/lib/supabase/server';
 import { recalcEstimateTotals } from '@/lib/estimates';
 
 export const dynamic = 'force-dynamic';
 
 // ═══════════════════════════════════════════
-// SEARCH: Tavily (primary) + DuckDuckGo (fallback)
+// SEARCH: Brave (primary) + DuckDuckGo (fallback)
 // ═══════════════════════════════════════════
 async function braveSearch(query: string): Promise<string | null> {
   const apiKey = process.env.BRAVE_SEARCH_API_KEY;
@@ -198,7 +198,7 @@ const READ_TOOLS = [
     input_schema: { type: 'object' as const, properties: { limit: { type: 'number' }, action_filter: { type: 'string' } } } },
   { name: 'search_cost_library', description: 'Search cost items for pricing.',
     input_schema: { type: 'object' as const, properties: { query: { type: 'string' }, category: { type: 'string', description: 'material|labor|equipment|subcontractor' } }, required: ['query'] } },
-  { name: 'web_search', description: 'Search the web (Tavily AI search + DuckDuckGo fallback) for current info — pricing, SC codes, regulations, permits, material costs. Returns AI-summarized answers plus source links.',
+  { name: 'web_search', description: 'Search the web (Brave Search + DuckDuckGo fallback) for current info — pricing, SC codes, regulations, permits, material costs. Returns titled snippets with source links.',
     input_schema: { type: 'object' as const, properties: { query: { type: 'string' } }, required: ['query'] } },
   { name: 'property_lookup', description: 'Look up a property by address. Returns lot size, building sqft, year built, construction features, estimated value, owner, FEMA flood zone, OSM building/business data, and satellite map link. Use for any job site address.',
     input_schema: { type: 'object' as const, properties: { address: { type: 'string', description: 'Full property address including city and state (e.g. "123 Main St, Greenville, SC")' } }, required: ['address'] } },
@@ -309,6 +309,8 @@ const WRITE_TOOLS = [
         valid_until: { type: 'string', description: 'Expiration date ISO string' },
         notes: { type: 'string', description: 'Internal notes' },
         inclusions: { type: 'string', description: 'Inclusions text' },
+        exclusions: { type: 'string', description: 'Exclusions text (what is NOT included)' },
+        recommendations: { type: 'string', description: 'Optional recommendations shown to the customer on the PDF' },
         project_start_date: { type: 'string', description: 'Start date ISO string' },
         project_duration_days: { type: 'number', description: 'Project duration in days' },
         schedule_notes: { type: 'string', description: 'Schedule notes' },
@@ -383,6 +385,31 @@ const WRITE_TOOLS = [
         item_ids: { type: 'array', items: { type: 'string' }, description: 'Array of line item UUIDs to delete (required)' },
       },
       required: ['estimate_id', 'item_ids'],
+    },
+  },
+  {
+    name: 'set_payment_schedule',
+    description: 'Set or replace the payment/deposit schedule (milestones with percentages) on an estimate. REPLACES the entire existing schedule. Percents should total 100. Dollar amounts auto-calculate from the estimate grand total when omitted.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        estimate_id: { type: 'string', description: 'Estimate UUID (required)' },
+        milestones: {
+          type: 'array',
+          description: 'Milestones IN ORDER (first = sort_order 0). Example: [{milestone:"Deposit",percent:30},{milestone:"Rough-in complete",percent:40},{milestone:"Final completion",percent:30}]',
+          items: {
+            type: 'object',
+            properties: {
+              milestone: { type: 'string', description: 'Milestone name, e.g. "Deposit", "Framing complete", "Final" (required)' },
+              description: { type: 'string', description: 'When this payment is due, e.g. "Due at contract signing"' },
+              percent: { type: 'number', description: 'Percent of grand total (required). All milestones should sum to 100.' },
+              amount: { type: 'number', description: 'Dollar amount — omit to auto-calculate from percent × estimate total' },
+            },
+            required: ['milestone', 'percent'],
+          },
+        },
+      },
+      required: ['estimate_id', 'milestones'],
     },
   },
   {
@@ -622,11 +649,11 @@ function selectTools(lastMessage: string, messageCount?: number): typeof ALL_TOO
   // Write tools — only when action words present
   if (/create|make|build|add|new/i.test(msg)) {
     if (needs.customer) tools.push(...WRITE_TOOLS.filter(t => t.name === 'create_customer'));
-    if (needs.estimate) tools.push(...WRITE_TOOLS.filter(t => ['create_estimate', 'add_line_items'].includes(t.name)));
+    if (needs.estimate) tools.push(...WRITE_TOOLS.filter(t => ['create_estimate', 'add_line_items', 'set_payment_schedule'].includes(t.name)));
   }
-  if (/update|change|edit|modify|set|remove|delete|swap|replace|adjust|fix/i.test(msg)) {
+  if (/update|change|edit|modify|set|remove|delete|swap|replace|adjust|fix|payment|deposit|milestone/i.test(msg)) {
     if (needs.customer) tools.push(...WRITE_TOOLS.filter(t => t.name === 'update_customer'));
-    if (needs.estimate) tools.push(...WRITE_TOOLS.filter(t => ['update_estimate', 'update_estimate_status', 'update_line_items', 'delete_line_items'].includes(t.name)));
+    if (needs.estimate) tools.push(...WRITE_TOOLS.filter(t => ['update_estimate', 'update_estimate_status', 'update_line_items', 'delete_line_items', 'set_payment_schedule'].includes(t.name)));
   }
   if (needs.estimate && /send|share|duplicate|copy|check|validate|revise/i.test(msg)) {
     tools.push(...WRITE_TOOLS.filter(t => ['send_estimate', 'generate_share_link', 'duplicate_estimate', 'check_estimate_pricing'].includes(t.name)));
@@ -1042,6 +1069,37 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       }
 
       return { result: `Deleted ${count || input.item_ids.length} line item(s). Totals recalculated.` };
+    }
+
+    case 'set_payment_schedule': {
+      if (!input.estimate_id) return { result: 'Error: estimate_id is required.' };
+      const milestones: any[] = input.milestones || [];
+      if (!milestones.length) return { result: 'Error: milestones array must not be empty (this tool replaces the whole schedule — an empty list would wipe it).' };
+
+      const { data: est } = await supabase
+        .from('estimates')
+        .select('id, estimate_number, total')
+        .eq('id', input.estimate_id)
+        .single();
+      if (!est) return { result: 'Estimate not found.' };
+
+      const totalPct = milestones.reduce((s, m) => s + (m.percent || 0), 0);
+      const grandTotal = est.total || 0;
+      const rows = milestones.map((m, idx) => ({
+        estimate_id: est.id,
+        milestone: m.milestone || `Payment ${idx + 1}`,
+        due_description: m.description || null,
+        percent: m.percent || 0,
+        amount: m.amount ?? Math.round(grandTotal * (m.percent || 0)) / 100,
+        sort_order: idx,
+      }));
+
+      await supabase.from('estimate_payment_schedules').delete().eq('estimate_id', est.id);
+      const { data: inserted, error } = await supabase.from('estimate_payment_schedules').insert(rows).select();
+      if (error) return { result: `Error saving payment schedule: ${error.message}` };
+
+      const warn = totalPct !== 100 ? ` ⚠️ Percents total ${totalPct}%, not 100% — flag this to the user.` : '';
+      return { result: `Payment schedule set on ${est.estimate_number} (${inserted?.length} milestones).${warn}\n${JSON.stringify(inserted, null, 2)}` };
     }
 
     case 'update_estimate_status': {
@@ -1601,8 +1659,10 @@ Building a new estimate:
 1. Gather: customer, type, scope, location
 2. Draft fully in chat — phases, line items (qty × unit_cost = total), subtotals, grand total, payment schedule
 3. Ask "Ready to commit?" — wait for confirmation
-4. Then: create_estimate → add_line_items → navigate to it
+4. Then: create_estimate → add_line_items → set_payment_schedule → navigate to it
 5. Revisions: update the draft in chat and re-present before committing
+
+Payment schedules: typical RO pattern is 30% deposit / progress payments at milestones / 10-15% final. Percents must total 100. Use set_payment_schedule (it REPLACES the whole schedule).
 
 Editing an existing estimate:
 1. get_estimate_details → get real UUIDs for all line items
@@ -1652,12 +1712,12 @@ Example: $18,000 assessed ÷ 0.06 = $300,000 market value. Always calculate and 
 FEMA flood zones: X = minimal risk · AE/A = high risk (flood insurance required) · VE = coastal high risk
 Flag AE/A/VE zones prominently — they affect foundation type, site work cost, and insurance.
 
-Codes: IBC/IRC 2021 (SC adopted 2023). Lien law: SC 29-5-10, 90-day window.
+Codes: SC currently enforces the 2021 I-codes (IBC/IRC etc., effective Jan 1 2023). The 2024 I-codes + 2023 NEC are in the SC adoption pipeline (modifications published May 2026, not yet effective) — web_search for current status if a code edition question matters. Lien law: SC 29-5-10, 90-day window.
 Conversions: 1 cu yd = 27 cu ft = 81 sqft @ 4" depth · 1 roofing sq = 100 sqft · 1 ton HVAC = 12,000 BTU/hr
 </property>`;
 
 // Builds the full system prompt from only the blocks needed for this request
-const ESTIMATE_TOOL_NAMES = new Set(['create_estimate','get_estimate_details','search_estimates','add_line_items','update_line_items','delete_line_items','update_estimate','update_estimate_status','send_estimate','duplicate_estimate','check_estimate_pricing','search_cost_library','search_templates','search_disclaimers','generate_share_link']);
+const ESTIMATE_TOOL_NAMES = new Set(['create_estimate','get_estimate_details','search_estimates','add_line_items','update_line_items','delete_line_items','update_estimate','update_estimate_status','set_payment_schedule','send_estimate','duplicate_estimate','check_estimate_pricing','search_cost_library','search_templates','search_disclaimers','generate_share_link']);
 const TASK_TOOL_NAMES = new Set(['create_task','list_tasks','complete_task','snooze_task','update_task','delete_task','get_daily_briefing']);
 
 function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: string): string {
@@ -1681,6 +1741,10 @@ function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: stri
 // ═══════════════════════════════════════════
 export async function POST(req: NextRequest) {
   try {
+    // This route has service-role DB access + can send email — never serve anonymous callers
+    const user = await getServerUser(req);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { messages, currentPage, projectContext, useModel, imageData } = await req.json();
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages required' }, { status: 400 });
@@ -1706,6 +1770,15 @@ export async function POST(req: NextRequest) {
 
     // Build context additions
     const contextParts: string[] = [];
+
+    // The model has no clock — without this, "tomorrow"/"this month"/task due
+    // dates and valid_until are guessed from stale training data.
+    const nowEastern = new Date().toLocaleString('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      hour: 'numeric', minute: '2-digit',
+    });
+    contextParts.push(`\nCurrent date & time (Eastern): ${nowEastern}`);
 
     if (memories?.length) {
       contextParts.push('\n## SAVED MEMORIES');

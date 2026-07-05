@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerUser } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,53 +73,78 @@ Cleanup: Final clean $0.15-0.30/sqft | Dumpster 30yd $400-700/pull
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getServerUser(req);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { messages, context } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages array required' }, { status: 400 });
     }
 
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'GROQ_API_KEY not configured' }, { status: 500 });
+    const grokKey = process.env.GROK_API_KEY;
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!grokKey && !groqKey) {
+      return NextResponse.json({ error: 'AI not configured' }, { status: 500 });
     }
 
     // Build context-aware system prompt
-    let contextNote = '';
+    const today = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' });
+    let contextNote = `\n\n## TODAY'S DATE\n${today}`;
     if (context) {
       const parts = [];
       if (context.division) parts.push(`Division: ${context.division}`);
       if (context.document_mode) parts.push(`Document type: ${context.document_mode}`);
       if (context.project_name) parts.push(`Project: ${context.project_name}`);
       if (context.existing_items?.length) parts.push(`${context.existing_items.length} items already in estimate`);
-      if (parts.length) contextNote = `\n\n## CURRENT ESTIMATE CONTEXT\n${parts.join('\n')}`;
+      if (parts.length) contextNote += `\n\n## CURRENT ESTIMATE CONTEXT\n${parts.join('\n')}`;
     }
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT + contextNote },
-          ...messages,
-        ],
-        temperature: 0.7,
-        max_tokens: 4000,
-      }),
-    });
+    const body = {
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT + contextNote },
+        ...messages,
+      ],
+      temperature: 0.7,
+      max_tokens: 4000,
+    };
 
-    if (!res.ok) {
-      const err = await res.text();
-      console.error('[ai-assist] Groq API error:', res.status, err);
-      return NextResponse.json({ error: 'AI service error' }, { status: 502 });
+    // Grok 4.1 Fast primary (much stronger pricing/quantity reasoning), Groq Llama fallback
+    let content = '';
+    if (grokKey) {
+      try {
+        const res = await fetch('https://api.x.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${grokKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'grok-4-1-fast', ...body }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          content = data.choices?.[0]?.message?.content || '';
+        } else {
+          console.error('[ai-assist] Grok error:', res.status, await res.text().catch(() => ''));
+        }
+      } catch (err) {
+        console.error('[ai-assist] Grok failed:', err);
+      }
     }
 
-    const data = await res.json();
-    const content = data.choices?.[0]?.message?.content || '';
+    if (!content && groqKey) {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', ...body }),
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        console.error('[ai-assist] Groq API error:', res.status, err);
+        return NextResponse.json({ error: 'AI service error' }, { status: 502 });
+      }
+      const data = await res.json();
+      content = data.choices?.[0]?.message?.content || '';
+    }
+
+    if (!content) return NextResponse.json({ error: 'AI service error' }, { status: 502 });
 
     // Parse JSON items if present
     let items = null;
