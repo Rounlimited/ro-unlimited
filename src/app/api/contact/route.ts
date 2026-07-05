@@ -21,10 +21,11 @@ export async function POST(req: NextRequest) {
 
     const projectLabel = projectType ? (projectLabels[projectType] || projectType) : 'Not specified';
 
-    // Notification email to RO Unlimited
+    // Notification email to RO Unlimited — build@ lands in the admin-app
+    // inbox (searchable there); the Gmail copy is for the owners.
     await resend.emails.send({
       from: 'RO Unlimited Website <noreply@rounlimited.com>',
-      to: ['Rounlimitedco@gmail.com'],
+      to: ['build@rounlimited.com', 'Rounlimitedco@gmail.com'],
       subject: `New Project Inquiry — ${projectLabel}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: #ffffff; padding: 32px; border-radius: 4px;">

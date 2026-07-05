@@ -139,6 +139,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ conversation: conv, readOnly });
   }
 
+  // Share a conversation — copies it into the target user's chat box so it
+  // appears in THEIR history (they own the copy and can continue it).
+  // Sharing targets follow the same visibility rules as the user picker:
+  // dev → anyone; admin → employees.
+  if (action === 'share') {
+    const { id, target_user_id } = body;
+    if (!id || !target_user_id) return NextResponse.json({ error: 'id and target_user_id required' }, { status: 400 });
+    const { conv, allowed } = await getConvWithAccess(id, true);
+    if (!conv) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+    if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    const { data: target } = await supabase.auth.admin.getUserById(target_user_id);
+    if (!target?.user) return NextResponse.json({ error: 'Target user not found' }, { status: 404 });
+    const mayShare = isDev(user) || (roleOf(user) !== 'employee' && roleOf(target.user) === 'employee');
+    if (!mayShare) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    const { data: copy, error } = await supabase
+      .from('ai_conversations')
+      .insert({
+        title: conv.title,
+        messages: conv.messages,
+        token_estimate: conv.token_estimate,
+        compacted: conv.compacted,
+        summary: `Shared by ${user.email}`,
+        user_id: target.user.id,
+        user_email: target.user.email || null,
+      })
+      .select('id')
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, shared_id: copy.id, target_name: displayName(target.user) });
+  }
+
   // Delete a conversation (owner or dev only)
   if (action === 'delete') {
     const { id } = body;

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff, Volume2, VolumeX, Camera, MapPin, HelpCircle } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff, Volume2, VolumeX, Camera, MapPin, HelpCircle, Share2 } from 'lucide-react';
 
 interface Message { role: 'user' | 'assistant'; content: string; imagePreview?: string; }
 interface Conversation { id: string; title: string; summary: string | null; token_estimate: number; compacted: boolean; created_at: string; updated_at: string; }
@@ -315,6 +315,17 @@ export default function AiChatBubble() {
       setReadOnly(!!data.readOnly);
     }
     setShowHistory(false);
+  };
+
+  // ── Share conversation into another user's chat box ──
+  const [shareConvId, setShareConvId] = useState<string | null>(null);
+  const shareConversation = async (convId: string, targetId: string, targetName: string) => {
+    const res = await fetch('/api/admin/ai-conversations', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'share', id: convId, target_user_id: targetId }),
+    });
+    setShareConvId(null);
+    setToast(res.ok ? `Chat shared with ${targetName} ✓` : 'Share failed — try again');
   };
 
   // ── Delete conversation ──
@@ -703,19 +714,44 @@ export default function AiChatBubble() {
       <div className="flex-1 overflow-y-auto px-3 pb-3">
         {conversations.length === 0 ? (
           <p className="text-center text-white/20 text-[14px] py-8">No saved chats yet</p>
-        ) : conversations.map(conv => (
-          <button key={conv.id} onClick={() => loadConversation(conv.id)}
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-colors mb-1 ${activeConvId === conv.id ? 'bg-[#C9A84C]/10' : 'hover:bg-white/5'}`}>
-            <MessageSquare size={16} className={activeConvId === conv.id ? 'text-[#C9A84C]' : 'text-white/20'} />
-            <div className="flex-1 min-w-0">
-              <p className={`text-[14px] truncate ${activeConvId === conv.id ? 'text-[#C9A84C] font-semibold' : 'text-white/60'}`}>{conv.title}</p>
-              <p className="text-[11px] text-white/20">{new Date(conv.updated_at).toLocaleDateString()}</p>
-            </div>
-            <button onClick={(e) => deleteConversation(conv.id, e)} className="p-1 text-white/10 hover:text-red-400 transition-colors shrink-0">
-              <Trash2 size={14} />
+        ) : conversations.map(conv => {
+          const shareTargets = viewableUsers.filter(u => u.id !== 'legacy');
+          return (
+          <div key={conv.id}>
+            <button onClick={() => loadConversation(conv.id)}
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-colors mb-1 ${activeConvId === conv.id ? 'bg-[#C9A84C]/10' : 'hover:bg-white/5'}`}>
+              <MessageSquare size={16} className={activeConvId === conv.id ? 'text-[#C9A84C]' : 'text-white/20'} />
+              <div className="flex-1 min-w-0">
+                <p className={`text-[14px] truncate ${activeConvId === conv.id ? 'text-[#C9A84C] font-semibold' : 'text-white/60'}`}>{conv.title}</p>
+                <p className="text-[11px] text-white/20">{new Date(conv.updated_at).toLocaleDateString()}</p>
+              </div>
+              {/* Share to another user (dev/admin only — targets from picker rules) */}
+              {!viewingUserId && shareTargets.length > 0 && (
+                <button onClick={(e) => { e.stopPropagation(); setShareConvId(shareConvId === conv.id ? null : conv.id); }}
+                  className={`p-1 transition-colors shrink-0 ${shareConvId === conv.id ? 'text-[#C9A84C]' : 'text-white/10 hover:text-[#C9A84C]'}`}
+                  title="Share this chat with...">
+                  <Share2 size={14} />
+                </button>
+              )}
+              <button onClick={(e) => deleteConversation(conv.id, e)} className="p-1 text-white/10 hover:text-red-400 transition-colors shrink-0">
+                <Trash2 size={14} />
+              </button>
             </button>
-          </button>
-        ))}
+            {/* Share target picker */}
+            {shareConvId === conv.id && (
+              <div className="mx-3 mb-2 p-2 bg-[#151515] border border-[#C9A84C]/20 rounded-xl">
+                <p className="text-[11px] text-white/30 px-1 mb-1.5">Send a copy to their chat history:</p>
+                {shareTargets.map(u => (
+                  <button key={u.id} onClick={() => shareConversation(conv.id, u.id, u.name)}
+                    className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left text-[13px] text-white/70 hover:bg-[#C9A84C]/10 hover:text-[#C9A84C] transition-colors">
+                    <Share2 size={12} className="opacity-50" /> {u.name}{u.email ? ` (${u.email})` : ''}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          );
+        })}
       </div>
     </div>
   );
