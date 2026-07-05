@@ -93,16 +93,53 @@ function EditorToolbar({ editor }: { editor: any }) {
 // etc.), so rendering them on the dark theme produces black-on-dark text.
 // Like Gmail, render HTML bodies on a white "paper" surface; plain-text
 // bodies are ours to style, so they stay on the dark theme.
+// Fixed-width emails (Google's are ~600px tables) are SCALED DOWN to fit
+// the viewport — Gmail's approach — instead of overflowing sideways.
 function EmailBody({ html, text, compact }: { html: string | null; text: string | null; compact?: boolean }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [spacerH, setSpacerH] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!html) return;
+    const fit = () => {
+      const wrap = wrapRef.current, inner = innerRef.current;
+      if (!wrap || !inner) return;
+      // Reset to natural layout to measure the email's real width
+      inner.style.transform = "";
+      inner.style.width = "";
+      const avail = wrap.clientWidth;
+      const natural = inner.scrollWidth;
+      if (natural > avail + 2 && avail > 0) {
+        const s = avail / natural;
+        inner.style.width = `${natural}px`;
+        inner.style.transform = `scale(${s})`;
+        inner.style.transformOrigin = "top left";
+        setSpacerH(inner.scrollHeight * s);
+      } else {
+        setSpacerH(undefined);
+      }
+    };
+    fit();
+    // Re-fit after images/fonts load shift the layout
+    const t1 = setTimeout(fit, 350);
+    const t2 = setTimeout(fit, 1500);
+    window.addEventListener("resize", fit);
+    return () => { clearTimeout(t1); clearTimeout(t2); window.removeEventListener("resize", fit); };
+  }, [html]);
+
   if (html) {
     return (
-      <div className={`bg-white rounded-xl ${compact ? "px-3 py-3" : "px-4 py-4"} overflow-x-auto max-w-full`}
+      <div ref={wrapRef} className={`bg-white rounded-xl ${compact ? "px-2 py-2.5" : "px-4 py-4"} overflow-hidden max-w-full`}
         style={{ colorScheme: "light" }}>
-        <div
-          className="text-[15px] leading-relaxed [&_a]:text-[#1a73e8] [&_a]:underline [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full [&_td]:break-words [&_div]:max-w-full [&_pre]:max-w-full [&_pre]:overflow-x-auto"
-          style={{ color: "#202124", wordBreak: "break-word", overflowWrap: "break-word" }}
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+        <div style={spacerH !== undefined ? { height: spacerH, overflow: "hidden" } : undefined}>
+          <div
+            ref={innerRef}
+            className="text-[15px] leading-relaxed [&_a]:text-[#1a73e8] [&_a]:underline [&_img]:max-w-full [&_img]:h-auto [&_td]:break-words [&_pre]:max-w-full [&_pre]:overflow-x-auto"
+            style={{ color: "#202124", wordBreak: "break-word", overflowWrap: "break-word" }}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        </div>
       </div>
     );
   }
@@ -718,11 +755,11 @@ export default function AdminInbox() {
           <span className="inline-block mt-2 text-[12px] font-semibold text-white/40 bg-white/5 border border-white/10 rounded px-2.5 py-0.5">Inbox</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-2 pb-4 space-y-3">
+        <div className="flex-1 overflow-y-auto px-1 pb-4 space-y-3">
           {loadingThread ? (
             <div className="flex justify-center py-16"><Loader2 size={28} className="text-[#C9A84C] animate-spin" /></div>
           ) : messages.map(msg => (
-            <div key={msg.id} className="bg-[#111]/60 rounded-2xl px-2.5 pt-4 pb-3">
+            <div key={msg.id} className="bg-[#111]/60 rounded-2xl px-1.5 pt-4 pb-2">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-11 h-11 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0" style={{ backgroundColor: avatarColor(msg.from_email) + "30", color: avatarColor(msg.from_email) }}>
                   {getInitial(msg.from_email)}
