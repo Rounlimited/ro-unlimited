@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff, Volume2, VolumeX, Camera, MapPin, HelpCircle, Share2 } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff, Volume2, VolumeX, Camera, MapPin, HelpCircle, Share2, AudioLines } from 'lucide-react';
 
 interface Message { role: 'user' | 'assistant'; content: string; imagePreview?: string; }
 interface Conversation { id: string; title: string; summary: string | null; token_estimate: number; compacted: boolean; created_at: string; updated_at: string; }
@@ -49,7 +49,7 @@ export default function AiChatBubble() {
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingVoiceSubmitRef = useRef<string | null>(null);
-  const sendMessageRef = useRef<() => void>(() => {});
+  const sendMessageRef = useRef<(overrideText?: string) => Promise<string | null>>(async () => null);
 
   // TTS (SpeechSynthesis)
   const [speakEnabled, setSpeakEnabled] = useState(false);
@@ -93,6 +93,243 @@ export default function AiChatBubble() {
       window.speechSynthesis.cancel();
       speakingRef.current = false;
     }
+  };
+
+  // ═══════════════════════════════════════════════════════════
+  // VOICE CONVERSATION MODE — hands-free, ChatGPT-voice style.
+  // Loop: listen (energy VAD detects when you stop talking) →
+  // Whisper transcribe → AI (full tool access) → speak reply
+  // (Groq PlayAI natural voice, device TTS fallback) → listen again.
+  // ═══════════════════════════════════════════════════════════
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [voiceState, setVoiceState] = useState<'listening' | 'thinking' | 'speaking'>('listening');
+  const [voiceCaption, setVoiceCaption] = useState('');
+  const voiceModeRef = useRef(false);
+  const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
+  const voiceCleanupRef = useRef<() => void>(() => {});
+  const speakDoneRef = useRef<(() => void) | null>(null);
+
+  const cleanForSpeech = (text: string) =>
+    text
+      .replace(/^\s*CHOICES:.*$/gm, '')
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/#{1,3}\s/g, '')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/^[-*•]\s/gm, '')
+      .replace(/^\d+\.\s/gm, '')
+      .replace(/---+/g, '')
+      .replace(/\n{2,}/g, '. ')
+      .trim();
+
+  // Speak and resolve when done. Natural voice via /api/admin/tts (reliable
+  // 'ended' event from the Audio element); falls back to device TTS.
+  const speakReply = (text: string) => new Promise<void>((resolve) => {
+    let done = false;
+    const finish = () => { if (!done) { done = true; speakDoneRef.current = null; resolve(); } };
+    speakDoneRef.current = finish;
+    const clean = cleanForSpeech(text);
+    if (!clean) return finish();
+    setVoiceState('speaking');
+
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/tts', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: clean }),
+        });
+        if (res.ok && voiceModeRef.current && !done) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const audio = voiceAudioRef.current || new Audio();
+          voiceAudioRef.current = audio;
+          audio.src = url;
+          audio.onended = () => { URL.revokeObjectURL(url); finish(); };
+          audio.onerror = () => { URL.revokeObjectURL(url); finish(); };
+          await audio.play();
+          return;
+        }
+      } catch { /* fall through to device TTS */ }
+      if (done || !voiceModeRef.current) return finish();
+      // Device fallback
+      if ((window as any).RONative?.speak) {
+        (window as any).RONative.speak(clean);
+        setTimeout(finish, Math.min(30000, (clean.length / 14) * 1000 + 600));
+        return;
+      }
+      if (window.speechSynthesis) {
+        const u = new SpeechSynthesisUtterance(clean);
+        u.rate = 1.05;
+        u.onend = finish;
+        u.onerror = finish;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+        setTimeout(finish, Math.min(35000, (clean.length / 11) * 1000 + 3000)); // safety net
+        return;
+      }
+      finish();
+    })();
+  });
+
+  const stopVoiceMode = useCallback(() => {
+    voiceModeRef.current = false;
+    setVoiceMode(false);
+    setVoiceCaption('');
+    speakDoneRef.current?.();
+    voiceCleanupRef.current();
+  }, []);
+
+  const startVoiceMode = async () => {
+    if (voiceModeRef.current) return;
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+      setToast('Microphone not supported in this browser');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      voiceModeRef.current = true;
+      setVoiceMode(true);
+      setVoiceState('listening');
+      setVoiceCaption('');
+
+      // Prime an Audio element inside the tap gesture (iOS autoplay unlock)
+      const primed = new Audio();
+      primed.muted = true;
+      primed.play().catch(() => {});
+      primed.muted = false;
+      voiceAudioRef.current = primed;
+
+      const AC = window.AudioContext || (window as any).webkitAudioContext;
+      const audioCtx = new AC();
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      audioCtx.createMediaStreamSource(stream).connect(analyser);
+      const buf = new Uint8Array(analyser.frequencyBinCount);
+
+      const mimeType = getSupportedMimeType();
+      let recorder: MediaRecorder | null = null;
+      let chunks: Blob[] = [];
+      let vadTimer: ReturnType<typeof setTimeout> | null = null;
+      let stopped = false;
+
+      // Energy-based VAD tuning
+      const FRAME_MS = 60;
+      const START_FRAMES = 3;      // ~180ms of voice to trigger
+      const END_SILENCE_MS = 1100; // pause length that ends your turn
+      const MIN_UTTER_MS = 500;    // shorter = ignored as noise
+      const MAX_UTTER_MS = 45000;
+      const THRESHOLD = 0.022;     // RMS speech threshold
+
+      let userSpeaking = false;
+      let speechFrames = 0;
+      let silenceMs = 0;
+      let speechStartAt = 0;
+
+      const startRecorder = () => {
+        chunks = [];
+        recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+        recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.start(250);
+      };
+
+      const rms = () => {
+        analyser.getByteTimeDomainData(buf);
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
+        return Math.sqrt(sum / buf.length);
+      };
+
+      const resumeListening = () => {
+        if (stopped || !voiceModeRef.current) return;
+        userSpeaking = false; speechFrames = 0; silenceMs = 0;
+        setVoiceState('listening');
+        startRecorder();
+      };
+
+      const handleUtterance = async (rec: MediaRecorder, recChunks: Blob[]) => {
+        const blob: Blob = await new Promise((res) => {
+          rec.onstop = () => res(new Blob(recChunks, { type: mimeType || 'audio/webm' }));
+          try { rec.stop(); } catch { res(new Blob(recChunks, { type: mimeType || 'audio/webm' })); }
+        });
+        if (stopped || !voiceModeRef.current) return;
+        setVoiceState('thinking');
+        try {
+          const ext = mimeType?.includes('mp4') ? 'mp4' : mimeType?.includes('ogg') ? 'ogg' : 'webm';
+          const form = new FormData();
+          form.append('audio', blob, `voice.${ext}`);
+          const tr = await fetch('/api/admin/transcribe', { method: 'POST', body: form });
+          const transcript: string = tr.ok ? ((await tr.json()).transcript || '') : '';
+          const text = transcript.trim();
+          if (stopped || !voiceModeRef.current) return;
+          if (text.length < 2) { resumeListening(); return; }
+          setVoiceCaption(`“${text}”`);
+          const reply = await sendMessageRef.current(text);
+          if (stopped || !voiceModeRef.current) return;
+          if (reply) {
+            const spoken = cleanForSpeech(reply);
+            setVoiceCaption(spoken.length > 240 ? spoken.slice(0, 240) + '…' : spoken);
+            await speakReply(reply);
+          }
+        } catch { /* resume regardless */ }
+        resumeListening();
+      };
+
+      const tick = () => {
+        if (stopped) return;
+        if (recorder) {
+          const level = rms();
+          if (!userSpeaking) {
+            if (level > THRESHOLD) {
+              speechFrames++;
+              if (speechFrames >= START_FRAMES) { userSpeaking = true; speechStartAt = Date.now(); silenceMs = 0; }
+            } else speechFrames = 0;
+          } else {
+            if (level < THRESHOLD) silenceMs += FRAME_MS; else silenceMs = 0;
+            const dur = Date.now() - speechStartAt;
+            if (silenceMs >= END_SILENCE_MS || dur >= MAX_UTTER_MS) {
+              const rec = recorder; const recChunks = chunks;
+              recorder = null;
+              userSpeaking = false;
+              if (dur - silenceMs >= MIN_UTTER_MS) {
+                handleUtterance(rec, recChunks);
+              } else {
+                try { rec.stop(); } catch {}
+                resumeListening();
+              }
+            }
+          }
+        }
+        vadTimer = setTimeout(tick, FRAME_MS);
+      };
+
+      startRecorder();
+      tick();
+
+      voiceCleanupRef.current = () => {
+        stopped = true;
+        if (vadTimer) clearTimeout(vadTimer);
+        try { recorder?.stop(); } catch {}
+        recorder = null;
+        stream.getTracks().forEach(t => t.stop());
+        audioCtx.close().catch(() => {});
+        try { voiceAudioRef.current?.pause(); } catch {}
+        window.speechSynthesis?.cancel();
+      };
+    } catch (err: any) {
+      setToast(err?.name === 'NotAllowedError' ? 'Microphone permission denied' : 'Could not start voice mode');
+    }
+  };
+
+  // Interrupt the AI mid-speech → jump back to listening
+  const interruptSpeech = () => {
+    try { voiceAudioRef.current?.pause(); } catch {}
+    window.speechSynthesis?.cancel();
+    speakDoneRef.current?.();
   };
 
   const getSupportedMimeType = (): string => {
@@ -368,11 +605,11 @@ export default function AiChatBubble() {
     }
   };
 
-  // ── Send message ──
-  const sendMessage = async (overrideText?: string) => {
-    if (readOnly) return; // viewing someone else's chat — no sending
+  // ── Send message ── (returns the assistant's reply text — used by voice mode)
+  const sendMessage = async (overrideText?: string): Promise<string | null> => {
+    if (readOnly) return null; // viewing someone else's chat — no sending
     const text = (overrideText ?? input).trim();
-    if ((!text && !attachedImage) || loading) return;
+    if ((!text && !attachedImage) || loading) return null;
 
     // Create conversation if none active.
     // IMPORTANT: track the id in a local variable — setActiveConvId is async,
@@ -484,8 +721,8 @@ export default function AiChatBubble() {
       const finalMessages: Message[] = [...newMessages, { role: 'assistant', content: replyText }];
       if (displayMode === 'minimized' || !open) setUnread(prev => prev + 1);
 
-      // Speak the response if TTS is enabled
-      speakText(replyText);
+      // Speak the response if TTS is enabled (voice mode speaks via its own loop)
+      if (!voiceModeRef.current) speakText(replyText);
 
       // Handle navigation actions
       if (responseActions) {
@@ -501,11 +738,14 @@ export default function AiChatBubble() {
         }).then(r => r.json()).then(d => setTokenEstimate(d.token_estimate || 0));
         fetchConversations();
       }
+      setLoading(false);
+      return replyText;
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Connection error. Try again.' }]);
     }
 
     setLoading(false);
+    return null;
   };
 
   // ── Floating window drag handlers ──
@@ -791,6 +1031,64 @@ export default function AiChatBubble() {
   return (
     <>
       <ToastNotification />
+
+      {/* ── VOICE CONVERSATION OVERLAY ── */}
+      {voiceMode && (
+        <div className="fixed inset-0 z-[140] bg-[#0a0a0a]/[0.97] backdrop-blur-xl flex flex-col items-center justify-center px-8"
+          style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}>
+          {/* Orb — tap to interrupt while the AI is speaking */}
+          <button
+            onClick={voiceState === 'speaking' ? interruptSpeech : undefined}
+            className="relative w-44 h-44 flex items-center justify-center outline-none"
+          >
+            <div
+              className={`absolute inset-0 rounded-full transition-all duration-700 ${
+                voiceState === 'listening' ? 'animate-pulse' : voiceState === 'thinking' ? 'animate-ping opacity-30' : 'animate-pulse'
+              }`}
+              style={{
+                background: voiceState === 'listening'
+                  ? 'radial-gradient(circle, rgba(52,211,153,0.35), rgba(16,185,129,0.08) 70%)'
+                  : voiceState === 'thinking'
+                  ? 'radial-gradient(circle, rgba(201,168,76,0.35), rgba(212,119,44,0.08) 70%)'
+                  : 'radial-gradient(circle, rgba(56,189,248,0.35), rgba(37,99,235,0.08) 70%)',
+              }}
+            />
+            <div
+              className="relative w-28 h-28 rounded-full flex items-center justify-center transition-colors duration-500"
+              style={{
+                background: voiceState === 'listening'
+                  ? 'linear-gradient(135deg, #34d399, #059669)'
+                  : voiceState === 'thinking'
+                  ? 'linear-gradient(135deg, #C9A84C, #D4772C)'
+                  : 'linear-gradient(135deg, #38bdf8, #2563eb)',
+                boxShadow: '0 0 60px rgba(0,0,0,0.4)',
+              }}
+            >
+              {voiceState === 'listening' ? <Mic size={44} className="text-black/80" />
+                : voiceState === 'thinking' ? <Loader2 size={44} className="text-black/80 animate-spin" />
+                : <Volume2 size={44} className="text-black/80" />}
+            </div>
+          </button>
+
+          <p className="mt-8 text-[20px] font-semibold text-white">
+            {voiceState === 'listening' ? 'Listening…' : voiceState === 'thinking' ? 'Working on it…' : 'Speaking — tap orb to interrupt'}
+          </p>
+          <p className="mt-1 text-[14px] text-white/35">
+            {voiceState === 'listening' ? 'Just talk — I’ll answer when you pause' : ' '}
+          </p>
+
+          {voiceCaption && (
+            <p className="mt-6 max-w-md text-center text-[15px] text-white/60 leading-relaxed px-2">{voiceCaption}</p>
+          )}
+
+          <button onClick={stopVoiceMode}
+            className="absolute bottom-0 mb-10 flex items-center gap-2 px-6 py-3.5 rounded-full bg-white/10 border border-white/15 text-white text-[15px] font-semibold active:scale-95 transition-transform"
+            style={{ marginBottom: 'calc(env(safe-area-inset-bottom) + 32px)' }}>
+            <X size={18} /> End conversation
+          </button>
+        </div>
+      )}
+
       <div ref={floatRef} className={container.className} style={container.style}>
         {showHistory && <HistoryPanel />}
 
@@ -853,6 +1151,14 @@ export default function AiChatBubble() {
                 className={`p-1.5 rounded-lg transition-colors ${speakEnabled ? 'text-[#C9A84C] bg-[#C9A84C]/10' : 'text-white/20 hover:text-white hover:bg-white/10'}`}
                 title={speakEnabled ? 'Voice responses on (click to mute)' : 'Voice responses off (click to enable)'}>
                 {speakEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              </button>
+            )}
+            {/* Voice conversation mode */}
+            {!isFloating && (
+              <button onClick={startVoiceMode} disabled={loading}
+                className="p-1.5 text-[#C9A84C]/60 hover:text-[#C9A84C] hover:bg-[#C9A84C]/10 rounded-lg transition-colors disabled:opacity-30"
+                title="Voice conversation — talk hands-free">
+                <AudioLines size={16} />
               </button>
             )}
             {/* Help — restarts guided mode anytime */}
