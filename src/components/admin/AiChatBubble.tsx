@@ -105,6 +105,20 @@ export default function AiChatBubble() {
   const [voiceState, setVoiceState] = useState<'listening' | 'thinking' | 'speaking'>('listening');
   const [voiceCaption, setVoiceCaption] = useState('');
   const voiceModeRef = useRef(false);
+  // Orpheus voices on Groq — professionally-trained, natural
+  const VOICE_OPTIONS = ['autumn', 'diana', 'hannah', 'austin', 'daniel', 'troy'] as const;
+  const [ttsVoice, setTtsVoice] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ro-tts-voice');
+      if (saved) return saved;
+    }
+    return 'troy';
+  });
+  const ttsVoiceRef = useRef(ttsVoice);
+  useEffect(() => {
+    ttsVoiceRef.current = ttsVoice;
+    try { localStorage.setItem('ro-tts-voice', ttsVoice); } catch {}
+  }, [ttsVoice]);
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
   const voiceCleanupRef = useRef<() => void>(() => {});
   const speakDoneRef = useRef<(() => void) | null>(null);
@@ -139,7 +153,7 @@ export default function AiChatBubble() {
       try {
         const res = await fetch('/api/admin/tts', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: clean }),
+          body: JSON.stringify({ text: clean, voice: ttsVoiceRef.current }),
         });
         if (res.ok && voiceModeRef.current && !done) {
           const blob = await res.blob();
@@ -1081,6 +1095,20 @@ export default function AiChatBubble() {
             <p className="mt-6 max-w-md text-center text-[15px] text-white/60 leading-relaxed px-2">{voiceCaption}</p>
           )}
 
+          {/* Voice picker — takes effect on the next reply */}
+          <div className="mt-8 flex flex-wrap justify-center gap-1.5 max-w-sm">
+            {VOICE_OPTIONS.map(v => (
+              <button key={v} onClick={() => setTtsVoice(v)}
+                className={`px-3 py-1.5 rounded-full text-[12px] font-semibold capitalize transition-all ${
+                  ttsVoice === v
+                    ? 'bg-[#C9A84C] text-black shadow-[0_0_12px_rgba(201,168,76,0.5)]'
+                    : 'bg-white/5 border border-white/10 text-white/40 hover:text-white/70'
+                }`}>
+                {v}
+              </button>
+            ))}
+          </div>
+
           <button onClick={stopVoiceMode}
             className="absolute bottom-0 mb-10 flex items-center gap-2 px-6 py-3.5 rounded-full bg-white/10 border border-white/15 text-white text-[15px] font-semibold active:scale-95 transition-transform"
             style={{ marginBottom: 'calc(env(safe-area-inset-bottom) + 32px)' }}>
@@ -1151,14 +1179,6 @@ export default function AiChatBubble() {
                 className={`p-1.5 rounded-lg transition-colors ${speakEnabled ? 'text-[#C9A84C] bg-[#C9A84C]/10' : 'text-white/20 hover:text-white hover:bg-white/10'}`}
                 title={speakEnabled ? 'Voice responses on (click to mute)' : 'Voice responses off (click to enable)'}>
                 {speakEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-              </button>
-            )}
-            {/* Voice conversation mode */}
-            {!isFloating && (
-              <button onClick={startVoiceMode} disabled={loading}
-                className="p-1.5 text-[#C9A84C]/60 hover:text-[#C9A84C] hover:bg-[#C9A84C]/10 rounded-lg transition-colors disabled:opacity-30"
-                title="Voice conversation — talk hands-free">
-                <AudioLines size={16} />
               </button>
             )}
             {/* Help — restarts guided mode anytime */}
@@ -1334,17 +1354,16 @@ export default function AiChatBubble() {
               title="Attach photo (camera or gallery)">
               <Camera size={isFloating ? 12 : 16} />
             </label>
-            {/* Voice button */}
-            <button onClick={toggleVoice} disabled={loading || transcribing}
-              className={`rounded-xl transition-colors flex-shrink-0 ${
-                listening ? 'bg-red-500 text-white animate-pulse' :
-                transcribing ? 'bg-[#C9A84C]/20 text-[#C9A84C]' :
-                'bg-white/5 text-white/40 hover:text-[#C9A84C] hover:bg-white/10'
-              } ${isFloating ? 'px-2.5 py-2' : 'px-3 py-2.5'}`}
-              title={listening ? 'Tap to stop & send' : transcribing ? 'Transcribing...' : 'Voice input'}>
-              {transcribing ? <Loader2 size={isFloating ? 12 : 16} className="animate-spin" /> :
-               listening ? <MicOff size={isFloating ? 12 : 16} /> :
-               <Mic size={isFloating ? 12 : 16} />}
+            {/* Voice conversation — hands-free talk mode */}
+            <button onClick={startVoiceMode} disabled={loading || transcribing}
+              className={`relative rounded-xl flex-shrink-0 overflow-hidden active:scale-90 transition-transform disabled:opacity-40 ${isFloating ? 'px-2.5 py-2' : 'px-3.5 py-2.5'}`}
+              style={{
+                background: 'linear-gradient(135deg, #34d399 0%, #38bdf8 35%, #a78bfa 70%, #f472b6 100%)',
+                boxShadow: '0 0 14px rgba(56,189,248,0.5), 0 0 28px rgba(167,139,250,0.25)',
+              }}
+              title="Talk to the AI — hands-free conversation">
+              <span className="absolute inset-0 bg-white/20 animate-pulse rounded-xl" style={{ mixBlendMode: 'overlay' }} />
+              <AudioLines size={isFloating ? 13 : 17} className="relative text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]" />
             </button>
             <button onClick={() => sendMessage()} disabled={loading || (!input.trim() && !attachedImage)}
               className={`bg-[#C9A84C] text-black rounded-xl hover:bg-[#C9A84C]/90 transition-colors disabled:opacity-30 flex-shrink-0 ${
