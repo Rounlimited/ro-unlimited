@@ -92,10 +92,13 @@ export async function POST(req: NextRequest) {
       .order('estimate_number', { ascending: false })
       .limit(1);
 
-    let nextNum = 1;
+    // Numbering starts at SEED+1 so documents never reveal how new the
+    // business's system is (RO-EST-2026-0003 reads as "third customer ever").
+    const DOC_NUMBER_SEED = 240;
+    let nextNum = DOC_NUMBER_SEED + 1;
     if (existing && existing.length > 0) {
       const lastNum = parseInt(existing[0].estimate_number.replace(prefix, ''), 10);
-      if (!isNaN(lastNum)) nextNum = lastNum + 1;
+      if (!isNaN(lastNum)) nextNum = Math.max(lastNum + 1, DOC_NUMBER_SEED + 1);
     }
 
     const estimate_number = `${prefix}${String(nextNum).padStart(4, '0')}`;

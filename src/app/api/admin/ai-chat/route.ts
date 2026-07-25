@@ -873,10 +873,13 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         .order('estimate_number', { ascending: false })
         .limit(1);
 
-      let nextNum = 1;
+      // Seeded so document numbers never reveal customer count (keep in sync
+      // with DOC_NUMBER_SEED in api/admin/estimates/route.ts)
+      const DOC_NUMBER_SEED = 240;
+      let nextNum = DOC_NUMBER_SEED + 1;
       if (existing && existing.length > 0) {
         const lastNum = parseInt(existing[0].estimate_number.replace(prefix, ''), 10);
-        if (!isNaN(lastNum)) nextNum = lastNum + 1;
+        if (!isNaN(lastNum)) nextNum = Math.max(lastNum + 1, DOC_NUMBER_SEED + 1);
       }
       const estimate_number = `${prefix}${String(nextNum).padStart(4, '0')}`;
 
