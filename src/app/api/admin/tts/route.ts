@@ -70,6 +70,9 @@ export async function POST(req: NextRequest) {
     let requested = typeof voice === 'string' ? voice.toLowerCase() : '';
     if (ORPHEUS_TO_EDGE[requested]) requested = ORPHEUS_TO_EDGE[requested];
     const voiceId = EDGE_VOICES[requested] ? requested : DEFAULT_VOICE;
+    // Which engines were tried and why they failed — surfaced in the 502
+    // body because Vercel runtime logs are impractical to tail
+    const tried: Record<string, string> = {};
 
     try {
       const audio = await edgeSpeech(EDGE_VOICES[voiceId], input);
@@ -77,6 +80,7 @@ export async function POST(req: NextRequest) {
         headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' },
       });
     } catch (err: any) {
+      tried.edge = String(err?.message || err).slice(0, 200);
       console.error('[tts] Edge TTS error:', err?.message || err);
     }
 
@@ -100,10 +104,14 @@ export async function POST(req: NextRequest) {
             headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' },
           });
         }
+        tried.relay = `HTTP ${res.status}`;
         console.error('[tts] relay error:', res.status);
       } catch (err: any) {
+        tried.relay = String(err?.message || err).slice(0, 200);
         console.error('[tts] relay error:', err?.message || err);
       }
+    } else {
+      tried.relay = 'skipped — TTS_PROXY_URL not set';
     }
 
     // Fallback: Groq Orpheus (works only once terms are accepted in console)
@@ -117,10 +125,11 @@ export async function POST(req: NextRequest) {
         });
       }
       const err = await res.text().catch(() => '');
+      tried.orpheus = `HTTP ${res.status}`;
       console.error('[tts] Orpheus fallback error:', res.status, err.slice(0, 300));
     }
 
-    return NextResponse.json({ error: 'TTS failed' }, { status: 502 });
+    return NextResponse.json({ error: 'TTS failed', tried }, { status: 502 });
   } catch (err: any) {
     console.error('[tts] error:', err);
     return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });

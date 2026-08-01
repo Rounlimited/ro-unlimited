@@ -13,6 +13,8 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '200mb',
     },
+    // msedge-tts uses ws + runtime version detection — must stay unbundled
+    serverComponentsExternalPackages: ['msedge-tts'],
   },
 };
 module.exports = nextConfig;
