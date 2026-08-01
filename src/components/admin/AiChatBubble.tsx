@@ -105,14 +105,19 @@ export default function AiChatBubble() {
   const [voiceState, setVoiceState] = useState<'listening' | 'thinking' | 'speaking'>('listening');
   const [voiceCaption, setVoiceCaption] = useState('');
   const voiceModeRef = useRef(false);
-  // Orpheus voices on Groq — professionally-trained, natural
-  const VOICE_OPTIONS = ['autumn', 'diana', 'hannah', 'austin', 'daniel', 'troy'] as const;
+  // Microsoft Edge neural voices (served via /api/admin/tts) — free,
+  // natural, same voices as Copilot Read Aloud
+  const VOICE_OPTIONS = ['andrew', 'brian', 'guy', 'ava', 'emma', 'jenny'] as const;
+  const LEGACY_VOICE_MAP: Record<string, string> = {
+    troy: 'andrew', austin: 'brian', daniel: 'guy',
+    autumn: 'ava', diana: 'emma', hannah: 'jenny',
+  };
   const [ttsVoice, setTtsVoice] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('ro-tts-voice');
-      if (saved) return saved;
+      if (saved) return LEGACY_VOICE_MAP[saved] || saved;
     }
-    return 'troy';
+    return 'andrew';
   });
   const ttsVoiceRef = useRef(ttsVoice);
   useEffect(() => {
@@ -164,6 +169,18 @@ export default function AiChatBubble() {
           audio.onended = () => { URL.revokeObjectURL(url); finish(); };
           audio.onerror = () => { URL.revokeObjectURL(url); finish(); };
           await audio.play();
+          // Watchdog: if 'ended' never fires (iOS backgrounding, decode
+          // stall) the loop must still return to listening
+          let lastT = -1;
+          const watchdog = () => {
+            if (done) return;
+            if (audio.paused || audio.ended || audio.currentTime === lastT) {
+              URL.revokeObjectURL(url); finish(); return;
+            }
+            lastT = audio.currentTime;
+            setTimeout(watchdog, 2000);
+          };
+          setTimeout(watchdog, Math.min(90000, (clean.length / 10) * 1000 + 8000));
           return;
         }
       } catch { /* fall through to device TTS */ }
@@ -276,7 +293,10 @@ export default function AiChatBubble() {
           const ext = mimeType?.includes('mp4') ? 'mp4' : mimeType?.includes('ogg') ? 'ogg' : 'webm';
           const form = new FormData();
           form.append('audio', blob, `voice.${ext}`);
-          const tr = await fetch('/api/admin/transcribe', { method: 'POST', body: form });
+          const tr = await fetch('/api/admin/transcribe', {
+            method: 'POST', body: form,
+            signal: typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(30000) : undefined,
+          });
           const transcript: string = tr.ok ? ((await tr.json()).transcript || '') : '';
           const text = transcript.trim();
           if (stopped || !voiceModeRef.current) return;
