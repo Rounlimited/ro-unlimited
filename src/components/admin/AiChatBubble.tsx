@@ -141,6 +141,13 @@ export default function AiChatBubble() {
   const voiceCleanupRef = useRef<() => void>(() => {});
   const speakDoneRef = useRef<(() => void) | null>(null);
 
+  // Release the mic if this component ever unmounts mid-conversation —
+  // otherwise the track stays live and the next start reports "mic in use"
+  useEffect(() => () => {
+    voiceModeRef.current = false;
+    try { voiceCleanupRef.current(); } catch {}
+  }, []);
+
   const cleanForSpeech = (text: string) =>
     text
       .replace(/^\s*CHOICES:.*$/gm, '')
@@ -235,15 +242,28 @@ export default function AiChatBubble() {
     // If mic tracks leaked from a failed previous start, release them first
     let stream: MediaStream | null = null;
     try {
-      const audioConstraints = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
+      // Mic acquisition ladder. echoCancellation makes Android request the
+      // VOICE_COMMUNICATION audio source, which throws NotReadableError
+      // ("in use by another app") whenever anything else holds that mode —
+      // RDP/dialer/assistant, or a stream we failed to release. Plain
+      // {audio:true} uses an ordinary mic source and usually succeeds, so
+      // fall back rather than dead-ending the user.
+      const tryGet = (c: MediaStreamConstraints) => navigator.mediaDevices.getUserMedia(c);
+      const FULL: MediaStreamConstraints = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
+      const BARE: MediaStreamConstraints = { audio: true };
       try {
-        stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
-      } catch (firstErr: any) {
-        // Android Chrome often reports NotReadableError transiently right
-        // after a previous holder releases the mic — one retry clears it
-        if (firstErr?.name !== 'NotReadableError') throw firstErr;
+        stream = await tryGet(FULL);
+      } catch (e1: any) {
+        if (e1?.name !== 'NotReadableError' && e1?.name !== 'AbortError') throw e1;
         await new Promise(r => setTimeout(r, 600));
-        stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+        try {
+          stream = await tryGet(FULL);
+        } catch (e2: any) {
+          if (e2?.name !== 'NotReadableError' && e2?.name !== 'AbortError') throw e2;
+          // Last resort: ordinary mic source, no echo cancellation
+          stream = await tryGet(BARE);
+          setToast('Voice on (basic mic mode) — use headphones if it hears itself');
+        }
       }
       const mic: MediaStream = stream;
       voiceModeRef.current = true;
