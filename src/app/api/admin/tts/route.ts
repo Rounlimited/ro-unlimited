@@ -80,6 +80,32 @@ export async function POST(req: NextRequest) {
       console.error('[tts] Edge TTS error:', err?.message || err);
     }
 
+    // Microsoft blocks Edge TTS from Vercel datacenter IPs — relay through
+    // the Oracle box (tts-relay systemd service behind dav.rounlimited.com)
+    const proxyUrl = process.env.TTS_PROXY_URL;
+    if (proxyUrl) {
+      try {
+        const res = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-tts-secret': process.env.TTS_PROXY_SECRET || '',
+          },
+          body: JSON.stringify({ text: input, voice: EDGE_VOICES[voiceId] }),
+          signal: AbortSignal.timeout(28000),
+        });
+        if (res.ok) {
+          const audio = await res.arrayBuffer();
+          return new Response(audio, {
+            headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' },
+          });
+        }
+        console.error('[tts] relay error:', res.status);
+      } catch (err: any) {
+        console.error('[tts] relay error:', err?.message || err);
+      }
+    }
+
     // Fallback: Groq Orpheus (works only once terms are accepted in console)
     const apiKey = process.env.GROQ_API_KEY;
     if (apiKey) {
