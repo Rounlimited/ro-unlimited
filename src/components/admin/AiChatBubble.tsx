@@ -235,9 +235,16 @@ export default function AiChatBubble() {
     // If mic tracks leaked from a failed previous start, release them first
     let stream: MediaStream | null = null;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      const audioConstraints = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+      } catch (firstErr: any) {
+        // Android Chrome often reports NotReadableError transiently right
+        // after a previous holder releases the mic — one retry clears it
+        if (firstErr?.name !== 'NotReadableError') throw firstErr;
+        await new Promise(r => setTimeout(r, 600));
+        stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+      }
       const mic: MediaStream = stream;
       voiceModeRef.current = true;
       setVoiceMode(true);
