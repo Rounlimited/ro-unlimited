@@ -23,3 +23,37 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     if (error || !doc || doc.status === 'draft') {
       return NextResponse.json({ error: 'Proposal not found' }, { status: 404 });
     }
+
+    const entry = {
+      at: new Date().toISOString(),
+      type,
+      comment: typeof body.comment === 'string' ? body.comment.slice(0, 4000) : undefined,
+      answers: body.answers && typeof body.answers === 'object' ? body.answers : undefined,
+      meta: { ua: req.headers.get('user-agent') || undefined },
+    };
+
+    const responses = Array.isArray(doc.responses) ? [...doc.responses, entry] : [entry];
+    const now = new Date().toISOString();
+    const patch: Record<string, unknown> = { responses, updated_at: now };
+
+    if (type === 'approval') {
+      patch.status = 'approved';
+      patch.approved_at = now;
+    } else if (doc.status !== 'approved') {
+      patch.status = 'responded';
+    }
+
+    const { error: upErr } = await supabase
+      .from('dev_proposals')
+      .update(patch)
+      .eq('id', doc.id);
+
+    if (upErr) {
+      return NextResponse.json({ error: 'Failed to save response' }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, status: patch.status || doc.status });
+  } catch (e: unknown) {
+    console.error('[proposal respond]', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
