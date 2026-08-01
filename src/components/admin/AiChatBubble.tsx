@@ -368,7 +368,16 @@ export default function AiChatBubble() {
         window.speechSynthesis?.cancel();
       };
     } catch (err: any) {
-      setToast(err?.name === 'NotAllowedError' ? 'Microphone permission denied' : 'Could not start voice mode');
+      const name = err?.name || '';
+      setToast(
+        name === 'NotAllowedError' || name === 'PermissionDeniedError'
+          ? 'Microphone permission denied — allow mic access in Settings > Safari (or your browser) and try again'
+          : name === 'NotFoundError' || name === 'DevicesNotFoundError'
+          ? 'No microphone found on this device'
+          : name === 'NotReadableError'
+          ? 'Microphone is in use by another app'
+          : `Could not start voice mode (${name || 'unknown'}: ${String(err?.message || err).slice(0, 80)})`
+      );
     }
   };
 

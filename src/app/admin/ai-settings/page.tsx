@@ -162,7 +162,8 @@ export default function AiSettingsPage() {
   }, {});
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white pb-24">
+    // AppShell's <main> is overflow-hidden — this page must scroll itself
+    <div className="flex-1 min-h-0 h-full overflow-y-auto bg-[#0a0a0a] text-white pb-24">
       {/* Header */}
       <div className="sticky top-0 z-20 bg-[#0a0a0a]/95 backdrop-blur-lg border-b border-white/10"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
