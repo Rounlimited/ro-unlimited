@@ -18,3 +18,4 @@ src_backup_pre_rebuild/
 
 # Claude worktrees
 .claude/
+supabase/.temp/

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff, Volume2, VolumeX, Camera, MapPin, HelpCircle, Share2, AudioLines } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, Minimize2, MessageSquare, Plus, Trash2, Zap, Move, Maximize2, Shrink, Mic, MicOff, Volume2, VolumeX, Camera, MapPin, HelpCircle, Share2, AudioLines, MoreVertical, Settings, ChevronRight } from 'lucide-react';
 
 interface Message { role: 'user' | 'assistant'; content: string; imagePreview?: string; }
 interface Conversation { id: string; title: string; summary: string | null; token_estimate: number; compacted: boolean; created_at: string; updated_at: string; }
@@ -21,9 +21,18 @@ export default function AiChatBubble() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('Thinking...');
-  const [aiModel, setAiModel] = useState<'grok' | 'claude' | 'groq'>('grok');
+  const [aiModel, setAiModel] = useState<'grok' | 'claude' | 'groq'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ro-ai-model');
+      if (saved === 'grok' || saved === 'claude' || saved === 'groq') return saved;
+    }
+    return 'grok';
+  });
+  useEffect(() => { try { localStorage.setItem('ro-ai-model', aiModel); } catch {} }, [aiModel]);
   const [unread, setUnread] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  // Header overflow menu (declutters the top bar)
+  const [showMenu, setShowMenu] = useState(false);
 
   // Chat history
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -52,7 +61,11 @@ export default function AiChatBubble() {
   const sendMessageRef = useRef<(overrideText?: string) => Promise<string | null>>(async () => null);
 
   // TTS (SpeechSynthesis)
-  const [speakEnabled, setSpeakEnabled] = useState(false);
+  const [speakEnabled, setSpeakEnabled] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('ro-tts-autoread') === '1';
+    return false;
+  });
+  useEffect(() => { try { localStorage.setItem('ro-tts-autoread', speakEnabled ? '1' : '0'); } catch {} }, [speakEnabled]);
   const speakingRef = useRef(false);
 
   const speakText = useCallback((text: string) => {
@@ -1165,77 +1178,143 @@ export default function AiChatBubble() {
             )}
             <div>
               <span className={`font-semibold text-white block leading-tight ${isFloating ? 'text-[13px]' : 'text-[15px]'}`}>RO Assistant</span>
-              {!isFloating && <span className="text-[11px] text-green-400">Online</span>}
+              {!isFloating && (
+                <span className="text-[11px] text-green-400">
+                  Online · <span className={aiModel === 'grok' ? 'text-blue-300/80' : aiModel === 'claude' ? 'text-[#C9A84C]/80' : 'text-green-300/80'}>{aiModel === 'grok' ? 'Smart' : aiModel === 'claude' ? 'Claude' : 'Fast'}</span>
+                </span>
+              )}
             </div>
             {isFloating && (
               <Move size={12} className="text-white/20 ml-1" />
             )}
           </div>
-          <div className="flex items-center gap-0.5">
-            {/* Token indicator */}
-            {tokenEstimate > 10000 && !isFloating && (
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${tokenEstimate > TOKEN_COMPACT_THRESHOLD ? 'bg-red-500/10 text-red-400' : 'bg-white/5 text-white/20'}`}>
-                {Math.round(tokenEstimate / 1000)}k
-              </span>
-            )}
-            {/* Compact button */}
+          <div className="flex items-center gap-1">
+            {/* Usage chip — only surfaces when the chat is getting long */}
             {tokenEstimate > TOKEN_COMPACT_THRESHOLD && !isFloating && (
               <button onClick={compactChat} disabled={compacting}
-                className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold bg-[#D4772C]/15 text-[#D4772C] border border-[#D4772C]/30 hover:bg-[#D4772C]/25 transition-colors" title="Compact chat to save context">
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                title="Long chat — tap to compact">
                 {compacting ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
-                Compact
+                {Math.round(tokenEstimate / 1000)}k
               </button>
             )}
-            {/* Model switch */}
-            {!isFloating && (
-              <button onClick={() => setAiModel(prev => prev === 'grok' ? 'claude' : prev === 'claude' ? 'groq' : 'grok')}
-                className={`px-2 py-1 rounded text-[11px] font-semibold transition-colors border ${aiModel === 'grok' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : aiModel === 'claude' ? 'bg-[#C9A84C]/15 text-[#C9A84C] border-[#C9A84C]/30' : 'bg-green-500/15 text-green-400 border-green-500/30'}`} title="Switch AI model">
-                {aiModel === 'grok' ? 'Grok' : aiModel === 'claude' ? 'Claude' : 'Groq'}
-              </button>
-            )}
-            {/* TTS toggle */}
-            {!isFloating && (
-              <button onClick={() => { if (speakEnabled) stopSpeaking(); setSpeakEnabled(prev => !prev); }}
-                className={`p-1.5 rounded-lg transition-colors ${speakEnabled ? 'text-[#C9A84C] bg-[#C9A84C]/10' : 'text-white/20 hover:text-white hover:bg-white/10'}`}
-                title={speakEnabled ? 'Voice responses on (click to mute)' : 'Voice responses off (click to enable)'}>
-                {speakEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-              </button>
-            )}
-            {/* Help — restarts guided mode anytime */}
-            {!isFloating && (
-              <button onClick={() => sendMessage(HELP_PROMPT)} disabled={loading}
-                className="p-1.5 text-[#C9A84C]/60 hover:text-[#C9A84C] hover:bg-[#C9A84C]/10 rounded-lg transition-colors disabled:opacity-30" title="Help — walk me through it">
-                <HelpCircle size={16} />
-              </button>
-            )}
-            {/* New chat */}
-            <button onClick={startNewChat} className="p-1.5 text-white/20 hover:text-[#C9A84C] hover:bg-white/5 rounded-lg transition-colors" title="New chat">
-              <Plus size={isFloating ? 14 : 16} />
+            {/* New chat — kept visible, most-used action */}
+            <button onClick={startNewChat} className="p-2 text-white/40 hover:text-[#C9A84C] hover:bg-white/5 rounded-lg transition-colors" title="New chat">
+              <Plus size={isFloating ? 14 : 18} />
             </button>
-            {/* Fullscreen toggle */}
+            {/* Overflow menu — everything else lives here */}
             {!isFloating && (
-              <button onClick={() => setDisplayMode(isFullscreen ? 'full' : 'fullscreen')} className="p-1.5 text-white/20 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title={isFullscreen ? 'Exit full screen' : 'Full screen'}>
-                {isFullscreen ? <Shrink size={16} /> : <Maximize2 size={16} />}
+              <button onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v); }}
+                className={`p-2 rounded-lg transition-colors ${showMenu ? 'text-[#C9A84C] bg-[#C9A84C]/10' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
+                title="Menu">
+                <MoreVertical size={18} />
               </button>
             )}
-            {/* Float toggle */}
-            {!isFullscreen && (
-              <button onClick={() => setDisplayMode(isFloating ? 'full' : 'floating')} className="p-1.5 text-white/20 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title={isFloating ? 'Expand panel' : 'Floating window'}>
-                <Move size={isFloating ? 14 : 16} />
+            {/* Float toggle stays visible in floating mode so you can get back */}
+            {isFloating && (
+              <button onClick={() => setDisplayMode('full')} className="p-1.5 text-white/20 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Expand panel">
+                <Move size={14} />
               </button>
             )}
             {/* Minimize */}
             {!isFullscreen && (
-              <button onClick={() => setDisplayMode('minimized')} className="p-1.5 text-white/30 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Minimize">
-                <Minimize2 size={isFloating ? 14 : 16} />
+              <button onClick={() => setDisplayMode('minimized')} className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Minimize">
+                <Minimize2 size={isFloating ? 14 : 18} />
               </button>
             )}
             {/* Close */}
-            <button onClick={() => setOpen(false)} className="p-1.5 text-white/30 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Close">
-              <X size={isFloating ? 14 : 16} />
+            <button onClick={() => { setShowMenu(false); setOpen(false); }} className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Close">
+              <X size={isFloating ? 14 : 18} />
             </button>
           </div>
         </div>
+
+        {/* ── Overflow menu panel ── */}
+        {showMenu && !isFloating && (
+          <>
+            <div className="absolute inset-0 z-[59]" onClick={() => setShowMenu(false)} />
+            <div className={`absolute z-[60] top-[52px] right-2 w-[290px] rounded-2xl bg-[#161616] border border-white/12 shadow-[0_16px_48px_rgba(0,0,0,0.6)] overflow-hidden ${isFullscreen ? 'right-6' : ''}`}>
+              {/* AI model — outcome labels, color-coded */}
+              <div className="px-4 pt-3.5 pb-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-white/30 mb-2">AI model</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {([
+                    ['grok', 'Smart', 'Best overall', 'bg-blue-500/15 text-blue-300 border-blue-400/40'],
+                    ['claude', 'Claude', 'Backup brain', 'bg-[#C9A84C]/15 text-[#C9A84C] border-[#C9A84C]/40'],
+                    ['groq', 'Fast', 'Quick answers', 'bg-green-500/15 text-green-300 border-green-400/40'],
+                  ] as const).map(([id, label, desc, activeCls]) => (
+                    <button key={id} onClick={() => setAiModel(id)}
+                      className={`px-1 py-2 rounded-xl border text-center transition-all ${aiModel === id ? activeCls : 'bg-white/[0.03] border-white/10 text-white/40 hover:text-white/70'}`}>
+                      <span className="block text-[13px] font-bold leading-tight">{label}</span>
+                      <span className="block text-[10px] opacity-70 leading-tight mt-0.5">{desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="h-px bg-white/8 mx-3 my-1" />
+              {/* Action rows — big targets, color-coded */}
+              <button onClick={() => { setShowMenu(false); startVoiceMode(); }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors">
+                <span className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #34d399 0%, #38bdf8 35%, #a78bfa 70%, #f472b6 100%)' }}>
+                  <AudioLines size={18} className="text-white" />
+                </span>
+                <span className="text-left">
+                  <span className="block text-[15px] font-semibold text-white">Voice conversation</span>
+                  <span className="block text-[12px] text-white/35">Talk hands-free, like a phone call</span>
+                </span>
+              </button>
+              <button onClick={() => { if (speakEnabled) stopSpeaking(); setSpeakEnabled(v => !v); }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors">
+                <span className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${speakEnabled ? 'bg-[#C9A84C]/20 text-[#C9A84C]' : 'bg-white/5 text-white/40'}`}>
+                  {speakEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                </span>
+                <span className="text-left flex-1">
+                  <span className="block text-[15px] font-semibold text-white">Read replies aloud</span>
+                  <span className="block text-[12px] text-white/35">{speakEnabled ? 'On — replies are spoken' : 'Off'}</span>
+                </span>
+                <span className={`w-11 h-6 rounded-full relative transition-colors flex-shrink-0 ${speakEnabled ? 'bg-[#C9A84C]' : 'bg-white/15'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${speakEnabled ? 'left-[22px]' : 'left-0.5'}`} />
+                </span>
+              </button>
+              <button onClick={() => { setShowMenu(false); sendMessage(HELP_PROMPT); }} disabled={loading}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors disabled:opacity-40">
+                <span className="w-9 h-9 rounded-xl bg-[#C9A84C]/15 text-[#C9A84C] flex items-center justify-center flex-shrink-0">
+                  <HelpCircle size={18} />
+                </span>
+                <span className="text-left">
+                  <span className="block text-[15px] font-semibold text-white">Help me get started</span>
+                  <span className="block text-[12px] text-white/35">Step-by-step guided walkthrough</span>
+                </span>
+              </button>
+              <div className="h-px bg-white/8 mx-3 my-1" />
+              <div className="flex">
+                <button onClick={() => { setShowMenu(false); setDisplayMode(isFullscreen ? 'full' : 'fullscreen'); }}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-3 text-[13px] font-semibold text-white/50 hover:text-white hover:bg-white/5 transition-colors">
+                  {isFullscreen ? <Shrink size={15} /> : <Maximize2 size={15} />}
+                  {isFullscreen ? 'Exit full screen' : 'Full screen'}
+                </button>
+                <div className="w-px bg-white/8 my-2" />
+                <button onClick={() => { setShowMenu(false); setDisplayMode('floating'); }}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-3 text-[13px] font-semibold text-white/50 hover:text-white hover:bg-white/5 transition-colors">
+                  <Move size={15} /> Float
+                </button>
+              </div>
+              <div className="h-px bg-white/8 mx-3 my-1" />
+              <button onClick={() => { setShowMenu(false); router.push('/admin/ai-settings'); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-violet-500/10 transition-colors">
+                <span className="w-9 h-9 rounded-xl bg-violet-500/15 text-violet-300 flex items-center justify-center flex-shrink-0">
+                  <Settings size={18} />
+                </span>
+                <span className="text-left flex-1">
+                  <span className="block text-[15px] font-semibold text-white">AI Settings</span>
+                  <span className="block text-[12px] text-white/35">Voices, memory, models &amp; usage</span>
+                </span>
+                <ChevronRight size={16} className="text-white/25" />
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Messages */}
         <div ref={scrollRef} className={`flex-1 overflow-y-auto space-y-2 ${isFloating ? 'p-2' : isFullscreen ? 'p-6 max-w-4xl mx-auto w-full' : 'p-3 space-y-3'}`}>

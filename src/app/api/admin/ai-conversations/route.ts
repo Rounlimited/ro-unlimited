@@ -9,9 +9,21 @@ import { createAdminClient, getServerUser, roleOf } from '@/lib/supabase/server'
 const DEV_EMAIL = 'admin@nexavisiongroup.com';
 const isDev = (user: any) => (user?.email || '').toLowerCase() === DEV_EMAIL;
 
-// Rough token estimate: ~4 chars per token
+// Replace bulky base64 image previews with a small flag — they don't belong in
+// stored history and inflate token estimates by ~50-75K per photo.
+function stripImagePreviews(messages: any[]): any[] {
+  return (messages || []).map((m: any) => {
+    if (m && typeof m === 'object' && m.imagePreview) {
+      const { imagePreview, ...rest } = m;
+      return { ...rest, hadImage: true };
+    }
+    return m;
+  });
+}
+
+// Rough token estimate: ~4 chars per token (image previews excluded)
 function estimateTokens(messages: any[]): number {
-  return Math.ceil(JSON.stringify(messages).length / 4);
+  return Math.ceil(JSON.stringify(stripImagePreviews(messages)).length / 4);
 }
 
 function displayName(u: any): string {
@@ -114,11 +126,23 @@ export async function POST(req: NextRequest) {
   if (action === 'save') {
     const { id, messages, title } = body;
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    const { allowed } = await getConvWithAccess(id, true);
+    const { conv, allowed } = await getConvWithAccess(id, true);
     if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    const tokens = estimateTokens(messages);
+    // Guard against last-write-wins across devices: a save with FEWER messages
+    // than what's stored means this client is stale — reject and return the
+    // stored conversation so the client can reconcile.
+    const incoming = Array.isArray(messages) ? messages : [];
+    const stored = Array.isArray(conv?.messages) ? conv.messages : [];
+    if (incoming.length < stored.length) {
+      return NextResponse.json(
+        { error: 'Stale save rejected — stored conversation has more messages', conversation: conv },
+        { status: 409 }
+      );
+    }
+    const cleaned = stripImagePreviews(incoming);
+    const tokens = estimateTokens(cleaned);
     const update: any = {
-      messages,
+      messages: cleaned,
       token_estimate: tokens,
       updated_at: new Date().toISOString(),
     };

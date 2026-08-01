@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, getServerUser } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 // GET — fetch all memories (loaded into AI context)
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const user = await getServerUser(req);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from('ai_memories')
@@ -24,6 +26,8 @@ export async function GET() {
 // POST — save a new memory
 export async function POST(req: NextRequest) {
   try {
+    const user = await getServerUser(req);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await req.json();
     if (!body.content) {
       return NextResponse.json({ error: 'content required' }, { status: 400 });
@@ -51,6 +55,8 @@ export async function POST(req: NextRequest) {
 // DELETE — remove a memory
 export async function DELETE(req: NextRequest) {
   try {
+    const user = await getServerUser(req);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const id = req.nextUrl.searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 

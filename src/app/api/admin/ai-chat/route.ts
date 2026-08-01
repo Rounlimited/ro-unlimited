@@ -204,12 +204,18 @@ const READ_TOOLS = [
     input_schema: { type: 'object' as const, properties: { address: { type: 'string', description: 'Full property address including city and state (e.g. "123 Main St, Greenville, SC")' } }, required: ['address'] } },
   { name: 'save_memory', description: 'Save to persistent memory. Use when user says "remember".',
     input_schema: { type: 'object' as const, properties: { content: { type: 'string' }, category: { type: 'string', description: 'general|pricing|preferences|projects|codes|materials' } }, required: ['content', 'category'] } },
-  { name: 'forget_memory', description: 'Delete a saved memory by keyword.',
-    input_schema: { type: 'object' as const, properties: { keyword: { type: 'string' } }, required: ['keyword'] } },
+  { name: 'forget_memory', description: 'Delete a saved memory. Pass a keyword to find it; if multiple memories match, none are deleted and the matches are returned — re-call with a more specific keyword or an exact memory_id.',
+    input_schema: { type: 'object' as const, properties: { keyword: { type: 'string', description: 'Keyword to match against memory content' }, memory_id: { type: 'string', description: 'Exact memory UUID for precise deletion (use when a keyword matched multiple memories)' } } } },
   { name: 'list_tasks', description: 'List tasks. Use for "what\'s on my schedule", "what do I have today", "what\'s overdue", "upcoming tasks", etc.',
     input_schema: { type: 'object' as const, properties: { filter: { type: 'string', description: 'today|overdue|upcoming|all (default: all)' }, category: { type: 'string', description: 'job_site|customer|vendor|permit|employee|financial|general' }, limit: { type: 'number', description: 'Max results (default 20)' } } } },
   { name: 'get_daily_briefing', description: 'Get a summary of today\'s tasks, overdue items, upcoming deadlines, and business status. Use when user asks "what\'s going on today", "morning briefing", "give me a rundown", etc.',
     input_schema: { type: 'object' as const, properties: {} } },
+  { name: 'get_business_stats', description: 'Business performance stats from the estimates table: counts and dollar totals grouped by status for a period, plus pipeline value (outstanding sent/viewed/revised estimates) and won (accepted) value. Use for "how\'s business", revenue, pipeline, or win-rate questions.',
+    input_schema: { type: 'object' as const, properties: { period: { type: 'string', description: 'week|month|quarter|year|all (default month)' } } } },
+  { name: 'search_inbox', description: 'Search the email inbox. Returns compact rows: from, subject, snippet, date, thread id, unread flag, attachments flag. Use for "any new emails", "find the email from X", etc.',
+    input_schema: { type: 'object' as const, properties: { query: { type: 'string', description: 'Match against sender address, subject, or body text' }, unread_only: { type: 'boolean', description: 'Only return unread emails' }, limit: { type: 'number', description: 'Max results (default 5, cap 10)' } } } },
+  { name: 'get_job_weather', description: 'Daily weather forecast for a job site: highs/lows (F), rain chance and amount (in), max wind (mph). Defaults to the Seneca/Upstate SC area when no address is given. Use for scheduling, concrete pours, and roofing weather questions.',
+    input_schema: { type: 'object' as const, properties: { address: { type: 'string', description: 'Job site street address' }, city: { type: 'string', description: 'City/state if no street address, e.g. "Greenville, SC"' }, days: { type: 'number', description: 'Forecast days (default 3, cap 7)' } } } },
 ];
 
 // ── WRITE TOOLS ──
@@ -600,75 +606,13 @@ const WRITE_TOOLS = [
 
 const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
 
-// ── Smart tool selection based on user message ──
-// Only send tools relevant to the user's intent to save ~3000 tokens/request
-function selectTools(lastMessage: string, messageCount?: number): typeof ALL_TOOLS {
+// Trivial one-liner greetings on a fresh conversation don't need tools.
+// Everything else always gets the FULL tool set in deterministic order —
+// a stable tool list keeps xAI's automatic prompt-prefix caching hot.
+function isTrivialGreeting(lastMessage: string, messageCount?: number): boolean {
+  if (messageCount && messageCount > 2) return false;
   const msg = lastMessage.toLowerCase();
-
-  // If conversation has history (>2 messages), always send tools — user is in a workflow
-  if (messageCount && messageCount > 2) return ALL_TOOLS;
-
-  // Simple greetings on FIRST message only — no tools needed
-  if (/^(hi|hey|hello|thanks|thank you)\b/.test(msg) && msg.length < 40) {
-    return [];
-  }
-
-  const tools: typeof ALL_TOOLS = [];
-  const needs = {
-    search: /search|find|look|check|show me|list|get|pull up|who|how many/i.test(msg),
-    estimate: /estimate|proposal|quote|bid|contract|change order|line item|pricing|price|cost|phase|markup|overhead/i.test(msg),
-    customer: /customer|client|contact|homeowner|property owner/i.test(msg),
-    employee: /employee|worker|staff|crew|team/i.test(msg),
-    vendor: /vendor|supplier|sub|subcontractor/i.test(msg),
-    email: /email|send|compose|mail|message/i.test(msg),
-    navigate: /go to|open|navigate|take me|show me.*page|switch to/i.test(msg),
-    memory: /remember|forget|memory|save.*note/i.test(msg),
-    web: /search.*web|google|look.*up|current.*price|what.*cost|code.*require/i.test(msg),
-    property: /property|lot size|sqft|square feet|address|parcel|acres|assessed value|look up.*address|\d+\s+\w+.*\b(st|ave|rd|blvd|dr|ln|ct|way|pl)\b|flood zone|building.*info|site.*info|tavern|restaurant|business.*address/i.test(msg),
-    tasks: /task|remind|schedule|calendar|todo|to.do|due today|overdue|briefing|rundown|what.*today|today.*tasks|don.t.*forget|follow.?up|check in|appointment|meeting|deadline/i.test(msg),
-  };
-
-  // Always include these lightweight tools
-  if (needs.memory) { tools.push(...READ_TOOLS.filter(t => t.name === 'save_memory' || t.name === 'forget_memory')); }
-  // web_search always included — AI needs it for prices, codes, regulations; it's read-only and cheap
-  tools.push(...READ_TOOLS.filter(t => t.name === 'web_search'));
-  if (needs.property) { tools.push(...READ_TOOLS.filter(t => t.name === 'property_lookup')); }
-  if (needs.navigate) { tools.push(...WRITE_TOOLS.filter(t => t.name === 'navigate')); }
-  if (needs.tasks) {
-    tools.push(...READ_TOOLS.filter(t => t.name === 'list_tasks' || t.name === 'get_daily_briefing'));
-    tools.push(...WRITE_TOOLS.filter(t => ['create_task', 'complete_task', 'snooze_task', 'update_task', 'delete_task'].includes(t.name)));
-  }
-
-  // Search tools
-  if (needs.search || needs.customer) tools.push(...READ_TOOLS.filter(t => t.name === 'search_customers'));
-  if (needs.search || needs.estimate) tools.push(...READ_TOOLS.filter(t => t.name === 'search_estimates' || t.name === 'get_estimate_details' || t.name === 'search_cost_library'));
-  if (needs.search || needs.employee) tools.push(...READ_TOOLS.filter(t => t.name === 'search_employees'));
-  if (needs.search || needs.vendor) tools.push(...READ_TOOLS.filter(t => t.name === 'search_vendors'));
-  if (needs.search) tools.push(...READ_TOOLS.filter(t => t.name === 'get_activity_log'));
-
-  // Write tools — only when action words present
-  if (/create|make|build|add|new/i.test(msg)) {
-    if (needs.customer) tools.push(...WRITE_TOOLS.filter(t => t.name === 'create_customer'));
-    if (needs.estimate) tools.push(...WRITE_TOOLS.filter(t => ['create_estimate', 'add_line_items', 'set_payment_schedule'].includes(t.name)));
-  }
-  if (/update|change|edit|modify|set|remove|delete|swap|replace|adjust|fix|payment|deposit|milestone/i.test(msg)) {
-    if (needs.customer) tools.push(...WRITE_TOOLS.filter(t => t.name === 'update_customer'));
-    if (needs.estimate) tools.push(...WRITE_TOOLS.filter(t => ['update_estimate', 'update_estimate_status', 'update_line_items', 'delete_line_items', 'set_payment_schedule'].includes(t.name)));
-  }
-  if (needs.estimate && /send|share|duplicate|copy|check|validate|revise/i.test(msg)) {
-    tools.push(...WRITE_TOOLS.filter(t => ['send_estimate', 'generate_share_link', 'duplicate_estimate', 'check_estimate_pricing'].includes(t.name)));
-  }
-  if (needs.email) tools.push(...WRITE_TOOLS.filter(t => t.name === 'compose_email'));
-  if (needs.estimate && /template|disclaimer/i.test(msg)) {
-    tools.push(...WRITE_TOOLS.filter(t => t.name === 'search_templates' || t.name === 'search_disclaimers'));
-  }
-
-  // If nothing matched but message is complex, send all (safety net)
-  if (tools.length === 0 && msg.length > 80) return ALL_TOOLS;
-
-  // Deduplicate
-  const seen = new Set<string>();
-  return tools.filter(t => { if (seen.has(t.name)) return false; seen.add(t.name); return true; });
+  return /^(hi|hey|hello|thanks|thank you)\b/.test(msg) && msg.length < 40;
 }
 
 // ═══════════════════════════════════════════
@@ -687,7 +631,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         .order('created_at', { ascending: false })
         .limit(limit);
       if (!data?.length) return { result: `No customers found matching "${input.query}".` };
-      return { result: JSON.stringify(data, null, 2) };
+      return { result: JSON.stringify(data) };
     }
 
     case 'search_estimates': {
@@ -707,15 +651,15 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           .order('created_at', { ascending: false })
           .limit(limit);
         if (!byCustomer?.length) return { result: `No estimates found matching "${input.query}".` };
-        return { result: JSON.stringify(byCustomer, null, 2) };
+        return { result: JSON.stringify(byCustomer) };
       }
-      return { result: JSON.stringify(data, null, 2) };
+      return { result: JSON.stringify(data) };
     }
 
     case 'get_estimate_details': {
       let estimateQuery = supabase
         .from('estimates')
-        .select('*, customer:customers(first_name, last_name, company_name, email, phone)');
+        .select('id, estimate_number, project_name, project_address, project_city, project_state, project_zip, status, document_mode, division, estimate_type, contract_type, subtotal, overhead_percent, overhead_amount, markup_percent, markup_amount, tax_percent, tax_amount, contingency_percent, contingency_amount, permit_fees, total, valid_until, notes, customer:customers(first_name, last_name, company_name, email, phone)');
       if (input.estimate_id) {
         estimateQuery = estimateQuery.eq('id', input.estimate_id);
       } else if (input.estimate_number) {
@@ -727,9 +671,9 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (!estimate) return { result: 'Estimate not found.' };
 
       const [{ data: lineItems }, { data: payments }, { data: history }] = await Promise.all([
-        supabase.from('estimate_line_items').select('*').eq('estimate_id', estimate.id).order('sort_order'),
-        supabase.from('estimate_payment_schedules').select('*').eq('estimate_id', estimate.id).order('sort_order'),
-        supabase.from('estimate_status_history').select('*').eq('estimate_id', estimate.id).order('changed_at', { ascending: false }),
+        supabase.from('estimate_line_items').select('id, phase, description, category, quantity, unit, unit_cost, markup_percent, total, sort_order').eq('estimate_id', estimate.id).order('sort_order'),
+        supabase.from('estimate_payment_schedules').select('id, milestone, due_description, percent, amount, sort_order').eq('estimate_id', estimate.id).order('sort_order'),
+        supabase.from('estimate_status_history').select('old_status, new_status, notes, changed_by, changed_at').eq('estimate_id', estimate.id).order('changed_at', { ascending: false }).limit(5),
       ]);
 
       return {
@@ -738,7 +682,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           line_items: lineItems || [],
           payment_schedule: payments || [],
           status_history: history || [],
-        }, null, 2),
+        }),
       };
     }
 
@@ -751,7 +695,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (input.status) query = query.eq('status', input.status);
       const { data } = await query.order('created_at', { ascending: false }).limit(15);
       if (!data?.length) return { result: `No employees found matching "${input.query}".` };
-      return { result: JSON.stringify(data, null, 2) };
+      return { result: JSON.stringify(data) };
     }
 
     case 'search_vendors': {
@@ -763,7 +707,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         .order('created_at', { ascending: false })
         .limit(15);
       if (!data?.length) return { result: `No vendors found matching "${input.query}".` };
-      return { result: JSON.stringify(data, null, 2) };
+      return { result: JSON.stringify(data) };
     }
 
     case 'get_activity_log': {
@@ -772,7 +716,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (input.action_filter) query = query.ilike('action', `%${input.action_filter}%`);
       const { data } = await query.order('created_at', { ascending: false }).limit(limit);
       if (!data?.length) return { result: 'No activity log entries found.' };
-      return { result: JSON.stringify(data, null, 2) };
+      return { result: JSON.stringify(data) };
     }
 
     case 'search_cost_library': {
@@ -785,7 +729,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (input.category) query = query.eq('category', input.category);
       const { data } = await query.order('name').limit(20);
       if (!data?.length) return { result: `No cost items found matching "${input.query}".` };
-      return { result: JSON.stringify(data, null, 2) };
+      return { result: JSON.stringify(data) };
     }
 
     case 'web_search': {
@@ -802,13 +746,27 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
     }
 
     case 'forget_memory': {
-      const { data: deleted } = await supabase
+      // Precise deletion by id
+      if (input.memory_id) {
+        const { data: row } = await supabase.from('ai_memories').select('id, content').eq('id', input.memory_id).single();
+        if (!row) return { result: `No memory found with id ${input.memory_id}.` };
+        const { error } = await supabase.from('ai_memories').delete().eq('id', input.memory_id);
+        if (error) return { result: `Error deleting memory: ${error.message}` };
+        return { result: `Deleted memory: "${row.content}"` };
+      }
+      if (!input.keyword) return { result: 'Provide a keyword or memory_id to identify the memory to delete.' };
+      // Select matches first — never bulk-delete on a broad keyword
+      const { data: matches } = await supabase
         .from('ai_memories')
-        .delete()
-        .ilike('content', `%${input.keyword}%`)
-        .select('content');
-      if (deleted?.length) return { result: `Deleted ${deleted.length} memory/memories matching "${input.keyword}".` };
-      return { result: `No memories found matching "${input.keyword}".` };
+        .select('id, content')
+        .ilike('content', `%${input.keyword}%`);
+      if (!matches?.length) return { result: `No memories found matching "${input.keyword}".` };
+      if (matches.length === 1) {
+        const { error } = await supabase.from('ai_memories').delete().eq('id', matches[0].id);
+        if (error) return { result: `Error deleting memory: ${error.message}` };
+        return { result: `Deleted memory: "${matches[0].content}"` };
+      }
+      return { result: `Found ${matches.length} memories matching "${input.keyword}" — nothing was deleted. Call forget_memory again with a more specific keyword or an exact memory_id:\n${JSON.stringify(matches.map(m => ({ id: m.id, content: m.content })))}` };
     }
 
     // ── WRITE TOOLS ──
@@ -834,7 +792,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         .select()
         .single();
       if (error) return { result: `Error creating customer: ${error.message}` };
-      return { result: `Customer created successfully:\n${JSON.stringify(data, null, 2)}` };
+      return { result: `Customer created successfully. ${JSON.stringify({ success: true, id: data.id, name: `${data.first_name} ${data.last_name}` })}` };
     }
 
     case 'update_customer': {
@@ -849,7 +807,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         .single();
       if (error) return { result: `Error updating customer: ${error.message}` };
       if (!data) return { result: 'Customer not found.' };
-      return { result: `Customer updated successfully:\n${JSON.stringify(data, null, 2)}` };
+      return { result: `Customer updated successfully. ${JSON.stringify({ success: true, id: data.id, name: `${data.first_name} ${data.last_name}` })}` };
     }
 
     case 'create_estimate': {
@@ -910,7 +868,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         .single();
       if (error) return { result: `Error creating estimate: ${error.message}` };
       return {
-        result: `Estimate created successfully:\n${JSON.stringify(data, null, 2)}`,
+        result: `Estimate created successfully. ${JSON.stringify({ success: true, id: data.id, estimate_number: data.estimate_number })}`,
         action: { type: 'navigate', path: `/admin/estimates/${data.id}`, description: `Opening estimate ${estimate_number}` },
       };
     }
@@ -951,7 +909,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         .single();
       if (error) return { result: `Error updating estimate: ${error.message}` };
       if (!data) return { result: 'Estimate not found.' };
-      return { result: `Estimate updated successfully:\n${JSON.stringify(data, null, 2)}` };
+      return { result: `Estimate updated successfully. ${JSON.stringify({ success: true, id: data.id, estimate_number: data.estimate_number, subtotal: data.subtotal, total: data.total })}` };
     }
 
     case 'add_line_items': {
@@ -965,58 +923,55 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         .eq('estimate_id', input.estimate_id)
         .order('sort_order', { ascending: false })
         .limit(1);
-      let nextSort = (existingItems?.[0]?.sort_order || 0) + 1;
+      const firstSort = (existingItems?.[0]?.sort_order || 0) + 1;
 
-      const results: any[] = [];
-      for (const item of input.items) {
+      // Single bulk insert instead of one round-trip per item
+      const rows = input.items.map((item: any, idx: number) => {
         const quantity = item.quantity || 1;
         const unit_cost = item.unit_cost || 0;
         const markup_percent = item.markup_percent || 0;
-        const total = quantity * unit_cost * (1 + markup_percent / 100);
-
-        const { data, error } = await supabase
-          .from('estimate_line_items')
-          .insert({
-            estimate_id: input.estimate_id,
-            phase: item.phase || null,
-            category: item.category || null,
-            description: item.description || null,
-            quantity,
-            unit: item.unit || null,
-            unit_cost,
-            markup_percent,
-            total,
-            sort_order: nextSort++,
-          })
-          .select()
-          .single();
-        if (error) {
-          results.push({ error: error.message, item });
-        } else {
-          results.push(data);
-        }
-      }
+        return {
+          estimate_id: input.estimate_id,
+          phase: item.phase || null,
+          category: item.category || null,
+          description: item.description || null,
+          quantity,
+          unit: item.unit || null,
+          unit_cost,
+          markup_percent,
+          total: quantity * unit_cost * (1 + markup_percent / 100),
+          sort_order: firstSort + idx,
+        };
+      });
+      const { data: inserted, error: insertErr } = await supabase
+        .from('estimate_line_items')
+        .insert(rows)
+        .select();
+      if (insertErr) return { result: `Error adding line items: ${insertErr.message}` };
 
       // Recalculate estimate totals
       const [{ data: est }, { data: allItems }] = await Promise.all([
         supabase.from('estimates').select('*').eq('id', input.estimate_id).single(),
         supabase.from('estimate_line_items').select('*').eq('estimate_id', input.estimate_id),
       ]);
+      let newTotal: number | undefined;
       if (est) {
         const totals = recalcEstimateTotals(allItems || [], est);
+        newTotal = totals.total;
         await supabase.from('estimates').update({ ...totals, updated_at: new Date().toISOString() }).eq('id', input.estimate_id);
       }
 
-      return { result: `Added ${results.filter(r => !r.error).length} line item(s) (sorted ${nextSort - input.items.length} to ${nextSort - 1}):\n${JSON.stringify(results, null, 2)}` };
+      const summary = (inserted || []).map((r: any) => ({ id: r.id, description: r.description, total: r.total }));
+      return { result: `Added ${inserted?.length || 0} line item(s) (sorted ${firstSort} to ${firstSort + rows.length - 1}). New estimate total: $${(newTotal ?? 0).toLocaleString()}\n${JSON.stringify(summary)}` };
     }
 
     case 'update_line_items': {
       if (!input.estimate_id) return { result: 'Error: estimate_id is required.' };
       if (!input.items?.length) return { result: 'Error: items array is required.' };
 
-      const updateResults: any[] = [];
-      for (const item of input.items) {
-        if (!item.id) { updateResults.push({ error: 'Missing id', item }); continue; }
+      // Per-item updates (each has different values) — run in parallel
+      const updateResults: any[] = await Promise.all(input.items.map(async (item: any) => {
+        if (!item.id) return { error: 'Missing id', item };
         const updates: Record<string, any> = {};
         if (item.phase !== undefined) updates.phase = item.phase;
         if (item.description !== undefined) updates.description = item.description;
@@ -1033,20 +988,23 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         if (q !== undefined && uc !== undefined) updates.total = q * uc * (1 + mp / 100);
 
         const { data, error } = await supabase.from('estimate_line_items').update(updates).eq('id', item.id).eq('estimate_id', input.estimate_id).select().single();
-        updateResults.push(error ? { error: error.message, id: item.id } : data);
-      }
+        return error ? { error: error.message, id: item.id } : data;
+      }));
 
       // Recalculate estimate totals
       const [{ data: est2 }, { data: allItems2 }] = await Promise.all([
         supabase.from('estimates').select('*').eq('id', input.estimate_id).single(),
         supabase.from('estimate_line_items').select('*').eq('estimate_id', input.estimate_id),
       ]);
+      let newTotal2: number | undefined;
       if (est2) {
         const totals = recalcEstimateTotals(allItems2 || [], est2);
+        newTotal2 = totals.total;
         await supabase.from('estimates').update({ ...totals, updated_at: new Date().toISOString() }).eq('id', input.estimate_id);
       }
 
-      return { result: `Updated ${updateResults.filter(r => !r.error).length} line item(s):\n${JSON.stringify(updateResults, null, 2)}` };
+      const updateSummary = updateResults.map((r: any) => r?.error ? r : { id: r.id, description: r.description, total: r.total });
+      return { result: `Updated ${updateResults.filter(r => !r?.error).length} line item(s). New estimate total: $${(newTotal2 ?? 0).toLocaleString()}\n${JSON.stringify(updateSummary)}` };
     }
 
     case 'delete_line_items': {
@@ -1097,12 +1055,25 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         sort_order: idx,
       }));
 
-      await supabase.from('estimate_payment_schedules').delete().eq('estimate_id', est.id);
+      // Fetch the existing schedule first so a failed insert can't cause data loss
+      const { data: oldRows } = await supabase.from('estimate_payment_schedules').select('*').eq('estimate_id', est.id);
+      const { error: delErr } = await supabase.from('estimate_payment_schedules').delete().eq('estimate_id', est.id);
+      if (delErr) return { result: `Error updating payment schedule: ${delErr.message}. The existing schedule is unchanged.` };
       const { data: inserted, error } = await supabase.from('estimate_payment_schedules').insert(rows).select();
-      if (error) return { result: `Error saving payment schedule: ${error.message}` };
+      if (error) {
+        // Restore the previous schedule so nothing is lost
+        if (oldRows?.length) {
+          const { error: restoreErr } = await supabase.from('estimate_payment_schedules').insert(oldRows);
+          if (restoreErr) {
+            return { result: `Error saving payment schedule: ${error.message}. WARNING: restoring the previous schedule also failed (${restoreErr.message}) — tell the user to re-check the payment schedule on ${est.estimate_number}.` };
+          }
+        }
+        return { result: `Error saving payment schedule: ${error.message}. The previous schedule was restored — nothing was lost.` };
+      }
 
       const warn = totalPct !== 100 ? ` ⚠️ Percents total ${totalPct}%, not 100% — flag this to the user.` : '';
-      return { result: `Payment schedule set on ${est.estimate_number} (${inserted?.length} milestones).${warn}\n${JSON.stringify(inserted, null, 2)}` };
+      const milestoneSummary = (inserted || []).map((m: any) => ({ milestone: m.milestone, percent: m.percent, amount: m.amount }));
+      return { result: `Payment schedule set on ${est.estimate_number} (${inserted?.length} milestones).${warn}\n${JSON.stringify(milestoneSummary)}` };
     }
 
     case 'update_estimate_status': {
@@ -1174,7 +1145,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           return { result: `Error sending estimate: ${err.error || res.statusText}` };
         }
         const data = await res.json();
-        return { result: `Estimate sent successfully to ${input.to_email}.\n${JSON.stringify(data, null, 2)}` };
+        return { result: `Estimate sent successfully to ${input.to_email}.\n${JSON.stringify(data)}` };
       } catch (err: any) {
         return { result: `Error sending estimate: ${err.message}` };
       }
@@ -1228,7 +1199,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         }
         const data = await res.json();
         return {
-          result: `Estimate duplicated successfully:\n${JSON.stringify(data, null, 2)}`,
+          result: `Estimate duplicated successfully. ${JSON.stringify({ success: true, id: data.id, estimate_number: data.estimate_number })}`,
           action: { type: 'navigate', path: `/admin/estimates/${data.id}`, description: `Opening revised estimate ${data.estimate_number}` },
         };
       } catch (err: any) {
@@ -1247,7 +1218,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           return { result: `Error checking pricing: ${err.error || res.statusText}` };
         }
         const data = await res.json();
-        return { result: JSON.stringify(data, null, 2) };
+        return { result: JSON.stringify(data) };
       } catch (err: any) {
         return { result: `Error checking pricing: ${err.message}` };
       }
@@ -1292,7 +1263,16 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       const { data, error } = await query;
       if (error) return { result: `Error searching templates: ${error.message}` };
       if (!data?.length) return { result: 'No templates found matching the criteria.' };
-      return { result: JSON.stringify(data, null, 2) };
+      // Full body only when the search narrowed to a single template
+      if (data.length === 1) return { result: JSON.stringify(data[0]) };
+      const previews = data.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        division: t.division,
+        estimate_type: t.estimate_type,
+        preview: (t.description || '').slice(0, 200),
+      }));
+      return { result: JSON.stringify({ note: 'Previews only. Narrow the search with division/estimate_type filters to a single result to get the full template.', templates: previews }) };
     }
 
     case 'search_disclaimers': {
@@ -1305,7 +1285,15 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       const { data, error } = await query;
       if (error) return { result: `Error searching disclaimers: ${error.message}` };
       if (!data?.length) return { result: 'No disclaimers found.' };
-      return { result: JSON.stringify(data, null, 2) };
+      // Full body only when the search narrowed to a single disclaimer
+      if (data.length === 1) return { result: JSON.stringify(data[0]) };
+      const previews = data.map((d: any) => ({
+        id: d.id,
+        title: d.title,
+        category: d.category,
+        preview: (d.body || '').slice(0, 200),
+      }));
+      return { result: JSON.stringify({ note: 'Previews only. Narrow the search with a category filter to a single result to get the full text.', disclaimers: previews }) };
     }
 
     case 'property_lookup': {
@@ -1465,16 +1453,16 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 
       const [
         { data: todayTasks },
-        { data: overdueTasks },
+        { data: overdueTasks, count: overdueCount },
         { data: upcomingTasks },
         { data: staleEstimates },
-        { data: unreadEmails },
+        { count: unreadCount },
       ] = await Promise.all([
         supabase.from('tasks').select('title, priority, category, due_time, linked_label').eq('due_date', todayStr).not('status', 'in', '("done","cancelled")').order('due_time', { ascending: true }),
-        supabase.from('tasks').select('title, due_date').lt('due_date', todayStr).not('status', 'in', '("done","cancelled")'),
+        supabase.from('tasks').select('title, due_date', { count: 'exact' }).lt('due_date', todayStr).not('status', 'in', '("done","cancelled")').order('due_date').limit(5),
         supabase.from('tasks').select('title, due_date').gt('due_date', todayStr).lte('due_date', sevenDaysOut).not('status', 'in', '("done","cancelled")').order('due_date').limit(5),
         supabase.from('estimates').select('estimate_number, project_name, total, sent_at, customer:customers(first_name, last_name)').eq('status', 'sent').lt('sent_at', threeDaysAgo).order('sent_at').limit(5),
-        supabase.from('email_messages').select('id').eq('direction', 'inbound').eq('read', false),
+        supabase.from('email_messages').select('id', { count: 'exact', head: true }).eq('direction', 'inbound').eq('read', false),
       ]);
 
       const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
@@ -1490,13 +1478,14 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         lines.push('**No tasks due today** ✅');
       }
 
-      if (overdueTasks?.length) {
-        lines.push(`\n⚠️ **Overdue: ${overdueTasks.length} task${overdueTasks.length !== 1 ? 's' : ''}**`);
-        overdueTasks.slice(0, 5).forEach((t: any) => {
+      const overdueTotal = overdueCount ?? overdueTasks?.length ?? 0;
+      if (overdueTotal > 0) {
+        lines.push(`\n⚠️ **Overdue: ${overdueTotal} task${overdueTotal !== 1 ? 's' : ''}**`);
+        (overdueTasks || []).forEach((t: any) => {
           const days = Math.floor((now.getTime() - new Date(t.due_date).getTime()) / 86400000);
           lines.push(`• ${t.title} (${days}d overdue)`);
         });
-        if (overdueTasks.length > 5) lines.push(`• ...and ${overdueTasks.length - 5} more`);
+        if (overdueTotal > 5) lines.push(`• ...and ${overdueTotal - 5} more`);
       }
 
       if (upcomingTasks?.length) {
@@ -1517,7 +1506,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         });
       }
 
-      if (unreadEmails?.length) lines.push(`\n📧 **${unreadEmails.length} unread email${unreadEmails.length !== 1 ? 's' : ''} in inbox**`);
+      if (unreadCount) lines.push(`\n📧 **${unreadCount} unread email${unreadCount !== 1 ? 's' : ''} in inbox**`);
 
       return { result: lines.join('\n') };
     }
@@ -1626,6 +1615,109 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       };
     }
 
+    case 'get_business_stats': {
+      const period = input.period || 'month';
+      const now = new Date();
+      let since: Date | null = new Date(now);
+      switch (period) {
+        case 'week': since.setDate(now.getDate() - 7); break;
+        case 'quarter': since.setMonth(now.getMonth() - 3); break;
+        case 'year': since.setFullYear(now.getFullYear() - 1); break;
+        case 'all': since = null; break;
+        case 'month':
+        default: since.setMonth(now.getMonth() - 1); break;
+      }
+      let statsQuery = supabase.from('estimates').select('status, total, document_mode, created_at');
+      if (since) statsQuery = statsQuery.gte('created_at', since.toISOString());
+      const { data: statRows, error: statsErr } = await statsQuery;
+      if (statsErr) return { result: `Error fetching business stats: ${statsErr.message}` };
+      const rows = statRows || [];
+      const round2 = (n: number) => Math.round(n * 100) / 100;
+      const byStatus: Record<string, { count: number; total: number }> = {};
+      for (const r of rows) {
+        const s = r.status || 'unknown';
+        if (!byStatus[s]) byStatus[s] = { count: 0, total: 0 };
+        byStatus[s].count++;
+        byStatus[s].total = round2(byStatus[s].total + (r.total || 0));
+      }
+      // Pipeline = outstanding estimates (not draft, not declined, not yet won/expired)
+      const pipelineStatuses = new Set(['sent', 'viewed', 'revised']);
+      const pipeline_value = round2(rows.filter((r: any) => pipelineStatuses.has(r.status)).reduce((s: number, r: any) => s + (r.total || 0), 0));
+      const won_value = round2(rows.filter((r: any) => r.status === 'accepted').reduce((s: number, r: any) => s + (r.total || 0), 0));
+      return {
+        result: JSON.stringify({
+          period,
+          since: since ? since.toISOString().split('T')[0] : 'all',
+          total_estimates: rows.length,
+          by_status: byStatus,
+          pipeline_value,
+          won_value,
+        }),
+      };
+    }
+
+    case 'search_inbox': {
+      const limit = Math.min(input.limit || 5, 10);
+      let inboxQuery = supabase
+        .from('email_messages')
+        .select('id, thread_id, from_email, subject, body_text, created_at, read, has_attachments')
+        .eq('direction', 'inbound')
+        .neq('folder', 'trash')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (input.unread_only) inboxQuery = inboxQuery.eq('read', false);
+      if (input.query) {
+        const q = String(input.query).replace(/[%,()]/g, ' ').trim();
+        if (q) inboxQuery = inboxQuery.or(`from_email.ilike.%${q}%,subject.ilike.%${q}%,body_text.ilike.%${q}%`);
+      }
+      const { data: emails, error: inboxErr } = await inboxQuery;
+      if (inboxErr) return { result: `Error searching inbox: ${inboxErr.message}` };
+      if (!emails?.length) return { result: 'No matching emails found.' };
+      const emailRows = emails.map((m: any) => ({
+        from: m.from_email,
+        subject: m.subject,
+        snippet: (m.body_text || '').slice(0, 150),
+        date: m.created_at,
+        thread_id: m.thread_id,
+        unread: !m.read,
+        has_attachments: !!m.has_attachments,
+      }));
+      return { result: JSON.stringify(emailRows) };
+    }
+
+    case 'get_job_weather': {
+      const days = Math.min(Math.max(Math.round(input.days || 3), 1), 7);
+      const place = input.address || input.city || '';
+      // Default to the company's service area
+      let coords = { lat: 34.6857, lon: -82.9532 }; // Seneca / Upstate SC
+      let locationLabel = 'Seneca / Upstate SC (default area)';
+      if (place) {
+        const geo = await geocodeAddress(place);
+        if (geo) { coords = geo; locationLabel = place; }
+        else locationLabel = `${place} (geocode failed — showing Seneca/Upstate SC area)`;
+      }
+      try {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=${days}`
+        );
+        if (!res.ok) return { result: `Weather lookup failed (${res.status}).` };
+        const data = await res.json();
+        const d = data.daily;
+        if (!d?.time?.length) return { result: 'No forecast data available.' };
+        const forecast = d.time.map((date: string, i: number) => ({
+          date,
+          high_f: d.temperature_2m_max?.[i],
+          low_f: d.temperature_2m_min?.[i],
+          rain_chance_pct: d.precipitation_probability_max?.[i],
+          rain_in: d.precipitation_sum?.[i],
+          wind_max_mph: d.wind_speed_10m_max?.[i],
+        }));
+        return { result: JSON.stringify({ location: locationLabel, forecast }) };
+      } catch (err: any) {
+        return { result: `Weather lookup error: ${err.message}` };
+      }
+    }
+
     default:
       return { result: `Unknown tool: ${name}` };
   }
@@ -1694,6 +1786,9 @@ Divisions: residential, commercial, grading, concrete, foundation, framing, roof
 Types: new_construction, renovation, repair, addition, remodel, commercial, quick_quote, preliminary, detailed, change_order, time_materials
 
 SC pricing (2025–26): Concrete $6-10/sqft · Framing $8-16 · Shingles $4-7 · Metal roof $8-14 · Plumbing $800-1500/fixture · HVAC $3-5K/ton · Electrical $150-300/outlet · Drywall $3-5 · Paint $2-4 · LVP $5-9 · Tile $8-20 · Cabinets $150-350/lnft · Demo $4-10 · Windows $400-1200ea · Insulation $1.50-3.50/sqft
+
+"How's business" / pipeline / revenue / win-rate questions → get_business_stats(period) — counts and totals by status, pipeline value, and won value.
+Inbox questions ("any new emails", "find the email from X") → search_inbox.
 </estimates>`;
 
 // Block 3 — task management (appended when task tools are active)
@@ -1725,6 +1820,8 @@ Flag AE/A/VE zones prominently — they affect foundation type, site work cost, 
 
 Codes: SC currently enforces the 2021 I-codes (IBC/IRC etc., effective Jan 1 2023). The 2024 I-codes + 2023 NEC are in the SC adoption pipeline (modifications published May 2026, not yet effective) — web_search for current status if a code edition question matters. Lien law: SC 29-5-10, 90-day window.
 Conversions: 1 cu yd = 27 cu ft = 81 sqft @ 4" depth · 1 roofing sq = 100 sqft · 1 ton HVAC = 12,000 BTU/hr
+
+Use get_job_weather for scheduling/pour/roofing weather questions — it returns a daily forecast (temps, rain chance/amount, wind) for any job site address, defaulting to the Seneca/Upstate SC area.
 </property>`;
 
 // Builds the full system prompt from only the blocks needed for this request
@@ -1769,6 +1866,8 @@ const TOOL_STATUS_LABELS: Record<string, string> = {
   search_templates: 'Checking templates…', search_disclaimers: 'Checking disclaimers…',
   create_task: 'Creating the task…', complete_task: 'Marking it done…',
   snooze_task: 'Snoozing the task…', update_task: 'Updating the task…', delete_task: 'Deleting the task…',
+  get_business_stats: 'Crunching the numbers…', search_inbox: 'Checking the inbox…',
+  get_job_weather: 'Checking the forecast…',
 };
 const toolStatusLabel = (name: string) => TOOL_STATUS_LABELS[name] || 'Working on it…';
 
@@ -1901,12 +2000,13 @@ export async function POST(req: NextRequest) {
 
     // The model has no clock — without this, "tomorrow"/"this month"/task due
     // dates and valid_until are guessed from stale training data.
-    const nowEastern = new Date().toLocaleString('en-US', {
+    // Date (day granularity) stays near the top; the exact time goes at the
+    // very END of the dynamic context so the long stable prefix can cache.
+    const todayEastern = new Date().toLocaleDateString('en-US', {
       timeZone: 'America/New_York',
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-      hour: 'numeric', minute: '2-digit',
     });
-    contextParts.push(`\nCurrent date & time (Eastern): ${nowEastern}`);
+    contextParts.push(`\nCurrent date (Eastern): ${todayEastern}`);
 
     if (memories?.length) {
       contextParts.push('\n## SAVED MEMORIES');
@@ -1936,15 +2036,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Exact time LAST — it changes every minute, so it must not sit in front of
+    // the cacheable prefix (memories, page, project context).
+    const timeEastern = new Date().toLocaleTimeString('en-US', {
+      timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit',
+    });
+    contextParts.push(`\nCurrent time (Eastern): ${timeEastern}`);
+
     // Build dynamic context block (memories, current page, active project)
     const dynamicContext = contextParts.length ? '\n' + contextParts.join('\n') : '';
     let content = '';
     let usedModel = '';
     const actions: { type: string; path: string; description: string }[] = [];
 
-    // Smart tool selection — only send tools relevant to the user's message
+    // Always send the FULL tool set in deterministic order (stable prefix →
+    // provider prompt caching stays hot). Only trivial greetings skip tools.
     const lastUserMsg = messages.filter((m: any) => m.role === 'user').pop()?.content || '';
-    const selectedTools = selectTools(typeof lastUserMsg === 'string' ? lastUserMsg : JSON.stringify(lastUserMsg), messages.length);
+    const selectedTools = isTrivialGreeting(typeof lastUserMsg === 'string' ? lastUserMsg : JSON.stringify(lastUserMsg), messages.length) ? [] : ALL_TOOLS;
 
     // Convert tools to OpenAI function-calling format (for Grok)
     const openaiTools = (tools: typeof ALL_TOOLS) => tools.map(t => ({
@@ -1974,6 +2082,78 @@ export async function POST(req: NextRequest) {
       return formatted;
     };
 
+    // ── Claude Haiku fallback runner — shared by the non-stream path and the
+    // streaming path (when Grok fails before any text was emitted). Runs the
+    // full tool loop, accumulates actions, returns the final text or null. ──
+    const runClaudeFallback = async (): Promise<string | null> => {
+      if (!claudeKey) return null;
+      try {
+        const apiMessages = buildApiMessages(messages, true);
+        // Cache PROMPT_CORE (never changes). Domain blocks + dynamic context in second block (no cache — varies per query).
+        const names = selectedTools.map(t => t.name);
+        const hasEstBlocks = names.some(n => ESTIMATE_TOOL_NAMES.has(n));
+        const hasTaskBlocks = names.some(n => TASK_TOOL_NAMES.has(n));
+        const hasPropertyBlock = names.includes('property_lookup');
+        const domainBlocks = [hasEstBlocks && PROMPT_ESTIMATES, hasTaskBlocks && PROMPT_TASKS, hasPropertyBlock && PROMPT_PROPERTY].filter(Boolean).join('\n\n');
+        const systemBlocks: any[] = [
+          { type: 'text', text: PROMPT_CORE, cache_control: { type: 'ephemeral' } },
+        ];
+        if (domainBlocks || dynamicContext) {
+          systemBlocks.push({ type: 'text', text: [domainBlocks, dynamicContext].filter(Boolean).join('\n\n') });
+        }
+
+        const convo: any[] = [...apiMessages];
+        let claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': claudeKey!, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 4000,
+            system: systemBlocks,
+            messages: convo,
+            ...(selectedTools.length > 0 ? { tools: selectedTools } : {}),
+          }),
+        });
+
+        if (!claudeRes.ok) {
+          console.error('[ai-chat] Claude error:', claudeRes.status, await claudeRes.text());
+          return null;
+        }
+        let claudeData = await claudeRes.json();
+        let rounds = 0;
+        while (claudeData.stop_reason === 'tool_use' && rounds < 8) {
+          rounds++;
+          const toolBlocks = claudeData.content.filter((b: any) => b.type === 'tool_use');
+          const toolResults: any[] = [];
+          const assistantContent = claudeData.content;
+          for (const tool of toolBlocks) {
+            const { result, action } = await executeTool(tool.name, tool.input, supabase);
+            if (action) actions.push(action);
+            toolResults.push({ type: 'tool_result', tool_use_id: tool.id, content: result });
+          }
+          convo.push({ role: 'assistant', content: assistantContent });
+          convo.push({ role: 'user', content: toolResults });
+          claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'x-api-key': claudeKey!, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'claude-haiku-4-5-20251001', max_tokens: 4000, system: systemBlocks,
+              messages: convo,
+              ...(selectedTools.length > 0 ? { tools: selectedTools } : {}),
+            }),
+          });
+          if (!claudeRes.ok) break;
+          claudeData = await claudeRes.json();
+        }
+        const textBlocks = claudeData.content?.filter((b: any) => b.type === 'text') || [];
+        const text = textBlocks.map((b: any) => b.text).join('\n');
+        return text || null;
+      } catch (err) {
+        console.error('[ai-chat] Claude failed:', err);
+        return null;
+      }
+    };
+
     // ═══ STREAMING MODE — NDJSON events: {type:'delta'|'status'|'done'|'error'} ═══
     const preferGrokStream = useModel !== 'claude' && useModel !== 'groq' && !!grokKey;
     if (stream === true && preferGrokStream) {
@@ -1981,13 +2161,24 @@ export async function POST(req: NextRequest) {
       const ndjson = new ReadableStream({
         async start(controller) {
           const emit: StreamEmit = (evt) => controller.enqueue(encoder.encode(JSON.stringify(evt) + '\n'));
+          // Track whether any text reached the client — we can only switch to
+          // the Claude fallback cleanly before the first delta.
+          let textEmitted = false;
+          const emitTracked: StreamEmit = (evt) => {
+            if (evt.type === 'delta' && evt.text) textEmitted = true;
+            emit(evt);
+          };
           try {
             const apiMessages: any[] = [
               { role: 'system', content: buildSystemPrompt(selectedTools, dynamicContext) },
               ...buildApiMessages(messages),
             ];
-            let tools = selectedTools.length > 0 ? openaiTools(selectedTools) : undefined;
-            let round = await grokStreamRound(apiMessages, tools, grokKey!, emit);
+            // Stable tool set on every round — never changes mid-loop
+            const tools = selectedTools.length > 0 ? openaiTools(selectedTools) : undefined;
+            let round = await grokStreamRound(apiMessages, tools, grokKey!, emitTracked).catch((err) => {
+              console.error('[ai-chat] Grok stream threw:', err);
+              return null;
+            });
 
             let rounds = 0;
             while (round && round.finishReason === 'tool_calls' && round.toolCalls.length > 0 && rounds < 8) {
@@ -1999,19 +2190,45 @@ export async function POST(req: NextRequest) {
               });
               for (const tc of round.toolCalls) {
                 emit({ type: 'status', label: toolStatusLabel(tc.function.name) });
-                let args: any = {};
-                try { args = typeof tc.function.arguments === 'string' ? JSON.parse(tc.function.arguments || '{}') : tc.function.arguments; } catch {}
+                let args: any = null;
+                try {
+                  args = typeof tc.function.arguments === 'string' ? JSON.parse(tc.function.arguments || '{}') : tc.function.arguments;
+                } catch {
+                  // Bad args JSON — don't execute the tool with empty input;
+                  // tell the model to re-issue the call.
+                  apiMessages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify({ error: 'Invalid tool arguments JSON — please re-issue the call' }) });
+                  continue;
+                }
                 const { result, action } = await executeTool(tc.function.name, args, supabase);
                 if (action) actions.push(action);
                 apiMessages.push({ role: 'tool', tool_call_id: tc.id, content: typeof result === 'string' ? result : JSON.stringify(result) });
               }
-              tools = openaiTools(ALL_TOOLS);
-              round = await grokStreamRound(apiMessages, tools, grokKey!, emit);
+              round = await grokStreamRound(apiMessages, tools, grokKey!, emitTracked).catch((err) => {
+                console.error('[ai-chat] Grok stream threw:', err);
+                return null;
+              });
             }
 
             if (!round) {
-              emit({ type: 'error', error: 'AI service error — try again.' });
+              // Grok failed. If nothing has streamed yet, fall back to Claude
+              // inside the same NDJSON response instead of surfacing an error.
+              if (!textEmitted && claudeKey) {
+                emit({ type: 'status', label: 'Switching to backup AI…' });
+                const claudeContent = await runClaudeFallback();
+                if (claudeContent) {
+                  emit({ type: 'delta', text: claudeContent });
+                  emit({ type: 'done', model: 'claude-haiku-4.5', ...(actions.length ? { actions } : {}) });
+                } else {
+                  emit({ type: 'error', error: 'AI service error — try again.' });
+                }
+              } else {
+                emit({ type: 'error', error: 'AI service error — try again.' });
+              }
             } else {
+              if (round.finishReason === 'tool_calls') {
+                // Hit the round cap while the model still wanted more tools
+                emit({ type: 'delta', text: "\n\nI ran out of steps while working on that — here's where I got to." });
+              }
               emit({ type: 'done', model: 'grok-4-1-fast', ...(actions.length ? { actions } : {}) });
             }
           } catch (err: any) {
@@ -2066,7 +2283,18 @@ export async function POST(req: NextRequest) {
 
             // Execute tools and add results
             for (const tc of toolCalls) {
-              const args = typeof tc.function.arguments === 'string' ? JSON.parse(tc.function.arguments) : tc.function.arguments;
+              let args: any = null;
+              try {
+                args = typeof tc.function.arguments === 'string' ? JSON.parse(tc.function.arguments) : tc.function.arguments;
+              } catch {
+                // Bad args JSON — return an error tool result instead of throwing
+                apiMessages.push({
+                  role: 'tool',
+                  tool_call_id: tc.id,
+                  content: JSON.stringify({ error: 'Invalid tool arguments JSON — please re-issue the call' }),
+                } as any);
+                continue;
+              }
               console.log(`[ai-chat] Executing tool: ${tc.function.name}`, JSON.stringify(args).substring(0, 200));
               const { result, action } = await executeTool(tc.function.name, args, supabase);
               console.log(`[ai-chat] Tool result: ${tc.function.name}`, typeof result === 'string' ? result.substring(0, 150) : 'object');
@@ -2078,8 +2306,7 @@ export async function POST(req: NextRequest) {
               } as any);
             }
 
-            // Continue with all tools available
-            const allGrokTools = openaiTools(ALL_TOOLS);
+            // Continue with the SAME stable tool set (keeps prefix cache hot)
             grokRes = await fetch('https://api.x.ai/v1/chat/completions', {
               method: 'POST',
               headers: { 'Authorization': `Bearer ${grokKey}`, 'Content-Type': 'application/json' },
@@ -2087,7 +2314,7 @@ export async function POST(req: NextRequest) {
                 model: 'grok-4-1-fast',
                 max_tokens: 4000,
                 messages: apiMessages,
-                tools: allGrokTools,
+                ...(grokTools ? { tools: grokTools } : {}),
               }),
             });
 
@@ -2108,66 +2335,10 @@ export async function POST(req: NextRequest) {
 
     // ── Priority 2: Claude Haiku fallback (if Grok fails or user selects) ──
     if (!content && claudeKey && useModel !== 'groq') {
-      try {
-        const apiMessages = buildApiMessages(messages, true);
-        // Cache PROMPT_CORE (never changes). Domain blocks + dynamic context in second block (no cache — varies per query).
-        const names = selectedTools.map(t => t.name);
-        const hasEstBlocks = names.some(n => ESTIMATE_TOOL_NAMES.has(n));
-        const hasTaskBlocks = names.some(n => TASK_TOOL_NAMES.has(n));
-        const hasPropertyBlock = names.includes('property_lookup');
-        const domainBlocks = [hasEstBlocks && PROMPT_ESTIMATES, hasTaskBlocks && PROMPT_TASKS, hasPropertyBlock && PROMPT_PROPERTY].filter(Boolean).join('\n\n');
-        const systemBlocks: any[] = [
-          { type: 'text', text: PROMPT_CORE, cache_control: { type: 'ephemeral' } },
-        ];
-        if (domainBlocks || dynamicContext) {
-          systemBlocks.push({ type: 'text', text: [domainBlocks, dynamicContext].filter(Boolean).join('\n\n') });
-        }
-
-        let claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'x-api-key': claudeKey!, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 4000,
-            system: systemBlocks,
-            messages: apiMessages,
-            ...(selectedTools.length > 0 ? { tools: selectedTools } : {}),
-          }),
-        });
-
-        if (!claudeRes.ok) {
-          console.error('[ai-chat] Claude error:', claudeRes.status, await claudeRes.text());
-        } else {
-          let claudeData = await claudeRes.json();
-          let rounds = 0;
-          while (claudeData.stop_reason === 'tool_use' && rounds < 8) {
-            rounds++;
-            const toolBlocks = claudeData.content.filter((b: any) => b.type === 'tool_use');
-            const toolResults: any[] = [];
-            const assistantContent = claudeData.content;
-            for (const tool of toolBlocks) {
-              const { result, action } = await executeTool(tool.name, tool.input, supabase);
-              if (action) actions.push(action);
-              toolResults.push({ type: 'tool_result', tool_use_id: tool.id, content: result });
-            }
-            claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-              method: 'POST',
-              headers: { 'x-api-key': claudeKey!, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                model: 'claude-haiku-4-5-20251001', max_tokens: 4000, system: systemBlocks,
-                messages: [...apiMessages, { role: 'assistant', content: assistantContent }, { role: 'user', content: toolResults }],
-                tools: ALL_TOOLS,
-              }),
-            });
-            if (!claudeRes.ok) break;
-            claudeData = await claudeRes.json();
-          }
-          const textBlocks = claudeData.content?.filter((b: any) => b.type === 'text') || [];
-          content = textBlocks.map((b: any) => b.text).join('\n');
-          usedModel = 'claude-haiku-4.5';
-        }
-      } catch (err) {
-        console.error('[ai-chat] Claude failed:', err);
+      const claudeContent = await runClaudeFallback();
+      if (claudeContent) {
+        content = claudeContent;
+        usedModel = 'claude-haiku-4.5';
       }
     }
 
@@ -2204,7 +2375,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error('[ai-chat] error:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'AI service error' }, { status: 500 });
   }
 }
 
