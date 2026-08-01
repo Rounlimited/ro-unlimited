@@ -232,10 +232,13 @@ export default function AiChatBubble() {
       setToast('Microphone not supported in this browser');
       return;
     }
+    // If mic tracks leaked from a failed previous start, release them first
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
+      const mic: MediaStream = stream;
       voiceModeRef.current = true;
       setVoiceMode(true);
       setVoiceState('listening');
@@ -252,7 +255,7 @@ export default function AiChatBubble() {
       const audioCtx = new AC();
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 512;
-      audioCtx.createMediaStreamSource(stream).connect(analyser);
+      audioCtx.createMediaStreamSource(mic).connect(analyser);
       const buf = new Uint8Array(analyser.frequencyBinCount);
 
       const mimeType = getSupportedMimeType();
@@ -276,7 +279,7 @@ export default function AiChatBubble() {
 
       const startRecorder = () => {
         chunks = [];
-        recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+        recorder = new MediaRecorder(mic, mimeType ? { mimeType } : undefined);
         recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
         recorder.start(250);
       };
@@ -362,12 +365,17 @@ export default function AiChatBubble() {
         if (vadTimer) clearTimeout(vadTimer);
         try { recorder?.stop(); } catch {}
         recorder = null;
-        stream.getTracks().forEach(t => t.stop());
+        mic.getTracks().forEach(t => t.stop());
         audioCtx.close().catch(() => {});
         try { voiceAudioRef.current?.pause(); } catch {}
         window.speechSynthesis?.cancel();
       };
     } catch (err: any) {
+      // Release the mic if we grabbed it before failing — otherwise every
+      // retry reports "in use by another app" until the tab is killed
+      try { stream?.getTracks().forEach(t => t.stop()); } catch {}
+      voiceModeRef.current = false;
+      setVoiceMode(false);
       const name = err?.name || '';
       setToast(
         name === 'NotAllowedError' || name === 'PermissionDeniedError'
@@ -375,7 +383,7 @@ export default function AiChatBubble() {
           : name === 'NotFoundError' || name === 'DevicesNotFoundError'
           ? 'No microphone found on this device'
           : name === 'NotReadableError'
-          ? 'Microphone is in use by another app'
+          ? 'Microphone busy — close other apps using it (or restart the app) and try again'
           : `Could not start voice mode (${name || 'unknown'}: ${String(err?.message || err).slice(0, 80)})`
       );
     }

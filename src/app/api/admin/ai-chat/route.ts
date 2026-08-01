@@ -214,7 +214,7 @@ const READ_TOOLS = [
     input_schema: { type: 'object' as const, properties: { period: { type: 'string', description: 'week|month|quarter|year|all (default month)' } } } },
   { name: 'search_inbox', description: 'Search the email inbox. Returns compact rows: from, subject, snippet, date, thread id, unread flag, attachments flag. Use for "any new emails", "find the email from X", etc.',
     input_schema: { type: 'object' as const, properties: { query: { type: 'string', description: 'Match against sender address, subject, or body text' }, unread_only: { type: 'boolean', description: 'Only return unread emails' }, limit: { type: 'number', description: 'Max results (default 5, cap 10)' } } } },
-  { name: 'get_job_weather', description: 'Daily weather forecast for a job site: highs/lows (F), rain chance and amount (in), max wind (mph). Defaults to the Seneca/Upstate SC area when no address is given. Use for scheduling, concrete pours, and roofing weather questions.',
+  { name: 'get_job_weather', description: 'Job-site forecast: daily highs/lows (F), rain chance/amount (in), max wind (mph), UV, plus working-hours (7am-6pm) avg humidity, avg dew point, and max wind gusts. Defaults to the Seneca/Upstate SC area when no address is given. Use for scheduling and trade go/no-go calls (pours, roofing, painting, crane work).',
     input_schema: { type: 'object' as const, properties: { address: { type: 'string', description: 'Job site street address' }, city: { type: 'string', description: 'City/state if no street address, e.g. "Greenville, SC"' }, days: { type: 'number', description: 'Forecast days (default 3, cap 7)' } } } },
 ];
 
@@ -1698,12 +1698,36 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       }
       try {
         const res = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=${days}`
+          `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}` +
+          `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,sunrise,sunset,uv_index_max` +
+          `&hourly=relative_humidity_2m,dew_point_2m,wind_gusts_10m,precipitation_probability,temperature_2m` +
+          `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=${days}`
         );
         if (!res.ok) return { result: `Weather lookup failed (${res.status}).` };
         const data = await res.json();
         const d = data.daily;
+        const h = data.hourly;
         if (!d?.time?.length) return { result: 'No forecast data available.' };
+        // Aggregate hourly conditions over the working day (7am–6pm local)
+        const workday = (date: string) => {
+          const idx: number[] = [];
+          (h?.time || []).forEach((t: string, i: number) => {
+            if (t.startsWith(date)) {
+              const hr = parseInt(t.slice(11, 13), 10);
+              if (hr >= 7 && hr <= 18) idx.push(i);
+            }
+          });
+          if (!idx.length) return {};
+          const avg = (arr: number[]) => Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
+          const rh = idx.map(i => h.relative_humidity_2m?.[i]).filter((v: any) => v != null);
+          const dew = idx.map(i => h.dew_point_2m?.[i]).filter((v: any) => v != null);
+          const gust = idx.map(i => h.wind_gusts_10m?.[i]).filter((v: any) => v != null);
+          return {
+            workday_humidity_avg_pct: rh.length ? avg(rh) : undefined,
+            workday_dew_point_avg_f: dew.length ? avg(dew) : undefined,
+            workday_wind_gust_max_mph: gust.length ? Math.round(Math.max(...gust)) : undefined,
+          };
+        };
         const forecast = d.time.map((date: string, i: number) => ({
           date,
           high_f: d.temperature_2m_max?.[i],
@@ -1711,8 +1735,10 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           rain_chance_pct: d.precipitation_probability_max?.[i],
           rain_in: d.precipitation_sum?.[i],
           wind_max_mph: d.wind_speed_10m_max?.[i],
+          uv_index_max: d.uv_index_max?.[i],
+          ...workday(date),
         }));
-        return { result: JSON.stringify({ location: locationLabel, forecast }) };
+        return { result: JSON.stringify({ location: locationLabel, workday_window: '7am-6pm', forecast }) };
       } catch (err: any) {
         return { result: `Weather lookup error: ${err.message}` };
       }
@@ -1821,7 +1847,16 @@ Flag AE/A/VE zones prominently — they affect foundation type, site work cost, 
 Codes: SC currently enforces the 2021 I-codes (IBC/IRC etc., effective Jan 1 2023). The 2024 I-codes + 2023 NEC are in the SC adoption pipeline (modifications published May 2026, not yet effective) — web_search for current status if a code edition question matters. Lien law: SC 29-5-10, 90-day window.
 Conversions: 1 cu yd = 27 cu ft = 81 sqft @ 4" depth · 1 roofing sq = 100 sqft · 1 ton HVAC = 12,000 BTU/hr
 
-Use get_job_weather for scheduling/pour/roofing weather questions — it returns a daily forecast (temps, rain chance/amount, wind) for any job site address, defaulting to the Seneca/Upstate SC area.
+Use get_job_weather for any scheduling/site-conditions question — it returns a daily forecast (temps, rain, wind, UV) plus working-hours (7am-6pm) humidity, dew point, and wind gusts for any job site address, defaulting to the Seneca/Upstate SC area.
+
+WEATHER JUDGMENT — never just recite numbers. Act as a seasoned superintendent: interpret the forecast against the task, give a clear GO / WAIT / NO-GO call, and when conditions are marginal recommend the better day and say why. Rules of thumb:
+- CONCRETE POURS: ideal 50–85°F. Below 40°F needs cold-weather measures (blankets/accelerator); above 90°F or hot+windy+low humidity = flash-drying/plastic-shrinkage risk (evaporation is the killer — high temp, gusts over ~20mph, humidity under ~40%, or a dew point far below air temp all make it worse). No pour with meaningful rain expected before final set (~8-12h). If tomorrow shows calmer wind/higher humidity/milder temps, say "wait a day" and explain.
+- ROOFING: no-go with gusts over ~25mph (sheet/shingle handling) or wet surfaces; shingles seal poorly below ~45°F and get scuff-soft above ~90°F deck temps. Watch afternoon pop-up storms — recommend morning starts.
+- EXTERIOR PAINT/STAIN/SEALANT: needs surface dry, 50–90°F, humidity under ~85%, and no rain for several hours after application; dew point within ~5°F of air temp near evening = condensation risk on fresh coats.
+- FRAMING/CRANE/SHEATHING: wind gusts over ~30mph = stop crane picks and sheet handling.
+- EXCAVATION/GRADING: heavy rain the day before matters as much as the day of (mud, compaction) — check the prior day's rain_in too.
+- MASONRY/MORTAR: similar to concrete; below 40°F mortar needs protection.
+Always name the specific numbers driving your call (e.g. "dew point 52°F with 88°F heat and 22mph gusts — surface water will evaporate faster than bleed water, high cracking risk").
 </property>`;
 
 // Builds the full system prompt from only the blocks needed for this request
