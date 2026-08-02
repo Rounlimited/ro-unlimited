@@ -369,6 +369,10 @@ export default function AiChatBubble() {
 
       const AC = window.AudioContext || (window as any).webkitAudioContext;
       const audioCtx = new AC();
+      // iOS creates AudioContext in 'suspended' state. Without this the
+      // analyser reads pure silence, the VAD never sees you stop talking,
+      // and the turn hangs until the max-utterance timeout.
+      if (audioCtx.state === 'suspended') { try { await audioCtx.resume(); } catch {} }
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 512;
       audioCtx.createMediaStreamSource(mic).connect(analyser);
@@ -463,6 +467,9 @@ export default function AiChatBubble() {
 
       const tick = () => {
         if (stopped) return;
+        // iOS re-suspends the context when the app backgrounds or a call
+        // interrupts; without this the VAD silently goes deaf
+        if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
         if (recorder) {
           const level = rms();
           if (!userSpeaking) {

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Sparkles, Brain, Volume2, BarChart3, Cpu, Loader2, Play,
-  Trash2, Plus, RefreshCw, Zap, MessageSquare, AudioLines, Info,
+  Trash2, Plus, RefreshCw, Zap, MessageSquare, AudioLines, Info, Activity,
 } from 'lucide-react';
 
 interface Memory { id: string; content: string; category: string; source: string; created_at: string; }
@@ -46,6 +46,149 @@ const MODELS = [
     cls: 'border-green-400/30', chip: 'bg-green-500/15 text-green-300 border-green-400/30',
   },
 ];
+
+// Runs the whole voice pipeline on THIS device and reports timings. Voice
+// problems are device-specific (iOS suspends audio, PWAs run stale code),
+// so the only real diagnosis is measuring on the phone that's misbehaving.
+function VoiceDiagnostics() {
+  const [running, setRunning] = useState(false);
+  const [rows, setRows] = useState<{ label: string; value: string; ok: boolean | null }[]>([]);
+
+  const run = async () => {
+    setRunning(true);
+    const out: { label: string; value: string; ok: boolean | null }[] = [];
+    const push = (label: string, value: string, ok: boolean | null = null) => {
+      out.push({ label, value, ok });
+      setRows([...out]);
+    };
+
+    // Build identity — catches "running stale cached code"
+    push('App build', String(process.env.NEXT_PUBLIC_BUILD_SHA || 'unknown'), null);
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && (navigator as any).maxTouchPoints > 1);
+    const standalone = (window.navigator as any).standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+    push('Device', `${isIOS ? 'iOS' : /Android/.test(ua) ? 'Android' : 'Desktop'}${standalone ? ' · installed app' : ' · browser tab'}`, null);
+
+    // Microphone + echo cancellation
+    let micStream: MediaStream | null = null;
+    let aec = false;
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      aec = !!micStream.getAudioTracks()[0]?.getSettings?.().echoCancellation;
+      push('Microphone', aec ? 'OK — echo cancellation on' : 'OK — but NO echo cancellation', aec);
+    } catch (e: any) {
+      push('Microphone', `FAILED (${e?.name || 'error'})`, false);
+    }
+
+    // AudioContext — the iOS "suspended" trap that deafens the silence detector
+    try {
+      const AC = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AC();
+      const before = ctx.state;
+      if (ctx.state === 'suspended') { try { await ctx.resume(); } catch {} }
+      const okCtx = ctx.state === 'running';
+      push('Audio engine', `${before} → ${ctx.state}${okCtx ? '' : ' (silence detector would be deaf)'}`, okCtx);
+      // Live mic level — proves the analyser actually sees sound
+      if (micStream && okCtx) {
+        const an = ctx.createAnalyser();
+        an.fftSize = 512;
+        ctx.createMediaStreamSource(micStream).connect(an);
+        const buf = new Uint8Array(an.frequencyBinCount);
+        let peak = 0;
+        const t0 = Date.now();
+        while (Date.now() - t0 < 1500) {
+          an.getByteTimeDomainData(buf);
+          let sum = 0;
+          for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
+          peak = Math.max(peak, Math.sqrt(sum / buf.length));
+          await new Promise(r => setTimeout(r, 50));
+        }
+        const heard = peak > 0.004;
+        push('Mic level (1.5s)', `${peak.toFixed(3)} peak${heard ? '' : ' — heard nothing, speak during the test'}`, heard);
+      }
+      ctx.close().catch(() => {});
+    } catch (e: any) {
+      push('Audio engine', `FAILED (${e?.message || e})`, false);
+    }
+
+    // Recording format
+    try {
+      const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+      const supported = types.find(t => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t));
+      push('Recording format', supported || 'none supported', !!supported);
+    } catch { push('Recording format', 'MediaRecorder unavailable', false); }
+
+    // Speech synthesis round trip — the number that matters for "delayed"
+    try {
+      const t0 = performance.now();
+      const res = await fetch('/api/admin/tts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: 'Thursday looks good for the pour.', voice: localStorage.getItem('ro-tts-voice') || 'andrew' }),
+      });
+      const netMs = Math.round(performance.now() - t0);
+      if (!res.ok) {
+        push('Speech request', `FAILED HTTP ${res.status}`, false);
+      } else {
+        const engine = res.headers.get('x-tts-engine') || '?';
+        const serverMs = res.headers.get('x-tts-ms') || '?';
+        push('Speech request', `${netMs}ms total · ${serverMs}ms server · via ${engine}`, netMs < 3000);
+        // Time from having audio to it actually playing (iOS decode cost)
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = new Audio();
+        a.src = url;
+        const t1 = performance.now();
+        const playMs = await new Promise<number>((resolve) => {
+          let settled = false;
+          const done = (v: number) => { if (!settled) { settled = true; resolve(v); } };
+          a.onplaying = () => done(Math.round(performance.now() - t1));
+          a.onerror = () => done(-1);
+          a.play().catch(() => done(-2));
+          setTimeout(() => done(-3), 5000);
+        });
+        try { a.pause(); URL.revokeObjectURL(url); } catch {}
+        push('Audio playback start',
+          playMs >= 0 ? `${playMs}ms` : playMs === -2 ? 'BLOCKED — needs a tap first (autoplay lock)' : playMs === -3 ? 'timed out' : 'decode error',
+          playMs >= 0 && playMs < 2000);
+      }
+    } catch (e: any) {
+      push('Speech request', `FAILED (${e?.message || e})`, false);
+    }
+
+    try { micStream?.getTracks().forEach(t => t.stop()); } catch {}
+    setRunning(false);
+  };
+
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-3">
+        <Activity size={16} className="text-red-300" />
+        <h2 className="text-[15px] font-bold">Voice Diagnostics</h2>
+      </div>
+      <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
+        <p className="text-[13px] text-white/45 leading-relaxed mb-3">
+          Having trouble with voice on this device? Tap below and <strong className="text-white/70">talk out loud</strong> for a couple of seconds while it runs, then send a screenshot.
+        </p>
+        <button onClick={run} disabled={running}
+          className="w-full py-3.5 rounded-xl font-bold text-black text-[15px] disabled:opacity-50 active:scale-[0.98] transition-transform"
+          style={{ background: 'linear-gradient(135deg, #C9A84C, #D4772C)' }}>
+          {running ? <span className="flex items-center justify-center gap-2"><Loader2 size={17} className="animate-spin" /> Testing…</span> : 'Run voice test'}
+        </button>
+        {rows.length > 0 && (
+          <div className="mt-3 divide-y divide-white/6 rounded-xl border border-white/8 overflow-hidden">
+            {rows.map((r, i) => (
+              <div key={i} className="flex items-start gap-2 px-3 py-2.5 bg-black/20">
+                <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${r.ok === null ? 'bg-white/25' : r.ok ? 'bg-green-400' : 'bg-red-400'}`} />
+                <span className="text-[12px] font-semibold text-white/50 w-[124px] flex-shrink-0">{r.label}</span>
+                <span className={`text-[12px] flex-1 break-words ${r.ok === false ? 'text-red-300' : 'text-white/70'}`}>{r.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
 
 export default function AiSettingsPage() {
   const router = useRouter();
@@ -360,6 +503,9 @@ export default function AiSettingsPage() {
             ))}
           </div>
         </section>
+
+        {/* ── Voice diagnostics ── */}
+        <VoiceDiagnostics />
 
         {/* ── System ── */}
         <section>

@@ -76,10 +76,14 @@ export async function POST(req: NextRequest) {
     // body because Vercel runtime logs are impractical to tail
     const tried: Record<string, string> = {};
 
+    const t0 = Date.now();
     try {
       const audio = await edgeSpeech(EDGE_VOICES[voiceId], input);
       return new Response(new Uint8Array(audio), {
-        headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' },
+        headers: {
+          'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store',
+          'x-tts-engine': 'edge-direct', 'x-tts-ms': String(Date.now() - t0),
+        },
       });
     } catch (err: any) {
       tried.edge = String(err?.message || err).slice(0, 200);
@@ -103,7 +107,10 @@ export async function POST(req: NextRequest) {
         if (res.ok) {
           const audio = await res.arrayBuffer();
           return new Response(audio, {
-            headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' },
+            headers: {
+              'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store',
+              'x-tts-engine': 'oracle-relay', 'x-tts-ms': String(Date.now() - t0),
+            },
           });
         }
         tried.relay = `HTTP ${res.status}`;

@@ -9,6 +9,11 @@ const nextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2560],
     minimumCacheTTL: 2678400, // 31 days — service images rarely change
   },
+  // Surfaced in AI Settings diagnostics so we can tell whether a device is
+  // actually running the current build (stale PWA caches look like bugs)
+  env: {
+    NEXT_PUBLIC_BUILD_SHA: (process.env.VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 7),
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '200mb',
