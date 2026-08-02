@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Lock, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, Sparkles, BarChart3 } from 'lucide-react';
 import { NAV_ITEMS, NAV_GROUPS, type NavItem } from '../nav-items';
 import { createClient } from '@/lib/supabase/client';
 
@@ -33,6 +33,7 @@ export default function DesktopSidebar() {
 
   const devItems: NavItem[] = isSuperAdmin ? [
     { id: 'dev-proposals', label: 'Dev Proposals', icon: Sparkles, href: '/admin/dev/proposals', active: true, color: '#D4772C', bg: 'rgba(212,119,44,0.15)', group: 'dev' },
+    { id: 'dev-activity', label: 'Activity', icon: BarChart3, href: '/admin/activity', active: true, color: '#D4772C', bg: 'rgba(212,119,44,0.15)', group: 'dev' },
   ] : [];
   const activeItems = [...NAV_ITEMS.filter(i => i.active), ...devItems];
   const navGroups = isSuperAdmin ? [...NAV_GROUPS, { key: 'dev', label: 'NexaVision Dev' }] : NAV_GROUPS;

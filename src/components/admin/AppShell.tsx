@@ -842,12 +842,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Dev-only apps — injected for super_admin (NexaVision) accounts only.
   const appIcons = useMemo(() => {
     if (!isSuperAdmin) return APP_ICONS;
-    const devProposals: AppIcon = {
-      id: 'dev-proposals', label: 'Dev Proposals', icon: Sparkles,
-      href: '/admin/dev/proposals', active: true,
-      color: '#D4772C', bg: 'rgba(212,119,44,0.15)', badge: 'DEV',
-    };
-    return [devProposals, ...APP_ICONS];
+    const devApps: AppIcon[] = [
+      {
+        id: 'dev-proposals', label: 'Dev Proposals', icon: Sparkles,
+        href: '/admin/dev/proposals', active: true,
+        color: '#D4772C', bg: 'rgba(212,119,44,0.15)', badge: 'DEV',
+      },
+      {
+        id: 'dev-activity', label: 'Activity', icon: BarChart3,
+        href: '/admin/activity', active: true,
+        color: '#D4772C', bg: 'rgba(212,119,44,0.15)', badge: 'DEV',
+      },
+    ];
+    return [...devApps, ...APP_ICONS];
   }, [isSuperAdmin]);
 
   const filtered = useMemo(() => drawerSearch

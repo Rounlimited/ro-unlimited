@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireEmailAccess } from '@/lib/email-auth';
 
 export async function GET(req: NextRequest) {
+  const auth = await requireEmailAccess();
+  if (!auth.ok) return auth.res;
   const supabase = createAdminClient();
   const { searchParams } = new URL(req.url);
   const q = searchParams.get('q') || '';
@@ -17,6 +20,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireEmailAccess();
+  if (!auth.ok) return auth.res;
   const supabase = createAdminClient();
   const body = await req.json();
   const { action, contact } = body;

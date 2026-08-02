@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, getServerUser, roleOf } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-// POST — log a page view or action
+// POST — log a page view or action (requires a logged-in session)
 export async function POST(req: NextRequest) {
   try {
+    const sessionUser = await getServerUser();
+    if (!sessionUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { user_id, user_email, action, page, details, user_agent } = await req.json();
     if (!user_email || !action) {
       return NextResponse.json({ error: 'Missing user_email or action' }, { status: 400 });
@@ -26,18 +30,15 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET — fetch activity (super_admin only, verified server-side)
+// GET — fetch activity (super_admin only, verified from the real session)
 export async function GET(req: NextRequest) {
   try {
-    const email = req.nextUrl.searchParams.get('viewer_email');
-    const supabase = createAdminClient();
-
-    // Verify the viewer is super_admin
-    const { data: { users } } = await supabase.auth.admin.listUsers();
-    const viewer = users?.find(u => u.email === email);
-    if (!viewer || viewer.user_metadata?.role !== 'super_admin') {
+    const viewer = await getServerUser();
+    if (!viewer || roleOf(viewer) !== 'super_admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
+    const supabase = createAdminClient();
+    const { data: { users } } = await supabase.auth.admin.listUsers();
 
     const days = parseInt(req.nextUrl.searchParams.get('days') || '7');
     const userFilter = req.nextUrl.searchParams.get('user_email');

@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logEmail, buildEmailHtml, stripHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, loadOutboundAttachments, saveOutboundAttachmentRows } from '@/lib/email';
+import { requireEmailAccess } from '@/lib/email-auth';
 import { randomUUID } from 'crypto';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireEmailAccess();
+    if (!auth.ok) return auth.res;
     const supabase = createAdminClient();
     const body = await req.json();
     const { to_email, to_name, subject, body: emailBody, body_html: richHtml, lead_id, draft_id, cc_emails, bcc_emails, from_email, attachments } = body;

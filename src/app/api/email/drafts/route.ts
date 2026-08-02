@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireEmailAccess } from '@/lib/email-auth';
 import { randomUUID } from 'crypto';
 
 export async function POST(req: NextRequest) {
+  const auth = await requireEmailAccess();
+  if (!auth.ok) return auth.res;
   const supabase = createAdminClient();
   const body = await req.json();
   const { draft_id, to_email, subject, body_html, body_text, cc_emails, bcc_emails } = body;

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireEmailAccess } from '@/lib/email-auth';
 
 export async function GET(req: NextRequest) {
+  const auth = await requireEmailAccess();
+  if (!auth.ok) return auth.res;
   const supabase = createAdminClient();
   const { searchParams } = new URL(req.url);
   const folder = searchParams.get('folder') || 'inbox';
