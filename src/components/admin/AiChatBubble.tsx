@@ -225,7 +225,13 @@ export default function AiChatBubble() {
   // rendering only starts once the reply finishes generating. So instead we
   // cut the reply into sentences AS IT STREAMS, synthesize each immediately,
   // and play them back-to-back while later sentences are still being written.
-  type SpeechStream = { push: (full: string) => void; finish: (full?: string) => Promise<void>; abort: () => void };
+  type SpeechStream = { push: (full: string) => void; finish: (full?: string) => Promise<void>; abort: () => void; filler: () => void };
+  // Pre-rendered "working on it" clip. Tool questions need several seconds of
+  // model + tool time before the first real sentence exists; saying something
+  // immediately beats dead air. Fetched during voice-mode warm-up so it costs
+  // nothing at the moment it's needed.
+  const fillerBlobRef = useRef<Blob | null>(null);
+  const voiceStatusRef = useRef<(() => void) | null>(null);
   const speechStreamRef = useRef<SpeechStream | null>(null);
   const voiceDeltaRef = useRef<((partial: string) => void) | null>(null);
   // Barge-in: keep listening while the AI talks so you can cut in by voice.
@@ -310,6 +316,7 @@ export default function AiChatBubble() {
     let cursor = 0;       // chars already handed off to synthesis
     let aborted = false;
     let started = false;
+    let fillerUsed = false;
     let chain: Promise<void> = Promise.resolve();
 
     const speakChunk = (raw: string) => {
@@ -360,6 +367,18 @@ export default function AiChatBubble() {
       push: (full) => drain(full, false),
       finish: async (full) => { if (full != null) drain(full, true); await chain; aiSpeakingRef.current = false; },
       abort: () => { aborted = true; aiSpeakingRef.current = false; speakDoneRef.current?.(); },
+      // Speak "let me check" only if the real reply hasn't started yet
+      filler: () => {
+        const blob = fillerBlobRef.current;
+        if (!blob || started || aborted || fillerUsed) return;
+        fillerUsed = true;
+        chain = chain.then(async () => {
+          if (aborted || started || !voiceModeRef.current) return;
+          aiSpeakingRef.current = true;
+          setVoiceState('speaking');
+          await playUrl(URL.createObjectURL(blob));
+        });
+      },
     };
   };
 
@@ -389,10 +408,11 @@ export default function AiChatBubble() {
     voiceAudioRef.current = primed;
     primed.play().catch(() => {});
     // Cold Vercel lambdas measured 2476ms server time vs 310ms warm
+    // Doubles as the lambda warm-up and the pre-rendered "working on it" clip
     fetch('/api/admin/tts', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: 'ok', voice: ttsVoiceRef.current }),
-    }).catch(() => {});
+      body: JSON.stringify({ text: 'Let me check that.', voice: ttsVoiceRef.current }),
+    }).then(r => (r.ok ? r.blob() : null)).then(b => { if (b) fillerBlobRef.current = b; }).catch(() => {});
     fetch('/api/admin/transcribe', { method: 'GET' }).catch(() => {});
     fetch('/api/admin/ai-chat', { method: 'GET' }).catch(() => {});
 
@@ -451,7 +471,8 @@ export default function AiChatBubble() {
       // Energy-based VAD tuning
       const FRAME_MS = 60;
       const START_FRAMES = 3;      // ~180ms of voice to trigger
-      const END_SILENCE_MS = 1100; // pause length that ends your turn
+      const END_SILENCE_MS = 750;  // pause that ends your turn — every ms here
+                                   // is dead air before the AI even starts
       const MIN_UTTER_MS = 500;    // shorter = ignored as noise
       const MAX_UTTER_MS = 45000;
       const THRESHOLD = 0.022;     // RMS speech threshold
@@ -517,11 +538,13 @@ export default function AiChatBubble() {
           const speech = createSpeechStream();
           speechStreamRef.current = speech;
           voiceDeltaRef.current = (partial) => speech.push(partial);
+          voiceStatusRef.current = () => speech.filler();
           let reply: string | null = null;
           try {
             reply = await sendMessageRef.current(text);
           } finally {
             voiceDeltaRef.current = null;
+            voiceStatusRef.current = null;
           }
           if (stopped || !voiceModeRef.current) { speech.abort(); return; }
           if (reply) {
@@ -1005,6 +1028,7 @@ export default function AiChatBubble() {
                 voiceDeltaRef.current?.(snapshot); // feed streaming speech
               } else if (evt.type === 'status' && evt.label) {
                 setLoadingStatus(evt.label);
+                voiceStatusRef.current?.(); // tools are running — say something
               } else if (evt.type === 'done') {
                 responseActions = evt.actions;
               } else if (evt.type === 'error') {
