@@ -12,7 +12,14 @@ const TOKEN_COMPACT_THRESHOLD = 20000;
 
 // Tiny silent WAV — played inside the tap gesture to satisfy iOS autoplay
 // rules, so later AI replies can start speaking without a user tap.
-const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=';
+
+// iOS can leave media promises pending forever (play() on a source it never
+// finishes loading, resume() on a context it won't start). Never let voice
+// startup block on one — a hang means the recorder never starts and the mic
+// appears dead with no error at all.
+const settleWithin = <T,>(p: Promise<T>, ms: number) =>
+  Promise.race([p.catch(() => undefined), new Promise<void>(r => setTimeout(r, ms))]);
 
 type DisplayMode = 'full' | 'minimized' | 'floating' | 'fullscreen';
 
@@ -372,6 +379,23 @@ export default function AiChatBubble() {
       setToast('Microphone not supported in this browser');
       return;
     }
+    // Unlock audio + start warming the backend SYNCHRONOUSLY, before any
+    // await. iOS only honours play() while we're still user-activated, and
+    // the first await (getUserMedia) ends that window — doing this later
+    // meant replies could not autoplay at all.
+    const primed = voiceAudioRef.current || new Audio();
+    primed.src = SILENT_WAV;
+    primed.muted = false;
+    voiceAudioRef.current = primed;
+    primed.play().catch(() => {});
+    // Cold Vercel lambdas measured 2476ms server time vs 310ms warm
+    fetch('/api/admin/tts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'ok', voice: ttsVoiceRef.current }),
+    }).catch(() => {});
+    fetch('/api/admin/transcribe', { method: 'GET' }).catch(() => {});
+    fetch('/api/admin/ai-chat', { method: 'GET' }).catch(() => {});
+
     // If mic tracks leaked from a failed previous start, release them first
     let stream: MediaStream | null = null;
     try {
@@ -407,31 +431,12 @@ export default function AiChatBubble() {
       setVoiceState('listening');
       setVoiceCaption('');
 
-      // iOS autoplay unlock: play REAL audio inside the tap gesture. Calling
-      // play() on a src-less element doesn't reliably unlock it — a silent
-      // clip does, and every later reply reuses this same unlocked element.
-      const primed = voiceAudioRef.current || new Audio();
-      primed.src = SILENT_WAV;
-      primed.muted = false;
-      try { await primed.play(); } catch { /* unlock is best-effort */ }
-      voiceAudioRef.current = primed;
-
-      // Warm the serverless functions while the user is still talking. A cold
-      // Vercel lambda measured 2476ms of server time vs 310ms warm, which is
-      // the whole "first reply is delayed" complaint.
-      fetch('/api/admin/tts', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: 'ok', voice: ttsVoiceRef.current }),
-      }).catch(() => {});
-      fetch('/api/admin/transcribe', { method: 'GET' }).catch(() => {});
-      fetch('/api/admin/ai-chat', { method: 'GET' }).catch(() => {});
-
       const AC = window.AudioContext || (window as any).webkitAudioContext;
       const audioCtx = new AC();
       // iOS creates AudioContext in 'suspended' state. Without this the
       // analyser reads pure silence, the VAD never sees you stop talking,
       // and the turn hangs until the max-utterance timeout.
-      if (audioCtx.state === 'suspended') { try { await audioCtx.resume(); } catch {} }
+      if (audioCtx.state === 'suspended') await settleWithin(audioCtx.resume(), 400);
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 512;
       audioCtx.createMediaStreamSource(mic).connect(analyser);
@@ -460,6 +465,11 @@ export default function AiChatBubble() {
       let silenceMs = 0;
       let speechStartAt = 0;
       let bargeFrames = 0;
+      // Silence is ambiguous — tell the user if we genuinely hear nothing
+      // rather than leaving them talking at a dead mic
+      let heardAnything = false;
+      let quietMs = 0;
+      let hintShown = false;
 
       const startRecorder = () => {
         chunks = [];
@@ -531,6 +541,18 @@ export default function AiChatBubble() {
         if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
         if (recorder) {
           const level = rms();
+          if (level > 0.004) { heardAnything = true; quietMs = 0; }
+          else if (!heardAnything) {
+            quietMs += FRAME_MS;
+            if (quietMs >= 6000 && !hintShown) {
+              hintShown = true;
+              setVoiceCaption(
+                audioCtx.state !== 'running'
+                  ? "Audio is blocked on this device — close and reopen the app, then try again"
+                  : "I can't hear anything yet — check that nothing is covering the mic, and that another app (or a call) isn't using it"
+              );
+            }
+          }
           if (!userSpeaking) {
             if (level > THRESHOLD) {
               speechFrames++;
