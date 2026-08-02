@@ -839,9 +839,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
   };
 
+  // Dev-only apps — injected for super_admin (NexaVision) accounts only.
+  const appIcons = useMemo(() => {
+    if (!isSuperAdmin) return APP_ICONS;
+    const devProposals: AppIcon = {
+      id: 'dev-proposals', label: 'Dev Proposals', icon: Sparkles,
+      href: '/admin/dev/proposals', active: true,
+      color: '#D4772C', bg: 'rgba(212,119,44,0.15)', badge: 'DEV',
+    };
+    return [devProposals, ...APP_ICONS];
+  }, [isSuperAdmin]);
+
   const filtered = useMemo(() => drawerSearch
-    ? APP_ICONS.filter(a => a.label.toLowerCase().includes(drawerSearch.toLowerCase()))
-    : APP_ICONS, [drawerSearch]);
+    ? appIcons.filter(a => a.label.toLowerCase().includes(drawerSearch.toLowerCase()))
+    : appIcons, [drawerSearch, appIcons]);
 
   const touchStartY = useRef(0);
   const handleDrawerTouchStart = (e: React.TouchEvent) => { touchStartY.current = e.touches[0].clientY; };

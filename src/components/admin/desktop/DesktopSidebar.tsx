@@ -3,11 +3,18 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';
-import { NAV_ITEMS, NAV_GROUPS } from '../nav-items';
+import { ChevronLeft, ChevronRight, Lock, Sparkles } from 'lucide-react';
+import { NAV_ITEMS, NAV_GROUPS, type NavItem } from '../nav-items';
+import { createClient } from '@/lib/supabase/client';
 
 export default function DesktopSidebar() {
   const pathname = usePathname();
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      setIsSuperAdmin(data?.user?.user_metadata?.role === 'super_admin');
+    });
+  }, []);
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== 'undefined') return localStorage.getItem('ro_sidebar_collapsed') === '1';
     return false;
@@ -24,7 +31,11 @@ export default function DesktopSidebar() {
     return pathname === item.href || pathname?.startsWith(item.href + '/');
   };
 
-  const activeItems = NAV_ITEMS.filter(i => i.active);
+  const devItems: NavItem[] = isSuperAdmin ? [
+    { id: 'dev-proposals', label: 'Dev Proposals', icon: Sparkles, href: '/admin/dev/proposals', active: true, color: '#D4772C', bg: 'rgba(212,119,44,0.15)', group: 'dev' },
+  ] : [];
+  const activeItems = [...NAV_ITEMS.filter(i => i.active), ...devItems];
+  const navGroups = isSuperAdmin ? [...NAV_GROUPS, { key: 'dev', label: 'NexaVision Dev' }] : NAV_GROUPS;
   const comingSoonItems = NAV_ITEMS.filter(i => !i.active);
 
   return (
@@ -51,7 +62,7 @@ export default function DesktopSidebar() {
 
       {/* Nav items */}
       <div className="flex-1 overflow-y-auto py-2 scrollbar-hide">
-        {NAV_GROUPS.map(group => {
+        {navGroups.map(group => {
           const items = activeItems.filter(i => i.group === group.key);
           if (items.length === 0) return null;
           return (
