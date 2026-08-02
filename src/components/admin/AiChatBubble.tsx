@@ -10,6 +10,10 @@ interface NavigationAction { type: 'navigate'; path: string; description: string
 
 const TOKEN_COMPACT_THRESHOLD = 20000;
 
+// Tiny silent WAV — played inside the tap gesture to satisfy iOS autoplay
+// rules, so later AI replies can start speaking without a user tap.
+const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+
 type DisplayMode = 'full' | 'minimized' | 'floating' | 'fullscreen';
 
 export default function AiChatBubble() {
@@ -360,12 +364,24 @@ export default function AiChatBubble() {
       setVoiceState('listening');
       setVoiceCaption('');
 
-      // Prime an Audio element inside the tap gesture (iOS autoplay unlock)
-      const primed = new Audio();
-      primed.muted = true;
-      primed.play().catch(() => {});
+      // iOS autoplay unlock: play REAL audio inside the tap gesture. Calling
+      // play() on a src-less element doesn't reliably unlock it — a silent
+      // clip does, and every later reply reuses this same unlocked element.
+      const primed = voiceAudioRef.current || new Audio();
+      primed.src = SILENT_WAV;
       primed.muted = false;
+      try { await primed.play(); } catch { /* unlock is best-effort */ }
       voiceAudioRef.current = primed;
+
+      // Warm the serverless functions while the user is still talking. A cold
+      // Vercel lambda measured 2476ms of server time vs 310ms warm, which is
+      // the whole "first reply is delayed" complaint.
+      fetch('/api/admin/tts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: 'ok', voice: ttsVoiceRef.current }),
+      }).catch(() => {});
+      fetch('/api/admin/transcribe', { method: 'GET' }).catch(() => {});
+      fetch('/api/admin/ai-chat', { method: 'GET' }).catch(() => {});
 
       const AC = window.AudioContext || (window as any).webkitAudioContext;
       const audioCtx = new AC();

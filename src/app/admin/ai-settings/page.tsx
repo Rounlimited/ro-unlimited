@@ -56,6 +56,12 @@ function VoiceDiagnostics() {
 
   const run = async () => {
     setRunning(true);
+    // Unlock audio synchronously, still inside the tap gesture — iOS drops
+    // gesture context after the first await, and this mirrors what voice
+    // mode actually does rather than testing an unprimed element.
+    const audioEl = new Audio();
+    audioEl.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+    audioEl.play().catch(() => {});
     const out: { label: string; value: string; ok: boolean | null }[] = [];
     const push = (label: string, value: string, ok: boolean | null = null) => {
       out.push({ label, value, ok });
@@ -118,24 +124,40 @@ function VoiceDiagnostics() {
       push('Recording format', supported || 'none supported', !!supported);
     } catch { push('Recording format', 'MediaRecorder unavailable', false); }
 
-    // Speech synthesis round trip — the number that matters for "delayed"
-    try {
+    // Speech synthesis round trip. Measured twice: the first call may hit a
+    // cold serverless function (~2.5s), which is why voice mode now warms
+    // these endpoints the moment you tap the button.
+    const speechCall = async () => {
       const t0 = performance.now();
       const res = await fetch('/api/admin/tts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: 'Thursday looks good for the pour.', voice: localStorage.getItem('ro-tts-voice') || 'andrew' }),
       });
-      const netMs = Math.round(performance.now() - t0);
+      return { res, netMs: Math.round(performance.now() - t0) };
+    };
+    try {
+      const first = await speechCall();
+      if (!first.res.ok) {
+        push('Speech (1st call)', `FAILED HTTP ${first.res.status}`, false);
+      } else {
+        const engine = first.res.headers.get('x-tts-engine') || '?';
+        const serverMs = Number(first.res.headers.get('x-tts-ms') || 0);
+        push('Speech (1st call)', `${first.netMs}ms total · ${serverMs}ms server · ${engine}${serverMs > 1500 ? ' · cold start' : ''}`, first.netMs < 3000);
+        await first.res.blob();
+      }
+      const second = await speechCall();
+      const res = second.res;
+      const netMs = second.netMs;
       if (!res.ok) {
-        push('Speech request', `FAILED HTTP ${res.status}`, false);
+        push('Speech (warm)', `FAILED HTTP ${res.status}`, false);
       } else {
         const engine = res.headers.get('x-tts-engine') || '?';
         const serverMs = res.headers.get('x-tts-ms') || '?';
-        push('Speech request', `${netMs}ms total · ${serverMs}ms server · via ${engine}`, netMs < 3000);
+        push('Speech (warm)', `${netMs}ms total · ${serverMs}ms server · ${engine}`, netMs < 2000);
         // Time from having audio to it actually playing (iOS decode cost)
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
-        const a = new Audio();
+        const a = audioEl;
         a.src = url;
         const t1 = performance.now();
         const playMs = await new Promise<number>((resolve) => {
@@ -154,6 +176,7 @@ function VoiceDiagnostics() {
     } catch (e: any) {
       push('Speech request', `FAILED (${e?.message || e})`, false);
     }
+    try { audioEl.pause(); } catch {}
 
     try { micStream?.getTracks().forEach(t => t.stop()); } catch {}
     setRunning(false);
