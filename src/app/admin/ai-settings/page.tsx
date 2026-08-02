@@ -55,6 +55,7 @@ export default function AiSettingsPage() {
   const [defaultModel, setDefaultModel] = useState('grok');
   const [ttsVoice, setTtsVoice] = useState('andrew');
   const [autoRead, setAutoRead] = useState(false);
+  const [bargeIn, setBargeIn] = useState(true);
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [newMemory, setNewMemory] = useState('');
   const [newMemoryCat, setNewMemoryCat] = useState('general');
@@ -70,6 +71,7 @@ export default function AiSettingsPage() {
       const v = localStorage.getItem('ro-tts-voice');
       if (v) setTtsVoice(legacyMap[v] || v);
       setAutoRead(localStorage.getItem('ro-tts-autoread') === '1');
+      setBargeIn(localStorage.getItem('ro-voice-bargein') !== '0');
     } catch {}
     void loadData();
   }, []);
@@ -233,6 +235,24 @@ export default function AiSettingsPage() {
               </span>
               <span className={`w-12 h-7 rounded-full relative transition-colors flex-shrink-0 ${autoRead ? 'bg-[#C9A84C]' : 'bg-white/15'}`}>
                 <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${autoRead ? 'left-[26px]' : 'left-1'}`} />
+              </span>
+            </button>
+            {/* Barge-in toggle */}
+            <button onClick={() => setBargeIn(v => {
+              try { localStorage.setItem('ro-voice-bargein', !v ? '1' : '0'); } catch {}
+              return !v;
+            })} className="w-full flex items-center gap-3 px-4 py-4">
+              <span className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${bargeIn ? 'bg-green-500/20 text-green-300' : 'bg-white/5 text-white/40'}`}>
+                <MessageSquare size={19} />
+              </span>
+              <span className="text-left flex-1">
+                <span className="block text-[15px] font-semibold">Interrupt by talking</span>
+                <span className="block text-[12px] text-white/35">
+                  {bargeIn ? 'Just start talking to cut the AI off mid-sentence' : 'Off — tap the orb to interrupt instead'}
+                </span>
+              </span>
+              <span className={`w-12 h-7 rounded-full relative transition-colors flex-shrink-0 ${bargeIn ? 'bg-green-500' : 'bg-white/15'}`}>
+                <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${bargeIn ? 'left-[26px]' : 'left-1'}`} />
               </span>
             </button>
             {/* Voice picker */}

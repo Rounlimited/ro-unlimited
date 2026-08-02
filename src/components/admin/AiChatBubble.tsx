@@ -174,6 +174,20 @@ export default function AiChatBubble() {
   type SpeechStream = { push: (full: string) => void; finish: (full?: string) => Promise<void>; abort: () => void };
   const speechStreamRef = useRef<SpeechStream | null>(null);
   const voiceDeltaRef = useRef<((partial: string) => void) | null>(null);
+  // Barge-in: keep listening while the AI talks so you can cut in by voice.
+  // Only safe with echo cancellation on, or the mic hears the AI and the
+  // assistant interrupts itself in a loop.
+  const aiSpeakingRef = useRef(false);
+  const hasAecRef = useRef(true);
+  const [bargeIn, setBargeIn] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('ro-voice-bargein') !== '0';
+    return true;
+  });
+  const bargeInRef = useRef(bargeIn);
+  useEffect(() => {
+    bargeInRef.current = bargeIn;
+    try { localStorage.setItem('ro-voice-bargein', bargeIn ? '1' : '0'); } catch {}
+  }, [bargeIn]);
 
   // Text safe to speak: everything before the CHOICES marker, holding back a
   // partially-arrived marker so we never read "CHOI" aloud.
@@ -254,7 +268,7 @@ export default function AiChatBubble() {
           if (url) try { URL.revokeObjectURL(url); } catch {}
           return;
         }
-        if (!started) { started = true; setVoiceState('speaking'); }
+        if (!started) { started = true; aiSpeakingRef.current = true; setVoiceState('speaking'); }
         if (url) await playUrl(url);
         else await deviceSpeak(clean);
       });
@@ -290,8 +304,8 @@ export default function AiChatBubble() {
 
     return {
       push: (full) => drain(full, false),
-      finish: async (full) => { if (full != null) drain(full, true); await chain; },
-      abort: () => { aborted = true; speakDoneRef.current?.(); },
+      finish: async (full) => { if (full != null) drain(full, true); await chain; aiSpeakingRef.current = false; },
+      abort: () => { aborted = true; aiSpeakingRef.current = false; speakDoneRef.current?.(); },
     };
   };
 
@@ -323,6 +337,7 @@ export default function AiChatBubble() {
       const tryGet = (c: MediaStreamConstraints) => navigator.mediaDevices.getUserMedia(c);
       const FULL: MediaStreamConstraints = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
       const BARE: MediaStreamConstraints = { audio: true };
+      hasAecRef.current = true;
       try {
         stream = await tryGet(FULL);
       } catch (e1: any) {
@@ -332,9 +347,11 @@ export default function AiChatBubble() {
           stream = await tryGet(FULL);
         } catch (e2: any) {
           if (e2?.name !== 'NotReadableError' && e2?.name !== 'AbortError') throw e2;
-          // Last resort: ordinary mic source, no echo cancellation
+          // Last resort: ordinary mic source, no echo cancellation. Barge-in
+          // must stay off here or the mic hears the AI's own voice.
           stream = await tryGet(BARE);
-          setToast('Voice on (basic mic mode) — use headphones if it hears itself');
+          hasAecRef.current = false;
+          setToast('Voice on (basic mic mode) — tap the orb to interrupt; headphones recommended');
         }
       }
       const mic: MediaStream = stream;
@@ -370,11 +387,16 @@ export default function AiChatBubble() {
       const MIN_UTTER_MS = 500;    // shorter = ignored as noise
       const MAX_UTTER_MS = 45000;
       const THRESHOLD = 0.022;     // RMS speech threshold
+      // Barge-in needs a higher bar than normal speech so leftover echo,
+      // coughs, or room noise can't make the AI interrupt itself
+      const BARGE_THRESHOLD = 0.055;
+      const BARGE_FRAMES = 6;      // ~360ms of sustained talking
 
       let userSpeaking = false;
       let speechFrames = 0;
       let silenceMs = 0;
       let speechStartAt = 0;
+      let bargeFrames = 0;
 
       const startRecorder = () => {
         chunks = [];
@@ -463,6 +485,27 @@ export default function AiChatBubble() {
               }
             }
           }
+        } else if (aiSpeakingRef.current && bargeInRef.current && hasAecRef.current) {
+          // Barge-in: the AI is talking and the mic is still open. Echo
+          // cancellation removes the AI's own voice from this signal, so a
+          // sustained loud level means the user is talking over it. Demand
+          // more than normal speech detection so residual echo can't trigger.
+          if (rms() > BARGE_THRESHOLD) {
+            bargeFrames++;
+            if (bargeFrames >= BARGE_FRAMES) {
+              bargeFrames = 0;
+              speechStreamRef.current?.abort();
+              try { voiceAudioRef.current?.pause(); } catch {}
+              window.speechSynthesis?.cancel();
+              speakDoneRef.current?.();
+              // They're already mid-sentence — capture from right now and
+              // end the turn on their next pause
+              resumeListening();
+              userSpeaking = true;
+              speechStartAt = Date.now();
+              silenceMs = 0;
+            }
+          } else bargeFrames = 0;
         }
         vadTimer = setTimeout(tick, FRAME_MS);
       };
@@ -1248,7 +1291,10 @@ export default function AiChatBubble() {
           </button>
 
           <p className="mt-8 text-[20px] font-semibold text-white">
-            {voiceState === 'listening' ? 'Listening…' : voiceState === 'thinking' ? 'Working on it…' : 'Speaking — tap orb to interrupt'}
+            {voiceState === 'listening' ? 'Listening…'
+              : voiceState === 'thinking' ? 'Working on it…'
+              : bargeIn ? 'Speaking — just talk to cut in'
+              : 'Speaking — tap orb to interrupt'}
           </p>
           <p className="mt-1 text-[14px] text-white/35">
             {voiceState === 'listening' ? 'Just talk — I’ll answer when you pause' : ' '}
