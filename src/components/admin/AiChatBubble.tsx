@@ -162,73 +162,145 @@ export default function AiChatBubble() {
       .replace(/^\d+\.\s/gm, '')
       .replace(/---+/g, '')
       .replace(/\n{2,}/g, '. ')
+      .replace(/[*_`#]+/g, '') // stray markdown from mid-sentence chunks
       .trim();
 
-  // Speak and resolve when done. Natural voice via /api/admin/tts (reliable
-  // 'ended' event from the Audio element); falls back to device TTS.
-  const speakReply = (text: string) => new Promise<void>((resolve) => {
-    let done = false;
-    const finish = () => { if (!done) { done = true; speakDoneRef.current = null; resolve(); } };
-    speakDoneRef.current = finish;
-    const clean = cleanForSpeech(text);
-    if (!clean) return finish();
-    setVoiceState('speaking');
+  // ═══ STREAMING SPEECH ═══
+  // Time-to-first-word is what makes voice feel alive. Synthesis time scales
+  // with length — a 4-sentence reply takes ~9s to render as one file, and
+  // rendering only starts once the reply finishes generating. So instead we
+  // cut the reply into sentences AS IT STREAMS, synthesize each immediately,
+  // and play them back-to-back while later sentences are still being written.
+  type SpeechStream = { push: (full: string) => void; finish: (full?: string) => Promise<void>; abort: () => void };
+  const speechStreamRef = useRef<SpeechStream | null>(null);
+  const voiceDeltaRef = useRef<((partial: string) => void) | null>(null);
 
-    (async () => {
-      try {
-        const res = await fetch('/api/admin/tts', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: clean, voice: ttsVoiceRef.current }),
-        });
-        if (res.ok && voiceModeRef.current && !done) {
-          const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
-          const audio = voiceAudioRef.current || new Audio();
-          voiceAudioRef.current = audio;
-          audio.src = url;
-          audio.onended = () => { URL.revokeObjectURL(url); finish(); };
-          audio.onerror = () => { URL.revokeObjectURL(url); finish(); };
-          await audio.play();
-          // Watchdog: if 'ended' never fires (iOS backgrounding, decode
-          // stall) the loop must still return to listening
-          let lastT = -1;
-          const watchdog = () => {
-            if (done) return;
-            if (audio.paused || audio.ended || audio.currentTime === lastT) {
-              URL.revokeObjectURL(url); finish(); return;
-            }
-            lastT = audio.currentTime;
-            setTimeout(watchdog, 2000);
-          };
-          setTimeout(watchdog, Math.min(90000, (clean.length / 10) * 1000 + 8000));
+  // Text safe to speak: everything before the CHOICES marker, holding back a
+  // partially-arrived marker so we never read "CHOI" aloud.
+  const speakableRegion = (t: string) => {
+    const i = t.search(/\n?\s*CHOICES\s*:/);
+    if (i >= 0) return t.slice(0, i);
+    const partial = t.match(/\n\s*C(?:H(?:O(?:I(?:C(?:E(?:S(?:\s*:?)?)?)?)?)?)?)?$/);
+    return partial ? t.slice(0, t.length - partial[0].length) : t;
+  };
+
+  const fetchSpeechUrl = async (text: string): Promise<string | null> => {
+    try {
+      const res = await fetch('/api/admin/tts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: ttsVoiceRef.current }),
+      });
+      if (!res.ok) return null;
+      return URL.createObjectURL(await res.blob());
+    } catch { return null; }
+  };
+
+  const playUrl = (url: string) => new Promise<void>((resolve) => {
+    let done = false;
+    const finish = () => { if (done) return; done = true; try { URL.revokeObjectURL(url); } catch {} resolve(); };
+    speakDoneRef.current = finish;
+    const audio = voiceAudioRef.current || new Audio();
+    voiceAudioRef.current = audio;
+    audio.onended = finish;
+    audio.onerror = finish;
+    audio.src = url;
+    audio.play().catch(finish);
+    // Watchdog — 'ended' can silently never fire (iOS backgrounding, stalls)
+    let last = -1;
+    const tick = () => {
+      if (done) return;
+      if (audio.paused || audio.ended || audio.currentTime === last) return finish();
+      last = audio.currentTime;
+      setTimeout(tick, 2000);
+    };
+    setTimeout(tick, 6000);
+  });
+
+  const deviceSpeak = (text: string) => new Promise<void>((resolve) => {
+    let done = false;
+    const finish = () => { if (done) return; done = true; resolve(); };
+    speakDoneRef.current = finish;
+    if ((window as any).RONative?.speak) {
+      (window as any).RONative.speak(text);
+      setTimeout(finish, Math.min(30000, (text.length / 14) * 1000 + 600));
+      return;
+    }
+    if (window.speechSynthesis) {
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.05;
+      u.onend = finish;
+      u.onerror = finish;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+      setTimeout(finish, Math.min(35000, (text.length / 11) * 1000 + 3000));
+      return;
+    }
+    finish();
+  });
+
+  const createSpeechStream = (): SpeechStream => {
+    let cursor = 0;       // chars already handed off to synthesis
+    let aborted = false;
+    let started = false;
+    let chain: Promise<void> = Promise.resolve();
+
+    const speakChunk = (raw: string) => {
+      const clean = cleanForSpeech(raw);
+      if (!clean) return;
+      const job = fetchSpeechUrl(clean); // synthesis starts NOW, in parallel
+      chain = chain.then(async () => {
+        const url = await job;
+        if (aborted || !voiceModeRef.current) {
+          if (url) try { URL.revokeObjectURL(url); } catch {}
           return;
         }
-      } catch { /* fall through to device TTS */ }
-      if (done || !voiceModeRef.current) return finish();
-      // Device fallback
-      if ((window as any).RONative?.speak) {
-        (window as any).RONative.speak(clean);
-        setTimeout(finish, Math.min(30000, (clean.length / 14) * 1000 + 600));
-        return;
+        if (!started) { started = true; setVoiceState('speaking'); }
+        if (url) await playUrl(url);
+        else await deviceSpeak(clean);
+      });
+    };
+
+    // Peel complete sentences off the text received so far
+    const drain = (full: string, flushTail: boolean) => {
+      if (aborted) return;
+      const speakable = flushTail ? full : speakableRegion(full);
+      while (cursor < speakable.length) {
+        const pending = speakable.slice(cursor);
+        const minLen = cursor === 0 ? 25 : 90; // start talking fast, then bigger chunks
+        const maxLen = 260;
+        if (!flushTail && pending.length < minLen) break;
+        let end = -1;
+        const re = /[.!?…](?=\s|$)|\n/g;
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(pending))) {
+          if (m.index + 1 >= Math.min(minLen, pending.length)) { end = m.index + 1; break; }
+        }
+        if (end < 0) {
+          if (flushTail) end = pending.length;
+          else if (pending.length >= maxLen) {
+            const slice = pending.slice(0, maxLen);
+            const sp = slice.lastIndexOf(' ');
+            end = sp > minLen ? sp : maxLen;
+          } else break;
+        }
+        cursor += end;
+        speakChunk(pending.slice(0, end));
       }
-      if (window.speechSynthesis) {
-        const u = new SpeechSynthesisUtterance(clean);
-        u.rate = 1.05;
-        u.onend = finish;
-        u.onerror = finish;
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(u);
-        setTimeout(finish, Math.min(35000, (clean.length / 11) * 1000 + 3000)); // safety net
-        return;
-      }
-      finish();
-    })();
-  });
+    };
+
+    return {
+      push: (full) => drain(full, false),
+      finish: async (full) => { if (full != null) drain(full, true); await chain; },
+      abort: () => { aborted = true; speakDoneRef.current?.(); },
+    };
+  };
 
   const stopVoiceMode = useCallback(() => {
     voiceModeRef.current = false;
     setVoiceMode(false);
     setVoiceCaption('');
+    speechStreamRef.current?.abort();
+    speechStreamRef.current = null;
     speakDoneRef.current?.();
     voiceCleanupRef.current();
   }, []);
@@ -345,13 +417,24 @@ export default function AiChatBubble() {
           if (stopped || !voiceModeRef.current) return;
           if (text.length < 2) { resumeListening(); return; }
           setVoiceCaption(`“${text}”`);
-          const reply = await sendMessageRef.current(text);
-          if (stopped || !voiceModeRef.current) return;
+          // Speak sentences as they stream in rather than waiting for the
+          // whole reply to be written and then synthesized
+          const speech = createSpeechStream();
+          speechStreamRef.current = speech;
+          voiceDeltaRef.current = (partial) => speech.push(partial);
+          let reply: string | null = null;
+          try {
+            reply = await sendMessageRef.current(text);
+          } finally {
+            voiceDeltaRef.current = null;
+          }
+          if (stopped || !voiceModeRef.current) { speech.abort(); return; }
           if (reply) {
             const spoken = cleanForSpeech(reply);
             setVoiceCaption(spoken.length > 240 ? spoken.slice(0, 240) + '…' : spoken);
-            await speakReply(reply);
           }
+          await speech.finish(reply || undefined);
+          speechStreamRef.current = null;
         } catch { /* resume regardless */ }
         resumeListening();
       };
@@ -416,8 +499,10 @@ export default function AiChatBubble() {
     }
   };
 
-  // Interrupt the AI mid-speech → jump back to listening
+  // Interrupt the AI mid-speech → drop the whole queued reply, not just the
+  // sentence currently playing, and jump back to listening
   const interruptSpeech = () => {
+    speechStreamRef.current?.abort();
     try { voiceAudioRef.current?.pause(); } catch {}
     window.speechSynthesis?.cancel();
     speakDoneRef.current?.();
@@ -786,6 +871,7 @@ export default function AiChatBubble() {
                 replyText += evt.text;
                 const snapshot = replyText;
                 setMessages([...newMessages, { role: 'assistant', content: snapshot }]);
+                voiceDeltaRef.current?.(snapshot); // feed streaming speech
               } else if (evt.type === 'status' && evt.label) {
                 setLoadingStatus(evt.label);
               } else if (evt.type === 'done') {

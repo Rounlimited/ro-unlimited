@@ -35,7 +35,9 @@ function edgeSpeech(edgeVoice: string, input: string): Promise<Buffer> {
       await tts.setMetadata(edgeVoice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
       const { audioStream } = tts.toStream(input);
       const chunks: Buffer[] = [];
-      const timer = setTimeout(() => reject(new Error('edge-tts timeout')), 25000);
+      // Short — sentence-sized chunks render in ~1s, so a slow attempt
+      // should hand off to the relay fast rather than stalling speech
+      const timer = setTimeout(() => reject(new Error('edge-tts timeout')), 7000);
       audioStream.on('data', (c: Buffer) => chunks.push(c));
       audioStream.on('end', () => {
         clearTimeout(timer);
