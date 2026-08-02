@@ -28,7 +28,7 @@ interface Props {
 export default function ProposalRenderer({ content, token, initialApproved }: Props) {
   const c = content;
   return (
-    <div className="prop-root">
+    <div className={`prop-root${token ? '' : ' preview'}`}>
       <ProposalStyles />
       <div className="rail"><span className="depth-tag">{c.brandFrom?.toUpperCase() || 'NEXAVISION'}</span></div>
       <main>
@@ -252,8 +252,11 @@ function ProposalStyles() {
   --paper:#F2EFE9; --pdim:rgba(242,239,233,.62); --pline:rgba(242,239,233,.14);
   background:var(--bedrock); color:var(--paper);
   font-family:Inter,system-ui,sans-serif; font-size:16px; line-height:1.65;
-  min-height:100vh; -webkit-font-smoothing:antialiased;
+  min-height:100vh; position:relative; -webkit-font-smoothing:antialiased;
 }
+.prop-root.preview .rail{position:absolute}
+.prop-root.preview .hero{min-height:70vh}
+.prop-root.preview .depth-tag{position:absolute;top:14px}
 .prop-root *{margin:0;padding:0;box-sizing:border-box}
 .prop-root .display{font-family:Anton,sans-serif;letter-spacing:.01em;text-transform:uppercase;line-height:1.04;font-weight:400}
 .prop-root .rail{position:fixed;left:0;top:0;bottom:0;width:44px;border-right:1px solid var(--pline);background:linear-gradient(180deg,rgba(13,21,36,.9),rgba(13,21,36,.7));z-index:50;pointer-events:none}

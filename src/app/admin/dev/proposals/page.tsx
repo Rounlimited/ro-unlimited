@@ -129,7 +129,7 @@ export default function DevProposalsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-24">
+    <div className="h-full overflow-y-auto bg-zinc-50 pb-24">
       <div className="mx-auto max-w-5xl px-4 pt-6">
         <div className="flex items-center justify-between mb-1">
           <h1 className="text-xl font-bold text-zinc-900">Dev Proposals</h1>
