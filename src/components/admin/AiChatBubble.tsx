@@ -144,6 +144,14 @@ export default function AiChatBubble() {
   const [voiceMode, setVoiceMode] = useState(false);
   const [voiceState, setVoiceState] = useState<'listening' | 'thinking' | 'speaking'>('listening');
   const [voiceCaption, setVoiceCaption] = useState('');
+  // Live spoken transcript: one entry per sentence handed to the synthesizer,
+  // with the one currently being spoken highlighted and scrolled into view.
+  const [voiceLines, setVoiceLines] = useState<string[]>([]);
+  const [voiceActive, setVoiceActive] = useState(-1);
+  const activeLineRef = useRef<HTMLSpanElement | null>(null);
+  useEffect(() => {
+    activeLineRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [voiceActive]);
   const voiceModeRef = useRef(false);
   // Microsoft Edge neural voices (served via /api/admin/tts) — free,
   // natural, same voices as Copilot Read Aloud
@@ -317,11 +325,14 @@ export default function AiChatBubble() {
     let aborted = false;
     let started = false;
     let fillerUsed = false;
+    let lineCount = 0;
     let chain: Promise<void> = Promise.resolve();
 
     const speakChunk = (raw: string) => {
       const clean = cleanForSpeech(raw);
       if (!clean) return;
+      const idx = lineCount++;
+      setVoiceLines(prev => [...prev, clean]);
       const job = fetchSpeechUrl(clean); // synthesis starts NOW, in parallel
       chain = chain.then(async () => {
         const url = await job;
@@ -330,6 +341,7 @@ export default function AiChatBubble() {
           return;
         }
         if (!started) { started = true; aiSpeakingRef.current = true; setVoiceState('speaking'); }
+        setVoiceActive(idx); // highlight + scroll to the sentence being spoken
         if (url) await playUrl(url);
         else await deviceSpeak(clean);
       });
@@ -341,11 +353,16 @@ export default function AiChatBubble() {
       const speakable = flushTail ? full : speakableRegion(full);
       while (cursor < speakable.length) {
         const pending = speakable.slice(cursor);
-        const minLen = cursor === 0 ? 25 : 90; // start talking fast, then bigger chunks
+        const first = cursor === 0;
+        // Get the first words out fast — the reply is already on screen while
+        // the synthesizer works, so a short opening chunk closes that gap.
+        // Later chunks are longer so the delivery doesn't sound chopped.
+        const minLen = first ? 12 : 90;
         const maxLen = 260;
         if (!flushTail && pending.length < minLen) break;
         let end = -1;
-        const re = /[.!?…](?=\s|$)|\n/g;
+        // First chunk may break on a clause; later ones need a full sentence
+        const re = first ? /[.!?…,;:](?=\s|$)|\n/g : /[.!?…](?=\s|$)|\n/g;
         let m: RegExpExecArray | null;
         while ((m = re.exec(pending))) {
           if (m.index + 1 >= Math.min(minLen, pending.length)) { end = m.index + 1; break; }
@@ -532,7 +549,9 @@ export default function AiChatBubble() {
           const text = transcript.trim();
           if (stopped || !voiceModeRef.current) return;
           if (text.length < 2) { resumeListening(); return; }
-          setVoiceCaption(`“${text}”`);
+          setVoiceCaption(text);
+          setVoiceLines([]);
+          setVoiceActive(-1);
           // Speak sentences as they stream in rather than waiting for the
           // whole reply to be written and then synthesized
           const speech = createSpeechStream();
@@ -547,10 +566,6 @@ export default function AiChatBubble() {
             voiceStatusRef.current = null;
           }
           if (stopped || !voiceModeRef.current) { speech.abort(); return; }
-          if (reply) {
-            const spoken = cleanForSpeech(reply);
-            setVoiceCaption(spoken.length > 240 ? spoken.slice(0, 240) + '…' : spoken);
-          }
           await speech.finish(reply || undefined);
           speechStreamRef.current = null;
         } catch { /* resume regardless */ }
@@ -1371,12 +1386,13 @@ export default function AiChatBubble() {
 
       {/* ── VOICE CONVERSATION OVERLAY ── */}
       {voiceMode && (
-        <div className="fixed inset-0 z-[140] bg-[#0a0a0a]/[0.97] backdrop-blur-xl flex flex-col items-center justify-center px-8"
-          style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}>
-          {/* Orb — tap to interrupt while the AI is speaking */}
+        <div className="fixed inset-0 z-[140] bg-[#0a0a0a]/[0.97] backdrop-blur-xl flex flex-col items-center px-5 pt-4"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)', paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}>
+          {/* Orb — shrinks once there's a reply to read, so the words get the
+              screen. Tap to interrupt while the AI is speaking. */}
           <button
             onClick={voiceState === 'speaking' ? interruptSpeech : undefined}
-            className="relative w-44 h-44 flex items-center justify-center outline-none"
+            className={`relative flex items-center justify-center outline-none flex-shrink-0 transition-all duration-500 ${voiceLines.length ? 'w-24 h-24' : 'w-44 h-44'}`}
           >
             <div
               className={`absolute inset-0 rounded-full transition-all duration-700 ${
@@ -1391,7 +1407,7 @@ export default function AiChatBubble() {
               }}
             />
             <div
-              className="relative w-28 h-28 rounded-full flex items-center justify-center transition-colors duration-500"
+              className={`relative rounded-full flex items-center justify-center transition-all duration-500 ${voiceLines.length ? 'w-16 h-16' : 'w-28 h-28'}`}
               style={{
                 background: voiceState === 'listening'
                   ? 'linear-gradient(135deg, #34d399, #059669)'
@@ -1401,44 +1417,77 @@ export default function AiChatBubble() {
                 boxShadow: '0 0 60px rgba(0,0,0,0.4)',
               }}
             >
-              {voiceState === 'listening' ? <Mic size={44} className="text-black/80" />
-                : voiceState === 'thinking' ? <Loader2 size={44} className="text-black/80 animate-spin" />
-                : <Volume2 size={44} className="text-black/80" />}
+              {(() => {
+                const sz = voiceLines.length ? 26 : 44;
+                return voiceState === 'listening' ? <Mic size={sz} className="text-black/80" />
+                  : voiceState === 'thinking' ? <Loader2 size={sz} className="text-black/80 animate-spin" />
+                  : <Volume2 size={sz} className="text-black/80" />;
+              })()}
             </div>
           </button>
 
-          <p className="mt-8 text-[20px] font-semibold text-white">
+          <p className={`font-bold text-white flex-shrink-0 ${voiceLines.length ? 'mt-3 text-[19px]' : 'mt-8 text-[24px]'}`}>
             {voiceState === 'listening' ? 'Listening…'
               : voiceState === 'thinking' ? 'Working on it…'
               : bargeIn ? 'Speaking — just talk to cut in'
               : 'Speaking — tap orb to interrupt'}
           </p>
-          <p className="mt-1 text-[14px] text-white/35">
-            {voiceState === 'listening' ? 'Just talk — I’ll answer when you pause' : ' '}
-          </p>
-
-          {voiceCaption && (
-            <p className="mt-6 max-w-md text-center text-[15px] text-white/60 leading-relaxed px-2">{voiceCaption}</p>
+          {!voiceLines.length && (
+            <p className="mt-2 text-[17px] text-white/45 flex-shrink-0 text-center">
+              {voiceState === 'listening' ? 'Just talk — I’ll answer when you pause' : ' '}
+            </p>
           )}
 
-          {/* Voice picker — takes effect on the next reply */}
-          <div className="mt-8 flex flex-wrap justify-center gap-1.5 max-w-sm">
-            {VOICE_OPTIONS.map(v => (
-              <button key={v} onClick={() => setTtsVoice(v)}
-                className={`px-3 py-1.5 rounded-full text-[12px] font-semibold capitalize transition-all ${
-                  ttsVoice === v
-                    ? 'bg-[#C9A84C] text-black shadow-[0_0_12px_rgba(201,168,76,0.5)]'
-                    : 'bg-white/5 border border-white/10 text-white/40 hover:text-white/70'
-                }`}>
-                {v}
-              </button>
-            ))}
-          </div>
+          {/* What you said */}
+          {voiceCaption && (
+            <p className="mt-3 max-w-2xl w-full text-center text-[17px] text-[#C9A84C]/75 leading-snug flex-shrink-0 px-2 line-clamp-2">
+              “{voiceCaption}”
+            </p>
+          )}
+
+          {/* The reply — large, scrolls itself, and follows along sentence by
+              sentence as it is spoken so you never lose your place */}
+          {voiceLines.length > 0 && (
+            <div className="mt-4 flex-1 min-h-0 w-full max-w-2xl overflow-y-auto px-1">
+              <p className="text-[26px] leading-[1.45] font-medium text-center pb-8">
+                {voiceLines.map((line, i) => (
+                  <span
+                    key={i}
+                    ref={i === voiceActive ? activeLineRef : undefined}
+                    className={
+                      i === voiceActive ? 'text-white'
+                        : i < voiceActive ? 'text-white/40'
+                        : 'text-white/55'
+                    }
+                  >
+                    {line}{' '}
+                  </span>
+                ))}
+              </p>
+            </div>
+          )}
+
+          {/* Voice picker — hidden once a reply is on screen so the words
+              get the room. Takes effect on the next reply. */}
+          {!voiceLines.length && (
+            <div className="mt-8 flex flex-wrap justify-center gap-2 max-w-md flex-shrink-0">
+              {VOICE_OPTIONS.map(v => (
+                <button key={v} onClick={() => setTtsVoice(v)}
+                  className={`px-4 py-2 rounded-full text-[15px] font-semibold capitalize transition-all ${
+                    ttsVoice === v
+                      ? 'bg-[#C9A84C] text-black shadow-[0_0_12px_rgba(201,168,76,0.5)]'
+                      : 'bg-white/5 border border-white/10 text-white/50 hover:text-white/80'
+                  }`}>
+                  {v}
+                </button>
+              ))}
+            </div>
+          )}
 
           <button onClick={stopVoiceMode}
-            className="absolute bottom-0 mb-10 flex items-center gap-2 px-6 py-3.5 rounded-full bg-white/10 border border-white/15 text-white text-[15px] font-semibold active:scale-95 transition-transform"
-            style={{ marginBottom: 'calc(env(safe-area-inset-bottom) + 32px)' }}>
-            <X size={18} /> End conversation
+            className="mt-4 flex-shrink-0 flex items-center gap-2 px-7 py-4 rounded-full bg-white/10 border border-white/15 text-white text-[17px] font-bold active:scale-95 transition-transform"
+            style={{ marginBottom: 'env(safe-area-inset-bottom)' }}>
+            <X size={20} /> End conversation
           </button>
         </div>
       )}
@@ -1662,7 +1711,7 @@ export default function AiChatBubble() {
             <div key={idx}>
               <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`rounded-2xl px-3 py-2 leading-relaxed ${
-                  isFloating ? 'max-w-[95%] text-[13px]' : isFullscreen ? 'max-w-[80%] text-[16px]' : 'max-w-[90%] text-[15px]'
+                  isFloating ? 'max-w-[95%] text-[15px]' : isFullscreen ? 'max-w-[80%] text-[19px]' : 'max-w-[90%] text-[18px]'
                 } ${
                   msg.role === 'user' ? 'bg-[#C9A84C]/15 text-white rounded-br-md' : 'bg-[#111] border border-white/5 text-white/80 rounded-bl-md'
                 }`}>
@@ -1677,7 +1726,7 @@ export default function AiChatBubble() {
                 <div className={`flex flex-wrap gap-2 mt-2 ${isFullscreen ? 'max-w-[80%]' : ''}`}>
                   {choices.map(choice => (
                     <button key={choice} onClick={() => sendMessage(choice)}
-                      className={`px-4 py-2.5 rounded-xl border border-[#C9A84C]/35 bg-[#C9A84C]/10 text-[#C9A84C] font-semibold hover:bg-[#C9A84C]/20 active:scale-95 transition-all ${isFloating ? 'text-[13px] px-3 py-2' : 'text-[15px]'}`}>
+                      className={`px-5 py-3.5 rounded-xl border border-[#C9A84C]/35 bg-[#C9A84C]/10 text-[#C9A84C] font-bold hover:bg-[#C9A84C]/20 active:scale-95 transition-all ${isFloating ? 'text-[14px] px-3 py-2' : 'text-[18px]'}`}>
                       {choice}
                     </button>
                   ))}
@@ -1736,7 +1785,7 @@ export default function AiChatBubble() {
               disabled={loading || transcribing}
               className={`flex-1 bg-[#1a1a1a] border rounded-xl px-3 text-white placeholder-white/25 focus:outline-none transition-colors ${
                 listening ? 'border-red-500/50 bg-red-500/5' : transcribing ? 'border-[#C9A84C]/30 bg-[#C9A84C]/5' : attachedImage ? 'border-[#C9A84C]/30' : 'border-white/10 focus:border-[#C9A84C]/50'
-              } ${isFloating ? 'py-2 text-[13px]' : isFullscreen ? 'py-3 text-[16px] px-4' : 'py-3 text-[15px] px-4'}`} />
+              } ${isFloating ? 'py-2 text-[15px]' : isFullscreen ? 'py-3.5 text-[18px] px-4' : 'py-3.5 text-[17px] px-4'}`} />
             {/* Camera / photo button — label for reliable mobile file picker */}
             <label htmlFor={loading ? undefined : 'chat-photo-input'}
               className={`rounded-xl transition-colors flex-shrink-0 inline-flex items-center justify-center ${
