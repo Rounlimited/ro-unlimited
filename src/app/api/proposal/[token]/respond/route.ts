@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/server';
+import { sanityWriteClient } from '@/lib/sanity/client';
 
 type RouteContext = { params: { token: string } };
 
@@ -13,14 +13,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Invalid response type' }, { status: 400 });
     }
 
-    const supabase = createAdminClient();
-    const { data: doc, error } = await supabase
-      .from('dev_proposals')
-      .select('id, status, responses')
-      .eq('share_token', params.token)
-      .single();
-
-    if (error || !doc || doc.status === 'draft') {
+    const doc = await sanityWriteClient.fetch(
+      `*[_type == "devProposal" && shareToken == $token][0]{ _id, status, responses }`,
+      { token: params.token }
+    );
+    if (!doc || doc.status === 'draft') {
       return NextResponse.json({ error: 'Proposal not found' }, { status: 404 });
     }
 
@@ -32,25 +29,19 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       meta: { ua: req.headers.get('user-agent') || undefined },
     };
 
-    const responses = Array.isArray(doc.responses) ? [...doc.responses, entry] : [entry];
+    const prev = doc.responses ? JSON.parse(doc.responses) : [];
+    const responses = [...prev, entry];
     const now = new Date().toISOString();
-    const patch: Record<string, unknown> = { responses, updated_at: now };
+    const patch: Record<string, unknown> = { responses: JSON.stringify(responses) };
 
     if (type === 'approval') {
       patch.status = 'approved';
-      patch.approved_at = now;
+      patch.approvedAt = now;
     } else if (doc.status !== 'approved') {
       patch.status = 'responded';
     }
 
-    const { error: upErr } = await supabase
-      .from('dev_proposals')
-      .update(patch)
-      .eq('id', doc.id);
-
-    if (upErr) {
-      return NextResponse.json({ error: 'Failed to save response' }, { status: 500 });
-    }
+    await sanityWriteClient.patch(doc._id).set(patch).commit();
     return NextResponse.json({ ok: true, status: patch.status || doc.status });
   } catch (e: unknown) {
     console.error('[proposal respond]', e);
