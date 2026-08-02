@@ -1908,10 +1908,19 @@ const toolStatusLabel = (name: string) => TOOL_STATUS_LABELS[name] || 'Working o
 
 type StreamEmit = (evt: Record<string, any>) => void;
 
+// Normalised result of one streamed round, shared by the Grok and Claude
+// paths so a single tool loop can drive either provider.
+// `toolCalls` is always OpenAI-shaped ({ id, function: { name, arguments } });
+// `content` carries the raw Anthropic assistant blocks (Claude only) needed to
+// replay the turn.
+type StreamRound = { text: string; toolCalls: any[]; finishReason: string; content?: any[] };
+
+const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
+
 // One streamed Grok round: emits text deltas live, accumulates any tool calls.
 async function grokStreamRound(
   apiMessages: any[], tools: any[] | undefined, grokKey: string, emit: StreamEmit,
-): Promise<{ text: string; toolCalls: any[]; finishReason: string } | null> {
+): Promise<StreamRound | null> {
   const res = await fetch('https://api.x.ai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${grokKey}`, 'Content-Type': 'application/json' },
@@ -1971,6 +1980,106 @@ async function grokStreamRound(
   }
 
   return { text, toolCalls: Object.values(toolCallsAcc), finishReason };
+}
+
+// One streamed Claude round — mirrors grokStreamRound: emits text deltas live,
+// accumulates any tool_use blocks. Anthropic SSE splits every content block
+// across start/delta/stop events, so blocks are accumulated by index and
+// replayed in order at the end.
+async function claudeStreamRound(
+  apiMessages: any[], systemBlocks: any[], tools: any[] | undefined, claudeKey: string, emit: StreamEmit,
+): Promise<StreamRound | null> {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': claudeKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 4000,
+      system: systemBlocks,
+      messages: apiMessages,
+      stream: true,
+      ...(tools?.length ? { tools } : {}),
+    }),
+  });
+  if (!res.ok || !res.body) {
+    console.error('[ai-chat] Claude stream error:', res.status, await res.text().catch(() => ''));
+    return null;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let text = '';
+  let stopReason = '';
+  let streamFailed = false;
+  const blocks: Record<number, { type: string; text: string; id?: string; name?: string; partialJson: string }> = {};
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      // Anthropic SSE also sends `event:` lines — only `data:` carries payload
+      if (!trimmed.startsWith('data:')) continue;
+      const payload = trimmed.slice(5).trim();
+      if (!payload || payload === '[DONE]') continue;
+      try {
+        const evt = JSON.parse(payload);
+        if (evt.type === 'content_block_start') {
+          const cb = evt.content_block || {};
+          blocks[evt.index] = cb.type === 'tool_use'
+            ? { type: 'tool_use', text: '', id: cb.id, name: cb.name, partialJson: '' }
+            : { type: cb.type || 'text', text: cb.text || '', partialJson: '' };
+        } else if (evt.type === 'content_block_delta') {
+          const b = blocks[evt.index] || (blocks[evt.index] = { type: 'text', text: '', partialJson: '' });
+          if (evt.delta?.type === 'text_delta' && evt.delta.text) {
+            // This is what lets voice mode start speaking before the turn ends
+            b.text += evt.delta.text;
+            text += evt.delta.text;
+            emit({ type: 'delta', text: evt.delta.text });
+          } else if (evt.delta?.type === 'input_json_delta' && typeof evt.delta.partial_json === 'string') {
+            b.partialJson += evt.delta.partial_json;
+          }
+        } else if (evt.type === 'message_delta') {
+          // Carries the stop reason — 'tool_use' means tools were requested
+          if (evt.delta?.stop_reason) stopReason = evt.delta.stop_reason;
+        } else if (evt.type === 'error') {
+          console.error('[ai-chat] Claude stream event error:', JSON.stringify(evt.error || evt));
+          streamFailed = true;
+        }
+        // content_block_stop / message_stop need no work — the block is already
+        // finalised in place, and message_stop just ends the read loop.
+      } catch { /* ignore malformed keepalive chunks */ }
+    }
+  }
+  if (streamFailed) return null;
+
+  // Replay blocks in index order into the Anthropic assistant content + the
+  // OpenAI-shaped toolCalls the shared tool loop consumes.
+  const content: any[] = [];
+  const toolCalls: any[] = [];
+  for (const idx of Object.keys(blocks).map(Number).sort((a, b) => a - b)) {
+    const b = blocks[idx];
+    if (b.type === 'tool_use') {
+      // Guarded parse — a truncated/malformed arg buffer must not throw here.
+      // The replayed block needs a valid object; the loop re-parses the raw
+      // buffer and turns a failure into an error tool_result.
+      let input: any = {};
+      try { input = JSON.parse(b.partialJson || '{}'); } catch { input = {}; }
+      content.push({ type: 'tool_use', id: b.id, name: b.name, input });
+      toolCalls.push({ id: b.id || '', type: 'function' as const, function: { name: b.name || '', arguments: b.partialJson || '{}' } });
+    } else if (b.type === 'text' && b.text) {
+      content.push({ type: 'text', text: b.text });
+    }
+  }
+
+  // Map Anthropic's stop_reason onto the Grok finish_reason vocabulary so the
+  // shared tool loop's conditions stay identical for both providers.
+  const finishReason = stopReason === 'tool_use' ? 'tool_calls' : (stopReason || 'stop');
+  return { text, toolCalls, finishReason, content };
 }
 
 // ═══════════════════════════════════════════
@@ -2117,32 +2226,41 @@ export async function POST(req: NextRequest) {
       return formatted;
     };
 
+    // Anthropic system blocks — cache PROMPT_CORE (never changes); domain blocks
+    // + dynamic context go in a second block (no cache — varies per query).
+    // Shared by the non-streaming Claude path and claudeStreamRound so both
+    // send a byte-identical cacheable prefix.
+    const buildClaudeSystemBlocks = (): any[] => {
+      const names = selectedTools.map(t => t.name);
+      const hasEstBlocks = names.some(n => ESTIMATE_TOOL_NAMES.has(n));
+      const hasTaskBlocks = names.some(n => TASK_TOOL_NAMES.has(n));
+      const hasPropertyBlock = names.includes('property_lookup');
+      const domainBlocks = [hasEstBlocks && PROMPT_ESTIMATES, hasTaskBlocks && PROMPT_TASKS, hasPropertyBlock && PROMPT_PROPERTY].filter(Boolean).join('\n\n');
+      const blocks: any[] = [
+        { type: 'text', text: PROMPT_CORE, cache_control: { type: 'ephemeral' } },
+      ];
+      if (domainBlocks || dynamicContext) {
+        blocks.push({ type: 'text', text: [domainBlocks, dynamicContext].filter(Boolean).join('\n\n') });
+      }
+      return blocks;
+    };
+
     // ── Claude Haiku fallback runner — shared by the non-stream path and the
-    // streaming path (when Grok fails before any text was emitted). Runs the
-    // full tool loop, accumulates actions, returns the final text or null. ──
+    // streaming path (when the primary stream fails before any text was
+    // emitted). Runs the full tool loop, accumulates actions, returns the final
+    // text or null. ──
     const runClaudeFallback = async (): Promise<string | null> => {
       if (!claudeKey) return null;
       try {
         const apiMessages = buildApiMessages(messages, true);
-        // Cache PROMPT_CORE (never changes). Domain blocks + dynamic context in second block (no cache — varies per query).
-        const names = selectedTools.map(t => t.name);
-        const hasEstBlocks = names.some(n => ESTIMATE_TOOL_NAMES.has(n));
-        const hasTaskBlocks = names.some(n => TASK_TOOL_NAMES.has(n));
-        const hasPropertyBlock = names.includes('property_lookup');
-        const domainBlocks = [hasEstBlocks && PROMPT_ESTIMATES, hasTaskBlocks && PROMPT_TASKS, hasPropertyBlock && PROMPT_PROPERTY].filter(Boolean).join('\n\n');
-        const systemBlocks: any[] = [
-          { type: 'text', text: PROMPT_CORE, cache_control: { type: 'ephemeral' } },
-        ];
-        if (domainBlocks || dynamicContext) {
-          systemBlocks.push({ type: 'text', text: [domainBlocks, dynamicContext].filter(Boolean).join('\n\n') });
-        }
+        const systemBlocks = buildClaudeSystemBlocks();
 
         const convo: any[] = [...apiMessages];
         let claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'x-api-key': claudeKey!, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
+            model: CLAUDE_MODEL,
             max_tokens: 4000,
             system: systemBlocks,
             messages: convo,
@@ -2172,7 +2290,7 @@ export async function POST(req: NextRequest) {
             method: 'POST',
             headers: { 'x-api-key': claudeKey!, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: 'claude-haiku-4-5-20251001', max_tokens: 4000, system: systemBlocks,
+              model: CLAUDE_MODEL, max_tokens: 4000, system: systemBlocks,
               messages: convo,
               ...(selectedTools.length > 0 ? { tools: selectedTools } : {}),
             }),
@@ -2191,7 +2309,11 @@ export async function POST(req: NextRequest) {
 
     // ═══ STREAMING MODE — NDJSON events: {type:'delta'|'status'|'done'|'error'} ═══
     const preferGrokStream = useModel !== 'claude' && useModel !== 'groq' && !!grokKey;
-    if (stream === true && preferGrokStream) {
+    // Claude streams too, but ONLY when explicitly selected — Grok stays the
+    // default. Claude's time-to-first-token is ~0.5-1.0s vs Grok's ~2.5-3.2s,
+    // which is what voice mode waits on before it can start speaking.
+    const preferClaudeStream = useModel === 'claude' && !!claudeKey;
+    if (stream === true && (preferGrokStream || preferClaudeStream)) {
       const encoder = new TextEncoder();
       const ndjson = new ReadableStream({
         async start(controller) {
@@ -2204,25 +2326,50 @@ export async function POST(req: NextRequest) {
             emit(evt);
           };
           try {
-            const apiMessages: any[] = [
-              { role: 'system', content: buildSystemPrompt(selectedTools, dynamicContext) },
-              ...buildApiMessages(messages),
-            ];
-            // Stable tool set on every round — never changes mid-loop
+            // Same tool set, same round cap, same status labels for both
+            // providers — only the wire format of the conversation differs.
+            // Stable tool set on every round — never changes mid-loop.
             const tools = selectedTools.length > 0 ? openaiTools(selectedTools) : undefined;
-            let round = await grokStreamRound(apiMessages, tools, grokKey!, emitTracked).catch((err) => {
-              console.error('[ai-chat] Grok stream threw:', err);
-              return null;
-            });
+            const claudeTools = selectedTools.length > 0 ? selectedTools : undefined;
+            const claudeSystemBlocks = preferClaudeStream ? buildClaudeSystemBlocks() : [];
+            // Grok carries the system prompt as message[0]; Claude takes it as
+            // a separate top-level `system` field.
+            const apiMessages: any[] = preferClaudeStream
+              ? buildApiMessages(messages, true)
+              : [
+                  { role: 'system', content: buildSystemPrompt(selectedTools, dynamicContext) },
+                  ...buildApiMessages(messages),
+                ];
+
+            const runRound = async (): Promise<StreamRound | null> => {
+              try {
+                return preferClaudeStream
+                  ? await claudeStreamRound(apiMessages, claudeSystemBlocks, claudeTools, claudeKey!, emitTracked)
+                  : await grokStreamRound(apiMessages, tools, grokKey!, emitTracked);
+              } catch (err) {
+                console.error('[ai-chat] stream round threw:', err);
+                return null;
+              }
+            };
+
+            let round = await runRound();
 
             let rounds = 0;
             while (round && round.finishReason === 'tool_calls' && round.toolCalls.length > 0 && rounds < 8) {
               rounds++;
-              apiMessages.push({
-                role: 'assistant',
-                content: round.text || null,
-                tool_calls: round.toolCalls,
-              });
+              if (preferClaudeStream) {
+                // Replay the assistant turn as Anthropic content blocks
+                apiMessages.push({ role: 'assistant', content: round.content || [] });
+              } else {
+                apiMessages.push({
+                  role: 'assistant',
+                  content: round.text || null,
+                  tool_calls: round.toolCalls,
+                });
+              }
+              // Anthropic wants every tool_result for a turn in ONE user
+              // message, so collect them and flush after the loop.
+              const claudeToolResults: any[] = [];
               for (const tc of round.toolCalls) {
                 emit({ type: 'status', label: toolStatusLabel(tc.function.name) });
                 let args: any = null;
@@ -2231,22 +2378,27 @@ export async function POST(req: NextRequest) {
                 } catch {
                   // Bad args JSON — don't execute the tool with empty input;
                   // tell the model to re-issue the call.
-                  apiMessages.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify({ error: 'Invalid tool arguments JSON — please re-issue the call' }) });
+                  const errBody = JSON.stringify({ error: 'Invalid tool arguments JSON — please re-issue the call' });
+                  if (preferClaudeStream) claudeToolResults.push({ type: 'tool_result', tool_use_id: tc.id, content: errBody });
+                  else apiMessages.push({ role: 'tool', tool_call_id: tc.id, content: errBody });
                   continue;
                 }
                 const { result, action } = await executeTool(tc.function.name, args, supabase);
                 if (action) actions.push(action);
-                apiMessages.push({ role: 'tool', tool_call_id: tc.id, content: typeof result === 'string' ? result : JSON.stringify(result) });
+                const body = typeof result === 'string' ? result : JSON.stringify(result);
+                if (preferClaudeStream) claudeToolResults.push({ type: 'tool_result', tool_use_id: tc.id, content: body });
+                else apiMessages.push({ role: 'tool', tool_call_id: tc.id, content: body });
               }
-              round = await grokStreamRound(apiMessages, tools, grokKey!, emitTracked).catch((err) => {
-                console.error('[ai-chat] Grok stream threw:', err);
-                return null;
-              });
+              if (preferClaudeStream && claudeToolResults.length) {
+                apiMessages.push({ role: 'user', content: claudeToolResults });
+              }
+              round = await runRound();
             }
 
             if (!round) {
-              // Grok failed. If nothing has streamed yet, fall back to Claude
-              // inside the same NDJSON response instead of surfacing an error.
+              // Primary stream failed. If nothing has streamed yet, fall back to
+              // non-streaming Claude inside the same NDJSON response instead of
+              // surfacing an error (Grok→Claude, or Claude stream→Claude REST).
               if (!textEmitted && claudeKey) {
                 emit({ type: 'status', label: 'Switching to backup AI…' });
                 const claudeContent = await runClaudeFallback();
@@ -2264,7 +2416,7 @@ export async function POST(req: NextRequest) {
                 // Hit the round cap while the model still wanted more tools
                 emit({ type: 'delta', text: "\n\nI ran out of steps while working on that — here's where I got to." });
               }
-              emit({ type: 'done', model: 'grok-4-1-fast', ...(actions.length ? { actions } : {}) });
+              emit({ type: 'done', model: preferClaudeStream ? 'claude-haiku-4.5' : 'grok-4-1-fast', ...(actions.length ? { actions } : {}) });
             }
           } catch (err: any) {
             console.error('[ai-chat] stream error:', err);

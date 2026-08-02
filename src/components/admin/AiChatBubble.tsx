@@ -995,7 +995,11 @@ export default function AiChatBubble() {
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
           currentPage: pathname,
           projectContext,
-          useModel: aiModel,
+          // Voice turns go to Claude: measured 0.46-0.99s to first token vs
+          // ~3s for Grok, and in a spoken conversation every second before
+          // the first word is dead air. Typed chat keeps the chosen model,
+          // where streaming text hides that latency.
+          useModel: voiceModeRef.current ? 'claude' : aiModel,
           stream: true,
           imageData: imageToSend ? { base64: imageToSend.base64, mimeType: imageToSend.mimeType } : undefined,
         }),
