@@ -38,6 +38,22 @@ export default function AiChatBubble() {
   // Header overflow menu (declutters the top bar)
   const [showMenu, setShowMenu] = useState(false);
 
+  // Open/close animation — the panel shrinks into the launcher pill instead
+  // of vanishing. State is untouched by this, so reopening resumes the chat.
+  const [anim, setAnim] = useState<'in' | 'out' | null>(null);
+  const animTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const animateAway = useCallback((commit: () => void) => {
+    if (animTimer.current) clearTimeout(animTimer.current);
+    setAnim('out');
+    animTimer.current = setTimeout(() => { setAnim(null); commit(); }, 250);
+  }, []);
+  // Drop the entrance class once it has played so the panel sits clean
+  useEffect(() => {
+    if (anim !== 'in') return;
+    const t = setTimeout(() => setAnim(null), 360);
+    return () => clearTimeout(t);
+  }, [anim]);
+
   // Chat history
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
@@ -144,6 +160,33 @@ export default function AiChatBubble() {
   const voiceAudioRef = useRef<HTMLAudioElement | null>(null);
   const voiceCleanupRef = useRef<() => void>(() => {});
   const speakDoneRef = useRef<(() => void) | null>(null);
+
+  // ── Session restore ──
+  // Navigating inside /admin keeps this component mounted, so state survives
+  // on its own. This covers the harder case: a reload or PWA relaunch mid
+  // conversation. Photo previews are dropped (base64 blows the ~5MB quota).
+  const sessionLoadedRef = useRef(false);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('ro-ai-session');
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (Array.isArray(s.messages) && s.messages.length) setMessages(s.messages);
+        if (s.activeConvId) setActiveConvId(s.activeConvId);
+        if (s.open) { setOpen(true); setDisplayMode(s.displayMode === 'minimized' ? 'minimized' : 'full'); }
+      }
+    } catch {}
+    sessionLoadedRef.current = true;
+  }, []);
+  useEffect(() => {
+    if (!sessionLoadedRef.current) return;
+    try {
+      sessionStorage.setItem('ro-ai-session', JSON.stringify({
+        messages: messages.slice(-40).map(({ imagePreview, ...m }) => m),
+        activeConvId, open, displayMode,
+      }));
+    } catch { /* quota — not worth failing over */ }
+  }, [messages, activeConvId, open, displayMode]);
 
   // Release the mic if this component ever unmounts mid-conversation —
   // otherwise the track stays live and the next start reports "mic in use"
@@ -1133,7 +1176,7 @@ export default function AiChatBubble() {
   useEffect(() => {
     const btn = document.getElementById('ai-bubble-header-btn');
     if (!btn) return;
-    const handler = () => { setOpen(true); setDisplayMode('full'); };
+    const handler = () => { setAnim('in'); setOpen(true); setDisplayMode('full'); };
     btn.addEventListener('click', handler);
     // Show unread badge on header button
     if (unread > 0) {
@@ -1153,9 +1196,9 @@ export default function AiChatBubble() {
     return (
       <>
         <ToastNotification />
-        <div className="fixed bottom-20 right-4 z-[90] flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-2xl cursor-pointer hover:scale-105 transition-all"
+        <div className="ro-ai-pill-in fixed bottom-20 right-4 z-[90] flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-2xl cursor-pointer hover:scale-105 transition-all"
           style={{ background: 'linear-gradient(135deg, #C9A84C, #D4772C)', boxShadow: '0 2px 16px rgba(201,168,76,0.3)', marginBottom: 'env(safe-area-inset-bottom)' }}
-          onClick={() => setDisplayMode('full')}>
+          onClick={() => { setAnim('in'); setDisplayMode('full'); }}>
           <Sparkles size={14} className="text-black" />
           <span className="text-black text-[12px] font-semibold">AI</span>
           {unread > 0 && <span className="w-5 h-5 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center">{unread}</span>}
@@ -1269,6 +1312,7 @@ export default function AiChatBubble() {
   const container = getContainerStyles();
   const isFloating = displayMode === 'floating';
   const isFullscreen = displayMode === 'fullscreen';
+  const animClass = anim === 'out' ? ' ro-ai-panel-out' : anim === 'in' ? ' ro-ai-panel-in' : '';
 
   // ── Chat panel (full, floating, or fullscreen) ──
   return (
@@ -1349,7 +1393,7 @@ export default function AiChatBubble() {
         </div>
       )}
 
-      <div ref={floatRef} className={container.className} style={container.style}>
+      <div ref={floatRef} className={container.className + animClass} style={container.style}>
         {showHistory && <HistoryPanel />}
 
         {/* Header */}
@@ -1417,12 +1461,12 @@ export default function AiChatBubble() {
             )}
             {/* Minimize */}
             {!isFullscreen && (
-              <button onClick={() => setDisplayMode('minimized')} className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Minimize">
+              <button onClick={() => animateAway(() => setDisplayMode('minimized'))} className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Minimize">
                 <Minimize2 size={isFloating ? 14 : 18} />
               </button>
             )}
             {/* Close */}
-            <button onClick={() => { setShowMenu(false); setOpen(false); }} className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Close">
+            <button onClick={() => { setShowMenu(false); animateAway(() => setOpen(false)); }} className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Close">
               <X size={isFloating ? 14 : 18} />
             </button>
           </div>
@@ -1500,7 +1544,7 @@ export default function AiChatBubble() {
                 </button>
               </div>
               <div className="h-px bg-white/8 mx-3 my-1" />
-              <button onClick={() => { setShowMenu(false); router.push('/admin/ai-settings'); }}
+              <button onClick={() => { setShowMenu(false); animateAway(() => setDisplayMode('minimized')); router.push('/admin/ai-settings'); }}
                 className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-violet-500/10 transition-colors">
                 <span className="w-9 h-9 rounded-xl bg-violet-500/15 text-violet-300 flex items-center justify-center flex-shrink-0">
                   <Settings size={18} />
