@@ -182,7 +182,7 @@ export default function UtilitiesPage() {
 
           <div className="hero-gold-line w-10 h-[2px] bg-gradient-to-r from-ro-gold/80 to-transparent mb-6" />
 
-          <p className="hero-desc text-sm sm:text-base leading-relaxed mb-8 max-w-sm hero-text-fade-subtle">
+          <p className="hero-desc text-sm sm:text-base leading-relaxed mb-8 max-w-sm text-ro-gray-200 border-l-2 border-ro-gold/70 bg-ro-black/50 backdrop-blur-md pl-4 pr-4 py-3.5" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>
             Water mains. Sewer taps. Storm drainage. Tier 2 septic. Nobody sees it when it&apos;s done &mdash; but every building in the Upstate stands on it. Licensed, self-performed, and photographed before backfill.
           </p>
 
