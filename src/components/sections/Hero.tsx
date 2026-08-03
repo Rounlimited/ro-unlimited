@@ -322,6 +322,11 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
                the headline actually sits, leaving the frame edges vivid. */}
         <div className="absolute inset-0 z-[2] bg-gradient-to-b from-ro-black/66 via-ro-black/50 to-ro-black/74" />
         <div className="absolute inset-0 z-[2] pointer-events-none" style={{ background: 'radial-gradient(ellipse 62% 52% at 50% 45%, rgba(8,8,8,0.42) 0%, rgba(8,8,8,0) 72%)' }} />
+        {/* Light grey wash — matte film look over the footage. Separate layer
+            from the black gradient so its weight can be tuned on its own.
+            Inline rgba (not a Tailwind opacity class) so it can't be dropped
+            by a JIT content-scan miss. */}
+        <div className="absolute inset-0 z-[2] pointer-events-none" style={{ background: 'rgba(115,115,115,0.13)' }} />
 
         <div className="relative z-[10] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-4 lg:pt-8 lg:pb-8">
           <div className="text-center">
