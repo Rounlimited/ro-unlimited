@@ -53,23 +53,45 @@ export default function SubPageAnimator({ children }: SubPageAnimatorProps) {
     // start points can be stale and a trigger may never become active.
     ScrollTrigger.refresh();
 
-    // Safety net: scroll reveals hide content first and show it on trigger, so
-    // anything that breaks the trigger leaves the page permanently blank. Never
-    // let that reach a visitor — if something is still hidden but on screen
-    // after a moment, just show it.
-    const failsafe = window.setTimeout(() => {
-      containerRef.current
-        ?.querySelectorAll<HTMLElement>('section:not(:first-child) .grid > div, section:not(:first-child) h2')
-        .forEach((el) => {
-          const r = el.getBoundingClientRect();
-          const onScreen = r.top < window.innerHeight && r.bottom > 0;
-          if (onScreen && Number(getComputedStyle(el).opacity) < 0.05) {
-            gsap.set(el, { opacity: 1, y: 0, clearProps: 'transform' });
+    // Self-healing reveal. These tweens hide content first and show it when a
+    // ScrollTrigger fires, so ANY failure in that chain leaves the page blank
+    // for the visitor — which is exactly what happened here. Rather than trust
+    // it, watch the revealed elements: once one has been on screen for a beat
+    // and is still invisible, fade it in ourselves. When GSAP works normally
+    // this never fires; when it doesn't, the page still reads correctly.
+    const timers = new Map<Element, number>();
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const el = entry.target as HTMLElement;
+          if (!entry.isIntersecting) {
+            const t = timers.get(el);
+            if (t) { window.clearTimeout(t); timers.delete(el); }
+            return;
           }
+          if (timers.has(el)) return;
+          timers.set(
+            el,
+            window.setTimeout(() => {
+              timers.delete(el);
+              if (Number(getComputedStyle(el).opacity) < 0.05) {
+                gsap.to(el, { opacity: 1, y: 0, duration: 0.4, overwrite: 'auto' });
+              }
+            }, 900)
+          );
         });
-    }, 2500);
+      },
+      { threshold: 0.01 }
+    );
+    containerRef.current
+      ?.querySelectorAll<HTMLElement>('section:not(:first-child) .grid > div, section:not(:first-child) h2, section:not(:first-child) .flex-wrap a')
+      .forEach((el) => io.observe(el));
 
-    return () => { window.clearTimeout(failsafe); ctx.revert(); };
+    return () => {
+      io.disconnect();
+      timers.forEach((t) => window.clearTimeout(t));
+      ctx.revert();
+    };
   }, [mounted, reducedMotion]);
 
   if (!mounted) return <div>{children}</div>;
