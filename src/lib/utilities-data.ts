@@ -382,12 +382,13 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     heroDescription:
       'Storm drainage collects rain off your roofs and pavement and moves it somewhere controlled before it can pond, undermine your asphalt, or run onto a neighbor. Catch basins and curb inlets swallow it, buried pipe carries it, and a detention pond holds the surge and releases it slowly so the creek downstream sees no more flow after your project than before it. RO Unlimited installs the whole package — structures, pipe, ponds, outfalls, and the erosion control that keeps you compliant while it is being built.',
     heroImage: `${IMG}/px-37627673.jpg`,
-    cardImage: `${SUB}/storm-catch-basin-grate.jpg`,
+    // Card uses the same wide trench shot that sits second in the gallery
+    cardImage: `${IMG}/px-37627672.jpg`,
     galleryImages: [
       `${IMG}/px-37627673.jpg`,
       `${IMG}/px-37627672.jpg`,
       `${SUB}/storm-hdpe-outfall.jpg`,
-      `${IMG}/px-37627672.jpg`,
+      `${SUB}/storm-clogged-inlet.jpg`,
       `${SUB}/storm-catch-basin-grate.jpg`,
       `${SUB}/sewer-structures-hdpe.jpg`,
     ],

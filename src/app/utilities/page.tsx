@@ -32,7 +32,7 @@ const CAPABILITIES = [
     desc: 'Black bolted ductile iron and big-bore C900 PVC \u2014 domestic service and fire lines, bedded, restrained, and pressure-tested to spec.' },
   { num: '03', slug: 'sanitary-sewer', title: 'Sanitary Sewer Installation', img: '/images/utilities/jr-sewer-lateral.jpg',
     desc: 'Gravity sewer mains, laterals, and manholes \u2014 laser-graded fall, tied into municipal systems clean the first time.' },
-  { num: '04', slug: 'storm-drainage', title: 'Storm Drainage Systems', img: '/images/utilities/px-37627673.jpg',
+  { num: '04', slug: 'storm-drainage', title: 'Storm Drainage Systems', img: '/images/utilities/px-37627672.jpg',
     desc: 'PVC and black corrugated HDPE storm runs, catch basins, and drainage structures \u2014 the package that gets your site through inspection.' },
   { num: '05', slug: 'commercial-septic', title: 'Tier 2 Septic Systems', img: '/images/utilities/jr-septic-tank-set.jpg',
     desc: 'Engineered and conventional septic under a Tier 2 license \u2014 commercial-scale systems, pump tanks, and drain fields.' },
