@@ -273,6 +273,202 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     ],
   },
 
+  // ═══ 3. SANITARY SEWER INSTALLATION ═══
+  {
+    id: 'sanitary-sewer',
+    slug: 'sanitary-sewer',
+    title: 'Sanitary Sewer Installation',
+    tagline: 'Gravity Mains, Laterals and Manholes — Graded Right the First Time',
+    heroDescription:
+      'A commercial sanitary sewer is three things working together: laterals running from each building, a gravity main collecting them, and manholes at every bend and junction so the line can be inspected, cleaned, and cameraed for the next fifty years. It all runs on gravity, which means every inch of fall matters. RO Unlimited installs to Oconee Joint Regional Sewer Authority and SC DES standards, tests it, cameras it, and hands you the closeout package.',
+    heroImage: `${IMG}/jr-sewer-lateral.jpg`,
+    cardImage: `${SUB}/sewer-fittings-trench.jpg`,
+    galleryImages: [
+      `${IMG}/jr-sewer-lateral.jpg`,
+      `${SUB}/sewer-fittings-trench.jpg`,
+      `${SUB}/sewer-structures-hdpe.jpg`,
+      `${SUB}/waterline-trench-bedding.jpg`,
+      `${SUB}/waterline-crew-install.jpg`,
+      `${IMG}/jr-underslab-rough.jpg`,
+    ],
+    overview: [
+      {
+        heading: 'What It Is',
+        content:
+          'Everything that goes down a toilet, sink, floor drain, or grease trap leaves the building through a lateral, joins a gravity main — eight inches and up — and travels to the treatment plant without a single pump, purely on fall. Manholes are the round concrete access shafts placed at every bend, size change, grade change, and intersection, and they exist so crews can inspect and clean the line. Where the ground runs out of fall, you need a lift station: a wet well with pumps that lifts the wastewater and pushes it through a pressurized force main until gravity can take over again. Sanitary is never combined with storm drainage — during heavy rain a combined system overflows raw sewage into the creek, which is why new ones have not been permitted in generations.',
+      },
+      {
+        heading: 'When You Need It',
+        content:
+          'New buildings and new pads are obvious. The one that catches owners out is a change of use: a retail shell becoming a restaurant, or a warehouse becoming manufacturing, triggers a fresh capacity calculation and impact fee even when the pipe is already in the ground. The single biggest budget surprise on Upstate sites is elevation — if the lowest fixture on your site cannot drain by gravity down to the tie-in manhole’s invert, you need a lift station, and that is a six-figure conversation. Under OJRSA rules a few specifics bite: service lines larger than four inches must connect to a manhole rather than tapping the pipe, and multi-family over four units requires a minimum eight-inch service.',
+      },
+      {
+        heading: 'Cost & Timeline',
+        content:
+          'Eight-inch PVC gravity main in open ground at normal depth generally plans at roughly $75 to $160 per foot; go deeper than twelve feet, hit rock, or work under existing pavement and that can run $180 to $400 and beyond, because rock excavation alone runs well over $150 a cubic yard. A standard four-foot manhole under ten feet deep is commonly $5,000 to $9,500; deep ones run to $20,000. A duplex submersible lift station with generator, controls, and site work is a $250,000 to $750,000 project. Budget the authority’s fees separately — OJRSA charges $4,100 per equivalent residential unit, which is 300 gallons per day, or $13.66 per gallon for other uses. On schedule: design and permitting is eight to twenty weeks, installation of a 400 to 800 foot run is one to three weeks in normal soil and three to six with rock, and then closeout takes another two to five. One constraint catches nearly every general contractor — the mandrel deflection test cannot be run until backfill has been in place at least thirty days.',
+      },
+      {
+        heading: 'Why It Matters Here',
+        content:
+          'The Upstate sits on Piedmont geology — granite and gneiss under weathered saprolite and red clay whose thickness changes dramatically over short distances. Rock depth is rarely predictable from a few borings, and a gravity sewer needing 0.40% fall cannot simply route around rock it finds sixty feet into a five-hundred-foot run without losing grade. Red clay compounds it: trench walls look stable dry and turn to soup after rain, and clay backfill placed wet consolidates later and pulls the pipe down into a belly. Local practice is specific and enforced — OJRSA wants an inspector notified no less than 48 hours before a connection, bans in-line hammer taps outright, and requires manhole taps be core-drilled with a rubber boot sealed with rubberized plaster. Mortar and cement are explicitly not allowed. A contractor who does not know that loses a day and a connection.',
+      },
+    ],
+    warningSigns: [
+      { trigger: 'A wet spot, sinkhole, or lush green stripe over the sewer line', detail: 'That is the pipe leaking out — which means the same open joint lets groundwater and soil in when the water table rises. The soil washing into the pipe leaves a void that eventually collapses whatever is paved above it.' },
+      { trigger: 'Backups that only happen during or right after heavy rain', detail: 'A sanitary system should not care about rain. If it does, you have inflow and infiltration — a cracked lateral, a failed manhole seal, or a roof drain illegally tied into the sanitary system. It is a compliance exposure and it consumes treatment capacity you are paying for.' },
+      { trigger: 'A manhole lid sitting below the pavement, rocking under traffic, or holding water', detail: 'The frame-to-chimney seal is the most common infiltration entry point on a commercial site, and a ponded lid with vent holes is a direct stormwater intake straight into your sanitary system.' },
+      { trigger: 'Repeat clogs in the same spot, or standing water mid-run on a camera report', detail: 'That is a belly — a sag from settlement or bad bedding. It never clears itself. Solids drop out in the low spot and re-clog on a schedule, and the fix is excavation and re-laying, not jetting.' },
+      { trigger: 'Roots in the camera footage', detail: 'Roots enter at joints and defects and then act as a strainer for grease and wipes. Recurring root intrusion is telling you the joint is already open, not that you have a tree problem.' },
+      { trigger: 'A lift station running noticeably more than it used to', detail: 'Stations are sized to run no more than about ten hours a day normally. One running well past that is either taking on infiltration or has a failing pump — and it is now one power outage away from a sanitary sewer overflow.' },
+    ],
+    maintenanceTips: [
+      { tip: 'Get the sealed record drawings and keep them', detail: 'They show invert elevations, manhole locations, and lateral positions. Without them every future repair starts with an expensive scavenger hunt across your own parking lot.' },
+      { tip: 'Camera the private sewer every three to five years', detail: 'Standard CCTV inspection runs a few dollars a foot — trivial against a collapsed line under a loading dock. Ask for NASSCO PACP coding so defects are graded on a standard scale you can actually trend over time.' },
+      { tip: 'Service the grease interceptor on a written schedule and keep the manifests', detail: 'Grease is the number one cause of commercial lateral blockages, and the authority runs a formal program with sizing requirements and inspections. A failed grease inspection can hold up a certificate of occupancy.' },
+      { tip: 'Test the lift station’s backup power under load quarterly', detail: 'A wet well with no power during an Upstate thunderstorm outage is a sanitary sewer overflow with your name on it. Knowing the generator starts is not the same as knowing it carries the pumps.' },
+      { tip: 'Protect the easement and keep manholes accessible', detail: 'Do not let landscaping, dumpster enclosures, fences, or trailer parking end up over a manhole. If a previous owner paved over one, get it raised and marked now rather than during an emergency at 2am.' },
+      { tip: 'Settle capacity before you sign the tenant', detail: 'Impact fees are assessed at the rate in effect when the capacity application completes. A restaurant going into a former retail bay can carry a five-figure capacity charge nobody wrote into the deal.' },
+    ],
+    processSteps: [
+      { num: '01', title: 'Verify Capacity & Tie-In', description: 'Confirm the receiving main has allocation, pull the capacity and impact fee determination, and locate the tie-in invert — that elevation decides whether the site works on gravity or needs a lift station.' },
+      { num: '02', title: 'Engineer & Permit the Profile', description: 'A professional engineer lays out slopes, manhole locations, and depths; plans are signed and sealed for the SC DES construction permit and the sewer authority’s approval.' },
+      { num: '03', title: 'Locate, Protect & Lay Out', description: 'SC811 tickets, private locates, easement staking, and confirmation of the ten-foot horizontal separation from any potable water main.' },
+      { num: '04', title: 'Open Trench With Protection In Place', description: 'Trench box, shoring, or benching chosen by the competent person before anyone enters, with spoil kept back from the edge — required at five feet and engineered past twenty.' },
+      { num: '05', title: 'Set Bedding to Grade', description: 'Crushed stone bedding placed and struck to laser or GPS grade, with bell holes dug so the barrel of the pipe carries the load rather than the bell.' },
+      { num: '06', title: 'Lay Pipe Upstream to Downstream', description: 'Bell upgrade, each gasketed joint lubricated and homed, verified with a feeler gauge, holding uniform slope between manholes. Pipe gets laid in dry trench only.' },
+      { num: '07', title: 'Haunch, Backfill & Compact', description: 'Work stone under the haunches, then backfill in six-inch layers thoroughly tamped to at least eighteen inches of cover before heavier compaction goes over the top.' },
+      { num: '08', title: 'Test, Camera & Close Out', description: 'Low-pressure air test, manhole vacuum test, mandrel deflection test after thirty days, CCTV video, then sealed record drawings and the authority’s closeout package.' },
+    ],
+    faq: [
+      { q: 'What slope does my sewer actually need?', a: 'Two answers, and knowing both is the point. South Carolina’s regulation is velocity-based — gravity sewers are designed for a mean velocity of not less than 2 feet per second flowing full. Your sewer authority then publishes the minimum slopes that deliver it, and that table is what you are held to. In OJRSA territory an 8-inch main needs 0.40 feet of fall per 100 feet, a 12-inch needs 0.22, and a 24-inch needs 0.08. The state sets the velocity; your authority sets the slope.' },
+      { q: 'Can a sewer have too much fall?', a: 'Yes, and it causes real problems. Run it too steep and the liquid outruns the solids, leaving deposits in the flatter reaches downstream. OJRSA requires provisions against scour where velocities exceed 10 feet per second, wants slopes held to 10% or less where possible, and requires concrete anchors designed by a South Carolina licensed structural engineer on anything over 20%.' },
+      { q: 'SDR-35 or SDR-26 — what do those numbers mean?', a: 'SDR is the Standard Dimension Ratio: outside diameter divided by wall thickness, so a lower number means a thicker wall. SDR-26 walls are roughly 30% thicker than SDR-35. Worth correcting a myth you will find online — the "46 psi" and "115 psi" figures attached to these are pipe stiffness values, not pressure ratings. Gravity sewer pipe is not pressure-rated at all. SDR-35 is the default for normal cover; SDR-26 gets specified for deeper cover or heavier surcharge loads.' },
+      { q: 'When do you have to use ductile iron instead of PVC?', a: 'In OJRSA territory, gravity mains are PVC unless cover exceeds fifteen feet, at which point ductile iron is required. Ductile iron also shows up at stream and structure crossings, inside casings, and under heavy structural loading. It comes with a trade-off: corrosion mitigation is required in corrosive soils or near buried power and gas, which can mean polyethylene wrap, zinc coating, cathodic protection, or simply going back to PVC.' },
+      { q: 'How deep does it go, and how far apart are manholes?', a: 'Minimum three feet of cover unless otherwise justified and approved. Manholes go at every line end, every change in grade, size, or alignment, and every intersection — and no further apart than 400 feet for pipe 15 inches and smaller, or 500 feet for 18 through 30 inch. Minimum manhole inside diameter is 48 inches, with larger required for deep or drop manholes.' },
+      { q: 'What tests do we have to pass before it is accepted?', a: 'Four. A low-pressure air test — for 8-inch pipe the minimum hold is 3 minutes 47 seconds per 100 feet, and a drop of more than half a psi is a failure. A vacuum test on the manholes. A mandrel deflection test limited to 5% of the pipe’s original vertical diameter, run without mechanical pulling devices, after backfill has sat at least thirty days. And a CCTV video, submitted as part of closeout.' },
+      { q: 'Why does the thirty-day wait matter to my schedule?', a: 'Because it is not negotiable and it sits at the end. The mandrel test proves the pipe has not deflected under its backfill, which means the backfill has to have had time to do its worst. Plan for it at bid time and it costs you nothing; discover it during closeout and it delays your certificate of occupancy.' },
+      { q: 'At what depth is shoring legally required?', a: 'Five feet, unless the excavation is entirely in stable rock. Between five and twenty feet a competent person selects the protective system; past twenty feet it has to be designed by a registered professional engineer. A competent person is legally defined as someone who can identify hazards and has authority to order workers out. This is not paperwork — seventeen workers died in trench collapses in 2025.' },
+    ],
+    costData: [
+      { item: '8" PVC gravity main, normal depth, open ground', cost: 'Plan $75 – $160 per LF', lifespan: '100+ years design life for PVC' },
+      { item: 'Same, deep, rock, or under pavement', cost: '$180 – $400+ per LF; rock excavation alone exceeds $150/CY', lifespan: 'Depth does not shorten pipe life' },
+      { item: 'Standard 4 ft precast manhole, under 10 ft deep', cost: '$5,000 – $9,500 each', lifespan: '50 – 75 years typical' },
+      { item: 'Deep manhole, 12 – 20 ft', cost: '$11,000 – $20,000 each', lifespan: '50 – 75 years typical' },
+      { item: 'Duplex submersible lift station w/ generator', cost: '$250,000 – $750,000 installed', lifespan: 'Pumps 10 – 15 yrs; wet well 50+ yrs' },
+      { item: 'Sewer impact fee (OJRSA)', cost: '$4,100 per ERU (300 gpd) or $13.66 per gallon', lifespan: 'One-time, set at capacity application' },
+    ],
+    seoKeywords: [
+      'commercial sanitary sewer installation Upstate SC',
+      'gravity sewer main installation Seneca SC',
+      'sewer lateral tie-in Oconee County',
+      'sewer lift station installation Anderson SC',
+      'sanitary sewer contractor Greenville SC',
+      'OJRSA sewer connection contractor',
+      'commercial sewer tap and manhole installation South Carolina',
+      'sewer main extension permitting SCDES',
+      'sewer air test and mandrel testing contractor SC',
+      'site utility contractor sanitary sewer Upstate South Carolina',
+    ],
+  },
+
+  // ═══ 4. STORM DRAINAGE SYSTEMS ═══
+  {
+    id: 'storm-drainage',
+    slug: 'storm-drainage',
+    title: 'Storm Drainage Systems',
+    tagline: 'Catch It, Carry It, Slow It Down — and Pass Inspection',
+    heroDescription:
+      'Storm drainage collects rain off your roofs and pavement and moves it somewhere controlled before it can pond, undermine your asphalt, or run onto a neighbor. Catch basins and curb inlets swallow it, buried pipe carries it, and a detention pond holds the surge and releases it slowly so the creek downstream sees no more flow after your project than before it. RO Unlimited installs the whole package — structures, pipe, ponds, outfalls, and the erosion control that keeps you compliant while it is being built.',
+    heroImage: `${IMG}/px-37627673.jpg`,
+    cardImage: `${SUB}/storm-catch-basin-grate.jpg`,
+    galleryImages: [
+      `${IMG}/px-37627673.jpg`,
+      `${IMG}/px-37627672.jpg`,
+      `${SUB}/storm-culvert-outfall.jpg`,
+      `${SUB}/storm-rcp-stockpile.jpg`,
+      `${SUB}/storm-catch-basin-grate.jpg`,
+      `${SUB}/sewer-structures-hdpe.jpg`,
+    ],
+    overview: [
+      {
+        heading: 'What It Is',
+        content:
+          'The system starts at the surface with catch basins, curb inlets, and yard drains, runs through buried pipe, passes through junction boxes where lines meet, and discharges through a headwall or flared end section — a concrete collar that stops the pipe end eroding out — into a ditch, a stream, or a pond. The pond is the part most owners misunderstand. A detention pond is not there to hold water permanently; it is normally dry, fills during a storm, and bleeds down through a restricted outlet over hours so your peak discharge never exceeds what the site produced before you built on it. A retention pond keeps a permanent pool and treats water quality as well. Storm is entirely separate from sanitary, always.',
+      },
+      {
+        heading: 'When You Need It',
+        content:
+          'Any new impervious area — building footprint, parking, drive aisles, loading. More pavement means more runoff arriving faster, so the site needs both conveyance and peak-flow control. Disturb an acre or more and you are into the South Carolina construction general permit and a SWPPP; disturb more than two acres and your plan needs agency approval and certification by a registered engineer, landscape architect, or Tier B surveyor. Disturb ten acres or more draining to one outlet and a sediment basin is required during construction. Beyond new work: redevelopment that adds pavement, and existing failures — chronic ponding, undermined curb, or a detention pond that no longer draws down.',
+      },
+      {
+        heading: 'Cost & Timeline',
+        content:
+          'Twelve to twenty-four inch HDPE dual-wall pipe at normal depth generally plans at $40 to $95 per foot; eighteen to thirty inch reinforced concrete pipe runs $85 to $175. A standard precast catch basin or curb inlet with a traffic-rated top is commonly $3,500 to $9,500 each, and a headwall or flared end section $1,400 to $4,000. Surface detention is by far the cheapest storage you can buy — under a dollar per cubic foot of storage — while underground chamber systems run roughly $6 to $17 per cubic foot installed, which is why they only make sense when land is worth more than the difference. A full storm package on a ten-acre commercial development commonly lands between $125,000 and $450,000. On schedule: permitting is three to eight weeks, storm pipe and structures three to eight weeks overlapping with mass grading, and pond work another two to five. One seasonal warning — you cannot terminate permit coverage until vegetation is established, so you do not want to be seeding in late July.',
+      },
+      {
+        heading: 'Why It Matters Here',
+        content:
+          'Upstate rainfall is genuinely severe and it arrives fast. At Seneca the 25-year, 24-hour storm is 6.74 inches and the 100-year is 8.81; the 10-year one-hour burst is 2.31 inches. A single summer cell will exceed the capture rate of an undersized inlet immediately, which is why grate count and grate type matter as much as pipe diameter. Red clay does not infiltrate — these are hydrologic group C and D soils, so runoff coefficients are high before you pave anything, and infiltration-based practices frequently do not work here without engineered media. And local peak-flow rules are stricter than the state minimum: the state requires controlling the 2- and 10-year events, but Greenville County makes the 25-year the critical storm across most of the county, with the 50-year in the Gilder Creek watershed and the 100-year inside Mauldin. Designing to the state floor and assuming it will clear county review is a rejected plan waiting to happen.',
+      },
+    ],
+    warningSigns: [
+      { trigger: 'A depression or soft spot in pavement near an inlet or over a pipe run', detail: 'This is the classic pre-collapse signature. Water escaping a separated joint pulls soil into the pipe and forms a void that grows quietly for months. By the time the surface dips, the void underneath is already large.' },
+      { trigger: 'Water still standing 24 to 48 hours after a storm', detail: 'A working detention pond draws down. Standing water means a clogged outlet orifice, a silted-in low flow channel, or a failed underdrain — and a pond that has not drained has no storage left for the next storm.' },
+      { trigger: 'Cracked or tilting structure tops, a grate that rocks, or a curb inlet pulling away', detail: 'The structure is settling, which means the pipe connections into it are being pulled apart. You are watching joint separation happen from the surface.' },
+      { trigger: 'Erosion at the outfall — a scour hole or undercut rip rap', detail: 'Discharge velocity is exceeding what the receiving channel can take. State rule requires velocities be reduced to nonerosive or to the pre-disturbance condition, so this is a compliance problem as well as a maintenance one.' },
+      { trigger: 'Sediment leaving the site or mud tracked onto the road', detail: 'This is the violation an inspector writes first. South Carolina allows a stop work order posted on site, and civil penalties run up to $1,000 with each day counted as a separate violation.' },
+      { trigger: 'A detention pond that has been landscaped, filled at the edges, or used for overflow parking', detail: 'Post-construction ponds are permanent permitted features with maintenance obligations attached to the property. Losing volume without approval puts the parcel out of compliance and puts a downstream flooding claim on your insurance.' },
+    ],
+    maintenanceTips: [
+      { tip: 'Clean catch basin sumps at least annually and after major storms', detail: 'The sump traps sediment until it fills, then it stops trapping and starts passing debris into the pipe. Cheap on a schedule, expensive as an emergency.' },
+      { tip: 'Inspect the detention pond twice a year and after every big event', detail: 'Check the orifice for obstruction, the emergency spillway for erosion, the embankment for burrowing animals and woody growth, and the forebay for sediment depth. Keep the records — they are your defense in an audit.' },
+      { tip: 'Never regrade, fill, or fence the pond, and keep growth out of the spillway', detail: 'Access paths should not cross an emergency spillway unless it was designed for it, and spillways belong on undisturbed soil. A well-meaning landscaper can quietly void a pond’s design capacity.' },
+      { tip: 'Camera the storm system before buying, before repaving, and every five to ten years', detail: 'Video finds root intrusion, joint separation, and collapse before they surface. Repaving over a failing storm line is money set on fire.' },
+      { tip: 'Protect your positive drainage when you re-stripe or re-pave', detail: 'A mill-and-overlay can flatten the very cross-slope that made the lot drain. Note the real conflict — pavement wants about 2% to avoid birdbaths, but ADA caps accessible stalls and access aisles at 2.08% in every direction. Accessible spaces have almost no slope budget, so they need to be laid out where the fall already works.' },
+      { tip: 'Keep the O&M plan and as-builts with the deed file', detail: 'When the site changes hands or the municipality audits post-construction practices, the owner who can produce the design volume, outlet detail, and inspection history closes the file in an afternoon. The one who cannot pays an engineer to reconstruct it.' },
+    ],
+    processSteps: [
+      { num: '01', title: 'Establish the Outfall & Existing Condition', description: 'Determine where water can legally leave the site and what it did before you touched it — that is the number every downstream calculation gets compared against.' },
+      { num: '02', title: 'Model & Size the System', description: 'Hydrology by a volume-based hydrograph method on a 24-hour storm distribution; the simpler rational method is only allowed for individual culverts on small drainage areas, not for a network.' },
+      { num: '03', title: 'Permit It', description: 'SWPPP, notice of intent for construction general permit coverage, and local land-disturbance approval — with engineer certification on anything over two acres.' },
+      { num: '04', title: 'Install Erosion Control First', description: 'Silt fence, construction entrance, diversions, and sediment basin go in and get inspected before the first blade of dirt moves.' },
+      { num: '05', title: 'Rough Grade to Positive Drainage', description: 'Every square foot has to fall somewhere on purpose. Flat is not neutral — flat is a puddle and eventually a pothole.' },
+      { num: '06', title: 'Set Structures & Lay Pipe', description: 'Structures to design rim and invert, pipe laid upgrade between them on bedding struck to grade, joints gasketed, haunching compacted, and inlet protection on every structure the moment its top is set.' },
+      { num: '07', title: 'Build the Pond & Outlet Control', description: 'Detention or retention facility with its multi-stage riser, anti-seep collars, forebay, and an emergency spillway sized to pass the 100-year event with a foot of freeboard below the top of dam.' },
+      { num: '08', title: 'Stabilize, Verify & Hand Over', description: 'Permanent seeding, rip rap at outfalls, camera the pipe, as-built the structures and pond volumes, and deliver the maintenance plan the owner is held to for the life of the site.' },
+    ],
+    faq: [
+      { q: 'Detention or retention — what is the difference?', a: 'A detention pond is normally dry. It fills during a storm and drains down through a restricted outlet over hours so your peak discharge never exceeds the pre-development rate. A retention pond holds a permanent pool and provides water quality treatment as well as storage. Municipalities require peak control because dozens of developments each doubling their peak discharge is exactly what floods the neighborhood downstream.' },
+      { q: 'Can we put the detention underground and keep the land?', a: 'Yes, and on tight infill sites it is often the only option — but it is the expensive one. Surface detention costs under a dollar per cubic foot of storage; underground chamber systems run roughly $6 to $17 per cubic foot installed. They also carry a permanent maintenance obligation, including periodic cleanout of the isolator row. Chamber systems are cited at 50 to 75 year lifespans.' },
+      { q: 'HDPE, concrete, or PVC — what should we specify?', a: 'HDPE dual-wall is the default for most commercial site storm: corrosion-proof, light, fast to install, and smooth enough inside to carry more and silt less. Reinforced concrete pipe gets specified where loads and burial depths are extreme, under roadway where the agency mandates it, and at deep crossings. PVC shows up on smaller runs where a watertight gasketed joint matters more than diameter. Honestly, all three last decades when installed correctly — the dominant variable is not the material, it is the bedding and haunching.' },
+      { q: 'When do we need a stormwater permit in South Carolina?', a: 'At one acre of land disturbance, or less if your project is part of a larger common plan of development. That means construction general permit coverage plus a SWPPP. The plan requirements tier separately: two acres or less gets a simplified plan needing neither agency approval nor engineer certification; over two acres requires an approved plan certified by a registered engineer, landscape architect, or Tier B surveyor.' },
+      { q: 'What water quality treatment are we actually required to provide?', a: 'Sediment control during construction has to achieve 80% removal of suspended solids. For permanent facilities, a water quality pond with a permanent pool must store and release the first half inch of runoff over 24 hours; one without a permanent pool must release the first full inch over 24 hours; and permanent infiltration practices must accept at minimum the first inch of runoff from all impervious areas.' },
+      { q: 'What happens if we disturb land without permit coverage?', a: 'The implementing agency posts a stop work order at the site and can refuse to issue further building or grading permits until it is remedied. Civil penalties run up to $1,000, and each day of violation counts separately. That is the state exposure; federal Clean Water Act penalties are separate and substantially higher.' },
+      { q: 'Why does bad storm work destroy pavement?', a: 'Because of the sequence. Poor bedding lets the pipe settle, joints separate, and water escapes into the surrounding soil — then flowing water carries soil particles back into the pipe, forming a void underground. The void grows quietly. Meanwhile, wherever capture points clog, water ponds and saturates the base, which weakens the subgrade and produces rutting, potholes, and eventually sudden collapse. Cracking pavement and wet areas that never dry are late-stage symptoms of a problem that started in the trench.' },
+      { q: 'How much slope does a parking lot need?', a: 'About 2% cross slope for asphalt is the practical minimum, because below that you cannot reliably build it without forming birdbaths. The hard constraint is ADA — accessible spaces and their access aisles cap at 2.08% in all directions. Those two numbers leave essentially no margin, which is why accessible stall placement is a drainage decision as much as a striping one.' },
+    ],
+    costData: [
+      { item: '12" – 24" HDPE dual-wall storm pipe, installed', cost: 'Plan $40 – $95 per LF', lifespan: '50 – 100+ years' },
+      { item: '18" – 30" reinforced concrete pipe, installed', cost: 'Plan $85 – $175 per LF', lifespan: 'Documented up to 100 years' },
+      { item: 'Catch basin or curb inlet, precast, traffic-rated top', cost: '$3,500 – $9,500 each', lifespan: 'Structure 40 – 75 yrs; castings shorter' },
+      { item: 'Headwall or flared end section', cost: '$1,400 – $4,000 each', lifespan: '50+ years' },
+      { item: 'Surface detention pond (earthwork + riser)', cost: 'Under $1.00 per CF of storage — by far the cheapest storage available', lifespan: 'Indefinite with maintenance; sediment cleanout on a cycle' },
+      { item: 'Underground detention chamber system', cost: '$6 – $17 per CF installed; full systems $50,000 – $200,000+', lifespan: '50 – 75 years' },
+    ],
+    seoKeywords: [
+      'commercial storm drainage installation Upstate SC',
+      'storm drain contractor Seneca SC',
+      'detention pond construction Oconee County SC',
+      'catch basin and curb inlet installation Greenville SC',
+      'site drainage contractor Anderson SC',
+      'underground stormwater detention South Carolina',
+      'SWPPP erosion control contractor Upstate SC',
+      'parking lot drainage repair Upstate South Carolina',
+      'storm pipe replacement sinkhole repair commercial SC',
+      'NPDES construction general permit stormwater contractor South Carolina',
+    ],
+  },
+
 ];
 
 export function getUtilitySubService(slug: string): UtilitySubService | undefined {
