@@ -171,7 +171,7 @@ export default function UtilitiesPage() {
 
       {/* â•â•â• HERO â•â•â• */}
       <section ref={heroRef} className="relative min-h-[100svh] flex flex-col overflow-hidden">
-        <Image src="/images/services/septic/subs/excavation-wide.jpg" alt="RO Unlimited underground utility excavation" fill priority className="object-cover" sizes="100vw" style={{ zIndex: 0 }} />
+        <Image src="/images/services/septic/subs/excavation-site-wide.jpg" alt="RO Unlimited underground utility excavation" fill priority className="object-cover" sizes="100vw" style={{ zIndex: 0 }} />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, transparent 20%, transparent 75%, rgba(10,10,10,0.95) 100%)' }} />
         <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ zIndex: 2, background: 'radial-gradient(circle, rgba(201,168,76,0.05) 0%, transparent 70%)' }} />

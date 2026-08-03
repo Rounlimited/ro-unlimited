@@ -250,7 +250,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
           sizes="100vw"
           style={{ zIndex: 0 }}
         />
-        <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
+        <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.95) 44%, rgba(10,10,10,0.72) 64%, rgba(0,0,0,0.2) 86%)' }} />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, transparent 20%, transparent 75%, rgba(10,10,10,0.95) 100%)' }} />
         <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ zIndex: 2, background: 'radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)' }} />
 
@@ -280,7 +280,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
 
           <div className="hero-gold-line w-10 h-[2px] bg-gradient-to-r from-ro-gold/80 to-transparent mb-6" />
 
-          <p className="hero-desc text-ro-gray-300 text-sm sm:text-base leading-relaxed mb-8 max-w-md" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>
+          <p className="hero-desc text-ro-gray-300 text-sm sm:text-base leading-relaxed mb-8 max-w-md" style={{ textShadow: '0 1px 10px rgba(0,0,0,0.85)' }}>
             {subService.heroDescription}
           </p>
 
@@ -663,6 +663,9 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
       {/* ═══ CTA ═══ */}
       <section ref={ctaRef} className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
         <Image src={heroImage} alt={`${subService.title} — RO Unlimited`} fill className="object-cover" sizes="100vw" style={{ zIndex: 0 }} />
+        {/* Base scrim — hero photos vary wildly in brightness (JR's red-clay
+            shots especially); without this the copy column is unreadable. */}
+        <div className="absolute inset-0" style={{ zIndex: 1, background: 'rgba(10,10,10,0.32)' }} />
         <div className="absolute inset-0 bg-ro-black/88" style={{ zIndex: 1 }} />
         <div className="absolute inset-0 forge-bg-alt" style={{ zIndex: 2, opacity: 0.6 }} />
         <div className="absolute inset-0 forge-slash pointer-events-none" style={{ zIndex: 3 }} />

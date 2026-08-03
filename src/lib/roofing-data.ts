@@ -17,6 +17,14 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     heroDescription: 'From basic 3-tab to premium designer styles that replicate natural slate and cedar shake, we install shingle systems built to handle Upstate South Carolina\'s heat, humidity, and storm seasons. With over 25 years of local experience, we know which products perform and which ones just look good in a brochure.',
     heroImage: '/images/services/roofing/subs/shingle-hero.jpg',
     cardImage: '/images/services/roofing/subs/shingle-card.jpg',
+    galleryImages: [
+      '/images/services/roofing/subs/shingle-hero.jpg',
+      '/images/services/roofing/subs/shingle-nailgun.jpg',
+      '/images/services/roofing/subs/shingle-install-kneeling.jpg',
+      '/images/services/roofing/subs/shingle-bundles-deck.jpg',
+      '/images/services/roofing/subs/crew-brick-house.jpg',
+      '/images/services/roofing/subs/roofer-roof-edge.jpg',
+    ],
     overview: [
       {
         heading: 'What It Is',
@@ -84,6 +92,14 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     heroDescription: 'With lifespans of 40–70 years, wind ratings up to 140 mph, and energy efficiency that can cut cooling costs by up to 25%, metal roofing is a long-term investment that pays dividends every month. We install standing seam, corrugated, and metal shingle systems engineered to handle our summers, our storms, and our humidity.',
     heroImage: '/images/services/roofing/subs/metal-hero.jpg',
     cardImage: '/images/services/roofing/subs/metal-card.jpg',
+    galleryImages: [
+      '/images/services/roofing/subs/metal-hero.jpg',
+      '/images/services/roofing/subs/metal-panels-closeup.jpg',
+      '/images/services/roofing/subs/metal-panel-fasteners.jpg',
+      '/images/services/roofing/subs/metal-roof-crew.jpg',
+      '/images/services/roofing/subs/crew-house-wide.jpg',
+      '/images/services/roofing/subs/house-scaffolding.jpg',
+    ],
     overview: [
       {
         heading: 'What It Is',
@@ -150,6 +166,14 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     heroDescription: 'Flat and low-slope roofs demand specialized knowledge that most residential roofers don\'t have. With over 25 years installing TPO, EPDM, modified bitumen, and built-up systems, we understand the unique challenges these roofs face — from ponding water and UV degradation to membrane fatigue from extreme temperature swings.',
     heroImage: '/images/services/roofing/subs/flat-hero.jpg',
     cardImage: '/images/services/roofing/subs/flat-card.jpg',
+    galleryImages: [
+      '/images/services/roofing/subs/flat-hero.jpg',
+      '/images/services/roofing/subs/flat-roof-insulation.jpg',
+      '/images/services/roofing/subs/commercial-roofs-aerial.jpg',
+      '/images/services/roofing/subs/metal-roof-crew.jpg',
+      '/images/services/roofing/subs/metal-panels-closeup.jpg',
+      '/images/services/roofing/subs/house-scaffolding.jpg',
+    ],
     overview: [
       {
         heading: 'What It Is',
@@ -216,6 +240,14 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     heroDescription: 'When your roof is leaking or a storm just ripped through your neighborhood, you need a contractor who answers the phone, shows up fast, and fixes it right — not one who uses your emergency to sell you a roof you don\'t need. We provide straightforward repair services and we\'ll tell you the truth about whether you need a repair or a replacement.',
     heroImage: '/images/services/roofing/subs/repair-hero.jpg',
     cardImage: '/images/services/roofing/subs/repair-card.jpg',
+    galleryImages: [
+      '/images/services/roofing/subs/repair-hero.jpg',
+      '/images/services/roofing/subs/chimney-flashing-slate.jpg',
+      '/images/services/roofing/subs/chimney-roll-roofing.jpg',
+      '/images/services/roofing/subs/shingle-install-kneeling.jpg',
+      '/images/services/roofing/subs/roofer-roof-edge.jpg',
+      '/images/services/roofing/subs/tile-edge-gutter.jpg',
+    ],
     overview: [
       {
         heading: 'What It Is',
@@ -281,6 +313,14 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     heroDescription: 'A roof replacement is one of the largest investments you\'ll make in your home, and it deserves a contractor who gets it right the first time. Whether your roof has reached end of life, sustained unrepairable storm damage, or is costing more in repairs than it\'s worth, we provide full tear-off and overlay replacement backed by 25+ years of experience.',
     heroImage: '/images/services/roofing/subs/replacement-hero.jpg',
     cardImage: '/images/services/roofing/subs/replacement-card.jpg',
+    galleryImages: [
+      '/images/services/roofing/subs/replacement-hero.jpg',
+      '/images/services/roofing/subs/shingle-bundles-deck.jpg',
+      '/images/services/roofing/subs/crew-house-wide.jpg',
+      '/images/services/roofing/subs/shingle-nailgun.jpg',
+      '/images/services/roofing/subs/crew-brick-house.jpg',
+      '/images/services/roofing/subs/house-scaffolding.jpg',
+    ],
     overview: [
       {
         heading: 'What It Is',
@@ -347,6 +387,14 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     heroDescription: 'The most expensive roof problems are the ones you don\'t know about until they\'ve caused serious damage. Our professional inspections give you a clear, documented picture of your roof\'s condition — whether you\'re maintaining your home, buying a new one, or assessing storm damage for an insurance claim.',
     heroImage: '/images/services/roofing/subs/inspection-hero.jpg',
     cardImage: '/images/services/roofing/subs/inspection-card.jpg',
+    galleryImages: [
+      '/images/services/roofing/subs/inspection-hero.jpg',
+      '/images/services/roofing/subs/chimney-flashing-slate.jpg',
+      '/images/services/roofing/subs/tile-edge-gutter.jpg',
+      '/images/services/roofing/subs/commercial-roofs-aerial.jpg',
+      '/images/services/roofing/subs/roofer-roof-edge.jpg',
+      '/images/services/roofing/subs/shingle-install-kneeling.jpg',
+    ],
     overview: [
       {
         heading: 'What It Is',
@@ -411,6 +459,14 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     heroDescription: 'Your gutters are your roof\'s exit strategy for water — and in Upstate South Carolina, where we average 50+ inches of rainfall per year, a properly functioning gutter system is not optional. We install seamless aluminum gutters, gutter guard systems, and complete drainage solutions designed to handle the volume our storms deliver.',
     heroImage: '/images/services/roofing/subs/gutter-hero.jpg',
     cardImage: '/images/services/roofing/subs/gutter-card.jpg',
+    galleryImages: [
+      '/images/services/roofing/subs/gutter-hero.jpg',
+      '/images/services/roofing/subs/copper-gutter-rain.jpg',
+      '/images/services/roofing/subs/tile-edge-gutter.jpg',
+      '/images/services/roofing/subs/gutter-card.jpg',
+      '/images/services/roofing/subs/crew-house-wide.jpg',
+      '/images/services/roofing/subs/house-scaffolding.jpg',
+    ],
     overview: [
       {
         heading: 'What It Is',
@@ -479,6 +535,14 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     heroDescription: 'Roof ventilation is the most overlooked component in a roofing system — and in our heat and humidity, it might be the most important. Proper attic ventilation reduces cooling costs by up to 30%, prevents moisture damage that destroys roofs from the inside out, and can extend your roof\'s lifespan by years.',
     heroImage: '/images/services/roofing/subs/ventilation-hero.jpg',
     cardImage: '/images/services/roofing/subs/ventilation-card.jpg',
+    galleryImages: [
+      '/images/services/roofing/subs/ventilation-hero.jpg',
+      '/images/services/roofing/subs/ventilation-card.jpg',
+      '/images/services/roofing/subs/shingle-bundles-deck.jpg',
+      '/images/services/roofing/subs/metal-panel-fasteners.jpg',
+      '/images/services/roofing/subs/chimney-roll-roofing.jpg',
+      '/images/services/roofing/subs/commercial-roofs-aerial.jpg',
+    ],
     overview: [
       {
         heading: 'What It Is',
