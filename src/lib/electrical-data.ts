@@ -22,7 +22,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       '/images/services/electrical/subs/electrician-switchboard.jpg',
       '/images/services/electrical/subs/panel-color-wiring.jpg',
       '/images/services/electrical/subs/electrician-working-panel.jpg',
-      '/images/services/electrical/panel-closeup.jpg',
+      '/images/services/electrical/subs/rewiring-exposed.jpg',
       '/images/services/electrical/electrician-panel.jpg',
     ],
     overview: [
@@ -458,7 +458,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     title: 'Lighting Design',
     tagline: 'The Right Light Changes Everything',
     heroDescription: 'From LED retrofits that cut energy use 75% to landscape lighting that transforms your property after dark — RO\'s electricians handle every aspect of residential and light commercial lighting. Design, installation, smart controls, and low-voltage exterior systems. We wire it, aim it, and make it work with your automation.',
-    heroImage: '/images/services/electrical/subs/lighting-hero.jpg',
+    heroImage: '/images/services/electrical/subs/lighting-card.jpg',
     cardImage: '/images/services/electrical/subs/lighting-card.jpg',
     galleryImages: [
       '/images/services/electrical/subs/landscape-lighting-path.jpg',
@@ -466,7 +466,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       '/images/services/electrical/subs/modern-lighting-interior.jpg',
       '/images/services/electrical/lighting-installation.jpg',
       '/images/services/electrical/subs/smart-home-living.jpg',
-      '/images/services/electrical/subs/lighting-hero.jpg',
+      '/images/services/electrical/subs/lighting-card.jpg',
     ],
     overview: [
       {

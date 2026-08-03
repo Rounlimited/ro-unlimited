@@ -94,7 +94,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
     cardImage: '/images/services/repairs/subs/interior-painting-card.jpg',
     galleryImages: [
       '/images/services/repairs/subs/interior-painting-hero.jpg',
-      '/images/services/repairs/subs/painter-rolling.jpg',
+      '/images/services/repairs/subs/spray-painting.jpg',
       '/images/services/repairs/subs/cutting-in.jpg',
       '/images/services/repairs/subs/paint-cans.jpg',
       '/images/services/repairs/subs/painted-room.jpg',

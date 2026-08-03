@@ -243,7 +243,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
     cardImage: '/images/services/septic/subs/septic-repair-card.jpg',
     galleryImages: [
       '/images/services/septic/subs/septic-repair-hero.jpg',
-      '/images/services/septic/subs/baffle-repair.jpg',
+      '/images/services/septic/subs/jetting-hose.jpg',
       '/images/services/septic/subs/tank-crack.jpg',
       '/images/services/septic/subs/riser-install.jpg',
       '/images/services/septic/subs/lid-replacement.jpg',
@@ -393,7 +393,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
     cardImage: '/images/services/septic/subs/system-replacement-card.jpg',
     galleryImages: [
       '/images/services/septic/subs/system-replacement-hero.jpg',
-      '/images/services/septic/subs/tank-removal.jpg',
+      '/images/services/septic/subs/septic-truck.jpg',
       '/images/services/septic/subs/new-tank-setting.jpg',
       '/images/services/septic/subs/new-drain-field.jpg',
       '/images/services/septic/subs/excavation-wide.jpg',
@@ -544,7 +544,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       '/images/services/septic/subs/emergency-service-hero.jpg',
       '/images/services/septic/subs/emergency-pumping.jpg',
       '/images/services/septic/subs/backup-indoor.jpg',
-      '/images/services/septic/subs/overflow-yard.jpg',
+      '/images/services/septic/subs/pumping-hose.jpg',
       '/images/services/septic/subs/technician-emergency.jpg',
       '/images/services/septic/subs/after-cleanup.jpg',
     ],
