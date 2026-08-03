@@ -27,7 +27,7 @@ const CAPABILITIES = [
     desc: 'Gravity sewer mains, laterals, and manholes \u2014 laser-graded fall, tied into municipal systems clean the first time.' },
   { num: '04', title: 'Storm Drainage Systems', img: '/images/services/septic/subs/gravel-trench.jpg',
     desc: 'Concrete pipe, structures, and manholes \u2014 the drainage package that gets your site through inspection.' },
-  { num: '05', title: 'Tier 2 Septic Systems', img: '/images/utilities/jr-septic-set.jpg',
+  { num: '05', title: 'Tier 2 Septic Systems', img: '/images/services/septic/subs/tank-setting.jpg',
     desc: 'Engineered and conventional septic under a Tier 2 license \u2014 commercial-scale systems, pump tanks, and drain fields.' },
   { num: '06', title: 'Commercial Grease Traps', img: '/images/services/septic/subs/distribution-box.jpg',
     desc: 'Interceptors and grease traps for restaurants and QSR builds \u2014 sized, set, plumbed, and inspection-ready.' },
@@ -44,7 +44,7 @@ const GALLERY = [
   '/images/utilities/jr-valve-assembly.jpg',
   '/images/utilities/jr-tap-sleeve-dip.jpg',
   '/images/services/septic/subs/excavator-tank.jpg',
-  '/images/utilities/jr-septic-set.jpg',
+  '/images/services/septic/subs/new-tank-setting.jpg',
   '/images/services/septic/subs/drain-field-trench.jpg',
   '/images/services/septic/subs/finished-installation.jpg',
 ];
