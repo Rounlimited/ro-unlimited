@@ -18,18 +18,20 @@ const HERO_STATS = [
 
 const TICKER = 'WATER MAIN TAPS \u2022 DUCTILE IRON \u2022 C900 PVC \u2022 SANITARY SEWER \u2022 STORM DRAINAGE \u2022 TIER 2 SEPTIC \u2022 COMMERCIAL GREASE TRAPS \u2022 HOT TAPS \u2022 FIRE LINES \u2022 ';
 
+// Images are RO's OWN job photos from JR. Every one has been visually checked
+// against its card title \u2014 do not swap in stock on filename or alt text alone.
 const CAPABILITIES = [
-  { num: '01', title: 'Water Main Taps & Hot Taps', img: '/images/utilities/jr-hot-tap-rig.jpg',
+  { num: '01', title: 'Water Main Taps & Hot Taps', img: '/images/utilities/jr-hot-tap.jpg',
     desc: 'Live-main connections without shutting the system down. Tapping sleeves, valves, and pressure connections done under license.' },
-  { num: '02', title: 'Ductile Iron & C900 Water Lines', img: '/images/utilities/jr-tap-sleeve-dip.jpg',
+  { num: '02', title: 'Ductile Iron & C900 Water Lines', img: '/images/utilities/jr-ductile-iron-valve.jpg',
     desc: 'Black bolted ductile iron and big-bore C900 PVC \u2014 domestic service and fire lines, bedded, restrained, and pressure-tested to spec.' },
-  { num: '03', title: 'Sanitary Sewer Installation', img: '/images/utilities/px-37627672.jpg',
+  { num: '03', title: 'Sanitary Sewer Installation', img: '/images/utilities/jr-sewer-lateral.jpg',
     desc: 'Gravity sewer mains, laterals, and manholes \u2014 laser-graded fall, tied into municipal systems clean the first time.' },
   { num: '04', title: 'Storm Drainage Systems', img: '/images/utilities/px-37627673.jpg',
     desc: 'PVC and black corrugated HDPE storm runs, catch basins, and drainage structures \u2014 the package that gets your site through inspection.' },
-  { num: '05', title: 'Tier 2 Septic Systems', img: '/images/services/septic/subs/tank-setting.jpg',
+  { num: '05', title: 'Tier 2 Septic Systems', img: '/images/utilities/jr-septic-tank-set.jpg',
     desc: 'Engineered and conventional septic under a Tier 2 license \u2014 commercial-scale systems, pump tanks, and drain fields.' },
-  { num: '06', title: 'Commercial Grease Traps', img: '/images/services/septic/subs/septic-tank-closeup.jpg',
+  { num: '06', title: 'Commercial Grease Traps', img: '/images/utilities/jr-grease-interceptor.jpg',
     desc: 'Interceptors and grease traps for restaurants and QSR builds \u2014 sized, set, plumbed, and inspection-ready.' },
 ];
 
@@ -41,12 +43,12 @@ const PROCESS = [
 ];
 
 const GALLERY = [
-  '/images/utilities/jr-valve-assembly.jpg',
-  '/images/utilities/jr-tap-sleeve-dip.jpg',
-  '/images/services/septic/subs/excavator-tank.jpg',
-  '/images/services/septic/subs/new-tank-setting.jpg',
-  '/images/services/septic/subs/drain-field-trench.jpg',
-  '/images/services/septic/subs/finished-installation.jpg',
+  '/images/utilities/jr-hot-tap.jpg',
+  '/images/utilities/jr-tapping-sleeve.jpg',
+  '/images/utilities/jr-valve-trench.jpg',
+  '/images/utilities/jr-underslab-rough.jpg',
+  '/images/utilities/px-37627672.jpg',
+  '/images/utilities/jr-grease-interceptor.jpg',
 ];
 
 const FAQS = [
