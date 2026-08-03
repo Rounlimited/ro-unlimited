@@ -250,7 +250,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
           sizes="100vw"
           style={{ zIndex: 0 }}
         />
-        <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.95) 44%, rgba(10,10,10,0.72) 64%, rgba(0,0,0,0.2) 86%)' }} />
+        <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.96) 52%, rgba(10,10,10,0.74) 70%, rgba(0,0,0,0.2) 88%)' }} />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, transparent 20%, transparent 75%, rgba(10,10,10,0.95) 100%)' }} />
         <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ zIndex: 2, background: 'radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)' }} />
 
