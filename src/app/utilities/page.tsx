@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -7,7 +7,7 @@ import { COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone, Droplets, ShieldCheck, ChevronDown, Waves, Flame, Layers } from 'lucide-react';
 import { gsap } from '@/components/animations/GSAPProvider';
 
-/* ─── Data ─────────────────────────────────────────────── */
+/* â”€â”€â”€ Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 const HERO_STATS = [
   { value: '3', label: 'State Licenses Held' },
@@ -23,9 +23,9 @@ const CAPABILITIES = [
     desc: 'Live-main connections without shutting the system down. Tapping sleeves, valves, and pressure connections done under license.' },
   { num: '02', title: 'Ductile Iron & C900 Water Lines', img: '/images/utilities/jr-tap-sleeve-dip.jpg',
     desc: 'Black bolted ductile iron and big-bore C900 PVC \u2014 domestic service and fire lines, bedded, restrained, and pressure-tested to spec.' },
-  { num: '03', title: 'Sanitary Sewer Installation', img: '/images/services/septic/subs/field-pipe.jpg',
+  { num: '03', title: 'Sanitary Sewer Installation', img: '/images/utilities/px-37627672.jpg',
     desc: 'Gravity sewer mains, laterals, and manholes \u2014 laser-graded fall, tied into municipal systems clean the first time.' },
-  { num: '04', title: 'Storm Drainage Systems', img: '/images/services/septic/subs/gravel-trench.jpg',
+  { num: '04', title: 'Storm Drainage Systems', img: '/images/utilities/px-37627673.jpg',
     desc: 'PVC and black corrugated HDPE storm runs, catch basins, and drainage structures \u2014 the package that gets your site through inspection.' },
   { num: '05', title: 'Tier 2 Septic Systems', img: '/images/services/septic/subs/tank-setting.jpg',
     desc: 'Engineered and conventional septic under a Tier 2 license \u2014 commercial-scale systems, pump tanks, and drain fields.' },
@@ -56,7 +56,7 @@ const FAQS = [
   { q: 'Can you handle the full site, not just utilities?', a: 'That\u2019s our model. We clear it, grade it, pipe it, and build on it \u2014 site development, underground utilities, and vertical construction under one contract with one accountable contractor.' },
 ];
 
-/* ─── Page ─────────────────────────────────────────────── */
+/* â”€â”€â”€ Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export default function UtilitiesPage() {
   const [mounted, setMounted] = useState(false);
@@ -76,7 +76,7 @@ export default function UtilitiesPage() {
     if (!mounted || !containerRef.current) return;
     const ctx = gsap.context(() => {
 
-      // Hero — cinematic staggered entrance
+      // Hero â€” cinematic staggered entrance
       if (heroRef.current) {
         const badge = heroRef.current.querySelector('.hero-badge');
         const h1 = heroRef.current.querySelector('h1');
@@ -94,7 +94,7 @@ export default function UtilitiesPage() {
         if (stats) tl.fromTo(stats, { y: 30, opacity: 0 },  { y: 0, opacity: 1, duration: 1.0 }, 1.3);
       }
 
-      // Capability cards — depth-staggered rise
+      // Capability cards â€” depth-staggered rise
       if (capsRef.current) {
         const head = capsRef.current.querySelector('.section-head');
         if (head) gsap.fromTo(head, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 1, scrollTrigger: { trigger: head, start: 'top 85%' } });
@@ -105,7 +105,7 @@ export default function UtilitiesPage() {
         });
       }
 
-      // License moat — split slide-in
+      // License moat â€” split slide-in
       if (licenseRef.current) {
         const left = licenseRef.current.querySelector('.moat-copy');
         const right = licenseRef.current.querySelector('.moat-side');
@@ -116,7 +116,7 @@ export default function UtilitiesPage() {
         });
       }
 
-      // Process — connector line draw + steps
+      // Process â€” connector line draw + steps
       if (processRef.current) {
         const lineEl = processRef.current.querySelector('.process-line');
         if (lineEl) gsap.fromTo(lineEl, { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: 1.6, ease: 'power2.inOut', scrollTrigger: { trigger: processRef.current, start: 'top 70%' } });
@@ -125,7 +125,7 @@ export default function UtilitiesPage() {
         });
       }
 
-      // Gallery — scale reveals
+      // Gallery â€” scale reveals
       if (galleryRef.current) {
         galleryRef.current.querySelectorAll('.gallery-item').forEach((img, i) => {
           gsap.fromTo(img, { y: 50, opacity: 0, scale: 0.94 },
@@ -162,7 +162,7 @@ export default function UtilitiesPage() {
         @media (prefers-reduced-motion: reduce) { .util-ticker-track { animation: none; } }
       `}</style>
 
-      {/* ═══ HERO ═══ */}
+      {/* â•â•â• HERO â•â•â• */}
       <section ref={heroRef} className="relative min-h-[100svh] flex flex-col overflow-hidden">
         <Image src="/images/services/septic/subs/excavation-wide.jpg" alt="RO Unlimited underground utility excavation" fill priority className="object-cover" sizes="100vw" style={{ zIndex: 0 }} />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
@@ -208,7 +208,7 @@ export default function UtilitiesPage() {
         </div>
       </section>
 
-      {/* ═══ SPEC TICKER ═══ */}
+      {/* â•â•â• SPEC TICKER â•â•â• */}
       <div className="relative overflow-hidden border-y border-ro-gold/15 bg-ro-black py-3 select-none" aria-hidden="true">
         <div className="util-ticker-track flex whitespace-nowrap w-max">
           <span className="text-ro-gold/60 font-mono text-[11px] tracking-[0.3em]">{TICKER}</span>
@@ -216,7 +216,7 @@ export default function UtilitiesPage() {
         </div>
       </div>
 
-      {/* ═══ CAPABILITIES ═══ */}
+      {/* â•â•â• CAPABILITIES â•â•â• */}
       <section ref={capsRef} className="py-24 sm:py-32 relative overflow-hidden">
         <div className="absolute inset-0 blueprint-overlay opacity-30" />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -244,7 +244,7 @@ export default function UtilitiesPage() {
         </div>
       </section>
 
-      {/* ═══ LICENSE MOAT ═══ */}
+      {/* â•â•â• LICENSE MOAT â•â•â• */}
       <section ref={licenseRef} className="py-24 sm:py-28 relative border-t border-ro-gray-800 overflow-hidden">
         <Image src="/images/services/septic/excavator-digging.jpg" alt="" fill className="object-cover opacity-[0.08]" sizes="100vw" aria-hidden="true" />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -276,7 +276,7 @@ export default function UtilitiesPage() {
         </div>
       </section>
 
-      {/* ═══ PROCESS ═══ */}
+      {/* â•â•â• PROCESS â•â•â• */}
       <section ref={processRef} className="py-24 sm:py-28 relative border-t border-ro-gray-800">
         <div className="absolute inset-0 blueprint-overlay opacity-20" />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -300,7 +300,7 @@ export default function UtilitiesPage() {
         </div>
       </section>
 
-      {/* ═══ GALLERY ═══ */}
+      {/* â•â•â• GALLERY â•â•â• */}
       <section ref={galleryRef} className="py-24 sm:py-28 relative border-t border-ro-gray-800">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
@@ -320,7 +320,7 @@ export default function UtilitiesPage() {
         </div>
       </section>
 
-      {/* ═══ FAQ ═══ */}
+      {/* â•â•â• FAQ â•â•â• */}
       <section ref={faqRef} className="py-24 sm:py-28 relative border-t border-ro-gray-800">
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -344,7 +344,7 @@ export default function UtilitiesPage() {
         </div>
       </section>
 
-      {/* ═══ CTA ═══ */}
+      {/* â•â•â• CTA â•â•â• */}
       <section ref={ctaRef} className="py-24 sm:py-32 relative border-t border-ro-gray-800 overflow-hidden">
         <Image src="/images/services/septic/equipment-jobsite.jpg" alt="" fill className="object-cover opacity-15" sizes="100vw" aria-hidden="true" />
         <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-ro-black/80 to-ro-black" />
