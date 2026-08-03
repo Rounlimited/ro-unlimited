@@ -1,11 +1,12 @@
 ﻿'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { usePrefersReducedMotion } from './GSAPProvider';
-
-gsap.registerPlugin(ScrollTrigger);
+// MUST come from GSAPProvider, never straight from 'gsap'. Importing the core
+// directly here created a SECOND gsap instance, and ScrollTrigger ends up bound
+// to only one of them — so every scroll-triggered tween on these pages applied
+// its `from` state (opacity 0) and then never played. The content stayed
+// invisible forever, including on /contact.
+import { gsap, ScrollTrigger, usePrefersReducedMotion } from './GSAPProvider';
 
 interface SubPageAnimatorProps {
   children: React.ReactNode;
@@ -47,7 +48,28 @@ export default function SubPageAnimator({ children }: SubPageAnimatorProps) {
         if (links.length && !section.querySelector('.grid')) gsap.from(links, { y: 20, opacity: 0, stagger: 0.1, duration: 0.5, scrollTrigger: { trigger: section, start: 'top 85%' } });
       });
     }, containerRef);
-    return () => ctx.revert();
+
+    // Positions are measured before fonts/images settle; without this the
+    // start points can be stale and a trigger may never become active.
+    ScrollTrigger.refresh();
+
+    // Safety net: scroll reveals hide content first and show it on trigger, so
+    // anything that breaks the trigger leaves the page permanently blank. Never
+    // let that reach a visitor — if something is still hidden but on screen
+    // after a moment, just show it.
+    const failsafe = window.setTimeout(() => {
+      containerRef.current
+        ?.querySelectorAll<HTMLElement>('section:not(:first-child) .grid > div, section:not(:first-child) h2')
+        .forEach((el) => {
+          const r = el.getBoundingClientRect();
+          const onScreen = r.top < window.innerHeight && r.bottom > 0;
+          if (onScreen && Number(getComputedStyle(el).opacity) < 0.05) {
+            gsap.set(el, { opacity: 1, y: 0, clearProps: 'transform' });
+          }
+        });
+    }, 2500);
+
+    return () => { window.clearTimeout(failsafe); ctx.revert(); };
   }, [mounted, reducedMotion]);
 
   if (!mounted) return <div>{children}</div>;
