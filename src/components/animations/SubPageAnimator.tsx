@@ -40,12 +40,20 @@ export default function SubPageAnimator({ children }: SubPageAnimatorProps) {
       sections?.forEach((section) => {
         const h2 = section.querySelector('h2');
         const sgl = section.querySelector('.gold-line');
-        if (h2) gsap.from(h2, { y: 30, opacity: 0, duration: 0.7, scrollTrigger: { trigger: h2, start: 'top 85%' } });
-        if (sgl) gsap.from(sgl, { scaleX: 0, transformOrigin: 'center', duration: 0.6, scrollTrigger: { trigger: sgl, start: 'top 85%' } });
+        // immediateRender:false on every scroll-triggered reveal below.
+        // By default gsap.from() hides the element the moment the tween is
+        // built and only shows it when the trigger fires — so anything that
+        // stops the trigger firing leaves the content permanently invisible
+        // (that is the bug that blanked /grading and /contact). With this off,
+        // the element renders normally and the reveal is applied only when the
+        // trigger actually runs: worst case you lose an animation, never the
+        // content.
+        if (h2) gsap.from(h2, { y: 30, opacity: 0, duration: 0.7, immediateRender: false, scrollTrigger: { trigger: h2, start: 'top 85%' } });
+        if (sgl) gsap.from(sgl, { scaleX: 0, transformOrigin: 'center', duration: 0.6, immediateRender: false, scrollTrigger: { trigger: sgl, start: 'top 85%' } });
         const cards = section.querySelectorAll('.grid > div');
-        if (cards.length) gsap.from(cards, { y: 40, opacity: 0, stagger: 0.08, duration: 0.6, ease: 'power2.out', scrollTrigger: { trigger: cards[0], start: 'top 85%' } });
+        if (cards.length) gsap.from(cards, { y: 40, opacity: 0, stagger: 0.08, duration: 0.6, ease: 'power2.out', immediateRender: false, scrollTrigger: { trigger: cards[0], start: 'top 85%' } });
         const links = section.querySelectorAll('.flex-wrap a');
-        if (links.length && !section.querySelector('.grid')) gsap.from(links, { y: 20, opacity: 0, stagger: 0.1, duration: 0.5, scrollTrigger: { trigger: section, start: 'top 85%' } });
+        if (links.length && !section.querySelector('.grid')) gsap.from(links, { y: 20, opacity: 0, stagger: 0.1, duration: 0.5, immediateRender: false, scrollTrigger: { trigger: section, start: 'top 85%' } });
       });
     }, containerRef);
 
@@ -64,12 +72,10 @@ export default function SubPageAnimator({ children }: SubPageAnimatorProps) {
       (entries) => {
         entries.forEach((entry) => {
           const el = entry.target as HTMLElement;
-          if (!entry.isIntersecting) {
-            const t = timers.get(el);
-            if (t) { window.clearTimeout(t); timers.delete(el); }
-            return;
-          }
-          if (timers.has(el)) return;
+          // Deliberately do NOT cancel when it scrolls back out — during a fast
+          // scroll an element can enter and leave before the check runs, and
+          // cancelling would let it stay invisible.
+          if (!entry.isIntersecting || timers.has(el)) return;
           timers.set(
             el,
             window.setTimeout(() => {
