@@ -6,6 +6,11 @@ import { useEffect, useRef, useState } from 'react';
 import { COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone, Droplets, ShieldCheck, ChevronDown, Waves, Flame, Layers } from 'lucide-react';
 import { gsap } from '@/components/animations/GSAPProvider';
+import { UTILITY_SUB_SERVICES } from '@/lib/utilities-data';
+
+// Slugs that have a built-out detail page today. Cards for anything not in
+// here stay non-clickable rather than linking to a 404.
+const DETAIL_SLUGS = new Set(UTILITY_SUB_SERVICES.map((s) => s.slug));
 
 /* â”€â”€â”€ Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
@@ -21,17 +26,17 @@ const TICKER = 'WATER MAIN TAPS \u2022 DUCTILE IRON \u2022 C900 PVC \u2022 SANIT
 // Images are RO's OWN job photos from JR. Every one has been visually checked
 // against its card title \u2014 do not swap in stock on filename or alt text alone.
 const CAPABILITIES = [
-  { num: '01', title: 'Water Main Taps & Hot Taps', img: '/images/utilities/jr-hot-tap.jpg',
+  { num: '01', slug: 'water-main-taps', title: 'Water Main Taps & Hot Taps', img: '/images/utilities/jr-hot-tap.jpg',
     desc: 'Live-main connections without shutting the system down. Tapping sleeves, valves, and pressure connections done under license.' },
-  { num: '02', title: 'Ductile Iron & C900 Water Lines', img: '/images/utilities/jr-ductile-iron-valve.jpg',
+  { num: '02', slug: 'water-lines', title: 'Ductile Iron & C900 Water Lines', img: '/images/utilities/jr-ductile-iron-valve.jpg',
     desc: 'Black bolted ductile iron and big-bore C900 PVC \u2014 domestic service and fire lines, bedded, restrained, and pressure-tested to spec.' },
-  { num: '03', title: 'Sanitary Sewer Installation', img: '/images/utilities/jr-sewer-lateral.jpg',
+  { num: '03', slug: 'sanitary-sewer', title: 'Sanitary Sewer Installation', img: '/images/utilities/jr-sewer-lateral.jpg',
     desc: 'Gravity sewer mains, laterals, and manholes \u2014 laser-graded fall, tied into municipal systems clean the first time.' },
-  { num: '04', title: 'Storm Drainage Systems', img: '/images/utilities/px-37627673.jpg',
+  { num: '04', slug: 'storm-drainage', title: 'Storm Drainage Systems', img: '/images/utilities/px-37627673.jpg',
     desc: 'PVC and black corrugated HDPE storm runs, catch basins, and drainage structures \u2014 the package that gets your site through inspection.' },
-  { num: '05', title: 'Tier 2 Septic Systems', img: '/images/utilities/jr-septic-tank-set.jpg',
+  { num: '05', slug: 'commercial-septic', title: 'Tier 2 Septic Systems', img: '/images/utilities/jr-septic-tank-set.jpg',
     desc: 'Engineered and conventional septic under a Tier 2 license \u2014 commercial-scale systems, pump tanks, and drain fields.' },
-  { num: '06', title: 'Commercial Grease Traps', img: '/images/utilities/jr-grease-interceptor.jpg',
+  { num: '06', slug: 'grease-interceptors', title: 'Commercial Grease Traps', img: '/images/utilities/jr-grease-interceptor.jpg',
     desc: 'Interceptors and grease traps for restaurants and QSR builds \u2014 sized, set, plumbed, and inspection-ready.' },
 ];
 
@@ -228,8 +233,14 @@ export default function UtilitiesPage() {
             <div className="mx-auto w-24 gold-line mt-5" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-            {CAPABILITIES.map((cap) => (
-              <div key={cap.num} className="cap-card group relative border border-ro-gray-800 hover:border-ro-gold/30 bg-ro-black/60 overflow-hidden transition-colors duration-500">
+            {CAPABILITIES.map((cap) => {
+              // A card only becomes a link once its detail page actually
+              // exists, so partially-built sections never dead-end a visitor.
+              const hasDetail = DETAIL_SLUGS.has(cap.slug);
+              const Wrapper = (hasDetail ? Link : 'div') as React.ElementType;
+              const wrapperProps = hasDetail ? { href: `/utilities/${cap.slug}` } : {};
+              return (
+              <Wrapper key={cap.num} {...wrapperProps} className="cap-card group relative border border-ro-gray-800 hover:border-ro-gold/30 bg-ro-black/60 overflow-hidden transition-colors duration-500 block">
                 <div className="relative h-44 sm:h-48 overflow-hidden">
                   <Image src={cap.img} alt={cap.title} fill className="object-cover transition-transform duration-700 group-hover:scale-110" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
                   <div className="absolute inset-0 bg-gradient-to-t from-ro-black via-ro-black/30 to-transparent" />
@@ -238,10 +249,17 @@ export default function UtilitiesPage() {
                 <div className="p-5 sm:p-6">
                   <h3 className="text-ro-white font-heading text-base sm:text-lg tracking-wider uppercase mb-2 group-hover:text-ro-gold transition-colors duration-300">{cap.title}</h3>
                   <p className="text-ro-gray-500 text-sm leading-relaxed">{cap.desc}</p>
-                  <div className="w-8 h-[1px] bg-ro-gold/30 mt-4 group-hover:w-16 transition-all duration-500" />
+                  {hasDetail ? (
+                    <span className="mt-4 inline-flex items-center gap-2 text-ro-gold/70 text-xs font-mono tracking-widest uppercase group-hover:text-ro-gold transition-colors">
+                      Read More <ArrowRight size={13} />
+                    </span>
+                  ) : (
+                    <div className="w-8 h-[1px] bg-ro-gold/30 mt-4 group-hover:w-16 transition-all duration-500" />
+                  )}
                 </div>
-              </div>
-            ))}
+              </Wrapper>
+              );
+            })}
           </div>
         </div>
       </section>

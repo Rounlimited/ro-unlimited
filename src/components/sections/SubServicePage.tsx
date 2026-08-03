@@ -17,11 +17,15 @@ interface SubServicePageProps {
   parentLabel: string;
   icon: React.ElementType;
   allSubServices: SubService[];
+  /** Section this sub-service lives under. Defaults to the services section;
+   *  utilities pages sit at /utilities/<slug> rather than /services/... */
+  basePath?: string;
 }
 
 interface DynamicImages { hero?: string; card?: string; gallery: string[] }
 
-export default function SubServicePage({ subService, parentSlug, parentLabel, icon: Icon, allSubServices }: SubServicePageProps) {
+export default function SubServicePage({ subService, parentSlug, parentLabel, icon: Icon, allSubServices, basePath = '/services' }: SubServicePageProps) {
+  const parentHref = `${basePath}/${parentSlug}`;
   const [mounted, setMounted] = useState(false);
   const [dynImages, setDynImages] = useState<DynamicImages | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -191,7 +195,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
     '@type': 'Service',
     name: `${subService.title} — RO Unlimited`,
     description: subService.heroDescription,
-    url: `https://rounlimited.com/services/${parentSlug}/${subService.slug}`,
+    url: `https://rounlimited.com${parentHref}/${subService.slug}`,
     provider: {
       '@type': 'LocalBusiness',
       name: 'RO Unlimited Construction & Development',
@@ -221,8 +225,8 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://rounlimited.com/' },
       { '@type': 'ListItem', position: 2, name: 'Services', item: 'https://rounlimited.com/services' },
-      { '@type': 'ListItem', position: 3, name: parentLabel, item: `https://rounlimited.com/services/${parentSlug}` },
-      { '@type': 'ListItem', position: 4, name: subService.title, item: `https://rounlimited.com/services/${parentSlug}/${subService.slug}` },
+      { '@type': 'ListItem', position: 3, name: parentLabel, item: `https://rounlimited.com${parentHref}` },
+      { '@type': 'ListItem', position: 4, name: subService.title, item: `https://rounlimited.com${parentHref}/${subService.slug}` },
     ],
   };
 
@@ -257,7 +261,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
               <li className="text-ro-gold/30">/</li>
               <li><Link href="/services" className="hover:text-ro-gold transition-colors">Services</Link></li>
               <li className="text-ro-gold/30">/</li>
-              <li><Link href={`/services/${parentSlug}`} className="hover:text-ro-gold transition-colors">{parentLabel}</Link></li>
+              <li><Link href={`${parentHref}`} className="hover:text-ro-gold transition-colors">{parentLabel}</Link></li>
               <li className="text-ro-gold/30">/</li>
               <li className="text-ro-gold/80" aria-current="page">{subService.title}</li>
             </ol>
@@ -610,7 +614,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
           {/* Desktop grid / Mobile horizontal scroll */}
           <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-4">
             {otherServices.slice(0, 4).map((svc) => (
-              <Link key={svc.id} href={`/services/${parentSlug}/${svc.slug}`}
+              <Link key={svc.id} href={`${parentHref}/${svc.slug}`}
                 className="cross-card group relative p-6 border border-ro-gray-800/30 overflow-hidden hover:border-ro-gold/20 transition-all duration-700 text-center">
                 {svc.cardImage && (
                   <>
@@ -635,7 +639,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
           {/* Mobile scroll */}
           <div className="sm:hidden flex gap-3 overflow-x-auto snap-x snap-mandatory pb-4 -mx-4 px-4 scrollbar-hide">
             {otherServices.map((svc) => (
-              <Link key={svc.id} href={`/services/${parentSlug}/${svc.slug}`}
+              <Link key={svc.id} href={`${parentHref}/${svc.slug}`}
                 className="cross-card flex-shrink-0 w-[60vw] snap-center group relative p-6 border border-ro-gray-800/30 text-center">
                 <div className="w-9 h-9 mx-auto flex items-center justify-center border border-ro-gold/15 bg-ro-gold/[0.04] mb-3">
                   <Icon size={16} className="text-ro-gold/60" />
@@ -649,7 +653,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
           </div>
 
           <div className="mt-10 text-center">
-            <Link href={`/services/${parentSlug}`} className="inline-flex items-center gap-2 text-ro-gold/50 text-sm font-mono tracking-wider uppercase hover:text-ro-gold transition-colors">
+            <Link href={`${parentHref}`} className="inline-flex items-center gap-2 text-ro-gold/50 text-sm font-mono tracking-wider uppercase hover:text-ro-gold transition-colors">
               All {parentLabel} Services <ArrowRight size={14} />
             </Link>
           </div>
