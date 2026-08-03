@@ -314,14 +314,27 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
           <div className="absolute top-[80%] left-0 right-0 h-px bg-ro-gold" />
         </div>
 
-        {/* Legibility is handled in two targeted layers rather than one blanket
-            scrim (at 72-90% black the footage just read as grey haze):
-            1. the video itself has its highlights compressed, so the blown-out
-               sky behind the white headline no longer glares;
-            2. a light overall gradient plus a tighter radial concentrated where
-               the headline actually sits, leaving the frame edges vivid. */}
-        <div className="absolute inset-0 z-[2] bg-gradient-to-b from-ro-black/66 via-ro-black/50 to-ro-black/74" />
-        <div className="absolute inset-0 z-[2] pointer-events-none" style={{ background: 'radial-gradient(ellipse 62% 52% at 50% 45%, rgba(8,8,8,0.42) 0%, rgba(8,8,8,0) 72%)' }} />
+        {/* Legibility is built from independent layers rather than one blanket
+            scrim (at 72-90% black the footage just read as grey haze). In order:
+            the video's own highlights are compressed so the blown-out sky stops
+            glaring, then (1) a light overall gradient for mood, (2) a grey
+            vignette shaped to the copy column for text contrast, (3) a faint
+            grey wash for the matte look. Tune ONE at a time — that's the point
+            of keeping them separate. */}
+        <div className="absolute inset-0 z-[2] bg-gradient-to-b from-ro-black/60 via-ro-black/44 to-ro-black/70" />
+        {/* Text-area vignette — a soft neutral-grey pocket covering the whole
+            copy column (badge → headline → description → CTAs → stats), not a
+            small ellipse behind the headline alone. Neutral grey rather than
+            pure black so the area reads as desaturated/greyed rather than just
+            dark, and it fades to nothing well before the frame edge so there
+            is no visible box — the video stays vivid around it. */}
+        <div
+          className="absolute inset-0 z-[2] pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(ellipse 72% 64% at 50% 52%, rgba(38,38,41,0.64) 0%, rgba(38,38,41,0.52) 42%, rgba(38,38,41,0.24) 70%, rgba(38,38,41,0) 90%)',
+          }}
+        />
         {/* Light grey wash — matte film look over the footage. Separate layer
             from the black gradient so its weight can be tuned on its own.
             Inline rgba (not a Tailwind opacity class) so it can't be dropped
