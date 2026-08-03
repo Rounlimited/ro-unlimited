@@ -6,7 +6,7 @@ import { COMPANY } from '@/lib/constants';
 import type { SubService } from '@/lib/sub-service-types';
 import {
   ArrowRight, Phone, AlertTriangle, Shield, CheckCircle2,
-  ChevronDown, Wrench, DollarSign, Clock,
+  ChevronDown, Wrench, SlidersHorizontal, Clock,
 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { gsap, ScrollTrigger } from '@/components/animations/GSAPProvider';
@@ -514,9 +514,9 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
           <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="cost-inner">
               <div className="text-center mb-12">
-                <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">Investment Guide</span>
+                <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">Scope &amp; Longevity</span>
                 <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">
-                  Cost & <span className="gradient-text-gold">Lifespan</span>
+                  What Drives <span className="gradient-text-gold">the Number</span>
                 </h2>
                 <div className="w-20 h-[2px] bg-gradient-to-r from-transparent via-ro-gold/40 to-transparent mx-auto mt-6" />
               </div>
@@ -528,7 +528,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
                     <span className="text-ro-gold text-[10px] sm:text-xs font-mono tracking-wider uppercase">Material / Service</span>
                   </div>
                   <div className="p-4 sm:p-5 text-center">
-                    <span className="text-ro-gold text-[10px] sm:text-xs font-mono tracking-wider uppercase flex items-center justify-center gap-1"><DollarSign size={11} /> Cost Range</span>
+                    <span className="text-ro-gold text-[10px] sm:text-xs font-mono tracking-wider uppercase flex items-center justify-center gap-1"><SlidersHorizontal size={11} /> What Moves It</span>
                   </div>
                   <div className="p-4 sm:p-5 text-center">
                     <span className="text-ro-gold text-[10px] sm:text-xs font-mono tracking-wider uppercase flex items-center justify-center gap-1"><Clock size={11} /> Lifespan</span>

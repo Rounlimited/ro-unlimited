@@ -472,7 +472,7 @@ export default function ServicesPage() {
             <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">
               More Than <span className="gradient-text-gold">Repairs</span>
             </h2>
-            <p className="text-ro-gray-400 text-sm sm:text-base mt-4 max-w-md mx-auto">A $3K roof repair today can lead to a $200K project tomorrow. One company — total capability.</p>
+            <p className="text-ro-gray-400 text-sm sm:text-base mt-4 max-w-md mx-auto">A repair call today is how a lot of clients find out we also build the building. One company — total capability.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {CROSS_DIVISIONS.map((div) => (

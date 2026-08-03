@@ -44,7 +44,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
       'Flashing, soffit, and fascia work',
     ],
     faq: [
-      { q: 'How much does roof repair cost in SC?', a: 'Minor repairs typically run $300–$1,500. Full replacements vary by size and material — we provide free estimates so you know the real number before any work starts.' },
+      { q: 'What drives the cost of a roof repair or replacement?', a: 'Square footage and pitch set the baseline — a steep roof needs staging and slows every trip up and down. After that it is how many layers come off, what the deck looks like once they do, the material you choose, and how much valley, flashing, and penetration detail is involved. Repairs are mostly access and labor; replacements are mostly material and disposal. We walk it, measure it, and hand you a written number before anything starts.' },
       { q: 'Do you handle insurance claims for storm damage?', a: 'Yes. We document the damage, provide detailed estimates, and work directly with your insurance adjuster to make the process as smooth as possible.' },
       { q: 'What roofing materials do you install?', a: 'Architectural shingles, standing seam metal, TPO/EPDM flat roofing, and more. We\'ll recommend the best option for your building and budget.' },
     ],
@@ -137,7 +137,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
       'Surge Protection & Safety',
     ],
     faq: [
-      { q: 'How much does an electrical panel upgrade cost?', a: 'A standard 200-amp panel upgrade typically runs $1,500–$3,500 depending on your home\'s wiring condition and whether the service entrance needs replacing. We provide free estimates.' },
+      { q: 'What drives the cost of a panel upgrade?', a: 'The panel itself is the small part. What moves the number is what feeds it and what leaves it — whether the service entrance cable, meter base, and grounding all have to be replaced, whether the utility has to reset the drop, how many circuits need AFCI or GFCI protection to meet current code, and what the branch wiring looks like once the cover comes off. Aluminum branch wiring or knob-and-tube behind the panel is a different job than a straight swap. We look first, then quote.' },
       { q: 'Are your electricians licensed?', a: 'Yes. All electrical work is performed by our licensed electricians, and every job is permitted and inspected to meet NEC code requirements in South Carolina.' },
       { q: 'Can you install EV chargers at my home?', a: 'Absolutely. We install Tesla Wall Connectors, ChargePoint, and universal Level 2 chargers with dedicated 240V circuits. A 30% federal tax credit applies to installation costs.' },
       { q: 'Do you install solar panels and battery storage?', a: 'Yes. We install complete solar-plus-storage systems including Tesla Powerwall, Enphase, and Generac PWRcell — with full electrical integration from panel to rooftop.' },
@@ -187,8 +187,8 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     ],
     faq: [
       { q: 'Do you offer emergency plumbing service?', a: 'Yes. Call us and we\'ll get someone out as quickly as possible. Burst pipes, major leaks, and sewer backups are priorities. Emergency dispatch is available with same-day response.' },
-      { q: 'How much does a water heater replacement cost?', a: 'Standard tank water heaters run $800–$2,000 installed. Tankless units are $2,500–$4,500. Heat pump water heaters (the most efficient option for SC) run $2,000–$4,000. We size it to your household.' },
-      { q: 'Can you re-pipe an entire house?', a: 'Yes. We re-pipe homes with copper or PEX. PEX is 30–40% cheaper and freeze-resistant. Full re-pipes typically take 2–5 days. Polybutylene and galvanized replacements are our most common re-pipe jobs.' },
+      { q: 'What should I know before replacing a water heater?', a: 'Type drives most of it. A tank swap in the same spot on the same fuel is the simple version. Tankless usually needs a larger gas line, a new vent path, and sometimes a dedicated circuit, so the install is a bigger job than the unit suggests. Heat pump units are the most efficient option for our climate, but they need air volume around them and a condensate drain — a tight interior closet can rule them out. Sizing comes from your household\'s peak demand, not from whatever was there before.' },
+      { q: 'Can you re-pipe an entire house?', a: 'Yes. We re-pipe homes with copper or PEX. PEX runs faster with fewer joints and tolerates a freeze better; copper is the choice for exposed or UV-hit runs. Full re-pipes typically take 2–5 days. Polybutylene and galvanized replacements are our most common re-pipe jobs.' },
       { q: 'Do you install water filtration systems?', a: 'Yes — whole-house carbon filters, water softeners, reverse osmosis, and well water treatment. We test your water first to design the right system. Most Upstate SC homes benefit from at least a softener.' },
       { q: 'Can you run a gas line for a new stove?', a: 'Absolutely. We install and extend natural gas and propane lines for stoves, dryers, water heaters, fireplaces, and outdoor grills. All gas work is permitted and pressure-tested.' },
     ],
@@ -234,7 +234,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
       { q: 'Do you handle small handyman-type jobs?', a: 'Yes. We take on jobs of all sizes — from a single drywall patch to a full deck build. Our punch-list service specifically bundles small items into one efficient visit so you finally cross everything off the list.' },
       { q: 'Can you build a new deck?', a: 'Absolutely. We build custom decks in wood, composite, and PVC. We handle design, permitting, and construction from start to finish — built to current code with proper hardware that lasts decades.' },
       { q: 'Do you do interior and exterior painting?', a: 'Yes — both. Interior includes prep, primer, two coats, and trim work. Exterior includes power wash, scraping, caulking, and weather-rated paint that lasts 8–15 years in SC sun.' },
-      { q: 'How much does a punch-list visit cost?', a: 'Half-day visits (3–4 hours, 5–10 small items) run $300–$800. Full-day visits run $600–$1,400. Hourly rate is $75–$125 depending on job complexity. Materials separate.' },
+      { q: 'How do you price a punch-list visit?', a: 'By the visit, not by the item. Send us the list up front and we group it so one trip covers as much as possible — a half day handles a batch of small items, a full day handles a long list or anything that needs two people. What moves it is awkwardness more than count: ladder work, high ceilings, anything that has to happen around your operating hours. Materials are billed separately so you see exactly what went into the job.' },
       { q: 'Can you handle electrical and plumbing during a repair?', a: 'Minor work yes — replacing fixtures, swapping outlets, fixing leaky faucets. Major work routes to our licensed electrical or plumbing teams. We\'re honest about what fits handyman scope vs. what needs a specialist.' },
     ],
     seoKeywords: ['handyman Greenville SC', 'home repair contractor Upstate SC', 'deck builder near me', 'fence installation SC', 'drywall repair Greenville', 'house painter SC'],
@@ -349,7 +349,7 @@ export const SERVICES_DETAIL: Record<string, ServiceDetail> = {
   'Small Renovations': {
     id: 'renovations',
     title: 'Small Renovations',
-    overview: 'Bathroom updates, kitchen refreshes, ADA modifications, and room conversions. Not every renovation needs to be a six-figure gut job — RO handles focused, scope-controlled renovations that transform spaces without the chaos of a full remodel.',
+    overview: 'Bathroom updates, kitchen refreshes, ADA modifications, and room conversions. Not every renovation needs to be a down-to-the-studs gut job — RO handles focused, scope-controlled renovations that transform spaces without the chaos of a full remodel.',
     includes: [
       'Bathroom updates — vanity, tile, fixtures, lighting',
       'Kitchen refreshes — cabinets, countertops, backsplash',

@@ -7,11 +7,13 @@
 //  commercial terminology, but every term unpacked in plain English
 //  the first time it appears. Confident, specific, never jargon soup.
 //
-//  FACTS: figures here are either published standards (OSHA, AWWA,
-//  NFPA, SC811, SC DES) or clearly framed as typical ranges. Utility
-//  fees cite Greenville Water's published schedule. Where an all-in
-//  installed price could not be verified from a public source, the
-//  copy says "quoted per job" rather than inventing a number.
+//  FACTS: figures here are published standards (OSHA, AWWA, NFPA,
+//  SC811, SC DES) — code minimums, test durations, review clocks,
+//  service lives. NO PRICING appears in public copy. Where the copy
+//  once quoted dollars, it now names the cost DRIVERS instead: what
+//  makes a job expensive, what owners forget to budget, and which
+//  authority publishes the fee schedule RO builds into the number.
+//  Estimating figures live on the admin/API side, never here.
 // ═══════════════════════════════════════════════════════════════
 
 import type { SubService } from './sub-service-types';
@@ -37,7 +39,7 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       `${IMG}/jr-tapping-sleeve.jpg`,
       `${IMG}/jr-ductile-iron-valve.jpg`,
       `${IMG}/jr-valve-trench.jpg`,
-      `${SUB}/waterline-joining-pipe.jpg`,
+      `${SUB}/waterline-bedded-pipe.jpg`,
       `${SUB}/waterline-crew-install.jpg`,
     ],
     overview: [
@@ -52,9 +54,9 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
           'Every ground-up commercial building needs at least one tap, and most need two — one for domestic water and a separate, larger one for the fire sprinkler system. You also need one when a tenant’s use changes and the existing service can no longer supply it: a restaurant, brewery, laundry, car wash, or medical suite going into a shell built for retail. A hot tap specifically is what you want any time the customers on that main cannot go without water — a hospital, school, apartment community, food plant, or occupied shopping center — because taking a public main out of service is not a decision a contractor gets to make on his own, and a depressurized main can trigger a precautionary boil-water advisory for everyone on it.',
       },
       {
-        heading: 'Cost & Timeline',
+        heading: 'What Drives the Cost',
         content:
-          'Two separate buckets, and owners are often surprised by the second one. The contractor scope — excavation, shoring, sleeve, valve, testing, backfill, and restoration — is quoted per job, because depth, main material, traffic control, and pavement repair drive it more than tap size does. The utility’s own fees are published and are the owner’s cost no matter who does the work: Greenville Water lists tap fees from $900 for a ¾-inch up to $4,000 for a 12-inch, meter fees from $350 to $1,600 for 5/8-inch through 2-inch, and non-residential capacity fees that run from $2,780 into six figures depending on meter size. The tap itself is roughly a two-hour operation once the pit is open; the full field sequence is typically one to three days. The schedule driver is paperwork, not digging — SC811 locates take three to ten working days, and the water authority’s review and inspection queue is measured in weeks.',
+          'Two separate buckets, and owners are routinely surprised by the second one. The contractor scope — excavation, shoring, sleeve, valve, testing, backfill, and restoration — is priced off the site, because depth, main material, traffic control, and pavement repair swing it further than tap size does. The second bucket is the water authority’s own fees, and those are the owner’s cost no matter who does the work: a tap fee that climbs with tap size, a meter fee, and a non-residential capacity fee that scales with meter size and on a large service can dwarf everything else about the connection. Greenville Water and every other Upstate authority publish those schedules. We pull the current numbers against your actual meter size and build them into the estimate rather than leaving you to discover them at permit time. The tap itself is roughly a two-hour operation once the pit is open; the full field sequence is typically one to three days. The schedule driver is paperwork, not digging — SC811 locates take three to ten working days, and the water authority’s review and inspection queue is measured in weeks.',
       },
       {
         heading: 'Why It Matters Here',
@@ -103,7 +105,7 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       {
         tip: 'Budget the utility fees separately from the contractor’s price',
         detail:
-          'Capacity fees alone run from $2,780 to well over $100,000 for non-residential meters on Greenville Water’s published schedule, and they are yours regardless of who installs the tap. Get the authority’s written fee quote before you set the project budget, not after.',
+          'Capacity fees scale with meter size, and on a large non-residential service they can outweigh every other cost of the connection. They are yours regardless of who installs the tap. Get the authority’s written fee quote against your actual meter size before you set the project budget, not after.',
       },
       {
         tip: 'Size the tap for the building you will have in ten years',
@@ -143,7 +145,7 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     ],
     faq: [
       { q: 'Will anyone lose water while you make the tap?', a: 'No — that is the entire point of a hot tap. The main stays pressurized and in service the whole time. Water pressure is contained inside the tapping machine while the cut is made, and the valve is closed before the machine comes off.' },
-      { q: 'Then why would anyone do a dry tap?', a: 'Because sometimes the main is already down. New mains not yet in service, a planned system overhaul, or a repair that is already isolating that segment are all cases where a dry tap is simpler, cheaper, and lets you inspect more thoroughly before the line goes into service.' },
+      { q: 'Then why would anyone do a dry tap?', a: 'Because sometimes the main is already down. New mains not yet in service, a planned system overhaul, or a repair that is already isolating that segment are all cases where a dry tap is simpler, faster, and lets you inspect more thoroughly before the line goes into service.' },
       { q: 'How large a branch can you take off an existing main?', a: 'It depends on the method. Tapping directly into ductile iron is limited by pipe size — up to a 2-inch tap on 24-inch and larger pipe. A service saddle or clamp maxes out at a 2-inch outlet. Anything bigger needs a tapping sleeve and valve, and the AWWA standard covering fabricated steel and stainless sleeves runs from 4-inch through 48-inch pipe with outlets through 36 inches.' },
       { q: 'How long does the tap itself take?', a: 'The mount, test, and tap sequence is roughly two hours for a typical wet tap. Ductile iron cuts quickly; HDPE takes several times longer. The multi-day part is the excavation, restraint, backfill, and restoration around it.' },
       { q: 'Why can’t our general contractor just do it?', a: 'Two reasons. South Carolina licenses "Water and Sewer Lines" as a general contractor classification requiring technical and business exams plus two years of documented commercial experience in the past five. And the water authority controls its own main — the connection happens on their terms, with their approved materials, their inspector, and often a short list of approved contractors.' },
@@ -152,12 +154,12 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       { q: 'Our main is old asbestos-cement pipe. Does that change things?', a: 'Yes. AC main is common in mid-century Upstate systems. Non-destructive approaches like wet tapping are the preferred way to deal with it, but worker-protection requirements still apply and the debris is regulated waste. Expect it to show up on the schedule and the invoice — and be skeptical of anyone who does not mention it at all.' },
     ],
     costData: [
-      { item: 'Utility tap fee, ¾" to 2" domestic', cost: '$900 – $2,800 (Greenville Water published schedule)', lifespan: 'One-time fee' },
-      { item: 'Utility tap fee, 4" to 12"', cost: '$2,000 – $4,000+ (4" and larger often priced at cost)', lifespan: 'One-time fee' },
-      { item: 'Capacity fee, non-residential', cost: '$2,780 – $138,000+ by meter size', lifespan: 'One-time fee' },
-      { item: 'Water meter, 5/8" through 2"', cost: '$350 – $1,600 (larger sizes quoted)', lifespan: 'Utility replaces on their cycle' },
-      { item: 'Installed wet tap — contractor scope', cost: 'Quoted per job — depth, main material, traffic control and restoration drive it', lifespan: 'Built to last the life of the main' },
-      { item: 'Plan review & inspection fees', cost: 'Extension review ~$4.00/LF; commercial plan review ~$800; re-inspection trips billed separately', lifespan: 'One-time fee' },
+      { item: 'Utility tap fee, ¾" to 2" domestic', cost: 'Set by your water authority’s published schedule, not by us', lifespan: 'One-time fee' },
+      { item: 'Utility tap fee, 4" to 12"', cost: 'Climbs with tap size; the large ones are often billed at actual cost', lifespan: 'One-time fee' },
+      { item: 'Capacity fee, non-residential', cost: 'Scales hard with meter size — the line owners underestimate most', lifespan: 'One-time fee' },
+      { item: 'Water meter, 5/8" through 2"', cost: 'Meter size alone; anything larger the authority quotes directly', lifespan: 'Utility replaces on their cycle' },
+      { item: 'Installed wet tap — contractor scope', cost: 'Depth, main material, traffic control, restoration', lifespan: 'Built to last the life of the main' },
+      { item: 'Plan review & inspection fees', cost: 'Length of the extension, plus a trip charge for every re-inspection', lifespan: 'One-time fee' },
     ],
     seoKeywords: [
       'water main tap Greenville SC',
@@ -186,7 +188,7 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     galleryImages: [
       `${SUB}/waterline-bedded-pipe.jpg`,
       `${SUB}/waterline-trench-bedding.jpg`,
-      `${SUB}/waterline-joining-pipe.jpg`,
+      `${SUB}/pvc-pipe-stock.jpg`,
       `${SUB}/waterline-crew-install.jpg`,
       `${IMG}/jr-ductile-iron-valve.jpg`,
       `${IMG}/jr-valve-trench.jpg`,
@@ -195,7 +197,7 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       {
         heading: 'What It Is',
         content:
-          'Two materials dominate commercial water service. Ductile iron pipe is cast iron with its graphite chemistry changed so the pipe bends instead of shattering — heavy, extremely strong, and cement-lined inside. C900 PVC is engineered plastic pressure pipe built to an AWWA standard, lighter and cheaper, immune to rusting from the inside, and made in different wall thicknesses for different pressures. Either one gets buried the same careful way: compacted stone under the pipe, stone worked into the haunches at its sides, adequate cover over the top, and copper tracer wire plus colored warning tape so the next contractor can find it. Anywhere the pipe turns or dead-ends, pressure tries to shove it apart, so those points get restrained with a thrust block or a mechanical restraint gland.',
+          'Two materials dominate commercial water service. Ductile iron pipe is cast iron with its graphite chemistry changed so the pipe bends instead of shattering — heavy, extremely strong, and cement-lined inside. C900 PVC is engineered plastic pressure pipe built to an AWWA standard, lighter and less costly per foot, immune to rusting from the inside, and made in different wall thicknesses for different pressures. Either one gets buried the same careful way: compacted stone under the pipe, stone worked into the haunches at its sides, adequate cover over the top, and copper tracer wire plus colored warning tape so the next contractor can find it. Anywhere the pipe turns or dead-ends, pressure tries to shove it apart, so those points get restrained with a thrust block or a mechanical restraint gland.',
       },
       {
         heading: 'When You Need It',
@@ -203,9 +205,9 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
           'New construction is the obvious one — every commercial building needs a domestic service and most need a fire line. Beyond that: an expansion or added stories that push fixture count and sprinkler demand past what the existing service can supply; a fire marshal requiring a private fire main or an added hydrant; a high-demand tenant like a restaurant, brewery, laundry, or car wash; a failing service line showing repeated leaks, rusty water, or poor pressure on upper floors; site development work needing main extensions and hydrant loops; or a DOT road-widening project forcing your private line to be relocated.',
       },
       {
-        heading: 'Cost & Timeline',
+        heading: 'Cost Drivers & Schedule',
         content:
-          'Installed cost is quoted per job and driven far more by conditions than by pipe. Diameter and pressure class matter, but depth, shoring, rock, restoration, and the number of fittings matter more — a straight run is inexpensive per foot; a run with six bends, two tees, a hydrant, and a backflow vault is not. Ductile iron material costs several times what C900 does per foot and is heavy enough to change the crew and equipment. A straightforward 200 to 400 foot commercial service and fire line in workable clay is commonly a one to two week operation. What surprises general contractors is the tail end: hydrostatic testing, a 24 to 48 hour chlorine hold, flushing, then two sets of bacteria samples pulled at least sixteen hours apart plus lab turnaround. That is four to seven days minimum from pipe-in-the-ground to cleared-for-service, it cannot be compressed, and a failed sample restarts it.',
+          'Conditions drive this far more than pipe does. Diameter and pressure class matter, but depth, shoring, rock, restoration, and the number of fittings matter more — a straight run in open ground prices well per foot; a run with six bends, two tees, a hydrant, and a backflow vault does not. Ductile iron material runs several times what C900 does per foot and is heavy enough to change the crew and the equipment on site. A straightforward 200 to 400 foot commercial service and fire line in workable clay is commonly a one to two week operation. What surprises general contractors is the tail end: hydrostatic testing, a 24 to 48 hour chlorine hold, flushing, then two sets of bacteria samples pulled at least sixteen hours apart plus lab turnaround. That is four to seven days minimum from pipe-in-the-ground to cleared-for-service, it cannot be compressed, and a failed sample restarts it. Put it in the schedule at bid time.',
       },
       {
         heading: 'Why It Matters Here',
@@ -224,7 +226,7 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     ],
     maintenanceTips: [
       { tip: 'Build the testing window into the schedule, not the punch list', detail: 'Hydrostatic test, then a 24 to 48 hour chlorine hold, then flushing, then two bacteria samples sixteen or more hours apart, then lab turnaround. It is a multi-day sequence that cannot be shortened, and general contractors routinely lose a week here.' },
-      { tip: 'Test the soil before committing to ductile iron', detail: 'The AWWA soil corrosivity evaluation is inexpensive next to replacing a corroded main. In Upstate clay it is the difference between pipe that outlives the building and pipe that becomes a recurring repair.' },
+      { tip: 'Test the soil before committing to ductile iron', detail: 'The AWWA soil corrosivity evaluation is a small line item next to replacing a corroded main. In Upstate clay it is the difference between pipe that outlives the building and pipe that becomes a recurring repair.' },
       { tip: 'Keep as-builts, tracer wire access points, and valve locations on file', detail: 'Record coordinates, depths, tracer wire termination boxes, and the tap location. The people who installed it will not be the people who have to find it in fifteen years.' },
       { tip: 'Put the fire main on an NFPA 25 calendar', detail: 'Annual obligations include a main drain flow test, waterflow alarm test, and hydrant servicing, with a flow test of underground mains on a five-year cycle. This is the building owner’s legal obligation, not the sprinkler contractor’s discretion.' },
       { tip: 'Keep backflow certification current', detail: 'Sprinkler and standpipe supplies have to be protected by an approved backflow assembly, and the water authority requires periodic certified testing. Let it lapse and you risk a shutoff notice on a fire line.' },
@@ -252,12 +254,12 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       { q: 'Can you work around our operating business?', a: 'Yes, and that is usually the plan. Combined with a hot tap on the existing main, most commercial water line work can be staged so the occupied part of the building never loses service. The interruption, when one is unavoidable, gets scheduled and communicated in advance rather than discovered.' },
     ],
     costData: [
-      { item: 'C900 PVC water main, installed', cost: 'Quoted per job — diameter, depth, rock and restoration drive it', lifespan: '55 – 70 years (AWWA independent estimate)' },
-      { item: 'Ductile iron water main, installed', cost: 'Quoted per job — material runs several times PVC per foot', lifespan: '100+ years in non-corrosive or properly encased soil' },
-      { item: 'Trench excavation, 4–6 ft', cost: 'Typically $10 – $20 per linear foot; rock adds substantially', lifespan: 'n/a' },
-      { item: 'Fire hydrant, installed', cost: 'Commonly $3,900 – $9,100 installed; more with long runs or restoration', lifespan: 'Decades with annual NFPA 25 servicing' },
-      { item: 'Backflow prevention assembly, fire service', cost: 'Device plus vault; authority inspection fees run a few hundred dollars per device', lifespan: 'Rebuild or replace on the authority’s testing cycle' },
-      { item: 'Pressure test, disinfection & bacteriological clearance', cost: 'Included in our scope — budget 4 to 7 days of schedule, not just dollars', lifespan: 'Required before any new main goes into service' },
+      { item: 'C900 PVC water main, installed', cost: 'Diameter, depth, rock, and how much you have to put back', lifespan: '55 – 70 years (AWWA independent estimate)' },
+      { item: 'Ductile iron water main, installed', cost: 'Material runs several times PVC per foot, and the weight changes the crew', lifespan: '100+ years in non-corrosive or properly encased soil' },
+      { item: 'Trench excavation, 4–6 ft', cost: 'Depth, groundwater, and whether the bucket finds rock', lifespan: 'n/a' },
+      { item: 'Fire hydrant, installed', cost: 'Distance off the main, valve and restraint, then restoration', lifespan: 'Decades with annual NFPA 25 servicing' },
+      { item: 'Backflow prevention assembly, fire service', cost: 'Device size, whether it needs a vault, recurring certified testing', lifespan: 'Rebuild or replace on the authority’s testing cycle' },
+      { item: 'Pressure test, disinfection & bacteriological clearance', cost: 'Costs schedule more than money — four to seven days, minimum', lifespan: 'Required before any new main goes into service' },
     ],
     seoKeywords: [
       'ductile iron water line installation Upstate SC',
@@ -282,10 +284,10 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     heroDescription:
       'A commercial sanitary sewer is three things working together: laterals running from each building, a gravity main collecting them, and manholes at every bend and junction so the line can be inspected, cleaned, and cameraed for the next fifty years. It all runs on gravity, which means every inch of fall matters. RO Unlimited installs to Oconee Joint Regional Sewer Authority and SC DES standards, tests it, cameras it, and hands you the closeout package.',
     heroImage: `${IMG}/jr-sewer-lateral.jpg`,
-    cardImage: `${SUB}/sewer-fittings-trench.jpg`,
+    cardImage: `${SUB}/pvc-pipe-stock.jpg`,
     galleryImages: [
       `${IMG}/jr-sewer-lateral.jpg`,
-      `${SUB}/sewer-fittings-trench.jpg`,
+      `${SUB}/pvc-pipe-stock.jpg`,
       `${SUB}/sewer-structures-hdpe.jpg`,
       `${SUB}/waterline-trench-bedding.jpg`,
       `${SUB}/waterline-crew-install.jpg`,
@@ -300,12 +302,12 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       {
         heading: 'When You Need It',
         content:
-          'New buildings and new pads are obvious. The one that catches owners out is a change of use: a retail shell becoming a restaurant, or a warehouse becoming manufacturing, triggers a fresh capacity calculation and impact fee even when the pipe is already in the ground. The single biggest budget surprise on Upstate sites is elevation — if the lowest fixture on your site cannot drain by gravity down to the tie-in manhole’s invert, you need a lift station, and that is a six-figure conversation. Under OJRSA rules a few specifics bite: service lines larger than four inches must connect to a manhole rather than tapping the pipe, and multi-family over four units requires a minimum eight-inch service.',
+          'New buildings and new pads are obvious. The one that catches owners out is a change of use: a retail shell becoming a restaurant, or a warehouse becoming manufacturing, triggers a fresh capacity calculation and impact fee even when the pipe is already in the ground. The single biggest budget surprise on Upstate sites is elevation — if the lowest fixture on your site cannot drain by gravity down to the tie-in manhole’s invert, you need a lift station — and a lift station is not a line item you absorb quietly. It brings pumps, a wet well, a control panel, standby power, a force main, and a permanent operating obligation with it. Under OJRSA rules a few specifics bite: service lines larger than four inches must connect to a manhole rather than tapping the pipe, and multi-family over four units requires a minimum eight-inch service.',
       },
       {
-        heading: 'Cost & Timeline',
+        heading: 'What It Takes',
         content:
-          'Eight-inch PVC gravity main in open ground at normal depth generally plans at roughly $75 to $160 per foot; go deeper than twelve feet, hit rock, or work under existing pavement and that can run $180 to $400 and beyond, because rock excavation alone runs well over $150 a cubic yard. A standard four-foot manhole under ten feet deep is commonly $5,000 to $9,500; deep ones run to $20,000. A duplex submersible lift station with generator, controls, and site work is a $250,000 to $750,000 project. Budget the authority’s fees separately — OJRSA charges $4,100 per equivalent residential unit, which is 300 gallons per day, or $13.66 per gallon for other uses. On schedule: design and permitting is eight to twenty weeks, installation of a 400 to 800 foot run is one to three weeks in normal soil and three to six with rock, and then closeout takes another two to five. One constraint catches nearly every general contractor — the mandrel deflection test cannot be run until backfill has been in place at least thirty days.',
+          'Depth and rock decide almost everything on a gravity sewer. Eight-inch PVC in open ground at normal depth is your baseline number; go deeper than twelve feet, hit rock, or work under existing pavement and the per-foot figure multiplies, because rock is priced by the cubic yard and it is the most expensive dirt on any site. Manholes price by depth — a standard four-foot structure under ten feet is routine work, while a deep one brings shoring, dewatering, and a crane with it. A duplex submersible lift station with generator, controls, and site work is a project inside your project, not an accessory to one. Budget the authority’s fees separately: OJRSA assesses capacity by equivalent residential unit — 300 gallons per day each — or by the gallon for other uses, on a published schedule we build into the number rather than leaving it as a surprise. On schedule: design and permitting is eight to twenty weeks, installation of a 400 to 800 foot run is one to three weeks in normal soil and three to six with rock, and then closeout takes another two to five. One constraint catches nearly every general contractor — the mandrel deflection test cannot be run until backfill has been in place at least thirty days.',
       },
       {
         heading: 'Why It Matters Here',
@@ -323,11 +325,11 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     ],
     maintenanceTips: [
       { tip: 'Get the sealed record drawings and keep them', detail: 'They show invert elevations, manhole locations, and lateral positions. Without them every future repair starts with an expensive scavenger hunt across your own parking lot.' },
-      { tip: 'Camera the private sewer every three to five years', detail: 'Standard CCTV inspection runs a few dollars a foot — trivial against a collapsed line under a loading dock. Ask for NASSCO PACP coding so defects are graded on a standard scale you can actually trend over time.' },
+      { tip: 'Camera the private sewer every three to five years', detail: 'Standard CCTV inspection is priced by the foot and is trivial next to a collapsed line under a loading dock. Ask for NASSCO PACP coding so defects are graded on a standard scale you can actually trend over time.' },
       { tip: 'Service the grease interceptor on a written schedule and keep the manifests', detail: 'Grease is the number one cause of commercial lateral blockages, and the authority runs a formal program with sizing requirements and inspections. A failed grease inspection can hold up a certificate of occupancy.' },
       { tip: 'Test the lift station’s backup power under load quarterly', detail: 'A wet well with no power during an Upstate thunderstorm outage is a sanitary sewer overflow with your name on it. Knowing the generator starts is not the same as knowing it carries the pumps.' },
       { tip: 'Protect the easement and keep manholes accessible', detail: 'Do not let landscaping, dumpster enclosures, fences, or trailer parking end up over a manhole. If a previous owner paved over one, get it raised and marked now rather than during an emergency at 2am.' },
-      { tip: 'Settle capacity before you sign the tenant', detail: 'Impact fees are assessed at the rate in effect when the capacity application completes. A restaurant going into a former retail bay can carry a five-figure capacity charge nobody wrote into the deal.' },
+      { tip: 'Settle capacity before you sign the tenant', detail: 'Impact fees are assessed at the rate in effect when the capacity application completes. A restaurant going into a former retail bay gets assessed on the new use, not the old one, and that charge lands on whoever signed without asking.' },
     ],
     processSteps: [
       { num: '01', title: 'Verify Capacity & Tie-In', description: 'Confirm the receiving main has allocation, pull the capacity and impact fee determination, and locate the tie-in invert — that elevation decides whether the site works on gravity or needs a lift station.' },
@@ -350,12 +352,12 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       { q: 'At what depth is shoring legally required?', a: 'Five feet, unless the excavation is entirely in stable rock. Between five and twenty feet a competent person selects the protective system; past twenty feet it has to be designed by a registered professional engineer. A competent person is legally defined as someone who can identify hazards and has authority to order workers out. This is not paperwork — seventeen workers died in trench collapses in 2025.' },
     ],
     costData: [
-      { item: '8" PVC gravity main, normal depth, open ground', cost: 'Plan $75 – $160 per LF', lifespan: '100+ years design life for PVC' },
-      { item: 'Same, deep, rock, or under pavement', cost: '$180 – $400+ per LF; rock excavation alone exceeds $150/CY', lifespan: 'Depth does not shorten pipe life' },
-      { item: 'Standard 4 ft precast manhole, under 10 ft deep', cost: '$5,000 – $9,500 each', lifespan: '50 – 75 years typical' },
-      { item: 'Deep manhole, 12 – 20 ft', cost: '$11,000 – $20,000 each', lifespan: '50 – 75 years typical' },
-      { item: 'Duplex submersible lift station w/ generator', cost: '$250,000 – $750,000 installed', lifespan: 'Pumps 10 – 15 yrs; wet well 50+ yrs' },
-      { item: 'Sewer impact fee (OJRSA)', cost: '$4,100 per ERU (300 gpd) or $13.66 per gallon', lifespan: 'One-time, set at capacity application' },
+      { item: '8" PVC gravity main, normal depth, open ground', cost: 'This is the baseline — everything below only adds to it', lifespan: '100+ years design life for PVC' },
+      { item: 'Same, deep, rock, or under pavement', cost: 'Rock is billed by the cubic yard and it multiplies the run', lifespan: 'Depth does not shorten pipe life' },
+      { item: 'Standard 4 ft precast manhole, under 10 ft deep', cost: 'Depth, ring count, and the traffic rating on the casting', lifespan: '50 – 75 years typical' },
+      { item: 'Deep manhole, 12 – 20 ft', cost: 'Shoring, dewatering, and a crane instead of an excavator', lifespan: '50 – 75 years typical' },
+      { item: 'Duplex submersible lift station w/ generator', cost: 'Pumps, wet well, panel, standby power, force main — a project in itself', lifespan: 'Pumps 10 – 15 yrs; wet well 50+ yrs' },
+      { item: 'Sewer impact fee (OJRSA)', cost: 'Assessed per equivalent residential unit — 300 gallons per day each', lifespan: 'One-time, set at capacity application' },
     ],
     seoKeywords: [
       'commercial sanitary sewer installation Upstate SC',
@@ -384,8 +386,8 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     galleryImages: [
       `${IMG}/px-37627673.jpg`,
       `${IMG}/px-37627672.jpg`,
-      `${SUB}/storm-culvert-outfall.jpg`,
-      `${SUB}/storm-rcp-stockpile.jpg`,
+      `${SUB}/storm-hdpe-outfall.jpg`,
+      `${IMG}/px-37627672.jpg`,
       `${SUB}/storm-catch-basin-grate.jpg`,
       `${SUB}/sewer-structures-hdpe.jpg`,
     ],
@@ -401,9 +403,9 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
           'Any new impervious area — building footprint, parking, drive aisles, loading. More pavement means more runoff arriving faster, so the site needs both conveyance and peak-flow control. Disturb an acre or more and you are into the South Carolina construction general permit and a SWPPP; disturb more than two acres and your plan needs agency approval and certification by a registered engineer, landscape architect, or Tier B surveyor. Disturb ten acres or more draining to one outlet and a sediment basin is required during construction. Beyond new work: redevelopment that adds pavement, and existing failures — chronic ponding, undermined curb, or a detention pond that no longer draws down.',
       },
       {
-        heading: 'Cost & Timeline',
+        heading: 'Budget & Timeline',
         content:
-          'Twelve to twenty-four inch HDPE dual-wall pipe at normal depth generally plans at $40 to $95 per foot; eighteen to thirty inch reinforced concrete pipe runs $85 to $175. A standard precast catch basin or curb inlet with a traffic-rated top is commonly $3,500 to $9,500 each, and a headwall or flared end section $1,400 to $4,000. Surface detention is by far the cheapest storage you can buy — under a dollar per cubic foot of storage — while underground chamber systems run roughly $6 to $17 per cubic foot installed, which is why they only make sense when land is worth more than the difference. A full storm package on a ten-acre commercial development commonly lands between $125,000 and $450,000. On schedule: permitting is three to eight weeks, storm pipe and structures three to eight weeks overlapping with mass grading, and pond work another two to five. One seasonal warning — you cannot terminate permit coverage until vegetation is established, so you do not want to be seeding in late July.',
+          'Pipe is the smallest surprise here. Twelve to twenty-four inch HDPE dual-wall at normal depth is the workhorse; reinforced concrete pipe runs materially more per foot and gets specified where loads, burial depth, or an agency spec demand it. Structures are the line that grows on you — every catch basin and curb inlet is a precast box, a frame, and a traffic-rated top, and the count comes off the inlet capacity math, not off the pipe layout. Headwalls and flared end sections are the small line that keeps an outfall from eroding out from under itself. What actually decides the budget is where you put the storage: surface detention is by a wide margin the least costly storage per cubic foot you can build, while underground chamber systems run multiples of it, which is why they only pencil when the land they free up is worth more than the difference. On schedule: permitting is three to eight weeks, storm pipe and structures three to eight weeks overlapping with mass grading, and pond work another two to five. One seasonal warning — you cannot terminate permit coverage until vegetation is established, so you do not want to be seeding in late July.',
       },
       {
         heading: 'Why It Matters Here',
@@ -416,11 +418,11 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       { trigger: 'Water still standing 24 to 48 hours after a storm', detail: 'A working detention pond draws down. Standing water means a clogged outlet orifice, a silted-in low flow channel, or a failed underdrain — and a pond that has not drained has no storage left for the next storm.' },
       { trigger: 'Cracked or tilting structure tops, a grate that rocks, or a curb inlet pulling away', detail: 'The structure is settling, which means the pipe connections into it are being pulled apart. You are watching joint separation happen from the surface.' },
       { trigger: 'Erosion at the outfall — a scour hole or undercut rip rap', detail: 'Discharge velocity is exceeding what the receiving channel can take. State rule requires velocities be reduced to nonerosive or to the pre-disturbance condition, so this is a compliance problem as well as a maintenance one.' },
-      { trigger: 'Sediment leaving the site or mud tracked onto the road', detail: 'This is the violation an inspector writes first. South Carolina allows a stop work order posted on site, and civil penalties run up to $1,000 with each day counted as a separate violation.' },
+      { trigger: 'Sediment leaving the site or mud tracked onto the road', detail: 'This is the violation an inspector writes first. South Carolina allows a stop work order posted on site, and civil penalties are assessed with each day counted as a separate violation.' },
       { trigger: 'A detention pond that has been landscaped, filled at the edges, or used for overflow parking', detail: 'Post-construction ponds are permanent permitted features with maintenance obligations attached to the property. Losing volume without approval puts the parcel out of compliance and puts a downstream flooding claim on your insurance.' },
     ],
     maintenanceTips: [
-      { tip: 'Clean catch basin sumps at least annually and after major storms', detail: 'The sump traps sediment until it fills, then it stops trapping and starts passing debris into the pipe. Cheap on a schedule, expensive as an emergency.' },
+      { tip: 'Clean catch basin sumps at least annually and after major storms', detail: 'The sump traps sediment until it fills, then it stops trapping and starts passing debris into the pipe. Routine on a schedule, an emergency call when it is not.' },
       { tip: 'Inspect the detention pond twice a year and after every big event', detail: 'Check the orifice for obstruction, the emergency spillway for erosion, the embankment for burrowing animals and woody growth, and the forebay for sediment depth. Keep the records — they are your defense in an audit.' },
       { tip: 'Never regrade, fill, or fence the pond, and keep growth out of the spillway', detail: 'Access paths should not cross an emergency spillway unless it was designed for it, and spillways belong on undisturbed soil. A well-meaning landscaper can quietly void a pond’s design capacity.' },
       { tip: 'Camera the storm system before buying, before repaving, and every five to ten years', detail: 'Video finds root intrusion, joint separation, and collapse before they surface. Repaving over a failing storm line is money set on fire.' },
@@ -439,21 +441,21 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     ],
     faq: [
       { q: 'Detention or retention — what is the difference?', a: 'A detention pond is normally dry. It fills during a storm and drains down through a restricted outlet over hours so your peak discharge never exceeds the pre-development rate. A retention pond holds a permanent pool and provides water quality treatment as well as storage. Municipalities require peak control because dozens of developments each doubling their peak discharge is exactly what floods the neighborhood downstream.' },
-      { q: 'Can we put the detention underground and keep the land?', a: 'Yes, and on tight infill sites it is often the only option — but it is the expensive one. Surface detention costs under a dollar per cubic foot of storage; underground chamber systems run roughly $6 to $17 per cubic foot installed. They also carry a permanent maintenance obligation, including periodic cleanout of the isolator row. Chamber systems are cited at 50 to 75 year lifespans.' },
+      { q: 'Can we put the detention underground and keep the land?', a: 'Yes, and on tight infill sites it is often the only option — but it is the expensive one. Surface detention is the least costly storage per cubic foot you can build; underground chamber systems run several times that installed. They also carry a permanent maintenance obligation, including periodic cleanout of the isolator row. Chamber systems are cited at 50 to 75 year lifespans. The question to settle first is whether the land you get back is worth more than the difference — on a tight infill site it usually is, and on a site with room to spare it almost never is.' },
       { q: 'HDPE, concrete, or PVC — what should we specify?', a: 'HDPE dual-wall is the default for most commercial site storm: corrosion-proof, light, fast to install, and smooth enough inside to carry more and silt less. Reinforced concrete pipe gets specified where loads and burial depths are extreme, under roadway where the agency mandates it, and at deep crossings. PVC shows up on smaller runs where a watertight gasketed joint matters more than diameter. Honestly, all three last decades when installed correctly — the dominant variable is not the material, it is the bedding and haunching.' },
       { q: 'When do we need a stormwater permit in South Carolina?', a: 'At one acre of land disturbance, or less if your project is part of a larger common plan of development. That means construction general permit coverage plus a SWPPP. The plan requirements tier separately: two acres or less gets a simplified plan needing neither agency approval nor engineer certification; over two acres requires an approved plan certified by a registered engineer, landscape architect, or Tier B surveyor.' },
       { q: 'What water quality treatment are we actually required to provide?', a: 'Sediment control during construction has to achieve 80% removal of suspended solids. For permanent facilities, a water quality pond with a permanent pool must store and release the first half inch of runoff over 24 hours; one without a permanent pool must release the first full inch over 24 hours; and permanent infiltration practices must accept at minimum the first inch of runoff from all impervious areas.' },
-      { q: 'What happens if we disturb land without permit coverage?', a: 'The implementing agency posts a stop work order at the site and can refuse to issue further building or grading permits until it is remedied. Civil penalties run up to $1,000, and each day of violation counts separately. That is the state exposure; federal Clean Water Act penalties are separate and substantially higher.' },
+      { q: 'What happens if we disturb land without permit coverage?', a: 'The implementing agency posts a stop work order at the site and can refuse to issue further building or grading permits until it is remedied. Civil penalties apply on top of that, and each day of violation counts separately, so the exposure compounds while you argue about it. That is the state side; federal Clean Water Act penalties are separate and substantially higher.' },
       { q: 'Why does bad storm work destroy pavement?', a: 'Because of the sequence. Poor bedding lets the pipe settle, joints separate, and water escapes into the surrounding soil — then flowing water carries soil particles back into the pipe, forming a void underground. The void grows quietly. Meanwhile, wherever capture points clog, water ponds and saturates the base, which weakens the subgrade and produces rutting, potholes, and eventually sudden collapse. Cracking pavement and wet areas that never dry are late-stage symptoms of a problem that started in the trench.' },
       { q: 'How much slope does a parking lot need?', a: 'About 2% cross slope for asphalt is the practical minimum, because below that you cannot reliably build it without forming birdbaths. The hard constraint is ADA — accessible spaces and their access aisles cap at 2.08% in all directions. Those two numbers leave essentially no margin, which is why accessible stall placement is a drainage decision as much as a striping one.' },
     ],
     costData: [
-      { item: '12" – 24" HDPE dual-wall storm pipe, installed', cost: 'Plan $40 – $95 per LF', lifespan: '50 – 100+ years' },
-      { item: '18" – 30" reinforced concrete pipe, installed', cost: 'Plan $85 – $175 per LF', lifespan: 'Documented up to 100 years' },
-      { item: 'Catch basin or curb inlet, precast, traffic-rated top', cost: '$3,500 – $9,500 each', lifespan: 'Structure 40 – 75 yrs; castings shorter' },
-      { item: 'Headwall or flared end section', cost: '$1,400 – $4,000 each', lifespan: '50+ years' },
-      { item: 'Surface detention pond (earthwork + riser)', cost: 'Under $1.00 per CF of storage — by far the cheapest storage available', lifespan: 'Indefinite with maintenance; sediment cleanout on a cycle' },
-      { item: 'Underground detention chamber system', cost: '$6 – $17 per CF installed; full systems $50,000 – $200,000+', lifespan: '50 – 75 years' },
+      { item: '12" – 24" HDPE dual-wall storm pipe, installed', cost: 'Depth, bedding, and how many structures the run ties into', lifespan: '50 – 100+ years' },
+      { item: '18" – 30" reinforced concrete pipe, installed', cost: 'Runs multiples of HDPE per foot; specified when the loads demand it', lifespan: 'Documented up to 100 years' },
+      { item: 'Catch basin or curb inlet, precast, traffic-rated top', cost: 'Structure depth, casting rating, and the count your grate math demands', lifespan: 'Structure 40 – 75 yrs; castings shorter' },
+      { item: 'Headwall or flared end section', cost: 'Pipe size, and whether the channel needs rip rap behind it', lifespan: '50+ years' },
+      { item: 'Surface detention pond (earthwork + riser)', cost: 'Earthwork volume and haul — the least costly storage you can build', lifespan: 'Indefinite with maintenance; sediment cleanout on a cycle' },
+      { item: 'Underground detention chamber system', cost: 'Multiples of surface storage; buys land back, adds permanent maintenance', lifespan: '50 – 75 years' },
     ],
     seoKeywords: [
       'commercial storm drainage installation Upstate SC',
@@ -485,7 +487,7 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       `${IMG}/jr-septic-tank-set.jpg`,
       `${SUB}/septic-soil-evaluation.jpg`,
       `${SUB}/waterline-trench-bedding.jpg`,
-      `${SUB}/sewer-fittings-trench.jpg`,
+      `${SUB}/pvc-pipe-stock.jpg`,
       `${IMG}/jr-sewer-lateral.jpg`,
       `${SUB}/waterline-crew-install.jpg`,
     ],
@@ -501,9 +503,9 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
           'Most of rural Oconee, Anderson, and outer Greenville County is beyond sewer, so any new build out there starts here. The trigger that catches owners out is change of use: state regulation requires a new permit to construct before any alteration that increases flow or changes the character of the wastewater. A retail bay at 15 gallons per employee becoming a restaurant at 40 gallons per seat can multiply the design flow tenfold and push the project over the engineering threshold overnight. Also worth knowing before you plan anything — South Carolina prohibits new septic permits, and even repairs, where a sewer treatment facility is "accessible for connection." The county or municipality decides what counts as accessible, and if connecting would require annexation or an easement across someone else’s land, it is not considered accessible.',
       },
       {
-        heading: 'Cost & Timeline',
+        heading: 'Planning It Out',
         content:
-          'We quote commercial systems from the soil report, not from a price list, and we would treat anyone who does otherwise with suspicion — the soil dictates the size of the field, and the field dominates the cost. The published government fees are firm: a $150 state site evaluation fee, $700 for a treatment facility construction permit, $350 for a pump station permit, and $530 a year to operate a land application permit. On schedule, a straightforward commercial system on decent soil is a one to three month permitting exercise. A large system using low pressure pipe or drip distribution is a six to nine month exercise before you break ground, because the land application permit carries a 180-day statutory review clock that runs first. Once issued, an onsite permit is good for five years.',
+          'We quote commercial systems from the soil report, not from a price list, and we would treat anyone who does otherwise with suspicion — the soil dictates the size of the field, and the field dominates the cost. Design flow sets the tank and the pumps. Soil acceptance rate sets the trench footage, and on Upstate clay that footage is the entire conversation. The state fees are published and firm: a site evaluation fee, a treatment facility construction permit fee, a pump station permit fee, and an annual fee to operate a land application permit. Those are yours regardless of who installs the system, and we carry the current schedule into the estimate. On schedule, a straightforward commercial system on decent soil is a one to three month permitting exercise. A large system using low pressure pipe or drip distribution is a six to nine month exercise before you break ground, because the land application permit carries a 180-day statutory review clock that runs first. Once issued, an onsite permit is good for five years.',
       },
       {
         heading: 'Why It Matters Here',
@@ -548,12 +550,12 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       { q: 'Is it still DHEC I am dealing with?', a: 'No. As of July 1, 2024, South Carolina split DHEC in two, and environmental permitting including onsite wastewater moved to SCDES, the Department of Environmental Services. Worth knowing that the retail food establishment program moved at the same time to the Department of Agriculture — so a new restaurant now deals with Agriculture for the food permit and SCDES for the septic and grease trap.' },
     ],
     costData: [
-      { item: 'Soil evaluation & report (Upstate, backhoe pits required)', cost: '$150 state site evaluation fee plus the soil classifier’s fee', lifespan: 'Supports a permit valid 5 years' },
-      { item: 'State permits — commercial', cost: 'Treatment facility construction $700; pump station $350; land application operating fee $530/yr', lifespan: 'Annual where applicable' },
-      { item: 'Commercial system, engineered for Upstate clay', cost: 'Quoted from the soil report — the soil sets the field size and the field dominates the cost', lifespan: 'Tank 30 – 40 yrs; drainfield varies widely with load and care' },
-      { item: 'Concrete tanks & grease traps', cost: 'Sized by formula; large capacities usually need tanks in series', lifespan: '30 – 40+ years if watertight' },
-      { item: 'Pump station (duplex required at 1,500 gpd and above)', cost: '$350 permit fee plus equipment within the system cost', lifespan: 'Effluent pumps roughly 7 – 15 yrs; floats and panel shorter' },
-      { item: 'Ongoing operation & maintenance', cost: 'Tank pumping and annual inspection on contract; land application operating fee where it applies', lifespan: 'Perpetual — it is a permit condition, not optional' },
+      { item: 'Soil evaluation & report (Upstate, backhoe pits required)', cost: 'State site evaluation fee, plus the soil classifier’s time on site', lifespan: 'Supports a permit valid 5 years' },
+      { item: 'State permits — commercial', cost: 'A published schedule: construction, pump station, annual land application', lifespan: 'Annual where applicable' },
+      { item: 'Commercial system, engineered for Upstate clay', cost: 'Soil acceptance rate — clay can need five times the field sand does', lifespan: 'Tank 30 – 40 yrs; drainfield varies widely with load and care' },
+      { item: 'Concrete tanks & grease traps', cost: 'Sized by formula; large capacities mean tanks in series', lifespan: '30 – 40+ years if watertight' },
+      { item: 'Pump station (duplex required at 1,500 gpd and above)', cost: 'Duplex pumps, control panel, alarm, and its own state permit', lifespan: 'Effluent pumps roughly 7 – 15 yrs; floats and panel shorter' },
+      { item: 'Ongoing operation & maintenance', cost: 'Pumping interval, plus the annual fee where land application applies', lifespan: 'Perpetual — it is a permit condition, not optional' },
     ],
     seoKeywords: [
       'commercial septic system Upstate SC',
@@ -584,7 +586,7 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       `${SUB}/grease-commercial-kitchen.jpg`,
       `${SUB}/grease-fog-source.jpg`,
       `${IMG}/jr-underslab-rough.jpg`,
-      `${SUB}/sewer-fittings-trench.jpg`,
+      `${SUB}/pvc-pipe-stock.jpg`,
       `${SUB}/sewer-structures-hdpe.jpg`,
     ],
     overview: [
@@ -599,9 +601,9 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
           'Any new food service facility — the plumbing code lists restaurants, hotel kitchens, hospitals, school kitchens, bars, factory cafeterias, and clubs. Any kitchen fit-out or menu change that adds fryers or a dishwasher, because that changes the sizing basis. Any existing facility that has had a grease-caused malfunction, at which point South Carolina requires immediate compliance as though it were a brand new facility. And on septic, any food service facility served by an onsite system, full stop. Which rulebook applies depends on where your waste goes: on sewer it is your local pretreatment authority, and on septic it is the state onsite wastewater regulation, which is considerably more prescriptive than most people expect.',
       },
       {
-        heading: 'Cost & Timeline',
+        heading: 'Sizing, Budget & Lead Time',
         content:
-          'A precast exterior interceptor typically runs $4,000 to $7,500 for a 1,000 gallon unit and $6,500 to $11,000 at 1,500 gallons for the tank itself, with in-ground installation all-in commonly landing between $5,000 and $20,000. The spread is driven by tank size, whether the lids need to be traffic-rated, excavation depth and rock, the distance from the kitchen to the tank, whether a sample manhole is required, and whether the parking lot has to be cut and put back. Plan review with the sewer authority is typically two to six weeks; the install itself is usually one to three days of site work once the tank is on site. The critical path is almost always the precast lead time, so order early.',
+          'Tank size sets the floor, and tank size comes out of whichever sizing method your authority accepts — so settle that before anyone prices a tank. From there the spread is driven by whether the lids have to be traffic-rated, excavation depth and whether you find rock, the run from the kitchen to the tank, whether a sample manhole is required, and whether the parking lot has to be cut and put back. An under-sink hydromechanical trap is a fixture-level purchase. An exterior in-ground interceptor is a site job with a crane on it, and those are not the same order of magnitude. Plan review with the sewer authority is typically two to six weeks; the install itself is usually one to three days of site work once the tank is on site. The critical path is almost always the precast lead time, so order early — a tank sitting in a yard three counties away has held up more certificates of occupancy than any inspector ever has.',
       },
       {
         heading: 'Why It Matters Here',
@@ -623,7 +625,7 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       { tip: 'Dry-wipe pans and scrape plates before anything hits the sink', detail: 'Everything kept out of the drain is grease you do not pay to haul. Collect fryer oil separately for rendering — never down the drain and never into the mop sink.' },
       { tip: 'Train staff, then retrain after turnover', detail: 'Post a one-page rule sheet at the dish pit and in every janitor’s closet. Staff turnover is the actual reason these rules get broken, not ignorance.' },
       { tip: 'Do not hot-flush the interceptor to clean it', detail: 'Hot water and detergent melt the grease and carry it downstream. The interceptor looks better and the sewer gets worse — and it is a common violation.' },
-      { tip: 'Inspect baffles, tees, and lid gaskets at every pump-out', detail: 'Ask the hauler to photograph the inside while it is empty. Concrete interceptors also corrode over time from hydrogen sulfide, and catching a deteriorating baffle early is far cheaper than replacing the tank.' },
+      { tip: 'Inspect baffles, tees, and lid gaskets at every pump-out', detail: 'Ask the hauler to photograph the inside while it is empty. Concrete interceptors also corrode over time from hydrogen sulfide, and catching a deteriorating baffle early is a repair — missing it is a tank replacement.' },
     ],
     processSteps: [
       { num: '01', title: 'Confirm Which Authority Governs', description: 'The local sewer and pretreatment authority if you are on sewer; the state onsite wastewater regulation if you are on septic. They size differently.' },
@@ -646,12 +648,12 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       { q: 'We are on septic, not sewer. Do we still need one?', a: 'Yes, and South Carolina’s requirements are specific. Minimum 1,000 gallons net liquid capacity, sized by state formula, dual-chambered or in series above 1,500 gallons per day. Two separate plumbing stub-outs — restrooms straight to the septic tank, kitchen through the grease trap first. Directly accessible from the surface with an eighteen-inch minimum access opening, and an extended outlet tee terminating six to twelve inches above the tank bottom.' },
     ],
     costData: [
-      { item: 'Under-sink hydromechanical trap (20 – 50 gpm)', cost: 'Roughly $500 – $2,000 equipment', lifespan: '5 – 15 years, shorter if neglected' },
-      { item: '1,000 gal precast exterior interceptor (tank supply)', cost: '$4,000 – $7,500', lifespan: '30 – 40+ years; hydrogen sulfide corrosion is the limiter' },
-      { item: '1,500 gal precast exterior interceptor (tank supply)', cost: '$6,500 – $11,000', lifespan: '30 – 40+ years' },
-      { item: 'Exterior in-ground installation, all-in', cost: '$5,000 – $20,000 depending on depth, rock, distance and restoration', lifespan: '—' },
-      { item: 'Traffic-rated (H-20) lids and risers', cost: 'Premium over standard lids — far cheaper specified up front than retrofitted', lifespan: 'Lids 20 – 30 yrs; gaskets sooner' },
-      { item: 'Pump-out service', cost: 'Roughly $300 – $600 per event, typically every 30 – 90 days', lifespan: 'Recurring — set the interval from measurement' },
+      { item: 'Under-sink hydromechanical trap (20 – 50 gpm)', cost: 'Flow rating, and whether it fits the cabinet it has to live in', lifespan: '5 – 15 years, shorter if neglected' },
+      { item: '1,000 gal precast exterior interceptor (tank supply)', cost: 'Precast pricing plus freight — the lead time bites harder', lifespan: '30 – 40+ years; hydrogen sulfide corrosion is the limiter' },
+      { item: '1,500 gal precast exterior interceptor (tank supply)', cost: 'Steps up with capacity; dual chambers or tanks in series', lifespan: '30 – 40+ years' },
+      { item: 'Exterior in-ground installation, all-in', cost: 'Depth, rock, run from the kitchen, and pavement restoration', lifespan: '—' },
+      { item: 'Traffic-rated (H-20) lids and risers', cost: 'A premium up front; a demolition bill if retrofitted later', lifespan: 'Lids 20 – 30 yrs; gaskets sooner' },
+      { item: 'Pump-out service', cost: 'Tank size and how fast your kitchen fills it', lifespan: 'Recurring — set the interval from measurement' },
     ],
     seoKeywords: [
       'commercial grease trap installation Upstate SC',
