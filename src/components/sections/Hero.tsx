@@ -314,10 +314,12 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
           <div className="absolute top-[80%] left-0 right-0 h-px bg-ro-gold" />
         </div>
 
-        {/* Gradient overlay — darker through the center where the headline sits */}
-        <div className="absolute inset-0 z-[2] bg-gradient-to-b from-ro-black/85 via-ro-black/72 to-ro-black/90" />
+        {/* Gradient overlay — darker through the center where the headline sits.
+            Kept light: at 72-90% the footage read as grey haze rather than video.
+            The headline carries its own drop-shadow for legibility. */}
+        <div className="absolute inset-0 z-[2] bg-gradient-to-b from-ro-black/58 via-ro-black/42 to-ro-black/70" />
         {/* Radial scrim — concentrates contrast directly behind the headline */}
-        <div className="absolute inset-0 z-[2] pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(8,8,8,0.50) 0%, rgba(8,8,8,0) 70%)' }} />
+        <div className="absolute inset-0 z-[2] pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(8,8,8,0.28) 0%, rgba(8,8,8,0) 70%)' }} />
 
         <div className="relative z-[10] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-4 lg:pt-8 lg:pb-8">
           <div className="text-center">
