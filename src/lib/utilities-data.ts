@@ -469,6 +469,204 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     ],
   },
 
+  // ═══ 5. COMMERCIAL / TIER 2 SEPTIC ═══
+  // Tier 2 scope is quoted from S.C. Code Regs. § 61-56.101. Tier 3 exists
+  // (Standard 610 specialized designs) — never call Tier 2 the "highest level."
+  {
+    id: 'commercial-septic',
+    slug: 'commercial-septic',
+    title: 'Tier 2 Commercial Septic Systems',
+    tagline: 'The License Level South Carolina Requires for Commercial Work',
+    heroDescription:
+      'A commercial septic system does the same job as a house system, but it is sized from the building’s actual daily water use rather than a bedroom count — and past 1,500 gallons a day, South Carolina requires a licensed professional engineer to design it. RO Unlimited holds a Tier 2 onsite wastewater license, which is the level the state requires for commercial systems, large systems, pump systems, grease traps, and repairs. A Tier 1 installer cannot legally touch any of it.',
+    heroImage: `${IMG}/jr-septic-tank-set.jpg`,
+    cardImage: `${SUB}/septic-soil-evaluation.jpg`,
+    galleryImages: [
+      `${IMG}/jr-septic-tank-set.jpg`,
+      `${SUB}/septic-soil-evaluation.jpg`,
+      `${SUB}/waterline-trench-bedding.jpg`,
+      `${SUB}/sewer-fittings-trench.jpg`,
+      `${IMG}/jr-sewer-lateral.jpg`,
+      `${SUB}/waterline-crew-install.jpg`,
+    ],
+    overview: [
+      {
+        heading: 'What It Is',
+        content:
+          'A watertight tank holds solids while liquid soaks into the soil, where microbes finish the treatment. That much is the same as a house. What changes on a commercial site is the sizing basis and the hardware. Design flow comes off an occupancy table — 40 gallons per seat per day for a full-service restaurant, 15 per employee per shift for an office, 100 per hotel room — not off bedrooms. South Carolina draws a hard line at 1,500 gallons per day: below it is a small system, above it is a large system that a South Carolina licensed professional engineer must design. Commercial systems also add parts a house never needs — a grease trap ahead of the tank for any kitchen, duplex pumps, pressure-dosed distribution — because commercial waste is stronger and arrives in sharper peaks.',
+      },
+      {
+        heading: 'When You Need It',
+        content:
+          'Most of rural Oconee, Anderson, and outer Greenville County is beyond sewer, so any new build out there starts here. The trigger that catches owners out is change of use: state regulation requires a new permit to construct before any alteration that increases flow or changes the character of the wastewater. A retail bay at 15 gallons per employee becoming a restaurant at 40 gallons per seat can multiply the design flow tenfold and push the project over the engineering threshold overnight. Also worth knowing before you plan anything — South Carolina prohibits new septic permits, and even repairs, where a sewer treatment facility is "accessible for connection." The county or municipality decides what counts as accessible, and if connecting would require annexation or an easement across someone else’s land, it is not considered accessible.',
+      },
+      {
+        heading: 'Cost & Timeline',
+        content:
+          'We quote commercial systems from the soil report, not from a price list, and we would treat anyone who does otherwise with suspicion — the soil dictates the size of the field, and the field dominates the cost. The published government fees are firm: a $150 state site evaluation fee, $700 for a treatment facility construction permit, $350 for a pump station permit, and $530 a year to operate a land application permit. On schedule, a straightforward commercial system on decent soil is a one to three month permitting exercise. A large system using low pressure pipe or drip distribution is a six to nine month exercise before you break ground, because the land application permit carries a 180-day statutory review clock that runs first. Once issued, an onsite permit is good for five years.',
+      },
+      {
+        heading: 'Why It Matters Here',
+        content:
+          'Three Upstate facts change everything about this work. First, backhoe pits are legally required above the Fall Line that separates the Piedmont from the Coastal Plain — Oconee, Anderson, Pickens, and Greenville are all above it, so every site evaluation up here needs an excavator on site, unlike the Lowcountry. Second, South Carolina does not use percolation tests at all; the word does not appear in the regulation. Sizing is done on soil morphology by certified staff or a licensed soil classifier. Out-of-state developers routinely arrive asking for a perc test. Third, red clay is expensive: sand accepts 0.9 to 1.0 gallons per square foot per day, while clay accepts 0.1 to 0.4. A 600-gallon-per-day office needs about 200 feet of trench on sand and roughly 1,000 feet on Upstate clay — five times the field, plus a 50% reserve area on top. South Carolina even publishes a system standard written specifically for expansive Piedmont clay, using the weathered saprolite below it.',
+      },
+    ],
+    warningSigns: [
+      { trigger: 'Standing water, spongy ground, or a bright green stripe over the drainfield', detail: 'That stripe is effluent surfacing and fertilizing the grass from below. Discharging effluent to the ground surface is a violation, and on a commercial property it is a public health exposure with customers walking across it.' },
+      { trigger: 'A high-water alarm at the pump panel, even one that silences itself', detail: 'South Carolina requires that alarm wired ahead of the pump’s overload protection precisely so it still works when the pump does not. Intermittent alarms mean a failing float, a stuck check valve, or a pump near the end of its life — and you have about one pump-tank volume of storage before it backs up inside the building.' },
+      { trigger: 'Any change of use, added seating, or new kitchen', detail: 'A permit is required before the alteration, not after. Adding a kitchen to a space permitted as retail can multiply design flow tenfold and put you over the threshold where an engineer must design the system.' },
+      { trigger: 'Trucks, trailers, or dumpsters parking on the drainfield', detail: 'State rule prohibits the system under a driveway or parking area. One loaded delivery truck can crush distribution pipe and destroy soil structure in a strip that never recovers — and the fix is rebuilding that section, not patching it.' },
+      { trigger: 'Building-wide slow drains or odor, especially after rain', detail: 'Building-wide rather than one fixture points at the system, not the plumbing. A correlation with weather suggests a seasonal high water table eating your vertical separation, or roof and surface water being routed onto the field.' },
+      { trigger: 'A grease trap nobody can remember pumping', detail: 'Once grease and solids reach about a quarter of the liquid depth the trap has stopped separating. Grease then moves into the tank and out into the trenches, where it coats the soil surface and cannot be flushed back out.' },
+    ],
+    maintenanceTips: [
+      { tip: 'Watch your water bill against your permitted design flow', detail: 'Your permit was issued for a specific gallons-per-day number. A sustained climb toward it means hydraulic overload is coming before any symptom shows — and twelve consecutive months of water data is exactly what the state lets you use to justify a revised flow if you expand.' },
+      { tip: 'Put the tank and grease trap on a contract, not on memory', detail: 'Let the first year’s measured intervals set the schedule rather than guessing. Keep every ticket — inspectors commonly want a year of records, and it is your evidence during a sale or a health inspection.' },
+      { tip: 'Physically protect the drainfield and the reserve area', detail: 'Bollards, wheel stops, signage. The undisturbed space between trenches does not count toward your 50% reserve — and if you pave the reserve area, you have no repair option the day the primary field fails.' },
+      { tip: 'Route all surface and roof water away from the system', detail: 'The regulation requires the system area be protected from surface and roof drainage with swales and positive grading. Every gallon of stormwater reaching the trenches is a gallon your clay cannot spend on wastewater.' },
+      { tip: 'Service the mechanical parts and track run time', detail: 'Pull and inspect the pump annually, verify the floats, test the alarm, and flush low pressure pipe laterals yearly. Rising run time at constant flow is the earliest possible warning of a failing pump or a clogging field — months before anything surfaces.' },
+      { tip: 'Control what goes down the drain, and retrain after staff turnover', detail: 'No garbage grinders on a grease-trap system — they are prohibited outright in South Carolina. No wipes, including the ones sold as flushable. No fryer oil and no mop-bucket grease. Staff turnover, not ignorance, is why these rules get broken.' },
+    ],
+    processSteps: [
+      { num: '01', title: 'Establish the Real Design Flow', description: 'Pull the number from the state occupancy table by seat, room, employee, or student count — everything downstream is sized off this one figure.' },
+      { num: '02', title: 'Soil Evaluation', description: 'Certified staff or a licensed professional soil classifier evaluates the soil — and above the Fall Line that means backhoe pits, not hand borings.' },
+      { num: '03', title: 'Determine the Regulatory Track', description: 'Under 1,500 gallons per day on a standard design, over 1,500 requiring a sealed engineered design, or advanced treatment that also needs a land application permit with its 180-day clock.' },
+      { num: '04', title: 'Design & Stamp', description: 'Size the field from the soil’s acceptance rate, the tank and grease trap from the state formulas, the pumps from the flow, and lay out the reserve area.' },
+      { num: '05', title: 'Submit & Permit', description: 'Pay the site evaluation fee, file through state ePermitting, and build the statutory review clocks into the construction schedule rather than discovering them.' },
+      { num: '06', title: 'Install Exactly to the Permit', description: 'Watertight tanks, solid Schedule 40 connections, seven feet of undisturbed earth between trenches, trench bottoms level within two inches, force mains encased under any drive or parking.' },
+      { num: '07', title: 'Final Inspection', description: 'The state inspects — or the engineer inspects their own design where one was required — and as-built documentation is due within two business days of completion.' },
+      { num: '08', title: 'Approval to Operate', description: 'Receive approval to operate, and start the maintenance file on day one rather than after the first backup.' },
+    ],
+    faq: [
+      { q: 'What exactly does a Tier 2 license cover?', a: 'South Carolina regulation is specific. A Tier 1 installer may install gravity-fed residential systems only, and is not authorized to conduct repairs on existing systems at all. Tier 2 covers everything Tier 1 does plus pumps, grease traps, curtain drains, elevated and mounded systems, and all commercial, large, and community onsite wastewater systems — plus repairs. Tier 3 exists above that for specialized engineered designs, so we do not claim to be the top tier. Tier 2 is simply the level the state requires for commercial work.' },
+      { q: 'What makes a system "commercial" versus "large"?', a: 'They are two different things and people mix them up. Commercial is about use — anything other than a private dwelling, intended for commerce. Large is about flow: anything over 1,500 gallons per day. A small church is commercial but not large. An apartment complex is large but not commercial. Above 1,500 gallons per day, a South Carolina licensed engineer must design it regardless of which label applies.' },
+      { q: 'Why a soil scientist instead of a perc test?', a: 'Because South Carolina does not use percolation tests — the word does not appear anywhere in the onsite wastewater regulation. The state sizes systems on soil morphology: texture, structure, depth to a restrictive horizon, and depth to the seasonal water table. Only certified staff or a licensed professional soil classifier may perform the evaluation, and above the Fall Line it requires backhoe pits.' },
+      { q: 'How big does my drainfield need to be?', a: 'Design flow divided by the soil acceptance rate divided by trench width. The catch is that the acceptance rate is set by your worst soil layer from the surface down to a foot below the trench bottom. In the Upstate that is usually clay at 0.1 to 0.4 gallons per square foot per day against 0.9 to 1.0 for sand — often five times the field. Then add a 50% reserve area, and note that the required undisturbed space between trenches does not count toward it.' },
+      { q: 'I am opening a restaurant. What is different?', a: 'Almost everything. Design flow is 40 gallons per seat per day for full-service dining, so a hundred seats is a 4,000 gallon-per-day system and automatically over the engineering threshold. You need an exterior grease trap of at least 1,000 gallons, and two separate plumbing stub-outs — restrooms running straight to the septic tank, kitchen routed through the grease trap first. Garbage grinders are prohibited. And restaurant waste runs roughly ten times the organic strength of household waste, so sizing on hydraulics alone will fail.' },
+      { q: 'The tank is fine — why did the drainfield fail?', a: 'Different jobs, different failure modes. The tank settles solids; the field absorbs liquid. Fields fail from a thickening biomat, accelerated by fine solids and grease escaping the tank, plus compaction from traffic, root intrusion, hydraulic overload, or a rising water table. A tank can look perfect while the field is finished.' },
+      { q: 'Sewer runs past my property. Can I still install septic?', a: 'Generally no. South Carolina prohibits new septic permits — and even repairs or replacement of failing systems — where a treatment facility is accessible for connection. But your county or municipality decides what counts as accessible, and if connecting would require annexation or an easement across adjacent property, it is not considered accessible. That distinction is worth confirming before you buy the land.' },
+      { q: 'Is it still DHEC I am dealing with?', a: 'No. As of July 1, 2024, South Carolina split DHEC in two, and environmental permitting including onsite wastewater moved to SCDES, the Department of Environmental Services. Worth knowing that the retail food establishment program moved at the same time to the Department of Agriculture — so a new restaurant now deals with Agriculture for the food permit and SCDES for the septic and grease trap.' },
+    ],
+    costData: [
+      { item: 'Soil evaluation & report (Upstate, backhoe pits required)', cost: '$150 state site evaluation fee plus the soil classifier’s fee', lifespan: 'Supports a permit valid 5 years' },
+      { item: 'State permits — commercial', cost: 'Treatment facility construction $700; pump station $350; land application operating fee $530/yr', lifespan: 'Annual where applicable' },
+      { item: 'Commercial system, engineered for Upstate clay', cost: 'Quoted from the soil report — the soil sets the field size and the field dominates the cost', lifespan: 'Tank 30 – 40 yrs; drainfield varies widely with load and care' },
+      { item: 'Concrete tanks & grease traps', cost: 'Sized by formula; large capacities usually need tanks in series', lifespan: '30 – 40+ years if watertight' },
+      { item: 'Pump station (duplex required at 1,500 gpd and above)', cost: '$350 permit fee plus equipment within the system cost', lifespan: 'Effluent pumps roughly 7 – 15 yrs; floats and panel shorter' },
+      { item: 'Ongoing operation & maintenance', cost: 'Tank pumping and annual inspection on contract; land application operating fee where it applies', lifespan: 'Perpetual — it is a permit condition, not optional' },
+    ],
+    seoKeywords: [
+      'commercial septic system Upstate SC',
+      'commercial septic system installation Oconee County SC',
+      'large capacity septic system South Carolina',
+      'Tier 2 licensed septic installer SC',
+      'septic system design flow 1500 gpd South Carolina engineer',
+      'low pressure pipe LPP septic system Anderson SC',
+      'septic system red clay soil Greenville County',
+      'soil evaluation and septic permit SCDES Upstate South Carolina',
+      'Lake Keowee septic setback requirements',
+      'commercial drainfield repair Seneca SC',
+    ],
+  },
+
+  // ═══ 6. COMMERCIAL GREASE INTERCEPTORS ═══
+  {
+    id: 'grease-interceptors',
+    slug: 'grease-interceptors',
+    title: 'Commercial Grease Traps & Interceptors',
+    tagline: 'Sized, Set, Plumbed and Inspection-Ready',
+    heroDescription:
+      'Fats, oils, and grease float. A grease interceptor is a tank that slows kitchen wastewater down enough for grease to rise and food solids to sink, so only the clean middle layer continues to the sewer or septic system. Get it undersized, badly plumbed, or unmaintained and you get blocked laterals, a failed inspection, and a certificate of occupancy that will not issue. RO Unlimited sizes them to the reviewing authority’s method, sets them, and hands you a system that passes.',
+    heroImage: `${IMG}/jr-grease-interceptor.jpg`,
+    cardImage: `${SUB}/grease-commercial-kitchen.jpg`,
+    galleryImages: [
+      `${IMG}/jr-grease-interceptor.jpg`,
+      `${SUB}/grease-commercial-kitchen.jpg`,
+      `${SUB}/grease-fog-source.jpg`,
+      `${IMG}/jr-underslab-rough.jpg`,
+      `${SUB}/sewer-fittings-trench.jpg`,
+      `${SUB}/sewer-structures-hdpe.jpg`,
+    ],
+    overview: [
+      {
+        heading: 'What It Is',
+        content:
+          'Two different pieces of equipment get called the same thing. The small stainless or plastic box under a sink is properly a hydromechanical interceptor — a grease trap — and it is rated in gallons per minute of flow. The large in-ground concrete tank outside, typically 1,000 to 3,000 gallons, is a gravity grease interceptor, rated in gallons of capacity. South Carolina is blunt about which one a commercial kitchen on septic needs: an interior unit may not be used in place of a properly sized exterior grease trap. Grease matters because it is the single most common cause of sewer blockages — the EPA has put it at 47% of reported blockages — which is why nearly every sewer authority runs a formal program with sizing rules, inspections, and penalties.',
+      },
+      {
+        heading: 'When You Need It',
+        content:
+          'Any new food service facility — the plumbing code lists restaurants, hotel kitchens, hospitals, school kitchens, bars, factory cafeterias, and clubs. Any kitchen fit-out or menu change that adds fryers or a dishwasher, because that changes the sizing basis. Any existing facility that has had a grease-caused malfunction, at which point South Carolina requires immediate compliance as though it were a brand new facility. And on septic, any food service facility served by an onsite system, full stop. Which rulebook applies depends on where your waste goes: on sewer it is your local pretreatment authority, and on septic it is the state onsite wastewater regulation, which is considerably more prescriptive than most people expect.',
+      },
+      {
+        heading: 'Cost & Timeline',
+        content:
+          'A precast exterior interceptor typically runs $4,000 to $7,500 for a 1,000 gallon unit and $6,500 to $11,000 at 1,500 gallons for the tank itself, with in-ground installation all-in commonly landing between $5,000 and $20,000. The spread is driven by tank size, whether the lids need to be traffic-rated, excavation depth and rock, the distance from the kitchen to the tank, whether a sample manhole is required, and whether the parking lot has to be cut and put back. Plan review with the sewer authority is typically two to six weeks; the install itself is usually one to three days of site work once the tank is on site. The critical path is almost always the precast lead time, so order early.',
+      },
+      {
+        heading: 'Why It Matters Here',
+        content:
+          'Upstate authorities run real programs with real paperwork. ReWa, the Greenville regional authority, requires a submittal review form with flow calculations and enrollment in a FOG register where you upload your maintenance manifests — free, but mandatory. OJRSA, covering Seneca, Walhalla, and Westminster, publishes standard details for grease traps, interceptors, and oil-water separators along with a sizing workbook and a sewer use regulation. Restaurants on septic get hit twice: they need both a grease trap and a commercial septic system, and South Carolina prohibits mound systems for facilities requiring grease traps — which closes off the usual workaround on poor soils. One more local wrinkle worth knowing: since July 2024 the retail food permit comes from the Department of Agriculture, while the septic and grease side sits with SCDES.',
+      },
+    ],
+    warningSigns: [
+      { trigger: 'Grease turning up downstream — in the lateral, the septic tank, or a slow floor drain', detail: 'The interceptor has stopped separating. Usually a full unit, a broken baffle, or a tee that has been knocked off. By the time you see it downstream, grease is already coating pipe or drainfield soil where it cannot be flushed out.' },
+      { trigger: 'Grease and solids past about a quarter of the liquid depth', detail: 'This is the industry 25% rule. Past that point incoming flow short-circuits the baffles and pushes grease straight through as if the unit were not there. Most restaurants reach it in one to three months, not annually.' },
+      { trigger: 'A non-traffic-rated lid where vehicles can reach it', detail: 'An H-20 rating means a 16,000 pound wheel load with a safety factor applied on top. A standard lid on a delivery route is a collapse waiting to happen — a genuine life-safety issue, not a maintenance item.' },
+      { trigger: 'Anyone selling enzymes or emulsifiers as a substitute for pumping', detail: 'The plumbing code prohibits discharging emulsifiers, chemicals, or enzymes to a grease interceptor. They do not remove grease — they liquefy it so it passes through your interceptor and congeals in the public sewer, which is precisely what the ordinance exists to prevent.' },
+      { trigger: 'A garbage disposal plumbed into the kitchen line', detail: 'The code is explicit that a food waste disposer shall not discharge to a grease interceptor, and South Carolina’s septic rule agrees. Solids overwhelm the unit and destroy the retention time it depends on.' },
+      { trigger: 'No sample port, no risers to grade, or a unit nobody can open', detail: 'If an inspector cannot sample or inspect it, you are in violation regardless of how well it actually works. South Carolina requires grease traps be directly accessible from the surface with a minimum eighteen-inch access opening.' },
+    ],
+    maintenanceTips: [
+      { tip: 'Measure rather than guess for the first year', detail: 'Have your hauler record grease and solids depth at every visit. Once you know how fast you reach 25%, set the contract interval from real data — which is also exactly what an inspector wants to see.' },
+      { tip: 'Keep manifests, and upload them where required', detail: 'Some authorities require maintenance documents uploaded to their register. Keep at least a year of tickets on site regardless — that log is your defense in an inspection and your evidence in a sale.' },
+      { tip: 'Dry-wipe pans and scrape plates before anything hits the sink', detail: 'Everything kept out of the drain is grease you do not pay to haul. Collect fryer oil separately for rendering — never down the drain and never into the mop sink.' },
+      { tip: 'Train staff, then retrain after turnover', detail: 'Post a one-page rule sheet at the dish pit and in every janitor’s closet. Staff turnover is the actual reason these rules get broken, not ignorance.' },
+      { tip: 'Do not hot-flush the interceptor to clean it', detail: 'Hot water and detergent melt the grease and carry it downstream. The interceptor looks better and the sewer gets worse — and it is a common violation.' },
+      { tip: 'Inspect baffles, tees, and lid gaskets at every pump-out', detail: 'Ask the hauler to photograph the inside while it is empty. Concrete interceptors also corrode over time from hydrogen sulfide, and catching a deteriorating baffle early is far cheaper than replacing the tank.' },
+    ],
+    processSteps: [
+      { num: '01', title: 'Confirm Which Authority Governs', description: 'The local sewer and pretreatment authority if you are on sewer; the state onsite wastewater regulation if you are on septic. They size differently.' },
+      { num: '02', title: 'Size the Unit', description: 'Using the method that authority accepts — the plumbing code’s 30-minute retention rule, a meals-per-peak-hour formula, fixture unit tables, or the state formula for systems on septic.' },
+      { num: '03', title: 'Submit for Plan Review', description: 'Forms, flow calculations, and a site map showing the connection point — and enrollment in the authority’s FOG register where one exists.' },
+      { num: '04', title: 'Separate the Plumbing at Rough-In', description: 'Kitchen waste routed to the interceptor, restrooms bypassing it straight to the sewer or septic tank, and no food waste grinder anywhere upstream.' },
+      { num: '05', title: 'Excavate & Set the Tank', description: 'On proper bedding, dead level, with traffic-rated lids anywhere a vehicle can reach — decided during design, because retrofitting after paving is far more expensive.' },
+      { num: '06', title: 'Install Internals & Access', description: 'Inlet and outlet tees or baffles, flow control, risers brought to grade, and the sample port where the authority requires one.' },
+      { num: '07', title: 'Inspect Before Backfill', description: 'Pass inspection with everything visible, then backfill and restore the surface. An inspector cannot approve what has already been buried.' },
+      { num: '08', title: 'Start the Maintenance Log Day One', description: 'Measure the first pump-out interval rather than guessing it, then lock it into a service contract before the first blockage rather than after.' },
+    ],
+    faq: [
+      { q: 'What is the actual difference between a grease trap and an interceptor?', a: 'Size, location, and how they are rated. A trap is small, indoor, usually under a sink, and rated in gallons per minute of flow. An interceptor is large, outdoors, in the ground, typically 1,000 gallons and up, and rated in gallons of capacity. In South Carolina, if you are on a septic system, the code is explicit that an interior unit cannot substitute for a properly sized exterior one.' },
+      { q: 'How is mine sized?', a: 'It depends on the authority, which is exactly why you confirm the method before buying a tank. Four are in common use: the plumbing code’s 30-minute retention rule, a meals-per-peak-hour formula, drainage fixture unit tables, and on septic in South Carolina a formula based on daily flow with a loading factor and retention factor. Different methods give different answers for the same kitchen.' },
+      { q: 'What is the 30-minute retention rule?', a: 'It is in the plumbing code South Carolina adopted. The required capacity of a gravity grease interceptor is the peak drain flow into it in gallons per minute multiplied by a retention time of thirty minutes. So a kitchen with 50 gallons per minute of peak flow needs a 1,500 gallon interceptor.' },
+      { q: 'How often does it have to be pumped?', a: 'Most ordinances use the 25% rule — pump when combined grease and solids reach a quarter of the liquid depth. In practice most restaurants land on a 30, 60, or 90 day cycle. Worth knowing that the 25% threshold comes from local ordinances and industry guidance rather than a federal regulation, so what actually binds you is your own permit or ordinance.' },
+      { q: 'Will enzymes or bacteria let me pump less often?', a: 'No, and selling them as a substitute is generally a violation. The code prohibits discharging emulsifiers, chemicals, or enzymes to a grease interceptor, allowing only certain microbial systems that meet a specific standard. Emulsifiers move the problem into the public sewer rather than solving it.' },
+      { q: 'Does my lid have to be traffic rated?', a: 'If any vehicle can reach it, yes. H-20 is the rating for a two-axle truck — a 32,000 pound axle, 16,000 pounds per wheel — with a safety factor applied for testing. Decide during design where delivery trucks actually drive, because retrofitting a traffic-rated lid after the lot is paved costs far more than specifying it up front.' },
+      { q: 'What does an inspector actually check?', a: 'Whether the unit is the approved size and type; that inlet and outlet tees or baffles are intact; that the sample port is present and reachable; that lids and risers come to grade, seal, and carry the right rating; grease and solids depth against the 25% threshold; your maintenance manifests; that no garbage disposal or restroom waste is plumbed into it; and that no prohibited additives are in use.' },
+      { q: 'We are on septic, not sewer. Do we still need one?', a: 'Yes, and South Carolina’s requirements are specific. Minimum 1,000 gallons net liquid capacity, sized by state formula, dual-chambered or in series above 1,500 gallons per day. Two separate plumbing stub-outs — restrooms straight to the septic tank, kitchen through the grease trap first. Directly accessible from the surface with an eighteen-inch minimum access opening, and an extended outlet tee terminating six to twelve inches above the tank bottom.' },
+    ],
+    costData: [
+      { item: 'Under-sink hydromechanical trap (20 – 50 gpm)', cost: 'Roughly $500 – $2,000 equipment', lifespan: '5 – 15 years, shorter if neglected' },
+      { item: '1,000 gal precast exterior interceptor (tank supply)', cost: '$4,000 – $7,500', lifespan: '30 – 40+ years; hydrogen sulfide corrosion is the limiter' },
+      { item: '1,500 gal precast exterior interceptor (tank supply)', cost: '$6,500 – $11,000', lifespan: '30 – 40+ years' },
+      { item: 'Exterior in-ground installation, all-in', cost: '$5,000 – $20,000 depending on depth, rock, distance and restoration', lifespan: '—' },
+      { item: 'Traffic-rated (H-20) lids and risers', cost: 'Premium over standard lids — far cheaper specified up front than retrofitted', lifespan: 'Lids 20 – 30 yrs; gaskets sooner' },
+      { item: 'Pump-out service', cost: 'Roughly $300 – $600 per event, typically every 30 – 90 days', lifespan: 'Recurring — set the interval from measurement' },
+    ],
+    seoKeywords: [
+      'commercial grease trap installation Upstate SC',
+      'grease interceptor installation Seneca SC',
+      'restaurant grease trap Oconee County',
+      '1000 gallon grease interceptor install Anderson SC',
+      'grease interceptor sizing South Carolina',
+      'ReWa grease interceptor requirements Greenville',
+      'FOG compliance restaurant Upstate South Carolina',
+      'exterior grease interceptor vs indoor grease trap',
+      'traffic rated grease interceptor lid H-20',
+      'commercial kitchen grease trap replacement Greenville SC',
+    ],
+  },
+
 ];
 
 export function getUtilitySubService(slug: string): UtilitySubService | undefined {

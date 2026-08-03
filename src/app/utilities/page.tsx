@@ -59,7 +59,7 @@ const GALLERY = [
 const FAQS = [
   { q: 'Can you tap into a live water main?', a: 'Yes \u2014 that\u2019s exactly what our water & sewer license covers. We perform hot taps on live mains with tapping sleeves and valves, so the surrounding system stays in service while your property gets connected.' },
   { q: 'Do you sub out the utility work?', a: 'No. Underground utilities are self-performed \u2014 our crews, our equipment, our licenses. That\u2019s the point: when the same contractor controls the sitework and the underground package, the critical path doesn\u2019t slip waiting on someone else\u2019s schedule.' },
-  { q: 'What does a Tier 2 septic license cover?', a: 'Commercial-scale septic \u2014 engineered systems, large conventional systems, pump stations, and commercial grease traps and interceptors. Most residential septic installers can\u2019t touch this class of work.' },
+  { q: 'What does a Tier 2 septic license cover?', a: 'South Carolina is specific about this. A Tier 1 installer may install gravity-fed residential systems only, and is not authorized to conduct repairs on existing systems at all. Tier 2 adds pumps, grease traps, curtain drains, elevated and mounded systems, and every commercial, large, and community onsite wastewater system \u2014 plus repairs. That is the license line commercial work sits on, and most residential installers don\u2019t hold it.' },
   { q: 'Can you handle the full site, not just utilities?', a: 'That\u2019s our model. We clear it, grade it, pipe it, and build on it \u2014 site development, underground utilities, and vertical construction under one contract with one accountable contractor.' },
 ];
 
