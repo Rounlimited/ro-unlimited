@@ -17,7 +17,7 @@ export default function GradingPage() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/20 bg-ro-gold/5 mb-6">
               <Mountain size={14} className="text-ro-gold" />
-              <span className="text-ro-gold text-xs font-mono tracking-wider uppercase">Land Grading & Site Prep</span>
+              <span className="text-ro-gold text-xs font-mono tracking-wider uppercase">{division.name}</span>
             </div>
             <h1 className="text-ro-white font-heading text-5xl sm:text-6xl lg:text-7xl tracking-tight uppercase leading-[0.9] mb-6">
               Every Build Starts<br /><span className="gradient-text-gold">With the Ground</span>
@@ -54,7 +54,7 @@ export default function GradingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-ro-gray-500 mb-6">Every great build starts with the ground. We&apos;ve been preparing sites across three states for 25 years. Once the ground is ready, we build on it too.</p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/residential" className="px-4 py-2 text-sm border border-ro-gray-700 text-ro-gray-400 hover:text-ro-gold hover:border-ro-gold/30 transition-colors uppercase tracking-wider font-heading">Residential &rarr;</Link>
+            <Link href="/utilities" className="px-4 py-2 text-sm border border-ro-gray-700 text-ro-gray-400 hover:text-ro-gold hover:border-ro-gold/30 transition-colors uppercase tracking-wider font-heading">Underground Utilities &rarr;</Link>
             <Link href="/commercial" className="px-4 py-2 text-sm border border-ro-gray-700 text-ro-gray-400 hover:text-ro-gold hover:border-ro-gold/30 transition-colors uppercase tracking-wider font-heading">Commercial &rarr;</Link>
           </div>
         </div>

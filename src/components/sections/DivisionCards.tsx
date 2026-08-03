@@ -3,9 +3,13 @@
 import { useRef } from 'react';
 import Link from 'next/link';
 import { DIVISIONS } from '@/lib/constants';
-import { ArrowRight, Home, Building2, Mountain, HardHat, Wrench } from 'lucide-react';
+import { ArrowRight, Home, Building2, Mountain, HardHat, Wrench, Droplets } from 'lucide-react';
 import { gsap, ScrollTrigger, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
+
+// Homepage shows featured divisions only — residential & small services
+// stay live as pages (SEO + referrals) but off the front door.
+const FEATURED = DIVISIONS.filter(d => d.featured);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ICONS: Record<string, any> = {
@@ -14,6 +18,7 @@ const ICONS: Record<string, any> = {
   mountain: Mountain,
   wrench: Wrench,
   hardhat: HardHat,
+  droplets: Droplets,
 };
 
 /**
@@ -213,7 +218,7 @@ export default function DivisionCards() {
           {/* Card Stage — single col on mobile, 2-col grid on desktop */}
           <div ref={stageRef} className="relative flex-1 max-w-2xl lg:max-w-5xl mx-auto w-full">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 lg:pt-2">
-              {DIVISIONS.map((division, index) => {
+              {FEATURED.map((division, index) => {
                 const Icon = ICONS[division.icon] || Building2;
                 return (
                   <div
