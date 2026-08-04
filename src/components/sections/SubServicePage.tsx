@@ -250,7 +250,14 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
           sizes="100vw"
           style={{ zIndex: 0 }}
         />
-        <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.96) 52%, rgba(10,10,10,0.74) 70%, rgba(0,0,0,0.2) 88%)' }} />
+        {/* Scrim has to be responsive. On desktop the copy sits in a left
+            column, so a left-to-right fade keeps the photo visible beside it.
+            On a phone the copy spans the FULL width — that same fade leaves
+            the right end of every line sitting on the bare photo, which is
+            exactly how JR's red-clay hero became unreadable. Below lg the
+            scrim stays flat and dark across the whole hero. */}
+        <div className="absolute inset-0 lg:hidden" style={{ zIndex: 1, background: 'rgba(10,10,10,0.88)' }} />
+        <div className="absolute inset-0 hidden lg:block" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.96) 52%, rgba(10,10,10,0.74) 70%, rgba(0,0,0,0.2) 88%)' }} />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, transparent 20%, transparent 75%, rgba(10,10,10,0.95) 100%)' }} />
         <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ zIndex: 2, background: 'radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)' }} />
 
