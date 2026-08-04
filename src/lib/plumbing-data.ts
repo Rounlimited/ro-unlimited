@@ -40,7 +40,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'South Carolina\'s clay-heavy soil shifts seasonally, stressing underground pipes and slab connections. Our warm, humid climate accelerates corrosion in galvanized lines. And Upstate SC water — while safe — carries enough minerals to build scale in aging pipes faster than cooler, drier regions. A re-pipe doesn\'t just fix today\'s leak; it eliminates the source of the next twenty.',
+        content: 'The red clay under these foothills swells and shrinks with the seasons, and that movement works on buried pipe and slab connections year after year — same story in Greenville and Easley as it is across the line in Toccoa or Hendersonville. Warm, humid summers accelerate corrosion in galvanized lines. And the water through most of this region, while safe, carries enough mineral load to build scale in aging pipe faster than it would in cooler, drier country. A re-pipe doesn\'t just fix today\'s leak; it eliminates the source of the next twenty.',
       },
     ],
     warningSigns: [
@@ -56,7 +56,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       { tip: 'Know where your main shutoff valve is', detail: 'In an emergency, seconds matter. Locate your main water shutoff (usually near the meter or where the main line enters the house) and test it annually to make sure it fully closes.' },
       { tip: 'Check exposed pipes for signs of corrosion annually', detail: 'Look at visible pipes in the basement, crawlspace, and under sinks. Green stains on copper, white buildup on galvanized, or wet spots mean trouble is developing.' },
       { tip: 'Monitor your water bill for unexplained increases', detail: 'A sudden spike in water usage without a change in habits often indicates a hidden leak. Most meters have a low-flow indicator that spins when water is flowing — check it with all fixtures off.' },
-      { tip: 'Insulate exposed pipes in unconditioned spaces', detail: 'Pipes in crawlspaces, attics, and exterior walls are vulnerable to freezing in Upstate SC winters. Foam sleeves go on in an afternoon, and a sleeved pipe is one you never have to open a wall to repair.' },
+      { tip: 'Insulate exposed pipes in unconditioned spaces', detail: 'Pipes in crawlspaces, attics, and exterior walls are what freeze first when a hard cold snap drops through the foothills — and the higher you sit toward the North Carolina line, the longer that cold holds. Foam sleeves go on in an afternoon, and a sleeved pipe is one you never have to open a wall to repair.' },
       { tip: 'Don\'t ignore slow drains as a pressure issue', detail: 'Slow drains are a drain/sewer problem, not a supply problem. But low hot water pressure combined with normal cold pressure points to corroded hot water supply lines specifically.' },
     ],
     processSteps: [
@@ -79,7 +79,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       { item: 'Full Re-Pipe (2,500 sq ft)', cost: 'Second story, extra baths, and longer runs each add a day', lifespan: '25–50+ years' },
       { item: 'Polybutylene Replacement', cost: 'Every gray line goes, including the buried service lateral if it\'s PB', lifespan: '25–50 years' },
     ],
-    seoKeywords: ['pipe repair Greenville SC', 're-piping Upstate SC', 'polybutylene replacement near me', 'plumber pipe replacement SC'],
+    seoKeywords: ['pipe repair Greenville SC', 're-piping Easley SC', 'polybutylene replacement near me', 'whole house repipe Anderson SC'],
   },
 
   // ═══ 2. WATER HEATER SERVICES ═══
@@ -110,11 +110,11 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       },
       {
         heading: 'Heat Pump Water Heaters',
-        content: 'The efficiency leader. Heat pump (hybrid) water heaters use ambient air to heat water — 2–3x more efficient than standard electric tanks. Energy Factor ratings of 3.0–4.0 mean a dramatically smaller electric bill every month, and the units qualify for federal energy tax credits. The trade-offs are physical, and they\'re what set the install: the unit needs 700+ cubic feet of surrounding air space, a condensate drain it didn\'t need before, and it blows cold exhaust air — so a tight interior closet usually won\'t work while a garage or basement will. Relocating the heater to make that happen means extending water lines and running a new circuit. They work best in warm climates, which makes South Carolina ideal.',
+        content: 'The efficiency leader. Heat pump (hybrid) water heaters use ambient air to heat water — 2–3x more efficient than standard electric tanks. Energy Factor ratings of 3.0–4.0 mean a dramatically smaller electric bill every month, and the units qualify for federal energy tax credits. The trade-offs are physical, and they\'re what set the install: the unit needs 700+ cubic feet of surrounding air space, a condensate drain it didn\'t need before, and it blows cold exhaust air — so a tight interior closet usually won\'t work while a garage or basement will. Relocating the heater to make that happen means extending water lines and running a new circuit. They work best in warm climates, and the Southeast gives them about as good a run as they get.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Water heating is the second-largest energy expense in most homes (14–18% of your utility bill). South Carolina\'s warm climate makes heat pump water heaters exceptionally efficient — the ambient warmth they extract from surrounding air is free and abundant here 10 months of the year. Between energy savings and available tax credits, upgrading from a standard tank to a heat pump unit often pays for itself in 3–5 years.',
+        content: 'Water heating is the second-largest energy expense in most homes (14–18% of your utility bill). The long warm season across the Carolinas and north Georgia makes heat pump water heaters exceptionally efficient — the ambient warmth they pull out of the surrounding air is free and abundant here ten months of the year. Between energy savings and available tax credits, upgrading from a standard tank to a heat pump unit often pays for itself in 3–5 years.',
       },
     ],
     warningSigns: [
@@ -152,7 +152,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       { item: 'Heat Pump Water Heater (installed)', cost: 'Needs air volume, a condensate drain, and often a new location', lifespan: '12–15 years' },
       { item: 'Anode Rod Replacement', cost: 'Headroom above the tank; a low ceiling means a segmented rod', lifespan: '3–5 years' },
     ],
-    seoKeywords: ['water heater replacement Greenville SC', 'tankless water heater installation', 'water heater repair Upstate SC', 'plumber water heater near me'],
+    seoKeywords: ['water heater replacement Greenville SC', 'tankless water heater installation Easley SC', 'water heater repair Spartanburg SC', 'plumber water heater near me'],
   },
 
   // ═══ 3. DRAIN CLEANING & SEWER ═══
@@ -187,7 +187,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC\'s mature tree canopy means root intrusion is the #1 cause of sewer line failure. Clay pipes (common in homes built before 1970) are especially vulnerable — tree roots exploit the joints and grow inside the pipe. Orangeburg pipe (compressed wood fiber, used 1945–1972) is reaching end of life throughout the region and collapses under soil pressure. If your home is 40+ years old and on original sewer lines, a camera inspection is the smartest hour you can put into it.',
+        content: 'The mature hardwood canopy across this region makes root intrusion the #1 cause of sewer line failure — the older streets in Greenville, Easley, Anderson, and Spartanburg, and the same shaded lots over both state lines. Clay pipes (common in homes built before 1970) are especially vulnerable — tree roots exploit the joints and grow inside the pipe. Orangeburg pipe (compressed wood fiber, used 1945–1972) is reaching end of life throughout the region and collapses under soil pressure. If your home is 40+ years old and on original sewer lines, a camera inspection is the smartest hour you can put into it.',
       },
     ],
     warningSigns: [
@@ -225,7 +225,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       { item: 'Trenchless Sewer Repair (per ft)', cost: 'Run length, pipe depth, and whether the old line can take a liner', lifespan: '50+ years' },
       { item: 'Traditional Sewer Replacement (per ft)', cost: 'Trench depth plus everything on top of it — lawn, drive, trees, patio', lifespan: '50+ years' },
     ],
-    seoKeywords: ['drain cleaning Greenville SC', 'sewer line repair Upstate SC', 'hydro jetting near me', 'sewer camera inspection SC'],
+    seoKeywords: ['drain cleaning Greenville SC', 'sewer line repair Easley SC', 'hydro jetting near me', 'sewer camera inspection Anderson SC'],
   },
 
   // ═══ 4. FIXTURE INSTALLATION ═══
@@ -298,7 +298,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       { item: 'Shower Valve Replacement', cost: 'Access decides it: an open back wall, or cut and retile the front', lifespan: '15–20 years' },
       { item: 'Garbage Disposal Install', cost: 'Existing outlet and switch, drain height, whether a dishwasher ties in', lifespan: '10–12 years' },
     ],
-    seoKeywords: ['fixture installation Greenville SC', 'toilet replacement plumber', 'faucet install Upstate SC', 'plumber fixture install near me'],
+    seoKeywords: ['fixture installation Greenville SC', 'toilet replacement plumber Easley SC', 'faucet install Pickens County SC', 'plumber fixture install near me'],
   },
 
   // ═══ 5. GAS LINE SERVICES ═══
@@ -329,7 +329,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       },
       {
         heading: 'Sizing, Permits & Inspection',
-        content: 'Three things size a gas job. First, the run distance from the meter or existing supply to the appliance. Second, the total BTU load of everything downstream, which sets pipe diameter — undersize it and the appliance starves no matter how new it is. Third, what the line has to pass through: an open crawlspace or unfinished basement run is straightforward, while a run crossing finished walls, a floor system, or a slab means penetrations, fire-caulking, and patching. Every branch to an additional appliance adds another shutoff, another drip leg, and another joint to test. Gas permits are required for all new gas work in South Carolina; the permit fee is written into every gas job we quote, and the inspection it triggers is what allows gas to flow. Schedule around the inspector, not just us — we pull the permit before we start and call for inspection as soon as the pressure test passes, but the appliance stays off until it clears.',
+        content: 'Three things size a gas job. First, the run distance from the meter or existing supply to the appliance. Second, the total BTU load of everything downstream, which sets pipe diameter — undersize it and the appliance starves no matter how new it is. Third, what the line has to pass through: an open crawlspace or unfinished basement run is straightforward, while a run crossing finished walls, a floor system, or a slab means penetrations, fire-caulking, and patching. Every branch to an additional appliance adds another shutoff, another drip leg, and another joint to test. Then there\'s the paperwork, and it changes with where you live. In South Carolina, a permit is required for all new gas work, and the inspection it triggers is what allows gas to flow. We hold licenses in South Carolina, North Carolina, and Georgia, and each state — often each county inside it — runs its own permit and inspection process, so the filing path shifts even when the pipe work is identical. Whichever jurisdiction you\'re in, the permit fee is written into the quote. Schedule around the inspector, not just us — we pull the permit before we start and call for inspection as soon as the pressure test passes, but the appliance stays off until it clears.',
       },
       {
         heading: 'Safety First',
@@ -359,7 +359,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       { num: '05', title: 'Inspection & Appliance Connection', description: 'The local inspector verifies our work meets code. Once passed, we connect the appliance, verify proper flame and operation, check venting, and walk you through the new shutoff valve location.' },
     ],
     faq: [
-      { q: 'Do I need a permit for gas line work?', a: 'Yes — always. Gas permits are required by South Carolina code for any new gas line installation, extension, or significant repair. The permit ensures an independent inspector verifies the work. We handle the permit process as part of every gas job.' },
+      { q: 'Do I need a permit for gas line work?', a: 'Yes — always. In South Carolina, code requires a gas permit for any new line, extension, or significant repair. We\'re licensed in South Carolina, North Carolina, and Georgia, and every jurisdiction we work in wants the same thing in some form — what changes is which office issues the permit and who shows up to inspect. Either way, the point is the same: an independent inspector puts eyes on the work before gas flows. We handle that process as part of every gas job, wherever the job is.' },
       { q: 'Can you convert my electric stove to gas?', a: 'Yes. We run a gas line from your nearest existing gas supply to the stove location, install a shutoff valve, and connect the new range. What drives that job is distance from the nearest existing gas supply, whether the run goes through open crawlspace or has to cross finished wall and floor, and whether your existing line and meter can carry the range\'s BTU load without upsizing. You\'ll also need a 120V outlet for the range igniter (most gas ranges still need electricity).' },
       { q: 'How do I know if I have a gas leak?', a: 'Smell (rotten eggs), sound (hissing), or visual signs (dead vegetation, bubbles in standing water). If you suspect a leak: don\'t flip light switches, don\'t use your phone inside, open windows, leave the house, and call us or 911 from outside.' },
       { q: 'Is CSST (flexible gas line) safe?', a: 'Yes — when properly installed and bonded. CSST must be bonded to the home\'s electrical grounding system per code to protect against lightning-induced damage. We install and bond all CSST per manufacturer specs and current NEC/NFP A codes.' },
@@ -371,7 +371,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       { item: 'Gas Leak Repair', cost: 'Finding it is the work — buried line or wall cavity takes longest', lifespan: '20+ years' },
       { item: 'Gas Permit', cost: 'Set by the local authority; written into every gas quote we give', lifespan: 'N/A' },
     ],
-    seoKeywords: ['gas line installation Greenville SC', 'gas plumber Upstate SC', 'gas line repair near me', 'gas stove hookup SC'],
+    seoKeywords: ['gas line installation Greenville SC', 'gas plumber Easley SC', 'gas line repair near me', 'gas stove hookup Anderson SC'],
   },
 
   // ═══ 6. WATER FILTRATION & TREATMENT ═══
@@ -380,7 +380,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
     slug: 'water-filtration',
     title: 'Water Filtration & Treatment',
     tagline: 'Better Water From Every Tap',
-    heroDescription: 'Hard water, chlorine taste, sediment, and mineral staining are common across the Upstate. RO installs whole-house filtration systems, water softeners, reverse osmosis units, and well water treatment systems that solve the problem at the source — not one faucet at a time. Clean, soft, great-tasting water from every tap in your home.',
+    heroDescription: 'Hard water, chlorine taste, sediment, and mineral staining turn up in house after house around here — Greenville and Easley on municipal supply, well houses out in Pickens County and across both state lines. RO installs whole-house filtration systems, water softeners, reverse osmosis units, and well water treatment systems that solve the problem at the source — not one faucet at a time. Clean, soft, great-tasting water from every tap in your home.',
     heroImage: '/images/services/plumbing/subs/water-filtration-hero.jpg',
     cardImage: '/images/services/plumbing/subs/water-filtration-card.jpg',
     galleryImages: [
@@ -398,7 +398,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       },
       {
         heading: 'Water Softeners',
-        content: 'Upstate SC water ranges from moderately hard to very hard (7–15+ GPG). Hard water causes scale buildup in pipes and water heaters, white spots on fixtures, dry skin, and reduced soap effectiveness. Ion-exchange water softeners replace calcium and magnesium with sodium, eliminating scale and dramatically improving appliance efficiency. Sizing follows your hardness number and household size — undersize the unit and it regenerates constantly, burning salt and water to keep up. Installation needs a drain line for the regeneration cycle and an outlet for the control head, and that pair usually decides where the unit can physically go.',
+        content: 'Water across these foothills runs moderately hard to very hard (7–15+ GPG), and it shifts from one system to the next — city water in Greenville reads differently than a well outside Pickens or a small system over in Rabun County. Hard water causes scale buildup in pipes and water heaters, white spots on fixtures, dry skin, and reduced soap effectiveness. Ion-exchange water softeners replace calcium and magnesium with sodium, eliminating scale and dramatically improving appliance efficiency. Sizing follows your hardness number and household size — undersize the unit and it regenerates constantly, burning salt and water to keep up. Installation needs a drain line for the regeneration cycle and an outlet for the control head, and that pair usually decides where the unit can physically go.',
       },
       {
         heading: 'Reverse Osmosis',
@@ -406,7 +406,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC sits on granite and limestone bedrock that contributes calcium, magnesium, and iron to groundwater. Municipal water is safe but heavily chlorinated. Well water varies dramatically — some wells produce excellent water, others have iron, sulfur, manganese, or bacterial issues that require treatment. A water test tells you exactly what you\'re dealing with, and we size and design the system off those numbers. Guessing is how a house ends up with a softener that never touches the actual problem.',
+        content: 'The granite and limestone bedrock under this whole stretch of foothills — the Greenville and Easley side, up into western North Carolina, down into northeast Georgia — puts calcium, magnesium, and iron into the groundwater. Municipal water is safe but heavily chlorinated. Well water varies dramatically — some wells produce excellent water, others have iron, sulfur, manganese, or bacterial issues that require treatment. A water test tells you exactly what you\'re dealing with, and we size and design the system off those numbers. Guessing is how a house ends up with a softener that never touches the actual problem.',
       },
     ],
     warningSigns: [
@@ -432,7 +432,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       { num: '05', title: 'Testing & Training', description: 'We retest the treated water to verify the system is performing as designed. You get a walkthrough of maintenance tasks — how to add salt, when to change filters, and how to read the control head.' },
     ],
     faq: [
-      { q: 'Do I need a water softener in Upstate SC?', a: 'Most homes in the Upstate have moderately hard to hard water (7–15+ GPG). If you see white scale on fixtures, spots on dishes, or dry skin after showering, a softener will make a noticeable difference. A simple hardness test — we run ours free — gives you the answer in minutes, and the number it returns is what sizes the unit.' },
+      { q: 'Do I need a water softener around Greenville?', a: 'Most homes in this part of the foothills have moderately hard to hard water (7–15+ GPG), and the same holds on both sides of the North Carolina and Georgia lines. If you see white scale on fixtures, spots on dishes, or dry skin after showering, a softener will make a noticeable difference. A simple hardness test — we run ours free — gives you the answer in minutes, and the number it returns is what sizes the unit.' },
       { q: 'Is reverse osmosis water safe to drink?', a: 'Yes — it\'s the purest drinking water available. RO removes 95–99% of dissolved solids. Some people add a mineral remineralization stage for taste preference, but the water is perfectly safe without it.' },
       { q: 'How much salt does a water softener use?', a: 'A typical family of 4 goes through about one 40-lb bag a month. High-efficiency units use less, and an undersized softener uses far more because it has to regenerate more often to keep up with the same hardness. We program regeneration cycles to minimize salt and water usage while maintaining soft water 24/7.' },
       { q: 'Can you treat well water with iron and sulfur?', a: 'Absolutely. Iron filters (oxidizing media or air injection systems) remove iron and manganese. Sulfur is treated with aeration, chlorination, or catalytic carbon depending on the concentration. We test first, then design the right system.' },
@@ -444,7 +444,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       { item: 'Iron/Manganese Filter', cost: 'Concentration and iron form pick the media — and whether aeration is required', lifespan: '5–10 years (media)' },
       { item: 'Water Test (comprehensive)', cost: 'Well panels run wider than municipal; bacteria adds lab turnaround', lifespan: 'Annual' },
     ],
-    seoKeywords: ['water filtration Greenville SC', 'water softener installation Upstate SC', 'well water treatment near me', 'whole house water filter SC'],
+    seoKeywords: ['water filtration Greenville SC', 'water softener installation Easley SC', 'well water treatment Pickens County SC', 'whole house water filter near me'],
   },
 
   // ═══ 7. BATHROOM & KITCHEN PLUMBING ═══
@@ -516,7 +516,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       { item: 'Kitchen Island Sink Install', cost: 'Under-floor drain routing, and which island vent method code allows', lifespan: '20+ years' },
       { item: 'Slab Concrete Cut & Drain Reroute', cost: 'Saw-cut length, trench depth, rebar in the way, repouring the floor', lifespan: '50+ years' },
     ],
-    seoKeywords: ['bathroom plumbing renovation Greenville SC', 'kitchen plumbing Upstate SC', 'rough-in plumber near me', 'bathroom remodel plumber SC'],
+    seoKeywords: ['bathroom plumbing renovation Greenville SC', 'kitchen plumbing Easley SC', 'rough-in plumber near me', 'bathroom remodel plumber Spartanburg SC'],
   },
 
   // ═══ 8. EMERGENCY PLUMBING ═══
@@ -547,7 +547,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       },
       {
         heading: 'What Changes on an After-Hours Call',
-        content: 'After-hours work carries a dispatch premium over scheduled service — that covers the on-call plumber, the dispatcher, and a truck rolling at 2 AM instead of 9 AM. The repair itself is priced the same as it would be on a Tuesday morning. What actually moves an emergency bill is what moves any plumbing bill: what failed and how hard it is to reach. A burst line in an open crawlspace is a short repair. The same failure inside a finished wall or under a slab has to be located first — pressure testing, acoustic listening, sometimes a camera — before anyone cuts anything. A water heater that has dumped its tank might be a straight same-day swap, or a swap plus a pan, a new shutoff, and a drain line the original install never had. And every hour the water keeps running grows the restoration side, which is almost always the bigger number. The premium for calling at 2 AM is small against what the water does by 6 AM.',
+        content: 'After-hours work carries a dispatch premium over scheduled service — that covers the on-call plumber, the dispatcher, and a truck rolling out of Easley at 2 AM instead of 9 AM. The repair itself is priced the same as it would be on a Tuesday morning. What actually moves an emergency bill is what moves any plumbing bill: what failed and how hard it is to reach. A burst line in an open crawlspace is a short repair. The same failure inside a finished wall or under a slab has to be located first — pressure testing, acoustic listening, sometimes a camera — before anyone cuts anything. A water heater that has dumped its tank might be a straight same-day swap, or a swap plus a pan, a new shutoff, and a drain line the original install never had. And every hour the water keeps running grows the restoration side, which is almost always the bigger number. The premium for calling at 2 AM is small against what the water does by 6 AM.',
       },
       {
         heading: 'Water Damage Prevention',
@@ -565,7 +565,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
     maintenanceTips: [
       { tip: 'Know where every shutoff valve is in your home', detail: 'Main shutoff, water heater, toilets, sinks, washing machine, ice maker, outdoor hose bibs. Label them if needed. In an emergency, knowing which valve to turn saves thousands in damage.' },
       { tip: 'Install a water leak detection system', detail: 'Battery-powered smart detectors sit near water heaters, washing machines, and under sinks and alert your phone at the first sign of water — each one takes about a minute to place. Whole-house automatic shutoff systems go further and close the main valve themselves; they need a spot on the main line and power nearby, which is what decides whether one fits your setup.' },
-      { tip: 'Disconnect outdoor hoses before freezing weather', detail: 'A connected hose traps water in the hose bib, which freezes and cracks the fitting or pipe behind the wall. This is one of the most common — and most preventable — emergency calls we get in Upstate SC winters.' },
+      { tip: 'Disconnect outdoor hoses before freezing weather', detail: 'A connected hose traps water in the hose bib, which freezes and cracks the fitting or pipe behind the wall. This is one of the most common — and most preventable — calls we run every winter, and it climbs the further up into the foothills you go.' },
       { tip: 'Know your insurance coverage for water damage', detail: 'Most homeowner\'s policies cover sudden, accidental water damage (burst pipe) but not gradual damage (slow leak you ignored). Review your policy before you need it — especially the deductible and coverage limits.' },
       { tip: 'Keep our number saved in your phone', detail: 'When a pipe bursts at midnight, you don\'t want to be searching Google in a panic. Save our number now: (864) 304-0139.' },
     ],
@@ -578,7 +578,7 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
     ],
     faq: [
       { q: 'Do you charge extra for emergency calls?', a: 'Yes — after-hours dispatch carries a premium over our standard service call rate, and we tell you what it is on the phone before a truck rolls. The repair itself is priced the same as scheduled work. The premium covers the dispatcher, the on-call plumber, and rapid-response logistics. It\'s a fraction of the additional damage caused by waiting until morning.' },
-      { q: 'How fast can you respond to an emergency?', a: 'Our goal is same-day response for all emergencies, with priority given to active water damage and sewage backups. Response time depends on current call volume and your location. We\'ll give you an honest ETA when you call — not a promise we can\'t keep.' },
+      { q: 'How fast can you respond to an emergency?', a: 'Our goal is same-day response for all emergencies, with priority given to active water damage and sewage backups. Our trucks run out of the Easley and Greenville area, so how far out you sit factors into the ETA alongside current call volume — a call in Pickens County moves faster than one deep into the mountains or across the Georgia line. We\'ll give you an honest number when you call, not a promise we can\'t keep.' },
       { q: 'What should I do while waiting for you to arrive?', a: 'Shut off the water (main shutoff if you can\'t isolate the source). Turn off the water heater. Open faucets to drain remaining pressure. Move valuables away from standing water. Take photos of the damage for insurance. Mop up standing water if safe to do so.' },
       { q: 'Will my insurance cover this?', a: 'Most homeowner\'s policies cover sudden, accidental plumbing failures (burst pipes, water heater failures). They typically don\'t cover damage from gradual leaks or deferred maintenance. We document everything to support your claim. File with your insurer promptly — most require notice within 24–48 hours.' },
     ],
@@ -589,6 +589,6 @@ export const PLUMBING_SUB_SERVICES: PlumbingSubService[] = [
       { item: 'Same-Day Water Heater Replacement', cost: 'Unit availability, plus pan, shutoff, and drain the old install skipped', lifespan: '8–12 years' },
       { item: 'Slab Leak Detection & Repair', cost: 'Locating comes first — then reroute overhead or open the slab', lifespan: '20+ years' },
     ],
-    seoKeywords: ['emergency plumber Greenville SC', '24 hour plumber Upstate SC', 'burst pipe repair near me', 'emergency plumbing service SC'],
+    seoKeywords: ['emergency plumber Greenville SC', '24 hour plumber Easley SC', 'burst pipe repair near me', 'emergency plumbing service Anderson SC'],
   },
 ];

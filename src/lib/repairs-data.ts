@@ -40,7 +40,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC humidity makes drywall mud dry slower than in dry climates — pushing through with too-thin coats causes shrinkage and visible patches months later. Properly executed repairs use multiple thin coats with proper drying time between, so the finish stays smooth as the house settles through seasonal humidity swings. Bad patches show up the first hot summer when humidity changes pull them tight.',
+        content: 'Humidity across the Carolinas and north Georgia makes drywall mud dry slower than it does in a dry climate — push through with too-thin coats and you get shrinkage and visible patches months later. Our crews run out of Easley, so most drywall calls are a short drive around Greenville and we can schedule around real dry time instead of rushing coats. Multiple thin coats, each one fully cured before the next, is what keeps a patch flat while the house moves through seasonal humidity swings. Bad patches announce themselves the first hot summer, when the air changes and the compound pulls tight.',
       },
     ],
     warningSigns: [
@@ -80,7 +80,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { item: 'Water Damage Section Repair', cost: 'How far the wet board runs once we open it up', lifespan: 'Permanent' },
       { item: 'Full Room Re-Mudding', cost: 'Square footage, ceiling height, dry time between coats', lifespan: '20+ years' },
     ],
-    seoKeywords: ['drywall repair Greenville SC', 'drywall patch Upstate SC', 'water damage drywall SC', 'ceiling repair Greenville'],
+    seoKeywords: ['drywall repair Greenville SC', 'drywall patch Easley SC', 'water damage drywall repair Anderson SC', 'ceiling repair Spartanburg SC'],
   },
 
   // ═══ 2. INTERIOR PAINTING ═══
@@ -115,7 +115,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'High humidity in Upstate SC accelerates paint failure when prep is skipped — especially in bathrooms and basements. We use the right paint for each room (mildew-resistant in wet areas, washable in kitchens, scuff-resistant in halls). Cheap paint cracks, peels, and discolors within a year here. Quality paint with proper prep lasts 8–12 years.',
+        content: 'Humid summers punish interior paint anywhere prep gets skipped — bathrooms and basements first, and that holds in Greenville and Spartanburg the same as it does across the line in western North Carolina. We spec the paint to the room: mildew-resistant in wet areas, washable in kitchens, scuff-resistant in hallways. Cheap paint in this climate cracks, peels, and discolors inside a year. Quality paint over honest prep gives you 8–12.',
       },
     ],
     warningSigns: [
@@ -154,7 +154,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { item: 'Whole House Interior', cost: 'Prep found on day one, color changes, occupied vs. empty', lifespan: '8–12 years' },
       { item: 'Color Change with Primer', cost: 'How far the color shifts and how many coats bury it', lifespan: 'Same as paint' },
     ],
-    seoKeywords: ['interior painting Greenville SC', 'house painter Upstate SC', 'kitchen cabinet painting SC', 'professional painter near me'],
+    seoKeywords: ['interior painting Greenville SC', 'house painters Easley SC', 'kitchen cabinet painting Spartanburg SC', 'interior painters SC NC GA'],
   },
 
   // ═══ 3. EXTERIOR PAINTING ═══
@@ -162,8 +162,8 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
     id: 'exterior-painting',
     slug: 'exterior-painting',
     title: 'Exterior Painting',
-    tagline: 'Weather-Tight Finish That Holds Up to SC Sun & Storms',
-    heroDescription: 'Exterior paint takes a beating in Upstate SC — UV, rain, humidity, freeze-thaw cycles. A botched exterior job peels in 18 months. RO\'s exterior painting includes proper power washing, scraping, caulking, priming raw wood, and two coats of exterior-grade paint that holds up for 8–15 years.',
+    tagline: 'Weather-Tight Finish That Holds Up to Southern Sun & Storms',
+    heroDescription: 'Exterior paint takes a beating across the Carolinas and north Georgia — UV, rain, humidity, freeze-thaw cycles. A botched exterior job peels in 18 months. RO\'s exterior painting includes proper power washing, scraping, caulking, priming raw wood, and two coats of exterior-grade paint that holds up for 8–15 years.',
     heroImage: '/images/services/repairs/subs/exterior-painting-hero.jpg',
     cardImage: '/images/services/repairs/subs/exterior-painting-card.jpg',
     galleryImages: [
@@ -185,11 +185,11 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       },
       {
         heading: 'What the Job Turns On',
-        content: 'Exterior work is priced off the prep, not the paint. Two houses the same size can be completely different jobs — one needs a wash and two coats, the other needs half the south wall scraped to bare wood, primed, rotten trim cut out and replaced, and every joint re-caulked. Height and access are the next lever: second-story gables, a steep lot, and anything that needs staging instead of a ladder all add hours before a brush moves. Substrate matters too — wood siding takes more prep than fiber cement, stucco drinks more product, and painting brick is a one-way decision. Homes built before 1978 fall under EPA RRP lead-safe rules, which means containment, dust control, and disposal we build into the schedule. Most exteriors run 5–10 working days and we schedule against the forecast: we don\'t paint in rain, above 85% humidity, or on a wall sitting at 130°F.',
+        content: 'Exterior work is priced off the prep, not the paint. Two houses the same size can be completely different jobs — one needs a wash and two coats, the other needs half the south wall scraped to bare wood, primed, rotten trim cut out and replaced, and every joint re-caulked. Height and access are the next lever: second-story gables, a steep lot, and anything that needs staging instead of a ladder all add hours before a brush moves. Substrate matters too — wood siding takes more prep than fiber cement, stucco drinks more product, and painting brick is a one-way decision. Homes built before 1978 fall under EPA RRP lead-safe rules, which means containment, dust control, and disposal we build into the schedule. A full exterior is a week or more of work, so it earns the drive — we run these out of Easley across the Greenville area and out into western North Carolina and northeast Georgia. Most exteriors run 5–10 working days and we schedule against the forecast: we don\'t paint in rain, above 85% humidity, or on a wall sitting at 130°F.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC summers push surface temperatures past 130°F on south-facing walls. Exterior paint must be rated for that or it bubbles and peels. Humidity also matters — paint applied above 85% humidity won\'t bond properly. Quality exterior products with proper application withstand 100°F summers and 20°F winters for over a decade. Cheap paint or wrong-temperature application fails in 1–3 years.',
+        content: 'Our summers push surface temperatures past 130°F on south-facing walls — the same on a house in Greenville as one over the state line in Hendersonville or across the Georgia border. Exterior paint has to be rated for that or it bubbles and peels. Humidity is the other half: paint applied above 85% humidity never bonds properly, and we get plenty of days here that sit above the line. Quality products put on inside the right window take 100°F summers and 20°F winters for over a decade. Cheap paint — or the right paint applied on the wrong day — fails in 1–3 years.',
       },
     ],
     warningSigns: [
@@ -216,7 +216,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { num: '05', title: 'Touch-Up & Cleanup', description: 'Walk-through with you to identify any missed spots or touch-ups. All paint debris cleaned up, plants and walkways protected throughout, no overspray on cars or glass. Final color samples saved for you.' },
     ],
     faq: [
-      { q: 'When is the best time of year to paint outside in SC?', a: 'Spring (March–May) and fall (October–November) are ideal — moderate temperature and humidity. Summer is workable if we paint in early mornings to avoid hot afternoons. Winter is too cold for proper bonding most days.' },
+      { q: 'When is the best time of year to paint outside around here?', a: 'Spring (March–May) and fall (October–November) are ideal across the region — moderate temperature and humidity. Summer is workable if we paint early mornings and stay off the walls the sun has been on. Winter is too cold for proper bonding most days, and the higher elevations up in western North Carolina shorten that window on both ends.' },
       { q: 'How long does the paint actually last?', a: 'Quality exterior paint with proper prep: 8–12 years on wood siding, 12–15 on fiber cement (Hardie), 5–8 on stucco. Cheap paint or skipped prep: 2–4 years. The difference is upfront prep, not the paint itself.' },
       { q: 'Do you spray or brush?', a: 'Both — spray for speed and uniform coverage on big surfaces, brush and roller for back-rolling and detail work. Spraying alone (without back-brushing) leaves a thin film that fails fast. We do both for proper bond.' },
       { q: 'What about HOA color approval?', a: 'We work with HOA-required colors. Bring us the approved palette and we\'ll match exactly. We can also help you submit color samples for approval if you\'re changing color schemes.' },
@@ -229,7 +229,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { item: 'Trim & Doors Only', cost: 'Linear feet of trim, old caulk removal, rot found', lifespan: '6–10 years' },
       { item: 'Wood Rot Repair (per board)', cost: 'How far the rot runs past what shows on the surface', lifespan: 'Permanent if maintained' },
     ],
-    seoKeywords: ['exterior painting Greenville SC', 'house painter Upstate SC', 'exterior house painting near me', 'siding painting SC'],
+    seoKeywords: ['exterior painting Greenville SC', 'exterior house painters Easley SC', 'siding painting Anderson SC', 'exterior painting western North Carolina'],
   },
 
   // ═══ 4. DECK REPAIR & BUILDING ═══
@@ -264,7 +264,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC humidity and rainfall accelerate wood rot. Pressure-treated wood lasts 15–25 years if properly stained and sealed every 2–4 years. Composite (Trex, TimberTech) lasts 25–30 years with no maintenance. The cheapest deck (untreated wood, no maintenance) fails in 5–8 years. Lifecycle cost favors composite or properly maintained pressure-treated.',
+        content: 'Heat, humidity, and summer rain across the foothills push a wood deck hard — the same cycle from the Greenville area up into the North Carolina mountains and down into north Georgia. Pressure-treated wood goes 15–25 years if it is stained and sealed every 2–4. Composite (Trex, TimberTech) goes 25–30 with no maintenance. The cheapest deck — untreated wood, never sealed — is gone in 5–8. Count every re-stain over the life of the deck and lifecycle cost favors composite, or pressure-treated that somebody actually keeps up.',
       },
     ],
     warningSigns: [
@@ -277,14 +277,14 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { trigger: 'Visible rust on hardware', detail: 'Joist hangers, screws, and bolts must be hot-dipped galvanized or stainless steel. Rust means the hardware is failing — and rust on screws can split the wood around them, accelerating failure.' },
     ],
     maintenanceTips: [
-      { tip: 'Stain or seal wood decks every 2–4 years', detail: 'Wood deck finishes wear under SC sun and rain. Re-staining when color fades (but before bare wood appears) extends deck life dramatically. Wait until bare wood is exposed and you\'re looking at sanding before staining.' },
+      { tip: 'Stain or seal wood decks every 2–4 years', detail: 'Wood deck finishes wear fast under southern sun and summer rain. Re-staining when color fades (but before bare wood appears) extends deck life dramatically. Wait until bare wood is exposed and you\'re looking at sanding before staining.' },
       { tip: 'Sweep regularly to prevent debris buildup', detail: 'Leaves and dirt trap moisture against deck boards, accelerating rot. A weekly sweep in fall keeps the surface dry and extends life.' },
       { tip: 'Check fasteners annually', detail: 'Walk the deck and look for popped nails, loose screws, or rusted hardware. Tighten or replace as needed. A 30-minute annual check prevents major repairs.' },
       { tip: 'Inspect ledger and railings each spring', detail: 'These are the highest-risk failure points. Ledger staining or a wobbly railing caught early is bolts, flashing, and an afternoon. Ignored, it turns into structural work — or a collapse.' },
       { tip: 'Keep gutters clear above the deck', detail: 'Overflow gutters dump water onto the deck, accelerating wear. Maintaining roof gutters protects the deck below.' },
     ],
     processSteps: [
-      { num: '01', title: 'Design & Permit', description: 'For new builds, we design to your space and needs, calculate load requirements, and pull required building permits. SC requires permits for any deck attached to the house — we handle all of it.' },
+      { num: '01', title: 'Design & Permit', description: 'For new builds, we design to your space and needs, calculate load requirements, and pull the required building permits. In South Carolina, any deck attached to the house needs a permit; North Carolina and Georgia set their own thresholds county by county. We are licensed in all three states and deal with whichever building department the job falls under.' },
       { num: '02', title: 'Footings & Framing', description: 'Footings dug to frost depth and inspected before pour. Posts set, beams sized to span, joists installed with proper hangers, ledger lag-bolted to house with flashing to prevent water infiltration.' },
       { num: '03', title: 'Decking Installation', description: 'Boards installed with proper gapping for expansion (especially composite), hidden fasteners or stainless screws to prevent rust streaks. Rim board finished cleanly. Stairs framed with proper rise/run code.' },
       { num: '04', title: 'Railings & Finish', description: 'Railings installed with code-compliant height (36–42") and baluster spacing (less than 4" gap). Posts notched into framing for strength, not just surface-mounted. Stain or sealer applied to wood decks.' },
@@ -292,7 +292,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
     ],
     faq: [
       { q: 'Wood, composite, or PVC?', a: 'Wood (pressure-treated): lowest material cost going in, needs staining every 2–4 years, lasts 15–25 years. Composite (Trex, TimberTech): a real step up in material, no staining, lasts 25–30+ years. PVC: top of the material range, completely waterproof, lasts effectively indefinitely. Once you count every re-stain you\'d otherwise buy over the life of the deck, composite comes out ahead for most homeowners.' },
-      { q: 'Do I need a permit?', a: 'Yes for any deck attached to the house in SC. Free-standing decks under 200 sq ft sometimes don\'t need permits but local rules vary. We always pull permits when required — unpermitted work creates problems at sale time.' },
+      { q: 'Do I need a permit?', a: 'In South Carolina, yes — anything attached to the house. Free-standing decks under 200 sq ft sometimes get a pass, but local rules vary. North Carolina and Georgia jurisdictions set their own thresholds, so we check the specific county before we quote. We hold licenses in all three states and we pull permits whenever they are required — unpermitted work turns into a problem at sale time.' },
       { q: 'How long does a new deck take to build?', a: 'Standard 200 sq ft deck: 5–7 working days. 400 sq ft with stairs: 10–14 days. Permit timeline adds 1–2 weeks before construction starts. Weather can extend timelines — we don\'t pour footings or install in rain.' },
       { q: 'Can you save my old deck?', a: 'Often yes. Many "totaled" decks just need ledger replacement, joist sister-ing, board replacement, and re-staining for far less than full replacement. We give honest assessments — some decks are past saving, but many aren\'t.' },
       { q: 'What about hot tubs on the deck?', a: 'Hot tub decks need engineering. A standard deck can\'t support a 4,000–6,000 lb hot tub plus water plus people. We design tub-rated decks with reinforced footings and joists at the design phase — retrofitting later is rarely cost-effective.' },
@@ -304,7 +304,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { item: 'Ledger Board Replacement', cost: 'Siding removal, flashing detail, rot found in the rim', lifespan: '20+ years' },
       { item: 'Railing Replacement (per linear ft)', cost: 'Material, post spacing, notching posts into the frame', lifespan: '15–25 years' },
     ],
-    seoKeywords: ['deck builder Greenville SC', 'deck repair Upstate SC', 'composite deck installation SC', 'deck refinishing near me'],
+    seoKeywords: ['deck builder Greenville SC', 'deck repair Easley SC', 'composite deck installation Spartanburg SC', 'deck contractor SC NC GA'],
   },
 
   // ═══ 5. FENCE REPAIR & INSTALLATION ═══
@@ -335,17 +335,17 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       },
       {
         heading: 'Where the Labor Goes',
-        content: 'Fence pricing starts with linear footage, height, and material — then the site takes over. Rock, roots, and hard Upstate clay slow post holes down; a flat, cleared line goes in fast. Slope means stepping or racking panels, which is more labor and more offcut waste. Gates cost more than the same footage of fence because they need deeper posts, heavier hardware, and bracing, so gate count moves the number more than gate width does. Tearing out and hauling off an old fence is its own line of work, and an unclear property line can mean waiting on a survey before we set anything. On repairs, one leaning post is rarely alone — posts set the same day tend to fail the same season, and we\'ll tell you honestly when you\'re better off replacing a run than chasing posts one at a time. Most installs take 2–5 days and repairs 1–2, plus 24–48 hours for post concrete to cure before panels go up.',
+        content: 'Fence pricing starts with linear footage, height, and material — then the site takes over. Rock, roots, and the hard red clay under most of this region slow post holes down; a flat, cleared line goes in fast. Slope means stepping or racking panels, which is more labor and more offcut waste. Gates cost more than the same footage of fence because they need deeper posts, heavier hardware, and bracing, so gate count moves the number more than gate width does. Tearing out and hauling off an old fence is its own line of work, and an unclear property line can mean waiting on a survey before we set anything. On repairs, one leaning post is rarely alone — posts set the same day tend to fail the same season, and we\'ll tell you honestly when you\'re better off replacing a run than chasing posts one at a time. Most installs take 2–5 days and repairs 1–2, plus 24–48 hours for post concrete to cure before panels go up.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC clay soils hold water at fence post bases, accelerating wood rot. Posts set in concrete (not just dirt-tamped) and with gravel for drainage at the bottom last 3× longer. Cheap installs that skip concrete or use undersized posts fail in the first 5 years. We use 4×4 minimum (often 6×6 for tall fences), 36" depth in concrete with gravel, and metal post bases for gates.',
+        content: 'The clay soils under the Greenville and Easley area hold water right at the base of a fence post, and wood rots from the ground up. Posts set in concrete — not dirt-tamped — over gravel for drainage last about 3× longer. Cheap installs that skip the concrete or use undersized posts start leaning inside 5 years. We run 4×4 minimum (6×6 on tall fences), 36" of depth in concrete over gravel, and metal post bases at gates. Same soil, same approach on the jobs we run over the line in North Carolina and Georgia.',
       },
     ],
     warningSigns: [
       { trigger: 'Fence leaning in one direction', detail: 'Post is failing — either rotted at base, undersized, or set too shallow. Pushing it back upright temporarily doesn\'t fix it; the post needs replacement or the fence will continue to lean.' },
       { trigger: 'Posts wiggling in the ground', detail: 'Concrete around the post has cracked or the post itself has deteriorated. A post that wiggles will fail completely in the next storm. Replace before that happens.' },
-      { trigger: 'Bottom of wood pickets rotting', detail: 'Common in Upstate SC. Pickets touching ground or grass wick moisture and rot. Solution: replace rotted pickets, leave 1–2" gap at bottom for new ones, or add a kickboard.' },
+      { trigger: 'Bottom of wood pickets rotting', detail: 'Common on any wood fence in this climate. Pickets touching ground or grass wick moisture and rot. Solution: replace rotted pickets, leave 1–2" gap at bottom for new ones, or add a kickboard.' },
       { trigger: 'Gates dragging or not closing', detail: 'Either the gate post has settled (most common) or the gate itself has sagged. Gate posts need to be set deeper than line posts (48"+ depth) and sometimes need diagonal bracing for tall gates.' },
       { trigger: 'Pickets popping off', detail: 'Wrong fasteners or fasteners failing. Galvanized ring-shank nails or stainless screws are required for outdoor use. Cheap nails rust and lose grip within years.' },
       { trigger: 'Visible rot at posts where fence meets ground', detail: 'Posts rot at the soil line where moisture and oxygen meet. Once visible rot appears, the post structurally is much weaker than it looks. Replace before it falls.' },
@@ -359,16 +359,16 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { tip: 'Lubricate gate hinges twice a year', detail: 'A drop of oil on hinges prevents squeaking and reduces wear. Stiff hinges put strain on the gate frame and accelerate failure.' },
     ],
     processSteps: [
-      { num: '01', title: 'Layout & Permit Check', description: 'We measure, locate property lines (recommend a survey if unclear), and check for any HOA or local restrictions. SC sometimes requires permits for fences over 6 ft — we handle if needed.' },
-      { num: '02', title: 'Call Before You Dig', description: 'SC811 utility location service called before any digging. Marks placed for gas, electric, water, and communications lines. Hitting a buried line is dangerous and expensive — we never skip this.' },
+      { num: '01', title: 'Layout & Permit Check', description: 'We measure, locate property lines (recommend a survey if unclear), and check for any HOA or local restrictions. In South Carolina, some jurisdictions require a permit above 6 ft; North Carolina and Georgia set their own rules county by county. We are licensed in all three and confirm before anything gets ordered.' },
+      { num: '02', title: 'Call Before You Dig', description: 'The utility locate goes in before any digging — SC811, NC811, or Georgia 811 depending on where the job sits. Marks placed for gas, electric, water, and communications lines. Hitting a buried line is dangerous and expensive — we never skip this.' },
       { num: '03', title: 'Set Posts', description: 'Post holes dug to 36" minimum (48" for gate posts), gravel for drainage, post centered and plumbed, concrete poured around the post. Concrete cures 24–48 hours before any panels go up.' },
       { num: '04', title: 'Install Panels or Boards', description: 'Pre-built panels (vinyl, aluminum) attached to posts with manufacturer hardware. Wood fence: rails attached to posts, then pickets nailed or screwed evenly to rails. Gates installed with proper hardware (heavy-duty hinges for wood gates).' },
       { num: '05', title: 'Stain & Cleanup', description: 'For new wood fences, we recommend waiting 30–60 days for the wood to dry before initial stain. We can return for staining or you can hire it out. All concrete and dirt cleaned up, posts wrapped if requested.' },
     ],
     faq: [
-      { q: 'How tall can my fence be?', a: 'Most SC residential zones allow 6 ft in back yards, 4 ft in front. Some areas allow 8 ft with permit. HOAs often have additional restrictions. We check local codes during the quote process.' },
+      { q: 'How tall can my fence be?', a: 'In South Carolina, most residential zones allow 6 ft in back yards and 4 ft in front, with 8 ft sometimes possible by permit. North Carolina and Georgia jurisdictions set their own limits, and HOAs stack their own restrictions on top of whatever the county says. We check the codes for your actual address during the quote.' },
       { q: 'Wood, vinyl, or aluminum?', a: 'Wood: least material cost going in, classic look, needs staining every 3–5 years, lasts 15–25 years. Vinyl: noticeably more upfront, no maintenance after, lasts 30+ years. Aluminum: the choice when you want to see through it (pool and ornamental fencing), 30+ years, no maintenance. Chain-link: the least material of the four, purely functional, lasts 20+ years. Pick on how long you\'ll own the house and how much weekend work you want.' },
-      { q: 'Do I need a permit?', a: 'Depends on locality and fence height. Most jurisdictions in Upstate SC don\'t require permits for residential fences under 6 ft, but pool barriers always need permits and inspections. We confirm before starting.' },
+      { q: 'Do I need a permit?', a: 'Depends on the jurisdiction and the height. Around Greenville, Easley, and Pickens County, most residential fences under 6 ft don\'t need one. Pool barriers always need a permit and an inspection, and that holds in all three states we work in. We confirm with the local building department before we start.' },
       { q: 'Can you replace just one section?', a: 'Yes — single picket, single panel, or single post replacements are common. Matching weathered material to a new section is the trickiest part. New sections will look noticeably different until they weather.' },
       { q: 'What about my neighbor\'s fence on the property line?', a: 'Property line fences are tricky. We strongly recommend talking to your neighbor before installing on or near the line. Some jurisdictions require shared cost if the fence benefits both properties — but that\'s typically a private agreement, not legal requirement.' },
     ],
@@ -379,7 +379,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { item: 'Chain-Link Fence (per linear ft)', cost: 'Height, mesh gauge, terminal posts at every corner', lifespan: '20+ years' },
       { item: 'Single Post Replacement', cost: 'Breaking out the old concrete footing is the real work', lifespan: '15–25 years' },
     ],
-    seoKeywords: ['fence installation Greenville SC', 'fence repair Upstate SC', 'wood privacy fence builder SC', 'vinyl fence installer near me'],
+    seoKeywords: ['fence installation Greenville SC', 'fence repair Easley SC', 'wood privacy fence builder Anderson SC', 'vinyl fence installer Pickens County SC'],
   },
 
   // ═══ 6. DOOR & WINDOW REPLACEMENT ═══
@@ -410,11 +410,11 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       },
       {
         heading: 'Cost Drivers & Lead Times',
-        content: 'The unit is only part of it. An insert replacement — new window dropped into the existing frame — goes fast. A full-frame replacement, where we take the opening back to studs and re-flash it, is a much longer job, and it\'s the honest answer when the sill or jamb is rotted. What we find behind the trim decides which one you get, and we\'d rather show you the rot and re-quote than trim over it. After that, anything non-standard moves the number: odd sizes, arched and specialty shapes, custom colors, and impact-rated glass all cost more and take longer to arrive. Exterior doors add threshold, jamb, and hardware work on top of the slab itself. Plan on 2–4 weeks lead time for stock units and 6–12 weeks for custom — that\'s calendar, not labor, and it\'s usually the longest stretch of the project. A single replacement is 2–4 hours on site; a whole-house window job runs 2–5 days.',
+        content: 'The unit is only part of it. An insert replacement — new window dropped into the existing frame — goes fast. A full-frame replacement, where we take the opening back to studs and re-flash it, is a much longer job, and it\'s the honest answer when the sill or jamb is rotted. What we find behind the trim decides which one you get, and we\'d rather show you the rot and re-quote than trim over it. After that, anything non-standard moves the number: odd sizes, arched and specialty shapes, custom colors, and impact-rated glass all cost more and take longer to arrive. Exterior doors add threshold, jamb, and hardware work on top of the slab itself. Plan on 2–4 weeks lead time for stock units and 6–12 weeks for custom — that\'s calendar, not labor, and it\'s usually the longest stretch of the project. A single replacement is 2–4 hours on site; a whole-house window job runs 2–5 days, and that is enough work to justify the drive — we take window jobs across South Carolina and into North Carolina and Georgia.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC summer humidity and winter cold both punish windows. Dual-pane low-E windows with proper installation maintain energy efficiency for 20–30 years. Cheap windows or bad installation lose efficiency in 5–8 years and lead to comfort problems and high bills. We install with foam insulation around the frame, proper flashing tape, and silicone caulk inside and out — not just nailed in and trimmed over.',
+        content: 'Humid summers and hard cold snaps both work on a window, and the swing gets wider the further up into the foothills you go. Dual-pane low-E units, installed correctly, hold their efficiency for 20–30 years. Cheap units or a sloppy install lose it in 5–8, and you feel that in comfort before you see it on the bill. We install with foam insulation around the frame, proper flashing tape, and silicone caulk inside and out — not just nailed in and trimmed over.',
       },
     ],
     warningSigns: [
@@ -429,7 +429,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
     maintenanceTips: [
       { tip: 'Lubricate hinges and tracks annually', detail: 'A drop of silicone spray on hinges, tracks, and locks each spring keeps everything moving smoothly. Stiff mechanisms wear out faster and stress the unit.' },
       { tip: 'Replace weatherstripping when worn', detail: 'Door and window weatherstripping wears out every 5–10 years. Swapping it is a materials-and-an-afternoon job that restores the air seal without touching the door itself.' },
-      { tip: 'Caulk around exterior trim every 2–3 years', detail: 'Exterior caulk degrades in SC sun. Re-caulking gaps prevents water entry that rots frames and damages walls.' },
+      { tip: 'Caulk around exterior trim every 2–3 years', detail: 'Exterior caulk degrades under southern sun faster than most people expect. Re-caulking gaps prevents water entry that rots frames and damages walls.' },
       { tip: 'Clean window tracks and weep holes', detail: 'Dirt in tracks prevents windows from sealing. Weep holes (small holes at the bottom outside of windows) drain water — keep them clear or water collects in the frame and rots it.' },
       { tip: 'Tighten door hinges as they loosen', detail: 'Heavy doors loosen hinge screws over time. A quick re-tighten (or longer screws into the framing) prevents the door from drooping and starting to rub.' },
     ],
@@ -454,7 +454,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { item: 'Single Window Replacement', cost: 'Insert or full-frame — decided by what the sill looks like', lifespan: '20–30 years' },
       { item: 'Whole-House Windows (15 units)', cost: 'Size mix, custom shapes, lead time on the order', lifespan: '20–30 years' },
     ],
-    seoKeywords: ['door replacement Greenville SC', 'window installation Upstate SC', 'replacement windows SC', 'exterior door installer near me'],
+    seoKeywords: ['door replacement Greenville SC', 'window installation Easley SC', 'replacement windows Spartanburg SC', 'window and door contractor SC NC GA'],
   },
 
   // ═══ 7. CONCRETE PATCHWORK ═══
@@ -489,7 +489,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC freeze-thaw cycles damage concrete that wasn\'t poured properly. Insufficient air entrainment in the mix causes spalling. Inadequate subgrade prep causes settling and cracking. Proper concrete pours (correct mix, proper subgrade compaction, reinforcement, controlled curing) last 30+ years. Cheap pours fail in 5–10 years.',
+        content: 'Freeze-thaw cycles across the foothills break down concrete that wasn\'t poured right — and you get more of those cycles the further north and the higher up you go. Not enough air entrainment in the mix and the surface spalls. Skimp on the subgrade and it settles and cracks. Poured properly — correct mix, compacted subgrade, reinforcement, controlled curing — a residential slab goes 30+ years. Cheap pours fail in 5–10.',
       },
     ],
     warningSigns: [
@@ -520,7 +520,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { q: 'How long until I can use new concrete?', a: 'Walking: 24 hours. Light vehicles: 7 days. Full strength (heavy loads, full use): 28 days. We post signs and barricades during cure period — driving on uncured concrete causes permanent damage.' },
       { q: 'What does stamped or colored concrete add?', a: 'Stamping is the bigger jump — it adds mats, release agent, and a lot more finishing labor on pour day, all of it on the clock while the slab is setting. Integral or surface color adds less. Both need re-sealing to keep the color from washing out, so budget the maintenance, not just the install. On a patio or front walk you look at every day, it earns its keep.' },
       { q: 'Can you match my existing concrete color?', a: 'Approximately, never exactly. Concrete colors change over time as the surface ages and the cement formula shifts. New patches will be lighter and more uniform than old; they\'ll weather to similar but not identical color over months.' },
-      { q: 'What about concrete in winter?', a: 'We pour year-round in SC, but cold-weather pours (below 40°F) require heated mix water and insulating blankets over the slab through the cure — more material, more labor, and someone watching the pour longer. We schedule for warmer days when the calendar allows.' },
+      { q: 'What about concrete in winter?', a: 'We pour year-round here, but cold-weather pours (below 40°F) require heated mix water and insulating blankets over the slab through the cure — more material, more labor, and someone watching the pour longer. A job up in western North Carolina hits that threshold weeks earlier in the season than one around Greenville does. We schedule for warmer days when the calendar allows.' },
     ],
     costData: [
       { item: 'Crack Sealing (per linear ft)', cost: 'Crack width, routing prep, whether the slab is still moving', lifespan: '5–10 years' },
@@ -529,7 +529,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { item: 'Driveway Replacement (600 sq ft)', cost: 'Slab thickness, rebar layout, truck access to the forms', lifespan: '30+ years' },
       { item: 'Stamped or Colored Concrete (per sq ft)', cost: 'Pattern complexity and finishing labor on pour day', lifespan: '30+ years' },
     ],
-    seoKeywords: ['concrete repair Greenville SC', 'driveway replacement Upstate SC', 'sidewalk repair near me', 'concrete contractor SC'],
+    seoKeywords: ['concrete repair Greenville SC', 'driveway replacement Easley SC', 'sidewalk repair Anderson SC', 'concrete contractor Spartanburg SC'],
   },
 
   // ═══ 8. PUNCH LIST & HANDYMAN ═══
@@ -564,7 +564,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Many home repair companies don\'t want small jobs — they need full-day projects to be profitable. Homeowners get stuck calling 5 different specialists for what could be one visit. RO\'s punch-list service exists for exactly that gap — billed by the hour so you aren\'t buying a project minimum for a two-hour list, one experienced hand who works across trades, and a willingness to do the small stuff that keeps a house in shape.',
+        content: 'Many home repair companies don\'t want small jobs — they need full-day projects to be profitable. Homeowners get stuck calling 5 different specialists for what could be one visit. RO\'s punch-list service exists for exactly that gap — billed by the hour so you aren\'t buying a project minimum for a two-hour list, one experienced hand who works across trades, and a willingness to do the small stuff that keeps a house in shape. This is our close-to-home work: Greenville, Easley, Pickens, Anderson, and the towns around them. The bigger projects take us across South Carolina and into North Carolina and Georgia, but nobody should be paying drive time to get a door planed and rehung.',
       },
     ],
     warningSigns: [
@@ -591,7 +591,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { num: '05', title: 'Cleanup & Documentation', description: 'All debris removed, materials stored or returned. You get an itemized list of what was completed and what (if anything) needs follow-up. Future visits build on this list.' },
     ],
     faq: [
-      { q: 'How small a job will you take?', a: 'Anything we can drive to. Plenty of outfits won\'t book below a project minimum — we\'ll run a single-item visit if it fits the schedule that week. Most punch lists end up bundling 5+ items anyway, because once you start writing them down, more come to mind.' },
+      { q: 'How small a job will you take?', a: 'Small is the whole point. Plenty of outfits won\'t book below a project minimum — around Greenville and Easley we\'ll run a single-item visit if it fits the schedule that week. Farther out, let the list build a little so the trip earns its keep. Most punch lists end up bundling 5+ items anyway, because once you start writing them down, more come to mind.' },
       { q: 'Can you handle electrical and plumbing during a punch-list visit?', a: 'Minor work — yes (replacing fixtures, fixing leaky faucets, swapping outlets and switches). Major work (new circuits, water heaters, sewer line work) — we route to our licensed electrical or plumbing teams. We\'re honest about what\'s in handyman scope vs. what needs a specialist.' },
       { q: 'Do you bring materials?', a: 'Common consumables (caulk, screws, basic hardware, weatherstripping) — yes, on the truck. Specific items (a particular faucet, specific paint color) — we either pick up or ask you to provide. Material costs are separate from labor.' },
       { q: 'How is this different from calling a plumber or electrician?', a: 'A licensed specialist bills at a trade rate and only touches that trade — a mixed list means three of them, three schedules, and three trip charges. A handyman is one person, one visit, working across trades. For complex single-trade work, call the specialist. For a list of small mixed items, the handyman visit gets more crossed off per hour on site.' },
@@ -604,7 +604,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { item: 'Annual Maintenance Visit', cost: 'House size, exterior items, what\'s piled up since last year', lifespan: '1 year' },
       { item: 'Pre-Sale Punch List', cost: 'Length of the inspection report, cosmetic versus real', lifespan: 'One-time' },
     ],
-    seoKeywords: ['handyman Greenville SC', 'home repair Upstate SC', 'punch list service SC', 'general handyman near me'],
+    seoKeywords: ['handyman Greenville SC', 'handyman Easley SC', 'home repair Pickens County SC', 'punch list service Anderson SC'],
   },
 
 ];

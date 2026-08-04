@@ -36,11 +36,11 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       },
       {
         heading: 'What Drives the Cost',
-        content: 'Three things set the number on a pump-out: tank size, how far the truck has to drive to reach you, and how much digging it takes to get to the lid. A 1,000–1,500 gallon tank is the baseline. Step up to 2,000 gallons and you\'re paying for more volume hauled and more disposal at the treatment plant. If the lid is buried under a foot of sod, that\'s hand-digging before the hose ever comes off the truck — a riser to grade eliminates it permanently. Same-day response during an active backup costs more because we pull a truck off scheduled work to get there. The pumping itself takes 30–60 minutes on site.',
+        content: 'Three things set the number on a pump-out: tank size, how far the truck has to drive to reach you, and how much digging it takes to get to the lid. Distance is real money here — Easley, Powdersville, and most of Greenville County are a short run from the yard, while a lake lot on the Georgia side of Hartwell or a place up toward the North Carolina line is half a day of driving on top of the work. A 1,000–1,500 gallon tank is the baseline. Step up to 2,000 gallons and you\'re paying for more volume hauled and more disposal at the treatment plant. If the lid is buried under a foot of sod, that\'s hand-digging before the hose ever comes off the truck — a riser to grade eliminates it permanently. Same-day response during an active backup costs more because we pull a truck off scheduled work to get there. The pumping itself takes 30–60 minutes on site.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC clay soils hold moisture longer than sandy soils, which means your drain field has less margin for error. Once solids reach the drain field, they clog the gravel bed and soil pores permanently — and at that point you\'re not buying a service call, you\'re buying a new drain field: a DHEC permit, an excavator, and days of equipment in your yard. Regular pumping is the best insurance you can buy against the most expensive septic failure mode. A pumping visit every four years is a rounding error next to one drain field replacement.',
+        content: 'The Piedmont clay under most of this region — the South Carolina foothills, northeast Georgia, and the western North Carolina line — holds moisture far longer than sandy soil, which means your drain field has less margin for error than the national averages assume. Once solids reach the drain field, they clog the gravel bed and soil pores permanently, and at that point you\'re not buying a service call, you\'re buying a new drain field: a permit, an excavator, and days of equipment in your yard. That permit comes from SCDES in South Carolina and from the county health department in North Carolina and Georgia, but the bill reads about the same in all three. Regular pumping is the best insurance you can buy against the most expensive septic failure mode. A pumping visit every four years is a rounding error next to one drain field replacement.',
       },
     ],
     warningSigns: [
@@ -68,7 +68,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       { num: '05', title: 'Restore & Report', description: 'We seal the lid, backfill if we dug to reach it, and restore the ground. You get a written report of sludge depth, tank condition, and a recommended next-pump date based on your usage.' },
     ],
     faq: [
-      { q: 'How often should I really pump?', a: 'The honest answer: it depends on tank size, household size, and usage. The Upstate SC average for a family of four with a 1,000-gallon tank is every 3–4 years. Larger tanks or smaller households stretch to 5+ years. We\'ll give you a specific timeline based on what we find in yours.' },
+      { q: 'How often should I really pump?', a: 'The honest answer: it depends on tank size, household size, and usage. Around Greenville and Easley, a family of four on a 1,000-gallon tank averages every 3–4 years. Larger tanks or smaller households stretch to 5+ years. We\'ll give you a specific timeline based on what we find in yours.' },
       { q: 'Can I just pump every 10 years to save money?', a: 'No. Solids will overflow into the drain field long before year 10. A pump-out every four years is a maintenance line item — a truck, an hour, done. A drain field replacement is a permit, an excavator, and a week of your yard torn up, and stretching the interval is what moves you from the first to the second by year seven instead of year 25. We\'ve watched this math play out many times.' },
       { q: 'Does pumping kill the bacteria in my tank?', a: 'No. Pumping removes excess sludge and scum but leaves residual bacteria in the tank walls and pipes. A healthy bacterial colony rebuilds within days of pumping as new waste enters.' },
       { q: 'What if you find cracks in my tank during pumping?', a: 'We document with photos, explain the severity, and give you options. Small cracks above the water line can be monitored. Cracks at or below the water line mean groundwater is entering (or effluent is escaping) and the tank needs repair or replacement.' },
@@ -81,7 +81,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       { item: 'Emergency Same-Day Pumping', cost: 'A truck pulled off booked work; nights and weekends more so', lifespan: 'One-time' },
       { item: 'Baffle/Filter Replacement', cost: 'Filter type, and whether the outlet tee goes with it', lifespan: '15–20 years' },
     ],
-    seoKeywords: ['septic pumping Greenville SC', 'septic tank pump out Upstate SC', 'septic service near me', 'how often pump septic tank SC'],
+    seoKeywords: ['septic pumping Greenville SC', 'septic tank pump out Easley SC', 'septic pumping Anderson Pickens County', 'how often to pump a septic tank South Carolina'],
   },
 
   // ═══ 2. SEPTIC INSPECTION ═══
@@ -108,15 +108,15 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       },
       {
         heading: 'When You Need It',
-        content: 'Three main scenarios: (1) Buying a home with a septic system — you should never close without one, regardless of what the seller says. (2) Selling a home — in SC, buyers increasingly demand an inspection and lenders sometimes require one. (3) Maintenance inspections — a baseline inspection every 5–10 years catches problems before they become expensive. Also essential after heavy rain events, if you notice any warning signs, or after tree roots have invaded.',
+        content: 'Three main scenarios: (1) Buying a home with a septic system — you should never close without one, regardless of what the seller says. (2) Selling a home — buyers across South Carolina, North Carolina, and Georgia increasingly demand an inspection, and lenders sometimes require one. (3) Maintenance inspections — a baseline inspection every 5–10 years catches problems before they become expensive. Also essential after heavy rain events, if you notice any warning signs, or after tree roots have invaded.',
       },
       {
         heading: 'Scope & Schedule',
-        content: 'What you pay for here is depth of scope, not square footage. A visual inspection is one tech, a lid, and a flashlight — it catches the obvious failures and nothing else. A full inspection means pumping the tank so the walls, baffles, and tees can actually be seen, a camera run on the house-to-tank line, and a load test with water actually running through the house. That\'s a different truck, a different crew, and 2–4 hours on site instead of thirty minutes. Real estate inspections add DHEC-compatible documentation and a turnaround your closing date dictates. Written report lands within 48 hours either way — order it early in your due diligence window, not on the last day of it.',
+        content: 'What you pay for here is depth of scope, not square footage. A visual inspection is one tech, a lid, and a flashlight — it catches the obvious failures and nothing else. A full inspection means pumping the tank so the walls, baffles, and tees can actually be seen, a camera run on the house-to-tank line, and a load test with water actually running through the house. That\'s a different truck, a different crew, and 2–4 hours on site instead of thirty minutes. Real estate inspections add documentation formatted for whoever holds the permit on that address — SCDES in South Carolina, the county health department in North Carolina or Georgia — on a turnaround your closing date dictates. Written report lands within 48 hours either way — order it early in your due diligence window, not on the last day of it.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'South Carolina DHEC requires permitted septic systems but doesn\'t mandate regular inspections. That means failed or marginal systems often aren\'t discovered until they back up — which can happen years after a home is sold. Upstate SC\'s clay-heavy soils mean drain fields fail sooner than in sandy regions, and many rural properties have older systems approaching end-of-life. An inspection today can keep a buyer from inheriting a full system replacement three months after closing — a job nobody escrowed for and no insurance policy covers.',
+        content: 'South Carolina requires a permit on every onsite system but doesn\'t mandate an inspection once it\'s in the ground — and neither do North Carolina or Georgia. So failed and marginal systems tend to stay hidden until they back up, sometimes years after a home changed hands. The clay-heavy Piedmont soils across this whole region push drain fields to fail sooner than they do in sandy country, and a lot of the rural property we inspect — out through Pickens and Anderson, up the North Carolina line, over toward northeast Georgia — is still running its original 1970s system. An inspection today can keep a buyer from inheriting a full system replacement three months after closing — a job nobody escrowed for and no insurance policy covers.',
       },
     ],
     warningSigns: [
@@ -135,27 +135,27 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       { tip: 'Don\'t skip the drain field portion', detail: 'The fast version of an inspection only looks at the tank. A complete one includes visual assessment of the drain field, probing for wet spots, and running water to observe the absorption rate — which is where the expensive failures actually live.' },
     ],
     processSteps: [
-      { num: '01', title: 'Record Review & Location', description: 'We pull DHEC records when available, interview the homeowner about maintenance history, and locate the tank using records, probes, or electronic locators. Every component is noted on a site diagram.' },
+      { num: '01', title: 'Record Review & Location', description: 'We pull the permit file from whichever agency issued it — SCDES in South Carolina, the county health department in North Carolina or Georgia — interview the homeowner about maintenance history, and locate the tank using records, probes, or electronic locators. Every component is noted on a site diagram.' },
       { num: '02', title: 'Tank Assessment', description: 'We open the tank, measure sludge and scum, and inspect baffles. If the tank is due for pumping, we coordinate that first so we can actually see the tank walls, inlet and outlet tees, and identify cracks or damage.' },
       { num: '03', title: 'Flow & Load Test', description: 'We run water through the house — sinks, tubs, washing machine — for 15–30 minutes while watching effluent flow through the distribution box (if accessible) and observing drain field absorption. This catches restrictions pumping alone won\'t show.' },
       { num: '04', title: 'Drain Field Survey', description: 'We walk the drain field looking for wet spots, odors, depressions, or unusually green vegetation. Where practical, we probe the soil to confirm absorption is happening below the surface, not above.' },
-      { num: '05', title: 'Written Report', description: 'You receive a detailed written report with photos, sludge/scum measurements, component condition, and a specific remaining-life estimate. For real estate transactions, we provide DHEC-compatible documentation.' },
+      { num: '05', title: 'Written Report', description: 'You receive a detailed written report with photos, sludge/scum measurements, component condition, and a specific remaining-life estimate. For real estate transactions, we provide it in the format the permitting agency and your lender expect.' },
     ],
     faq: [
       { q: 'Do I need an inspection if I\'m not buying or selling?', a: 'Not required by law, but strongly recommended every 5–10 years. Inspections catch problems while they\'re still repairs. We regularly meet homeowners replacing an entire system that an inspection three years earlier would have caught as a failed baffle and a field that was only starting to clog — same house, completely different scope of work.' },
       { q: 'What happens if the inspection fails?', a: 'Depends on what failed. A marginal drain field might need a D-box, a jetting, or one trench rebuilt. A dead system needs full replacement — permit, soil retest, excavation. For home purchases, a failed inspection is leverage for a price reduction or for the seller to repair before closing. Either way you get a written scope and a number built from what we actually found in your tank, not a rate card.' },
       { q: 'Can I skip pumping during the inspection to save money?', a: 'You can, but then the inspection is mostly guesswork. Without an empty tank, we can\'t see the walls, baffles, or measure real sludge levels. We recommend combining pumping and inspection — saves a service visit and gives a real picture.' },
       { q: 'Does my homeowner\'s insurance cover septic failures?', a: 'Almost never. Septic is classified as maintenance, not sudden damage. That\'s why inspections matter — you can\'t file an insurance claim for a system that quietly failed over 10 years.' },
-      { q: 'Is DHEC approval required for new owners?', a: 'SC doesn\'t require a transfer approval for existing systems, but any repairs or replacement must go through DHEC permitting. An inspection establishes the baseline the new owner inherits.' },
+      { q: 'Does the permit transfer to me as the new owner?', a: 'South Carolina doesn\'t require a transfer approval on an existing system, but any repair or replacement has to go through SCDES — the Department of Environmental Services, which took over onsite wastewater permitting from DHEC in 2024. North Carolina and Georgia run theirs through county health departments and handle transfers on their own terms; we\'ll tell you which set of rules the address falls under. Either way, an inspection establishes the baseline you inherit.' },
     ],
     costData: [
       { item: 'Basic Visual Inspection', cost: 'One tech, one lid, no pump truck — scope is the whole story', lifespan: '1-time (valid 90 days)' },
       { item: 'Full Inspection with Pumping', cost: 'Tank size sets the pump-out; the load test adds the hours', lifespan: '1-time (valid 1 year)' },
-      { item: 'Real Estate Transaction Inspection', cost: 'DHEC-ready paperwork on a turnaround your closing date sets', lifespan: '1-time (valid 90 days)' },
+      { item: 'Real Estate Transaction Inspection', cost: 'Permit-agency-ready paperwork on a turnaround your closing sets', lifespan: '1-time (valid 90 days)' },
       { item: 'Camera Line Scope Add-On', cost: 'Footage scoped, pipe material, and whether a cleanout exists', lifespan: '1-time' },
       { item: 'Dye Test (drain field absorption)', cost: 'Field size and how many hours of water it takes to load it', lifespan: '1-time' },
     ],
-    seoKeywords: ['septic inspection Greenville SC', 'septic inspection before buying house', 'real estate septic inspection Upstate SC', 'septic system evaluation SC'],
+    seoKeywords: ['septic inspection Greenville SC', 'septic inspection before buying a house', 'real estate septic inspection Pickens County SC', 'septic system evaluation SC NC GA'],
   },
 
   // ═══ 3. NEW SEPTIC INSTALLATION ═══
@@ -164,7 +164,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
     slug: 'new-installation',
     title: 'New Septic Installation',
     tagline: 'From Soil Test to Final Inspection — One Crew, One Standard',
-    heroDescription: 'Installing a new septic system is the single most regulated part of residential construction. Soil type, slope, water table depth, setbacks from wells and property lines — every variable affects what can go in and what it costs. RO handles the full scope: soil evaluation, DHEC permitting, system design, excavation, tank and drain field installation, and final inspection.',
+    heroDescription: 'Installing a new septic system is the single most regulated part of residential construction. Soil type, slope, water table depth, setbacks from wells and property lines — every variable affects what can go in and what it costs — and the rules change the moment you cross a state line. RO works out of Easley and is licensed for onsite wastewater in South Carolina, North Carolina, and Georgia, handling the full scope in all three: soil evaluation, permitting, system design, excavation, tank and drain field installation, and final inspection.',
     heroImage: '/images/services/septic/subs/excavator-site.jpg',
     cardImage: '/images/services/septic/subs/backhoe-field.jpg',
     galleryImages: [
@@ -182,22 +182,22 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       },
       {
         heading: 'When You Need It',
-        content: 'Three scenarios: (1) New construction on a rural lot without municipal sewer access — most common. (2) Complete system replacement when the existing system has failed beyond repair. (3) Adding a second system for an accessory dwelling, in-law suite, or workshop with plumbing. Any of these require DHEC permits, and in most cases a licensed installer like RO.',
+        content: 'Three scenarios: (1) New construction on a rural lot without municipal sewer access — most common. (2) Complete system replacement when the existing system has failed beyond repair. (3) Adding a second system for an accessory dwelling, in-law suite, or workshop with plumbing. All three need a permit and, in most cases, a licensed installer. South Carolina tiers that licence — Tier 1, Tier 2, and Tier 3 by system type and size — and RO holds Tier 2, the level the state requires for pump systems, large systems, grease traps, and repairs. A Tier 1 installer cannot legally touch that work. North Carolina and Georgia license installers under their own programs, and RO carries all three, so the permit path changes with the address but the crew doesn\'t.',
       },
       {
         heading: 'Planning It Out',
-        content: 'The soil report writes most of this estimate before we do. A gravity-flow system on well-draining piedmont soil for a 3–4 bedroom home is the baseline scope: soil test, permit, tank, drain field, labor. Everything above that is the site talking — a slow perc rate in clay, a water table sitting high, rock close to grade, or a lot too tight to hold the required reserve area all push you toward an engineered design (sand filter, mound bed, aerobic treatment) with imported material, a pump, and power run to it. Bedroom count sets tank size and linear feet of field, so a fifth bedroom is not a rounding adjustment. Timeline: soil test and permitting 1–3 weeks, installation 2–5 days, DHEC inspection and backfill 1–2 more days — 2–4 weeks start to finish, longer when the spring permit queue backs up.',
+        content: 'The soil report writes most of this estimate before we do. A gravity-flow system on well-draining Piedmont soil for a 3–4 bedroom home is the baseline scope: soil test, permit, tank, drain field, labor. Everything above that is the site talking — a slow perc rate in clay, a water table sitting high, rock close to grade, or a lot too tight to hold the required reserve area all push you toward an engineered design (sand filter, mound bed, aerobic treatment) with imported material, a pump, and power run to it. Bedroom count sets tank size and linear feet of field, so a fifth bedroom is not a rounding adjustment. Timeline: soil evaluation and permitting 1–3 weeks, installation 2–5 days, inspection and backfill 1–2 more days — 2–4 weeks start to finish, longer when the spring permit queue backs up. Which queue you\'re in depends on the address: SCDES reviews it in South Carolina, a county health department does in North Carolina and Georgia, and they don\'t all move at the same speed.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC has a wide range of soil conditions — sandy piedmont, clay-heavy bottomland, shallow bedrock near foothills. A cookie-cutter system that works on one lot may fail on the next. Getting the right system designed for your specific site is the single biggest factor in longevity. Shortcuts taken at install show up five years later as drain field failure, and by then the fix is a permit and an excavator. RO does it right the first time.',
+        content: 'Soil out here changes lot to lot — sandy Piedmont on one parcel, clay-heavy bottomland on the next, shallow bedrock as you climb toward the foothills. A cookie-cutter system that works on one lot fails on the one beside it. That\'s the reason South Carolina sizes systems on soil morphology — texture, structure, depth to a restrictive horizon, depth to the seasonal water table — instead of a percolation test, and why above the Fall Line, which covers everything we build in this state, the evaluation has to come out of backhoe pits rather than hand borings. North Carolina and Georgia evaluate and permit onsite systems under their own rules, so the same house plan can end up with a different permitted design depending on which side of the line it lands. Lake lots add a layer on top: Keowee, Jocassee, and Hartwell all carry setbacks from the water, and Hartwell puts South Carolina rules on one shore and Georgia rules on the other. Getting the design right for your specific site is the single biggest factor in how long it lasts. Shortcuts taken at install show up five years later as drain field failure, and by then the fix is a permit and an excavator. RO does it right the first time.',
       },
     ],
     warningSigns: [
-      { trigger: 'Your contractor doesn\'t mention a soil test', detail: 'DHEC requires a perc test (percolation test) before any new system permit. If the contractor is quoting without a soil evaluation, they\'re either planning to skip it (illegal) or they haven\'t done this before.' },
+      { trigger: 'Your contractor doesn\'t mention a soil evaluation', detail: 'No state we work in will issue a permit without a soil evaluation first. South Carolina doesn\'t even use percolation tests — the state reads soil morphology, done by certified staff or a licensed professional soil classifier, from backhoe pits anywhere above the Fall Line. If a contractor is quoting without any soil work, they\'re either planning to skip it (illegal) or they haven\'t done this before.' },
       { trigger: 'The quote comes in far under everyone else\'s', detail: 'A number well below the rest almost always means something has been left out — a tank smaller than code requires, an undersized drain field, or no permit at all. Ask three questions: what tank size, how many linear feet of field, and what\'s the permit number. If those answers are missing, the quotes aren\'t comparable and you\'re not shopping the same job.' },
-      { trigger: 'No permit number on the quote', detail: 'A legitimate installer will either have the permit in hand or include the permit fee and timeline in the quote. Work without a DHEC permit is illegal and will create problems at sale time.' },
-      { trigger: 'You\'re told an "engineered system" isn\'t necessary on a difficult lot', detail: 'If your lot has clay soils, steep slope, shallow water table, or proximity to a stream, a simple gravity-flow system may not pass DHEC. An installer steering you away from an engineered design to save money is gambling with your long-term system health.' },
+      { trigger: 'No permit number on the quote', detail: 'A legitimate installer will either have the permit in hand or include the permit fee and timeline in the quote. Unpermitted work is illegal in all three states and will create problems at sale time.' },
+      { trigger: 'You\'re told an "engineered system" isn\'t necessary on a difficult lot', detail: 'If your lot has clay soils, steep slope, shallow water table, or proximity to a stream, a simple gravity-flow system may not be permittable at all. An installer steering you away from an engineered design to save money is gambling with your long-term system health.' },
       { trigger: 'No written warranty', detail: 'Reputable installers warranty tank and drain field workmanship for at least 1 year, often 2–5 years. If warranty terms aren\'t written into the quote, they don\'t exist.' },
       { trigger: 'No plan for protecting the install site during construction', detail: 'Other trades driving heavy equipment over a new drain field will compact the soil and destroy absorption. The installer should mark the area and coordinate with the GC to protect it.' },
     ],
@@ -209,27 +209,27 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       { tip: 'First pumping at 3 years', detail: 'New systems should be pumped at 3 years to establish a baseline sludge accumulation rate. After the first pump, we can dial in your specific interval.' },
     ],
     processSteps: [
-      { num: '01', title: 'Site Assessment & Soil Test', description: 'A certified soil classifier evaluates the site, digs test pits, and measures percolation rate. This determines what system type is permittable and where it must be located. Results inform the design.' },
-      { num: '02', title: 'System Design & DHEC Permit', description: 'We design the system to match soil conditions, home size, and site constraints, then submit to DHEC for permit. Approval typically takes 2–3 weeks. You receive full plans before any excavation.' },
+      { num: '01', title: 'Site Assessment & Soil Evaluation', description: 'Certified staff or a licensed professional soil classifier evaluates the site. In South Carolina that means reading soil morphology — texture, structure, depth to a restrictive horizon and to the seasonal water table — out of backhoe pits above the Fall Line, not a perc test. This determines what system type is permittable and where it must sit. Results inform the design.' },
+      { num: '02', title: 'System Design & Permit', description: 'We design the system to match soil conditions, home size, and site constraints, then submit it to the agency that holds jurisdiction — SCDES in South Carolina, the county health department in North Carolina or Georgia. Approval typically takes 2–3 weeks. You receive full plans before any excavation.' },
       { num: '03', title: 'Excavation & Tank Setting', description: 'We excavate for tank and drain field, set the concrete tank on a level gravel bed, and plumb the inlet line from the house. Tank is tested for watertightness before backfill.' },
       { num: '04', title: 'Drain Field Construction', description: 'Gravel trenches are dug to design specs, perforated distribution pipe is laid with correct slope, and the field is covered with filter fabric and soil. Distribution box is set and connected to tank and field.' },
-      { num: '05', title: 'Inspection & Backfill', description: 'DHEC inspector confirms all components meet permit specs before any covering. Once passed, we backfill, grade, and seed. You get the final inspection report and warranty documentation.' },
+      { num: '05', title: 'Inspection & Backfill', description: 'The permitting inspector confirms all components meet permit specs before any covering. Once passed, we backfill, grade, and seed. You get the final inspection report and warranty documentation.' },
     ],
     faq: [
-      { q: 'How long does the whole process take?', a: '2–4 weeks typical, but can stretch to 8+ weeks during high-demand seasons or with complex sites. The soil test and DHEC permit account for 1–3 weeks; the physical installation is 3–7 days; final inspection and backfill add 1–2 days. We\'ll give you a specific schedule after the soil test.' },
+      { q: 'How long does the whole process take?', a: '2–4 weeks typical, but can stretch to 8+ weeks during high-demand seasons or with complex sites. The soil evaluation and permit account for 1–3 weeks; the physical installation is 3–7 days; final inspection and backfill add 1–2 days. We\'ll give you a specific schedule once the soil work is back and we know which agency is reviewing it.' },
       { q: 'Can I live in the house during installation?', a: 'If it\'s an existing home with an old system, yes — but plumbing use will be limited during the 1–2 days the old system is disconnected and the new one connected. For new construction, the septic usually goes in before occupancy permit, so it\'s a non-issue.' },
-      { q: 'What\'s the difference between a gravity system and an engineered system?', a: 'Gravity systems use natural soil slope to move effluent from tank to drain field — the simplest design, with no pump and nothing to fail electrically. Engineered systems use pumps, filters, or elevated beds to compensate for poor soil, high water tables, or steep terrain. They carry more material, a pump, an electrical connection, and maintenance you don\'t have with gravity — but on a difficult site they\'re the only design DHEC will permit.' },
-      { q: 'Do I need a contractor for new construction septic?', a: 'Yes, and in SC it must be a licensed installer. DIY septic installation is illegal and will fail DHEC inspection, meaning you can\'t get a certificate of occupancy on the house.' },
-      { q: 'How big a tank and drain field do I need?', a: 'Determined by number of bedrooms (DHEC uses bedrooms as a proxy for occupancy). 3-bedroom: 1,000-gallon tank, ~300 ft drain field. 4-bedroom: 1,250-gallon tank, ~400 ft field. 5-bedroom: 1,500-gallon tank, ~500 ft field. Soil conditions can increase these numbers.' },
+      { q: 'What\'s the difference between a gravity system and an engineered system?', a: 'Gravity systems use natural soil slope to move effluent from tank to drain field — the simplest design, with no pump and nothing to fail electrically. Engineered systems use pumps, filters, or elevated beds to compensate for poor soil, high water tables, or steep terrain. They carry more material, a pump, an electrical connection, and maintenance you don\'t have with gravity — but on a difficult site they\'re the only design the state will permit.' },
+      { q: 'Do I need a contractor for new construction septic?', a: 'Yes. In South Carolina it has to be a licensed installer holding the right tier for the system you\'re putting in; North Carolina and Georgia license installers under their own programs. DIY septic installation is illegal in all three and will fail inspection, meaning you can\'t get a certificate of occupancy on the house.' },
+      { q: 'How big a tank and drain field do I need?', a: 'Determined by number of bedrooms — every state we work in uses bedrooms as a proxy for occupancy. 3-bedroom: 1,000-gallon tank, ~300 ft drain field. 4-bedroom: 1,250-gallon tank, ~400 ft field. 5-bedroom: 1,500-gallon tank, ~500 ft field. Soil conditions can increase these numbers.' },
     ],
     costData: [
       { item: 'Standard 3–4 BR Gravity System', cost: 'Bedroom count sets the tank; perc rate sets the field length', lifespan: '25–40 years' },
-      { item: 'Soil Test & Permit', cost: 'Number of test pits, site access, and the current DHEC queue', lifespan: '1-time' },
+      { item: 'Soil Evaluation & Permit', cost: 'Number of backhoe pits, site access, and the review queue you land in', lifespan: '1-time' },
       { item: 'Engineered Mound System', cost: 'Imported sand by the truckload, a pump, and power run to it', lifespan: '20–35 years' },
       { item: 'Aerobic Treatment System', cost: 'Aerator, control panel, electrical, and a service contract after', lifespan: '15–25 years' },
       { item: 'Pump Station (if needed)', cost: 'Vertical lift to the field and how far the effluent travels', lifespan: '10–15 years' },
     ],
-    seoKeywords: ['new septic installation Greenville SC', 'septic system installer Upstate SC', 'DHEC permit septic install', 'new construction septic SC'],
+    seoKeywords: ['new septic installation Greenville SC', 'licensed septic installer Easley SC', 'SCDES septic permit South Carolina', 'new construction septic installer northeast Georgia'],
   },
 
   // ═══ 4. SEPTIC TANK REPAIR ═══
@@ -264,7 +264,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC has many 30-plus-year-old concrete tanks where the baffles have failed. Once baffles are gone, scum and solids flow straight into the drain field and clog it within months. A baffle is a length of PVC and an afternoon. The field it protects is a DHEC permit, an excavator, and a week. Unseen tank cracks do the same damage from the other direction — thousands of gallons of groundwater leaking in every year, overloading the field no matter how well you maintain everything else.',
+        content: 'A lot of the housing around Greenville, Easley, and out through Anderson and Pickens counties sits on 30-plus-year-old concrete tanks, and by that age the baffles are usually gone. Once they are, scum and solids flow straight into the drain field and clog it within months. A baffle is a length of PVC and an afternoon. The field it protects is a permit, an excavator, and a week. Unseen tank cracks do the same damage from the other direction — thousands of gallons of groundwater leaking in every year, overloading the field no matter how well you maintain everything else.',
       },
     ],
     warningSigns: [
@@ -304,7 +304,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       { item: 'Inlet/Outlet Pipe Repair', cost: 'Excavation depth, pipe material, and how close the run is to the house', lifespan: '20–30 years' },
       { item: 'Concrete Crack Sealing', cost: 'Crack location, pump-out and dry time, then cure before use', lifespan: '10–20 years' },
     ],
-    seoKeywords: ['septic tank repair Greenville SC', 'septic baffle replacement SC', 'septic lid replacement Upstate SC', 'septic tank crack repair'],
+    seoKeywords: ['septic tank repair Greenville SC', 'septic baffle replacement Anderson SC', 'septic lid and riser replacement Easley SC', 'septic tank crack repair Spartanburg SC'],
   },
 
   // ═══ 5. DRAIN FIELD REPAIR ═══
@@ -335,11 +335,11 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       },
       {
         heading: 'Cost Drivers',
-        content: 'The diagnosis decides this one, not the size of your yard. Clearing a cracked D-box or jetting biomat and roots out of the laterals is a hose, a machine, and a day. Rebuilding a trench means excavation, hauling out saturated gravel, new pipe and stone, and a DHEC permit before anyone digs. Full rehabilitation — aerating soil, replacing gravel and fabric across the field — is days of equipment and a lot of material moved twice. Access is its own line: a field behind a fence, down a slope, or on the far side of a septic-safe route the truck can\'t take adds hours before a single repair happens. Repairs run 1–4 days. Full replacement is 5–10 days and restarts the permit clock. Our diagnosis tells you which path you\'re on before you commit to anything.',
+        content: 'The diagnosis decides this one, not the size of your yard. Clearing a cracked D-box or jetting biomat and roots out of the laterals is a hose, a machine, and a day. Rebuilding a trench means excavation, hauling out saturated gravel, new pipe and stone, and a permit in hand before anyone digs. Full rehabilitation — aerating soil, replacing gravel and fabric across the field — is days of equipment and a lot of material moved twice. Access is its own line: a field behind a fence, down a slope, or on the far side of a septic-safe route the truck can\'t take adds hours before a single repair happens. Repairs run 1–4 days. Full replacement is 5–10 days and restarts the permit clock. Our diagnosis tells you which path you\'re on before you commit to anything.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC clay soils are marginal for drain fields even when perfectly designed. Once compacted by construction traffic, landscaping equipment, or vehicle use, clay loses most of its absorption capacity. We see fields written off as "failed" when the real problem was a clogged effluent filter upstream or a cracked D-box. Fixing the actual cause is a service call and a part. Replacing the field is a permit, a soil retest, and heavy equipment across your yard for a week — so it\'s worth finding out which one you have.',
+        content: 'Piedmont clay is marginal for drain fields even when the design is perfect, and it\'s what our crews dig in on nearly every job — the same red clay whether the address is in Pickens County, across the Georgia line, or up in the Carolina foothills. Once it\'s compacted by construction traffic, landscaping equipment, or vehicles, clay loses most of its absorption capacity. We see fields written off as "failed" when the real problem was a clogged effluent filter upstream or a cracked D-box. Fixing the actual cause is a service call and a part. Replacing the field is a permit, a soil retest, and heavy equipment across your yard for a week — so it\'s worth finding out which one you have.',
       },
     ],
     warningSigns: [
@@ -362,24 +362,24 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       { num: '01', title: 'Full System Diagnosis', description: 'Drain field problems are often caused by upstream issues. We start by inspecting the tank, baffles, and D-box — because fixing a field without fixing the cause just repeats the failure. Photos and measurements at every step.' },
       { num: '02', title: 'Identify Failure Mode', description: 'We probe the field, measure saturation depth, and determine whether failure is due to compaction, root intrusion, biomat saturation, or upstream debris. Different causes mean different repair strategies.' },
       { num: '03', title: 'Repair Strategy', description: 'We lay out the options in order of how invasive they are: jetting to remove biomat and roots, D-box replacement, partial trench replacement, or full rehabilitation with new gravel and fabric. Each comes with a written scope and a number built from what we found in your field — not off a rate card. We recommend the least-invasive approach that restores function.' },
-      { num: '04', title: 'Execute & Restore', description: 'Depending on scope, work may include excavating trenches, installing new distribution piping, replacing gravel, installing filter fabric, or restoring the D-box. All DHEC permit requirements are handled.' },
+      { num: '04', title: 'Execute & Restore', description: 'Depending on scope, work may include excavating trenches, installing new distribution piping, replacing gravel, installing filter fabric, or restoring the D-box. We handle the permit side wherever the job sits — SCDES in South Carolina, county health in North Carolina and Georgia.' },
       { num: '05', title: 'Test & Monitor', description: 'After repairs, we run water through the system and verify absorption is happening. For severe cases, we schedule a 30-day follow-up to confirm the repair held and the field is functioning normally.' },
     ],
     faq: [
       { q: 'Is my field really dead, or can it be saved?', a: 'Depends on the cause. Compaction and biomat issues often respond to aeration and jetting. Root intrusion can be cleared if the piping isn\'t broken. Age-related end-of-life can\'t be reversed. Diagnosis tells us which camp you\'re in before spending money on a repair that won\'t work.' },
       { q: 'How long does a repair last?', a: 'Quality jetting can add 5–10 years to a field that\'s clogging but still structurally sound. D-box replacement effectively restores a field indefinitely if that was the only issue. Partial trench replacement is equivalent to a 20+ year fix for the affected section.' },
-      { q: 'What\'s the difference between repair and replacement?', a: 'Repair addresses specific failed components or clogs. Replacement removes the entire old field and installs a new one — which requires a DHEC permit, a soil retest, and often relocation to a fresh area of the yard. Repair keeps the field you already have and the permit you already hold. Replacement starts the whole approval process over.' },
+      { q: 'What\'s the difference between repair and replacement?', a: 'Repair addresses specific failed components or clogs. Replacement removes the entire old field and installs a new one — which requires a fresh permit, a new soil evaluation, and often relocation to a fresh area of the yard. Repair keeps the field you already have and the permit you already hold. Replacement starts the whole approval process over.' },
       { q: 'Can I use the system during repairs?', a: 'Mostly yes, with restricted use. We\'ll tell you to minimize water use during the repair and for a week or two afterward while the field stabilizes. Plan accordingly — run dishwasher and laundry at a cousin\'s house if you can.' },
       { q: 'What if the repair doesn\'t work?', a: 'We stand behind our diagnoses. If we recommend and perform a repair that doesn\'t solve the problem, we credit the repair cost toward full replacement. The only way to know definitively is to try — but we only try when we believe there\'s a realistic chance.' },
     ],
     costData: [
       { item: 'Distribution Box Replacement', cost: 'How deep the box sits and how many laterals tie into it', lifespan: '20–30 years' },
       { item: 'Line Jetting & Root Removal', cost: 'Lateral footage, root load, and where the jetter truck can park', lifespan: '5–10 years' },
-      { item: 'Partial Trench Replacement', cost: 'Trench length, hauling saturated spoil, and the DHEC permit', lifespan: '20–30 years' },
+      { item: 'Partial Trench Replacement', cost: 'Trench length, hauling saturated spoil, and the repair permit', lifespan: '20–30 years' },
       { item: 'Full Field Rehabilitation', cost: 'Field size, gravel and fabric replaced, days of equipment on site', lifespan: '15–25 years' },
       { item: 'Effluent Filter Upgrade', cost: 'Filter size and whether the outlet tee will take a housing', lifespan: '15–20 years' },
     ],
-    seoKeywords: ['drain field repair Greenville SC', 'leach field repair Upstate SC', 'septic drain field failing', 'septic field jetting SC'],
+    seoKeywords: ['drain field repair Greenville SC', 'leach field repair Pickens County SC', 'septic drain field failing western North Carolina', 'septic field jetting South Carolina'],
   },
 
   // ═══ 6. FULL SYSTEM REPLACEMENT ═══
@@ -406,15 +406,15 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       },
       {
         heading: 'When You Need It',
-        content: 'Repair vs. replace is a math problem. Once the realistic repair list starts approaching what a whole new system costs, replacement usually wins — you stop paying to keep alive something that can fail again next season. Age is another factor: systems over 30 years old often have multiple failure points, making piecewise repair costly. Failed DHEC inspections during real estate transactions often force replacement.',
+        content: 'Repair vs. replace is a math problem. Once the realistic repair list starts approaching what a whole new system costs, replacement usually wins — you stop paying to keep alive something that can fail again next season. Age is another factor: systems over 30 years old often have multiple failure points, making piecewise repair costly. A failed inspection during a real estate transaction often forces the decision for you.',
       },
       {
         heading: 'Budget & Schedule',
-        content: 'A replacement is two jobs stacked on each other. First the old system comes out: pump the dead tank, excavate and haul it or crush and abandon it in place per DHEC rules, and get the old material off site — none of which exists on a new-construction install. From there the drivers are the same as any new system: bedroom count sets tank size and linear feet of field, and the soil report decides whether gravity flow still passes on that lot or whether you\'re into a mound, an aerobic unit, or a pump-fed design. If the original records are old enough, DHEC will want a fresh soil test, and that lands before anything else can move. Schedule: 1–2 weeks permitting, 3–7 days installing, 1–2 days for inspection and backfill — call it 2–3 weeks, longer in a wet season when the excavator can\'t get across the yard without doing damage.',
+        content: 'A replacement is two jobs stacked on each other. First the old system comes out: pump the dead tank, excavate and haul it or crush and abandon it in place the way the state allows, and get the old material off site — none of which exists on a new-construction install. From there the drivers are the same as any new system: bedroom count sets tank size and linear feet of field, and the soil report decides whether gravity flow still passes on that lot or whether you\'re into a mound, an aerobic unit, or a pump-fed design. If the original records are old enough, the permitting agency will want a fresh soil evaluation, and that lands before anything else can move. Schedule: 1–2 weeks permitting, 3–7 days installing, 1–2 days for inspection and backfill — call it 2–3 weeks, longer in a wet season when the excavator can\'t get across the yard without doing damage.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Many Upstate SC homes built in the 1960s–80s have original septic systems reaching end of life simultaneously. Replacing rather than repeatedly repairing gets you decades of trouble-free service. It also protects property value — homes with documented new systems sell more easily and at higher prices than homes with "we keep fixing it" systems.',
+        content: 'The building boom that ran through the Greenville–Easley corridor and the rural counties around it from the 1960s to the 80s put in thousands of septic systems that are all reaching end of life at roughly the same time — and we see the same vintage across the line in northeast Georgia and the western Carolinas. Replacing rather than repeatedly repairing gets you decades of trouble-free service. It also protects property value — homes with documented new systems sell more easily and at higher prices than homes with "we keep fixing it" systems.',
       },
     ],
     warningSigns: [
@@ -422,8 +422,8 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       { trigger: 'Tank is steel or has cracked concrete walls', detail: 'Steel tanks installed before the 1980s are almost universally rusted through. Cracked concrete tanks leak effluent into groundwater and pull groundwater in. Neither can be reliably repaired — replacement is the answer.' },
       { trigger: 'Drain field has failed despite maintenance', detail: 'If you\'ve pumped on schedule, installed effluent filters, and still see field failure, the field itself has reached end of life. Biomat saturation, soil exhaustion, or original installation errors can\'t be repaired — only replaced.' },
       { trigger: 'Multiple components need repair at once', detail: 'When we find a failed baffle, a cracked D-box, and a marginal drain field during the same inspection, piecewise repair rarely makes sense. Replacement gives you a coherent new system instead of a patched-together old one.' },
-      { trigger: 'System failed DHEC inspection for real estate sale', detail: 'A failed inspection blocks most home sales. Replacement typically must happen before closing, either paid by the seller or negotiated into the price. Find out early — a failed inspection two weeks from closing becomes a scope nobody escrowed for and a permit clock nobody can speed up.' },
-      { trigger: 'You\'re adding bedrooms or a guesthouse', detail: 'DHEC sizes systems by bedroom count. Adding a bedroom or accessory dwelling may require replacement (or supplementation) with a larger system. Plan this before starting construction.' },
+      { trigger: 'System failed its septic inspection for a real estate sale', detail: 'A failed inspection blocks most home sales. Replacement typically must happen before closing, either paid by the seller or negotiated into the price. Find out early — a failed inspection two weeks from closing becomes a scope nobody escrowed for and a permit clock nobody can speed up.' },
+      { trigger: 'You\'re adding bedrooms or a guesthouse', detail: 'Every state we work in sizes systems by bedroom count. Adding a bedroom or accessory dwelling may require replacement (or supplementation) with a larger system. Plan this before starting construction.' },
     ],
     maintenanceTips: [
       { tip: 'Protect the new system during construction', detail: 'If replacement is part of a larger project, make sure other trades aren\'t driving over the new field or dumping materials on it. Damage to a brand-new field voids warranty and starts the clock over.' },
@@ -434,17 +434,17 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
     ],
     processSteps: [
       { num: '01', title: 'Replacement Assessment', description: 'We confirm replacement is actually the right call by reviewing all repair options and cost-of-repair vs. replacement. If repair can realistically add 10+ years, we\'ll say so. If not, we move to design.' },
-      { num: '02', title: 'Design & Permit', description: 'Depending on age of records, a new soil test may be required. We design a system appropriate to your site, current code, and your home\'s bedroom count, then submit to DHEC. Permit issuance: 1–3 weeks.' },
-      { num: '03', title: 'Demolition & Removal', description: 'The old tank is pumped, then excavated and removed. The old drain field is excavated or capped and abandoned in place per DHEC rules. Old materials are hauled and disposed properly.' },
+      { num: '02', title: 'Design & Permit', description: 'Depending on age of records, a new soil evaluation may be required. We design a system appropriate to your site, current code, and your home\'s bedroom count, then submit it to SCDES or to the county health department, depending on which state the property is in. Permit issuance: 1–3 weeks.' },
+      { num: '03', title: 'Demolition & Removal', description: 'The old tank is pumped, then excavated and removed. The old drain field is excavated or capped and abandoned in place the way the permit requires. Old materials are hauled and disposed properly.' },
       { num: '04', title: 'New System Install', description: 'New tank is set on a level gravel bed. New drain field trenches are dug, new pipe and gravel laid, new D-box set and connected. All connections are pressure-tested before any backfill.' },
-      { num: '05', title: 'Inspection & Restoration', description: 'DHEC inspector verifies every component meets permit specs. Once passed, we backfill carefully, grade the site, and seed grass. You get final inspection documents, warranty paperwork, and an as-built drawing.' },
+      { num: '05', title: 'Inspection & Restoration', description: 'The permitting inspector verifies every component meets permit specs. Once passed, we backfill carefully, grade the site, and seed grass. You get final inspection documents, warranty paperwork, and an as-built drawing.' },
     ],
     faq: [
-      { q: 'Do I have to put the new system in the same spot?', a: 'Sometimes yes, sometimes no — depends on what caused the old failure and what DHEC approves. If the old location failed because of soil exhaustion, we\'ll need a new location. If the location is fine and the old system just wore out, we can reuse it.' },
+      { q: 'Do I have to put the new system in the same spot?', a: 'Sometimes yes, sometimes no — depends on what caused the old failure and what the permitting agency approves. If the old location failed because of soil exhaustion, we\'ll need a new location. If the location is fine and the old system just wore out, we can reuse it.' },
       { q: 'How much yard damage will there be?', a: 'Significant during installation — tank excavation requires a 15×15 area dug 6+ feet deep, drain field requires 200–400 feet of trench. After installation, we restore grading and seed grass. Full visual recovery takes one growing season.' },
       { q: 'Can my existing plumbing be reused?', a: 'Usually yes. The main sewer line from the house to the tank often survives because it\'s only one pipe. Internal house plumbing is unaffected. We verify the line is intact before connecting the new tank.' },
       { q: 'Will replacement increase my property value?', a: 'Yes, demonstrably. Homes with new septic systems sell faster and at higher prices than homes with older or failing systems. For homes purchased to flip or sell soon, a new system is often a positive ROI.' },
-      { q: 'What if you find bedrock or high water table during excavation?', a: 'We stop and redesign. Bedrock or high water table often means an engineered alternative system (mound, aerobic) is needed instead of gravity-flow. We adjust the design and resubmit to DHEC. That adds 1–2 weeks to the schedule and a materially different scope — a pump, an electrical run, imported media — and you hear it from us the day we hit it, not on the final invoice.' },
+      { q: 'What if you find bedrock or high water table during excavation?', a: 'We stop and redesign. Bedrock or high water table often means an engineered alternative system (mound, aerobic) is needed instead of gravity-flow. We adjust the design and resubmit it for permit. That adds 1–2 weeks to the schedule and a materially different scope — a pump, an electrical run, imported media — and you hear it from us the day we hit it, not on the final invoice.' },
     ],
     costData: [
       { item: 'Full Gravity Replacement (3–4 BR)', cost: 'Bedroom count, the soil report, and how far the old system has to go', lifespan: '25–40 years' },
@@ -453,7 +453,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       { item: 'Site Restoration & Seeding', cost: 'Square footage torn up, slope, and what season you seed in', lifespan: '1-time' },
       { item: 'Upgrade to 5-BR System', cost: 'Bigger tank, more linear feet, and more reserve area to hold', lifespan: '25–40 years' },
     ],
-    seoKeywords: ['septic replacement Greenville SC', 'septic system replacement Upstate SC', 'new septic system install', 'replace old septic tank SC'],
+    seoKeywords: ['septic replacement Greenville SC', 'replace failed septic system Easley SC', 'full septic system replacement Spartanburg SC', 'septic replacement northeast Georgia'],
   },
 
   // ═══ 7. SEWER LINE CLEANING ═══
@@ -488,7 +488,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Many Upstate SC sewer lines from the 1960s–1980s are clay tile or Orangeburg (a tar-impregnated fiber pipe that fails catastrophically at 40–50 years). Root intrusion through aging joints is the number-one cause of backups in older homes. Jetting with a camera run is how you meet a line failure on your schedule instead of at 10 PM on a holiday — and it\'s the only way to know whether you need cleaning or a section of pipe replaced.',
+        content: 'Anything built in this region between the 1960s and the 1980s — older Greenville and Easley neighborhoods, rural Anderson and Pickens, and the same era of housing over the Georgia and North Carolina lines — is likely running clay tile or Orangeburg (a tar-impregnated fiber pipe that fails catastrophically at 40–50 years). Add mature hardwoods over the line, which this whole area has, and root intrusion through aging joints becomes the number-one cause of backups in older homes. Jetting with a camera run is how you meet a line failure on your schedule instead of at 10 PM on a holiday — and it\'s the only way to know whether you need cleaning or a section of pipe replaced.',
       },
     ],
     warningSigns: [
@@ -528,7 +528,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       { item: 'Emergency Same-Day Service', cost: 'Truck pulled off booked work; nights and weekends add more', lifespan: '1-time' },
       { item: 'Cleanout Installation', cost: 'Depth to the line, distance from the foundation, what\'s on top', lifespan: '30+ years' },
     ],
-    seoKeywords: ['sewer line cleaning Greenville SC', 'hydro jetting septic line Upstate SC', 'septic line camera inspection', 'roots in sewer line SC'],
+    seoKeywords: ['sewer line cleaning Greenville SC', 'hydro jetting sewer line Easley SC', 'septic line camera inspection Anderson SC', 'roots in sewer line South Carolina'],
   },
 
   // ═══ 8. EMERGENCY SEPTIC SERVICE ═══
@@ -563,7 +563,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Upstate SC summer storms and winter freezes both trigger septic emergencies. Saturated ground stops drain field absorption, and frozen lines block flow. We keep 24/7 capacity because the gap between calling at hour one and hour six is the gap between pumping a tank and hiring a remediation crew to tear out flooring, baseboard, and drywall. Fast response limits damage — always.',
+        content: 'Summer thunderstorms and winter freezes hit the whole tri-state the same way, and both trigger septic emergencies: saturated ground stops drain field absorption, frozen lines block flow. Our trucks run out of Easley, so Greenville, Anderson, and Pickens are a short response and the far edges of our range — northeast Georgia, the North Carolina foothills — take longer. We\'ll tell you on the phone which one you are instead of letting you wait and wonder. We keep 24/7 capacity because the gap between calling at hour one and hour six is the gap between pumping a tank and hiring a remediation crew to tear out flooring, baseboard, and drywall. Fast response limits damage — always.',
       },
     ],
     warningSigns: [
@@ -589,10 +589,10 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       { num: '05', title: 'Permanent Repair Plan', description: 'You get a written scope and estimate for the permanent fix, usually scheduled within days. We don\'t pressure you to decide mid-crisis — once the emergency is handled, we can have the real conversation with clear heads.' },
     ],
     faq: [
-      { q: 'How fast can you actually get here?', a: 'During business hours, usually 2–4 hours from your call. After-hours and weekends, 3–5 hours. We keep emergency capacity reserved — we don\'t stack jobs ahead of emergencies. If we can\'t make it in that timeframe, we tell you on the call so you can seek alternative help.' },
+      { q: 'How fast can you actually get here?', a: 'Depends where you are. Inside the Greenville–Easley–Anderson core, usually 2–4 hours from your call during business hours and 3–5 after hours or on a weekend. Out at the edges of our range in Georgia or North Carolina, add drive time and we\'ll quote you a real window on the call. We keep emergency capacity reserved — we don\'t stack jobs ahead of emergencies. If we can\'t make it in that timeframe, we tell you on the call so you can seek alternative help.' },
       { q: 'What should I do before you arrive?', a: 'Stop all water use. Don\'t flush toilets, run showers, or do laundry. If sewage is indoors, protect family and pets from contact with it. Clear the path to the tank if possible. Have a check or card ready — emergency work is typically payment at service.' },
       { q: 'Will insurance cover the emergency?', a: 'Usually not. Septic failures are considered maintenance, not covered events. However, some homeowner policies cover water damage inside the home from a backup — separate from the septic repair itself. Call your insurer; document everything with photos.' },
-      { q: 'Can I just pump the tank myself to hold things over?', a: 'No — pumping requires a vacuum truck and DHEC-compliant waste disposal. Unpermitted dumping is a serious DHEC violation. If the tank is overflowing, stop using water and call.' },
+      { q: 'Can I just pump the tank myself to hold things over?', a: 'No — pumping requires a vacuum truck and disposal at a permitted treatment facility. Unpermitted dumping is a serious environmental violation in all three states we work in. If the tank is overflowing, stop using water and call.' },
       { q: 'What\'s the difference between emergency pumping and regular pumping?', a: 'Same work, different context. Emergency pumping costs more because we drop other work to respond, and may be after-hours. Once the crisis is stabilized, you can return to a normal pumping schedule.' },
     ],
     costData: [
@@ -602,7 +602,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       { item: 'Emergency Line Clearing', cost: 'Where the blockage sits, pipe material, and no cleanout to work from', lifespan: '1-time' },
       { item: 'Full Emergency Service Call', cost: 'How many failures stacked at once and hours to stabilize them', lifespan: '1-time' },
     ],
-    seoKeywords: ['emergency septic service Greenville SC', '24 hour septic pumping SC', 'septic backup emergency Upstate SC', 'septic overflow emergency SC'],
+    seoKeywords: ['emergency septic service Greenville SC', '24 hour septic pumping Easley SC', 'septic backup emergency Anderson Pickens SC', 'emergency septic service SC NC GA'],
   },
 
 ];

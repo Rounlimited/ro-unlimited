@@ -36,11 +36,11 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       },
       {
         heading: 'What Drives the Number',
-        content: 'The panel itself is the small part. What moves a panel job is how far past a straight swap it goes: a 200A service needs a service entrance cable, meter base, and mast rated for 200A, and if yours are undersized they all get rebuilt in the same visit. Circuit count matters too — every circuit you land in a new panel has to meet current AFCI and GFCI rules, so a 30-circuit house buys more breakers than a 16-circuit one. Going to 400A is not a bigger version of the same job; it is two 200A panels and a heavier utility feed. Timing is the predictable part: most upgrades finish in one day, your power is off 4–8 hours during the swap, and the utility disconnect has to be scheduled ahead — that lead time, not our labor, is usually what sets your install date. Permit and final inspection are on every one we do. We price from your actual panel and load calculation, after the cover comes off.',
+        content: 'The panel itself is the small part. What moves a panel job is how far past a straight swap it goes: a 200A service needs a service entrance cable, meter base, and mast rated for 200A, and if yours are undersized they all get rebuilt in the same visit. Circuit count matters too — every circuit you land in a new panel has to meet current AFCI and GFCI rules, so a 30-circuit house buys more breakers than a 16-circuit one. Going to 400A is not a bigger version of the same job; it is two 200A panels and a heavier utility feed. Timing is the predictable part: most upgrades finish in one day, your power is off 4–8 hours during the swap, and the utility disconnect has to be scheduled ahead — that lead time, not our labor, is usually what sets your install date, and it varies by provider, since Duke, Dominion, the rural co-ops, and the municipal utilities all run their own scheduling. Permit and final inspection are on every one we do, pulled with whichever authority has jurisdiction over your address. We price from your actual panel and load calculation, after the cover comes off.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'South Carolina summers push HVAC systems hard, and more homeowners are adding EV chargers, pool pumps, and workshop circuits. A 100A panel can\'t safely handle these loads simultaneously. Beyond capacity, older panels may not meet current NEC code requirements for arc-fault (AFCI) and ground-fault (GFCI) protection — both of which are enforced during any permitted electrical work in SC.',
+        content: 'Summers here push HVAC systems hard, and every year more homeowners are adding EV chargers, pool pumps, and workshop circuits on top of that. A 100A panel can\'t safely carry those loads at the same time. Beyond capacity, older panels often fall short of current NEC requirements for arc-fault (AFCI) and ground-fault (GFCI) protection. In South Carolina, those requirements get enforced on any permitted electrical work. We hold electrical licenses in South Carolina, North Carolina, and Georgia, and each state adopts and amends the NEC on its own schedule — so which code cycle your job answers to depends on which side of the line your house sits. We confirm that before we quote, not after.',
       },
     ],
     warningSigns: [
@@ -71,8 +71,8 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { q: 'How long will my power be off during a panel upgrade?', a: 'Typically 4–8 hours. We schedule the utility disconnect early in the morning so power is restored by afternoon. For critical needs (medical equipment, home office), we can coordinate timing or provide temporary power.' },
       { q: 'Do I need a 400-amp panel?', a: 'Most homes do fine with 200 amps, even with an EV charger and modern appliances. 400-amp service (two 200A panels) is for large homes with multiple EV chargers, workshops, pools, and heavy HVAC systems. We\'ll calculate your actual load before recommending — we don\'t upsell.' },
       { q: 'Will a panel upgrade fix my flickering lights?', a: 'If the flickering is caused by an overtaxed panel, yes. But flickering can also come from loose connections, faulty breakers, or utility-side issues. We diagnose the root cause before recommending an upgrade.' },
-      { q: 'Does my insurance require a panel upgrade?', a: 'Many insurers in SC are flagging homes with Federal Pacific, Zinsco, and fuse-box panels. Some deny coverage or raise premiums. A 200A upgrade with modern breakers typically satisfies any insurer and can reduce your premium.' },
-      { q: 'Can I upgrade my panel myself?', a: 'No. Panel work requires a licensed electrician, an electrical permit, and a final inspection in South Carolina. DIY panel work is illegal for homeowners, dangerous, and will void your insurance if something goes wrong.' },
+      { q: 'Does my insurance require a panel upgrade?', a: 'Carriers across all three states we work in are flagging homes with Federal Pacific, Zinsco, and fuse-box panels. Some deny coverage or raise premiums. A 200A upgrade with modern breakers typically satisfies any insurer and can reduce your premium.' },
+      { q: 'Can I upgrade my panel myself?', a: 'No. In South Carolina, panel work requires a licensed electrician, an electrical permit, and a final inspection — homeowner DIY on a service panel isn\'t legal here. North Carolina and Georgia enforce their own versions of the same thing. We\'re licensed in all three, so wherever you are, we pull the permit and meet the inspector. Beyond the legal side, this is the one box in your house that stays live after you shut off the main, and doing it wrong voids your insurance the day it matters.' },
     ],
     costData: [
       { item: '100A to 200A Upgrade', cost: 'Target amperage, circuit count, whether the service entrance gets replaced', lifespan: '25–40 years' },
@@ -81,7 +81,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { item: 'Federal Pacific / Zinsco Replacement', cost: 'Circuit count, plus whether old branch wire is long enough to reland', lifespan: '25–40 years' },
       { item: 'Sub-Panel Addition', cost: 'Distance from the main panel, feeder size, open walls or finished', lifespan: '25–40 years' },
     ],
-    seoKeywords: ['electrical panel upgrade Greenville SC', 'panel upgrade 200 amp', 'electrical panel replacement Upstate SC', 'breaker box upgrade near me'],
+    seoKeywords: ['electrical panel upgrade Greenville SC', '200 amp panel upgrade Easley SC', 'electrical panel replacement Anderson SC', 'licensed electrician SC NC GA'],
   },
 
   // ═══ 2. WHOLE-HOUSE REWIRING ═══
@@ -112,11 +112,11 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       },
       {
         heading: 'Scope, Access & Schedule',
-        content: 'A rewire is scoped off access, not square footage alone. A house with a walkable attic and a full crawlspace lets us fish most runs without opening walls. A two-story on a slab with finished ceilings means cutting, patching, and painting — and wall repair is a real line item on a rewire, not a rounding error. Circuit count drives it too: every new circuit lands under current AFCI and GFCI rules, and each high-draw appliance gets its own home run. Plaster and lath, balloon framing, blown-in insulation, and knob-and-tube spliced inside walls with no junction boxes all slow the pull down, and you don\'t know which of those you have until we open the first bay. Plan on 3–7 days for the wiring itself, plus drywall and paint time behind it — we sequence our in-house drywall team so the two phases don\'t sit waiting on each other. The rough-in inspection has to pass before anything gets closed up, so that inspector visit sits in the middle of your schedule, not at the end.',
+        content: 'A rewire is scoped off access, not square footage alone. A house with a walkable attic and a full crawlspace lets us fish most runs without opening walls. A two-story on a slab with finished ceilings means cutting, patching, and painting — and wall repair is a real line item on a rewire, not a rounding error. Circuit count drives it too: every new circuit lands under current AFCI and GFCI rules, and each high-draw appliance gets its own home run. Plaster and lath, balloon framing, blown-in insulation, and knob-and-tube spliced inside walls with no junction boxes all slow the pull down, and you don\'t know which of those you have until we open the first bay. Plan on 3–7 days for the wiring itself, plus drywall and paint time behind it — we sequence our in-house drywall team so the two phases don\'t sit waiting on each other. The rough-in inspection has to pass before anything gets closed up, so that inspector visit sits in the middle of your schedule, not at the end — and that inspector works for whatever county or municipality your house sits in. We\'re licensed in South Carolina, North Carolina, and Georgia and permit the job locally either way, but the office we\'re dealing with sets the turnaround, so we build their calendar into yours from the start.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'South Carolina\'s heat and humidity accelerate insulation degradation in older wiring. Many pre-1975 homes in the Upstate still have original wiring that\'s 50+ years old. Beyond safety, insurance companies are increasingly refusing to write policies on homes with knob-and-tube or aluminum wiring. A rewire protects your family, satisfies insurers, and dramatically increases your home\'s value.',
+        content: 'Heat and humidity accelerate insulation breakdown in older wiring, and we have plenty of both. Pre-1975 housing stock is everywhere in this part of the country — the older neighborhoods around Greenville and Easley, the mill villages, the mountain cabins over the North Carolina line — and a lot of it is still running its original 50-year-old wire. Beyond safety, insurance companies are increasingly refusing to write policies on homes with knob-and-tube or aluminum wiring. A rewire protects your family, satisfies insurers, and dramatically increases your home\'s value.',
       },
     ],
     warningSigns: [
@@ -154,7 +154,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { item: 'Wall Repair & Restoration', cost: 'How many bays we had to open, plus texture and paint match', lifespan: 'N/A' },
       { item: 'Knob-and-Tube Replacement', cost: 'Splices buried in walls, no ground path, plaster and lath everywhere', lifespan: '40–50+ years' },
     ],
-    seoKeywords: ['whole house rewiring Greenville SC', 'aluminum wiring replacement', 'knob and tube replacement Upstate SC', 'house rewire cost near me'],
+    seoKeywords: ['whole house rewiring Greenville SC', 'aluminum wiring replacement Easley SC', 'knob and tube rewiring Spartanburg SC', 'house rewire cost near me'],
   },
 
   // ═══ 3. GENERATOR INSTALLATION ═══
@@ -163,7 +163,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     slug: 'generator-installation',
     title: 'Generator Installation',
     tagline: 'Your Power Stays On When the Grid Goes Down',
-    heroDescription: 'When severe weather knocks out power across the Upstate, a standby generator kicks in automatically — within seconds. RO installs whole-house generators from Generac, Kohler, and Briggs & Stratton, complete with automatic transfer switches, concrete pads, and full electrical integration. No extension cords, no manual startup, no worry.',
+    heroDescription: 'When severe weather drops the grid across the foothills, a standby generator kicks in automatically — within seconds. RO installs whole-house generators from Generac, Kohler, and Briggs & Stratton, complete with automatic transfer switches, concrete pads, and full electrical integration. No extension cords, no manual startup, no worry.',
     heroImage: '/images/services/electrical/subs/generator-hero.jpg',
     cardImage: '/images/services/electrical/subs/generator-card.jpg',
     galleryImages: [
@@ -185,11 +185,11 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       },
       {
         heading: 'Sizing, Fuel & Schedule',
-        content: 'The generator is only part of the job. Sizing sets the floor, and the load calculation picks the size — a unit that carries essential circuits is a different machine than one that carries the whole house with central AC running. After that it is site work and fuel: how far the pad sits from your gas meter or propane tank, whether the gas line has to be upsized to feed the unit at full load (undersized pipe is the single most common reason a generator starts and then stumbles), how far the transfer switch has to run back to your panel, and whether that switch is a whole-home ATS or a smaller essential-circuits switch. Premium brands ask more for quieter enclosures and heavier build — that is a real difference when the pad has to sit near a bedroom window. Schedule: 1–2 days for the set and electrical hookup once the pad has cured, plus a day if gas line work is needed, plus lead time up front for the pad pour, the permits, and the gas inspection. Propane setups add tank placement and the first fill.',
+        content: 'The generator is only part of the job. Sizing sets the floor, and the load calculation picks the size — a unit that carries essential circuits is a different machine than one that carries the whole house with central AC running. After that it is site work and fuel: how far the pad sits from your gas meter or propane tank, whether the gas line has to be upsized to feed the unit at full load (undersized pipe is the single most common reason a generator starts and then stumbles), how far the transfer switch has to run back to your panel, and whether that switch is a whole-home ATS or a smaller essential-circuits switch. Premium brands ask more for quieter enclosures and heavier build — that is a real difference when the pad has to sit near a bedroom window. Schedule: 1–2 days for the set and electrical hookup once the pad has cured, plus a day if gas line work is needed, plus lead time up front for the pad pour, the permits, and the gas inspection. Permit and gas-inspection requirements are not the same in every jurisdiction — we\'re licensed in South Carolina, North Carolina, and Georgia and handle whichever set applies at your address, but a county that inspects gas and electrical separately adds a visit to the calendar. Propane setups add tank placement and the first fill.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'The Upstate sees severe thunderstorms, ice storms, and hurricane remnants that regularly cause multi-day outages. A standby generator isn\'t a luxury — it protects your sump pump from flooding, keeps your fridge and freezer running, maintains HVAC for vulnerable family members, and lets you work from home when the grid is down. For homes with medical equipment, it\'s essential.',
+        content: 'This region takes severe thunderstorms all summer, ice storms coming down off the Blue Ridge in winter, and hurricane remnants tracking inland in the fall — all of which cause multi-day outages. The farther you are down a rural co-op line, whether that\'s out past Pickens, up in the North Carolina mountain counties, or across into northeast Georgia, the further down the restoration list you sit. A standby generator isn\'t a luxury — it protects your sump pump from flooding, keeps your fridge and freezer running, maintains HVAC for vulnerable family members, and lets you work from home when the grid is down. For homes with medical equipment, it\'s essential.',
       },
     ],
     warningSigns: [
@@ -216,7 +216,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     ],
     faq: [
       { q: 'How quickly does a standby generator start?', a: 'Within 10–30 seconds of detecting a power outage. The automatic transfer switch monitors utility power continuously. When it detects a loss, it signals the generator to start and transfers your home\'s load. The entire process is hands-free.' },
-      { q: 'Generac or Kohler — which do you recommend?', a: 'Both are good machines. Generac dominates the residential market here, which means parts and service techs are easy to find across the Upstate — that matters in the week after an ice storm when every generator in the county wants attention. Kohler builds a quieter, heavier unit; if the pad has to sit near a bedroom window or close to a property line, that is worth paying for. For most homes the Guardian series in the 16–22 kW range carries the load. We pick from your load calculation and your site plan, not from the brochure.' },
+      { q: 'Generac or Kohler — which do you recommend?', a: 'Both are good machines. Generac dominates the residential market here, which means parts and service techs are easy to find anywhere in our footprint — that matters in the week after an ice storm when every generator in the county wants attention at once. Kohler builds a quieter, heavier unit; if the pad has to sit near a bedroom window or close to a property line, that is worth paying for. For most homes the Guardian series in the 16–22 kW range carries the load. We pick from your load calculation and your site plan, not from the brochure.' },
       { q: 'Can a generator power my entire home including AC?', a: 'Yes — with the right size. A 22 kW generator can power most homes including central AC. Larger homes with multiple HVAC zones, electric ranges, and EV chargers may need 26 kW+. We size it to your actual load, not guesswork.' },
       { q: 'How loud is a standby generator?', a: 'Modern standby generators run at 60–70 decibels at 23 feet — similar to a normal conversation or a dishwasher. Kohler units tend to be slightly quieter. They\'re significantly quieter than any portable generator.' },
       { q: 'What fuel should I use — natural gas or propane?', a: 'If you have a natural gas line, use it — unlimited fuel supply, no tank to refill. If natural gas isn\'t available, propane is the standard alternative. Both work equally well. We size the propane tank based on your generator\'s fuel consumption and how long you want to run between refills.' },
@@ -228,7 +228,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { item: 'Gas Line Extension', cost: 'Distance from the meter and pipe size needed at full load', lifespan: '50+ years' },
       { item: 'Concrete Pad', cost: 'Pad footprint, site grading, and truck access for the pour', lifespan: '50+ years' },
     ],
-    seoKeywords: ['generator installation Greenville SC', 'whole house generator Upstate SC', 'Generac installer near me', 'standby generator installation cost'],
+    seoKeywords: ['generator installation Greenville SC', 'whole house generator Easley SC', 'Generac installer Anderson SC', 'standby generator installer western North Carolina'],
   },
 
   // ═══ 4. EV CHARGER INSTALLATION ═══
@@ -259,11 +259,11 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       },
       {
         heading: 'What Drives the Install',
-        content: 'The circuit is the job. The biggest single variable is the distance from your panel to where the car actually parks — a charger on the garage wall backing up to the panel is an afternoon; a charger at the far end of a detached garage means conduit, likely a trench, and sometimes a sub-panel. After that: whether your panel has a free two-pole slot and the spare capacity a load calculation says you need for a 40–60 amp circuit, whether the run goes through open garage framing or gets fished through finished walls, and whether it goes outdoors and needs weatherproof conduit, fittings, and a rated disconnect. If the load calc says the service is already full, a panel upgrade comes first and brings utility disconnect scheduling with it — that is the surprise that moves an EV job from one day to two visits. Permit and inspection apply. A 30% federal tax credit covers EV charger installation at your primary residence, hardware and labor both, and we hand you the documentation for it.',
+        content: 'The circuit is the job. The biggest single variable is the distance from your panel to where the car actually parks — a charger on the garage wall backing up to the panel is an afternoon; a charger at the far end of a detached garage means conduit, likely a trench, and sometimes a sub-panel. After that: whether your panel has a free two-pole slot and the spare capacity a load calculation says you need for a 40–60 amp circuit, whether the run goes through open garage framing or gets fished through finished walls, and whether it goes outdoors and needs weatherproof conduit, fittings, and a rated disconnect. If the load calc says the service is already full, a panel upgrade comes first and brings utility disconnect scheduling with it — that is the surprise that moves an EV job from one day to two visits. Permit and inspection apply everywhere we work; we\'re licensed in South Carolina, North Carolina, and Georgia, so the paperwork follows your address rather than ours. A 30% federal tax credit covers EV charger installation at your primary residence, hardware and labor both, and we hand you the documentation for it.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Public chargers in the Upstate are still sparse and slow next to charging in your own garage. A Level 2 charger means you stop planning your day around finding a working plug. SC electricity rates sit below the national average, so your cost per mile drops hard against gasoline, and if your utility offers overnight time-of-use rates you can push nearly all of your charging into the lowest-rate hours of the night — a smart charger schedules that for you and you never think about it again. The federal tax credit covers a share of the install on top of that.',
+        content: 'Public charging thins out fast once you\'re off the I-85 corridor, and even where you find it, it\'s slow next to charging in your own garage. A Level 2 charger means you stop planning your day around finding a working plug. Residential power across South Carolina, North Carolina, and Georgia runs at or under the national average rate, so your cost per mile drops hard against gasoline. Several of the utilities in our footprint — Duke, Dominion, and Georgia Power among them — offer overnight time-of-use pricing, which lets you push nearly all of your charging into the cheapest hours of the night. A smart charger schedules that once and you never think about it again. The federal tax credit covers a share of the install on top of that.',
       },
     ],
     warningSigns: [
@@ -301,7 +301,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { item: 'NEMA 14-50 Outlet (installed)', cost: 'Short run through open framing keeps this one simple', lifespan: '20+ years' },
       { item: 'Panel Upgrade (if needed)', cost: 'Triggered by the load calc; adds utility disconnect scheduling', lifespan: '25–40 years' },
     ],
-    seoKeywords: ['EV charger installation Greenville SC', 'Tesla Wall Connector installer', 'Level 2 charger installation Upstate SC', 'home EV charging setup near me'],
+    seoKeywords: ['EV charger installation Greenville SC', 'Tesla Wall Connector installer Easley SC', 'Level 2 charger installation Spartanburg SC', 'home EV charging electrician near me'],
   },
 
   // ═══ 5. SOLAR & BATTERY STORAGE ═══
@@ -332,11 +332,11 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       },
       {
         heading: 'Payback & What Moves It',
-        content: 'System size sets the base, and size comes off twelve months of your actual bills — not a rule of thumb per square foot. From there the roof drives it: pitch, orientation, how many separate roof planes the array has to be split across, shading from trees you are not going to cut down, and whether the decking and shingles have enough life left to carry a 25-year array. Putting panels on a roof with five years in it means paying to pull them and reset them later, so roof age is a scheduling decision as much as a cost one. On the electrical side: distance from the array to the panel, and whether your main panel can take the backfeed breaker or needs a line-side tap. Adding a battery brings its own inverter, transfer gear, and a decision about which circuits stay live in an outage. Payback in SC generally lands in the 7–10 year range against a 25-year panel warranty — the years after payback are the return. Schedule is mostly paperwork: permits, HOA approval where it applies, and the utility interconnection application, then the meter swap and Permission to Operate. The utility side routinely takes longer than the installation does.',
+        content: 'System size sets the base, and size comes off twelve months of your actual bills — not a rule of thumb per square foot. From there the roof drives it: pitch, orientation, how many separate roof planes the array has to be split across, shading from trees you are not going to cut down, and whether the decking and shingles have enough life left to carry a 25-year array. Putting panels on a roof with five years in it means paying to pull them and reset them later, so roof age is a scheduling decision as much as a cost one. On the electrical side: distance from the array to the panel, and whether your main panel can take the backfeed breaker or needs a line-side tap. Adding a battery brings its own inverter, transfer gear, and a decision about which circuits stay live in an outage. Payback across the three states we work in generally lands in the 7–10 year range against a 25-year panel warranty — the years after payback are the return. Schedule is mostly paperwork: permits, HOA approval where it applies, and the utility interconnection application, then the meter swap and Permission to Operate. Interconnection rules belong to your utility, not to us, and Duke, Dominion, the co-ops, and Georgia Power each run their own process and their own queue. The utility side routinely takes longer than the installation does.',
       },
       {
         heading: 'Why It Matters Here',
-        content: 'South Carolina gets 210+ sunny days per year — ideal solar conditions. Duke Energy and Dominion offer net metering, crediting you for excess power sent to the grid. The combination of strong sun, reasonable electricity rates, and available incentives makes solar-plus-storage one of the best long-term investments for Upstate homeowners. Add in the backup power benefit during our storm season, and the value goes beyond just savings.',
+        content: 'This corner of the Southeast gets the sun for it — 210-plus clear days a year is typical across South Carolina, western North Carolina, and northeast Georgia. What differs is the program on the other end of the meter. In South Carolina, Duke Energy and Dominion run the net-metering and successor tariffs; North Carolina and Georgia set their own terms, and what you get credited for an exported kilowatt-hour is not the same number in each. We tell you which program your address actually falls under before we size anything, because that credit rate is what the payback math runs on. Strong sun, reasonable rates, and the incentives still on the table make solar-plus-storage one of the better long-term plays here — and the battery carries you through storm season on top of the savings.',
       },
     ],
     warningSigns: [
@@ -345,7 +345,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { trigger: 'Your roof is 5–15 years old and in good condition', detail: 'The ideal time to add solar is when your roof has 15–20 years of life remaining. Installing solar on a roof that needs replacement soon means you\'ll pay to remove and reinstall panels.' },
       { trigger: 'You\'re planning to stay in your home for 7+ years', detail: 'Solar payback periods average 7–10 years. If you plan to stay long-term, the return is substantial. Even if you sell, an owned, paid-off system is documented value on the listing — studies consistently show a resale premium over comparable homes without one. A leased system is a different conversation; it transfers to the buyer and not every buyer wants it.' },
       { trigger: 'You want energy independence from the utility', detail: 'A solar-plus-storage system with enough capacity can operate independently of the grid during outages. For some homeowners, reducing dependence on the utility is reason enough.' },
-      { trigger: 'Your utility rates keep increasing', detail: 'Electricity rates in SC have risen 15–25% over the past decade. Solar locks in your cost of electricity at installation — immune to future rate hikes for the life of the system.' },
+      { trigger: 'Your utility rates keep increasing', detail: 'Retail electricity rates across the region have climbed 15–25% over the past decade. Solar locks in your cost of electricity at installation — immune to future rate hikes for the life of the system.' },
     ],
     maintenanceTips: [
       { tip: 'Keep panels clear of debris and shade', detail: 'Leaves, pollen, and bird droppings reduce output. Most panels self-clean in rain, but a yearly rinse with a garden hose helps. Trim tree growth that creates new shade.' },
@@ -366,7 +366,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { q: 'What drives what a Tesla Powerwall install comes to?', a: 'Your existing electrical setup, mostly. A newer home with a 200A panel, wall space near it, and a short conduit run is the straightforward version. Older homes push higher: a panel that has to be upgraded first, a backup subpanel built so critical circuits can be separated from the rest, longer runs, or an outdoor location that needs a rated enclosure and shade — heat is what shortens a battery\'s life, so where it hangs is an engineering decision, not a preference. How much of the house you want carried through an outage matters too: backing up the whole panel is different gear than backing up the fridge, the well pump, and the internet. One thing works in your favor — the Powerwall 3 has a solar inverter built in, so on a new solar-plus-battery job you aren\'t buying a separate one.' },
       { q: 'What happens to excess solar power I generate?', a: 'Under net metering, excess power is sent to the grid and credited to your account. You draw from those credits at night or on cloudy days. With battery storage, excess power charges your battery first, then exports to the grid. The combination maximizes both self-consumption and backup capability.' },
       { q: 'How long do solar panels actually last?', a: 'Modern solar panels are warrantied for 25 years at 80–85% of original output. Real-world lifespan is 30–35 years. Degradation is about 0.5% per year — at year 25, your panels are still producing 87%+ of their original output. The inverter is the part that doesn\'t go the distance: plan on replacing it once around year 12–15 as a scheduled mid-life item, not a failure. A string inverter is one unit on a wall and a short swap. Microinverters sit under each panel, so replacing one means getting back on the roof — worth knowing before you choose between them.' },
-      { q: 'Are there still tax incentives for solar in 2026?', a: 'The federal residential solar tax credit (Section 25D) at 30% ended December 31, 2025 for customer-owned systems. However, third-party owned systems (leases and PPAs) can still access commercial credits and pass savings to homeowners. SC state incentives and net metering remain available. We help you navigate the current incentive landscape for the best deal.' },
+      { q: 'Are there still tax incentives for solar in 2026?', a: 'The federal residential solar tax credit (Section 25D) at 30% ended December 31, 2025 for customer-owned systems. However, third-party owned systems (leases and PPAs) can still access commercial credits and pass savings to homeowners. State-level incentives and interconnection programs are still in play, but they are genuinely different in South Carolina, North Carolina, and Georgia — the credit you\'d get in Pickens County is not the credit you\'d get an hour away in Rabun. We work in all three, so we\'ll tell you what actually applies at your address instead of quoting the best case from somewhere else.' },
     ],
     costData: [
       { item: 'Solar System (7–10 kW)', cost: 'Array size off your bills, roof planes, shading, panel backfeed capacity', lifespan: '25–35 years' },
@@ -375,7 +375,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { item: 'Generac PWRcell 2 (installed)', cost: 'Battery module count and whether it ties into a standby generator', lifespan: '10–15 years' },
       { item: 'Inverter Replacement (mid-life)', cost: 'One string unit on a wall, or microinverters needing roof access', lifespan: '12–15 years' },
     ],
-    seoKeywords: ['solar panel installation Greenville SC', 'Tesla Powerwall installer Upstate SC', 'home battery storage near me', 'solar and battery installation cost SC'],
+    seoKeywords: ['solar panel installation Greenville SC', 'Tesla Powerwall installer Easley SC', 'home battery storage Anderson SC', 'solar installer northeast Georgia'],
   },
 
   // ═══ 6. SMART HOME & AUTOMATION ═══
@@ -410,7 +410,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'South Carolina\'s hot summers drive high HVAC costs. Smart energy management — automated schedules, circuit-level monitoring, and load-shedding during peak hours — can cut energy bills by 15–20%. When paired with solar and battery storage, a smart panel like SPAN optimizes how your home generates, stores, and uses power. It\'s also a major resale value driver — 79% of home buyers actively seek smart home features.',
+        content: 'Long hot summers across the region mean HVAC is the biggest line on most power bills we look at. Smart energy management — automated schedules, circuit-level monitoring, and load-shedding during peak hours — can cut energy bills by 15–20%. When paired with solar and battery storage, a smart panel like SPAN optimizes how your home generates, stores, and uses power. It\'s also a major resale value driver — 79% of home buyers actively seek smart home features.',
       },
     ],
     warningSigns: [
@@ -448,7 +448,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { item: 'Lutron Caseta Starter Kit', cost: 'Grows per switch; depends on a neutral wire in the box', lifespan: '10+ years' },
       { item: 'Control4 Whole-Home System', cost: 'Room count, subsystems tied in, whether the wiring already exists', lifespan: '10–15 years' },
     ],
-    seoKeywords: ['smart home electrician Greenville SC', 'SPAN Panel installer', 'home automation wiring Upstate SC', 'smart electrical panel near me'],
+    seoKeywords: ['smart home electrician Greenville SC', 'SPAN Panel installer Easley SC', 'home automation wiring Anderson SC', 'smart electrical panel near me'],
   },
 
   // ═══ 7. LIGHTING DESIGN ═══
@@ -509,7 +509,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { num: '05', title: 'Programming & Final Walk', description: 'Smart controls are programmed with scenes, schedules, and automation rules. We walk the property at night to verify every light does exactly what the design intended. Adjustments are made on the spot.' },
     ],
     faq: [
-      { q: 'What drives the size of a landscape lighting quote?', a: 'Fixture count first — every uplight, path light, and step light is a fixture, a mount, and a waterproof splice. Then run length and how hard the digging is: burying wire across open lawn is quick, trenching under a driveway or through an established root bed is not. Transformer size follows fixture count, and a large property may need more than one, each fed from its own exterior circuit. The other real fork is fixture material. We install commercial-grade brass and copper that will still be aimed where we put it in ten years, not the plastic box-store kits that go milky and fail in two seasons — that choice moves the number more than anything except count. We walk the property before quoting, usually at dusk, because the design decides the count and the count decides the number.' },
+      { q: 'What drives the size of a landscape lighting quote?', a: 'Fixture count first — every uplight, path light, and step light is a fixture, a mount, and a waterproof splice. Then run length and how hard the digging is: burying wire across open lawn is quick, trenching under a driveway or through an established root bed is not. Transformer size follows fixture count, and a large property may need more than one, each fed from its own exterior circuit. The other real fork is fixture material. We install commercial-grade brass and copper that will still be aimed where we put it in ten years, not the plastic box-store kits that go milky and fail in two seasons — that choice moves the number more than anything except count. We walk the property before quoting, usually at dusk, because the design decides the count and the count decides the number — which is also why we group jobs by area once you\'re outside the Greenville area. A dusk walk in Clemson and one up in the North Carolina mountains aren\'t happening the same evening.' },
       { q: 'Is LED retrofit worth it if my bulbs still work?', a: 'Yes — don\'t wait for bulbs to burn out. The savings start the day they go in and repeat every billing cycle, and a full-house retrofit typically pays for itself inside a year or two on energy alone. There\'s a second return people forget: you stop dragging a ladder out every time a can light quits, because LEDs run 25,000–50,000 hours instead of 1,000. The old bulbs are burning money while you wait on them.' },
       { q: 'What color temperature should I use?', a: 'For most residential applications: 2700K (warm white) for living areas and bedrooms, 3000K for kitchens and bathrooms, and 3500K–4000K for garages and workshops. Exterior landscape lighting looks best at 2700K–3000K. We never use 5000K+ (daylight) in residential — it feels harsh and institutional.' },
       { q: 'Can you add recessed lights to my existing ceiling?', a: 'Yes. We use "remodel" or "retrofit" recessed cans that install into existing ceilings without opening up the entire surface. Access from above (attic) makes it even easier. We can add recessed lighting to virtually any room without major construction.' },
@@ -521,7 +521,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { item: 'Lutron Smart Dimmer (per switch)', cost: 'Whether the box has a neutral; LED-rated models to stop flicker', lifespan: '10+ years' },
       { item: 'Under-Cabinet LED Strip', cost: 'Run length, where power comes from, and hiding the driver', lifespan: '15+ years' },
     ],
-    seoKeywords: ['lighting design Greenville SC', 'landscape lighting installation Upstate SC', 'LED retrofit electrician near me', 'outdoor lighting installer SC'],
+    seoKeywords: ['lighting design Greenville SC', 'landscape lighting installation Easley SC', 'LED retrofit electrician Anderson SC', 'outdoor lighting installer Spartanburg SC'],
   },
 
   // ═══ 8. SURGE PROTECTION & SAFETY ═══
@@ -530,7 +530,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     slug: 'surge-protection-safety',
     title: 'Surge Protection & Safety',
     tagline: 'Protect Everything Plugged Into Your Home',
-    heroDescription: 'A single lightning strike delivers up to 300 million volts. Your home experiences 20+ smaller power surges every day from appliance cycling alone. RO installs whole-house surge protectors, GFCI/AFCI protection, smoke and CO detectors, and performs comprehensive electrical safety inspections. Protection you can\'t see — until you need it.',
+    heroDescription: 'A single lightning strike delivers up to 300 million volts, and thunderstorms roll across these foothills most afternoons in July and August. Your home also takes 20+ smaller surges every day from appliance cycling alone. RO installs whole-house surge protectors, GFCI/AFCI protection, smoke and CO detectors, and performs comprehensive electrical safety inspections. Protection you can\'t see — until you need it.',
     heroImage: '/images/services/electrical/subs/surge-protection-hero.jpg',
     cardImage: '/images/services/electrical/subs/surge-protection-card.jpg',
     galleryImages: [
@@ -548,7 +548,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       },
       {
         heading: 'GFCI & AFCI Protection',
-        content: 'GFCI (Ground-Fault Circuit Interrupter) outlets detect current leaking to ground — the kind that happens when electricity flows through you. Required by code near water: bathrooms, kitchens, garages, exteriors, laundry rooms. AFCI (Arc-Fault Circuit Interrupter) breakers detect dangerous arcing in wires — the sparking that causes electrical fires. Current NEC code requires AFCI protection in virtually every living space. Both are small devices with outsized consequences — and worth knowing before you plan any electrical work: once you touch a circuit under permit, code brings them along whether you budgeted for them or not. That is the single most common surprise on an otherwise simple job.',
+        content: 'GFCI (Ground-Fault Circuit Interrupter) outlets detect current leaking to ground — the kind that happens when electricity flows through you. Required by code near water: bathrooms, kitchens, garages, exteriors, laundry rooms. AFCI (Arc-Fault Circuit Interrupter) breakers detect dangerous arcing in wires — the sparking that causes electrical fires. Current NEC code requires AFCI protection in virtually every living space. Both are small devices with outsized consequences — and worth knowing before you plan any electrical work: once you touch a circuit under permit, code brings them along whether you budgeted for them or not. That is the single most common surprise on an otherwise simple job. Which NEC edition you\'re held to is the part people miss. South Carolina, North Carolina, and Georgia each adopt and amend the code on their own schedule, so the exact locations that require GFCI or AFCI can differ across a state line. We\'re licensed in all three and we check what your inspector is actually enforcing before we write the scope.',
       },
       {
         heading: 'Smoke & CO Detection',
@@ -587,7 +587,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { q: 'Is a whole-house surge protector worth it?', a: 'It is the smallest protective device we install and it stands in front of the most equipment — HVAC control boards, heat pump inverters, well pump controls, the panel-mounted electronics in modern ranges and washers, plus every computer and smart device in the house. Control boards are the ones that hurt, because a surge takes out a board and the repair is a service call plus a part you wait a week for. The install is short: a two-pole breaker slot at the main panel, or a box beside it if the panel is full. What we check first is the grounding and bonding — the device only works if it has a solid path to ground. It pays for itself the first time it absorbs a real spike.' },
       { q: 'Do power strips provide the same protection?', a: 'No. Power strips (Type 3) protect individual devices at the outlet. A whole-house surge protector (Type 2) stops surges at the panel before they reach any circuit. Best practice is layered protection: Type 2 at the panel plus Type 3 at sensitive devices. One without the other leaves gaps.' },
       { q: 'How often do I need to replace a whole-house surge protector?', a: 'Every 5–10 years under normal conditions. Large surges degrade the internal components faster. Most units have an LED indicator that shows remaining protection. If the light goes out, the device has done its job and needs replacement.' },
-      { q: 'Do I need AFCI breakers if my home is older?', a: 'AFCI breakers aren\'t retroactively required, but they\'re strongly recommended — especially in older homes where wiring connections are more likely to develop arc faults. Any new circuit or panel work triggers the requirement. We recommend adding them proactively for fire safety.' },
+      { q: 'Do I need AFCI breakers if my home is older?', a: 'AFCI breakers aren\'t retroactively required in South Carolina, North Carolina, or Georgia, but they\'re strongly recommended — especially in older homes where wiring connections are more likely to develop arc faults. Any new circuit or panel work triggers the requirement. We recommend adding them proactively for fire safety.' },
       { q: 'What\'s included in an electrical safety inspection?', a: 'We check: panel condition and brand safety, wiring type and visible condition, grounding system integrity, GFCI presence and function, AFCI protection, smoke/CO detector placement and age, outlet and switch condition, visible junction boxes, and code compliance. You receive a written report with photos and prioritized recommendations.' },
     ],
     costData: [
@@ -597,6 +597,6 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
       { item: 'Smoke/CO Combo Detector (installed)', cost: 'Existing interconnect wiring, or new wire pulled to each location', lifespan: '10 years' },
       { item: 'Full Electrical Safety Inspection', cost: 'Home size, number of panels, how much wiring is reachable', lifespan: 'Every 3–5 years' },
     ],
-    seoKeywords: ['whole house surge protector Greenville SC', 'electrical safety inspection Upstate SC', 'GFCI outlet installation near me', 'smoke detector installation electrician SC'],
+    seoKeywords: ['whole house surge protector Greenville SC', 'electrical safety inspection Easley SC', 'GFCI outlet installation Anderson SC', 'smoke detector installation electrician Pickens SC'],
   },
 ];

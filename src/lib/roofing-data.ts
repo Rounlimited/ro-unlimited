@@ -13,8 +13,8 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     id: 'shingle-roofing',
     slug: 'shingle-roofing',
     title: 'Shingle Roofing',
-    tagline: 'Proven Protection Engineered for Carolina Weather',
-    heroDescription: 'From basic 3-tab to premium designer styles that replicate natural slate and cedar shake, we install shingle systems built to handle Upstate South Carolina\'s heat, humidity, and storm seasons. With over 25 years of local experience, we know which products perform and which ones just look good in a brochure.',
+    tagline: 'Proven Protection Built for Foothills Weather',
+    heroDescription: 'From basic 3-tab to premium designer styles that replicate natural slate and cedar shake, we install shingle systems built to handle the heat, humidity, and storm seasons this part of the country runs on. Our crews work out of Easley, just west of Greenville, and we roof across South Carolina, North Carolina, and Georgia. After 25-plus years on these roofs we know which products perform and which ones just look good in a brochure.',
     heroImage: '/images/services/roofing/subs/shingle-hero.jpg',
     cardImage: '/images/services/roofing/subs/shingle-card.jpg',
     galleryImages: [
@@ -32,7 +32,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'Materials & Performance',
-        content: 'All modern asphalt shingles start with a fiberglass base mat coated in asphalt and topped with ceramic-coated mineral granules that protect against UV radiation. Architectural shingles are now the industry standard, offering wind ratings of 110–130 mph compared to 3-tab\'s 60–70 mph. For Upstate SC, where severe thunderstorms regularly produce 50–80 mph gusts, that difference matters. Impact-resistant (Class 4) shingles are increasingly popular here, tested to withstand hail strikes and sometimes qualifying homeowners for insurance discounts.',
+        content: 'All modern asphalt shingles start with a fiberglass base mat coated in asphalt and topped with ceramic-coated mineral granules that protect against UV radiation. Architectural shingles are now the industry standard, offering wind ratings of 110–130 mph compared to 3-tab\'s 60–70 mph. Severe thunderstorms across the foothills regularly produce 50–80 mph gusts, on either side of the state lines, so that difference matters. Impact-resistant (Class 4) shingles come up on more and more of our jobs, tested to withstand hail strikes and sometimes qualifying homeowners for insurance discounts.',
       },
       {
         heading: 'What Drives the Number',
@@ -40,7 +40,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Choosing the right shingle tier isn\'t just about appearance — it\'s about matching your roofing investment to your home\'s needs, your budget timeline, and our local weather patterns. Our humidity and heat can shorten lifespans by several years if ventilation and installation quality are lacking. A quality architectural shingle installation with proper ventilation is the sweet spot for most Upstate homeowners.',
+        content: 'Choosing the right shingle tier isn\'t just about appearance — it\'s about matching your roofing investment to your home\'s needs, your budget timeline, and what the weather here actually does to a roof. Humidity and heat across the region can shorten lifespans by several years if ventilation and installation quality are lacking. A quality architectural shingle installation with proper ventilation is the sweet spot for most of the homes we work on, from Greenville and Anderson out to the mountain counties.',
       },
     ],
     warningSigns: [
@@ -59,7 +59,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { tip: 'Trim tree branches back 3+ feet from the roof', detail: 'Overhanging limbs drop debris, scrape shingles in wind, and provide pathways for moss growth.' },
       { tip: 'Address moss and algae promptly', detail: 'Use zinc or copper strips along the ridge, or have us apply a professional treatment. Never pressure-wash shingles — it strips granules.' },
       { tip: 'Check attic ventilation and insulation', detail: 'Trapped heat and moisture from below destroy shingles from the inside out, especially in our hot summers.' },
-      { tip: 'Visual check after every significant storm', detail: 'Upstate SC gets hail and high winds regularly. Catching damage early keeps the insurance claim straightforward and keeps the repair to shingles instead of decking.' },
+      { tip: 'Visual check after every significant storm', detail: 'Hail and high winds come through this region every year. Catching damage early keeps the insurance claim straightforward and keeps the repair to shingles instead of decking.' },
     ],
     processSteps: [
       { num: '01', title: 'Consultation & Inspection', description: 'We inspect your current roof, measure the area, assess decking condition from the attic, check ventilation, and discuss your goals and budget. You get a detailed written estimate with material options.' },
@@ -69,8 +69,8 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { num: '05', title: 'Inspection & Cleanup', description: 'We inspect every detail, run magnetic sweepers for nails, haul away all debris, and walk you through the completed work. You receive warranty documentation for both materials and labor.' },
     ],
     faq: [
-      { q: 'What type of asphalt shingle do you recommend for Upstate SC?', a: 'For most homeowners, we recommend architectural shingles with a Class 4 impact rating. They handle our wind, hail, and UV exposure far better than 3-tab, and the 25–30 year lifespan makes them the best cost-per-year investment. We work primarily with GAF, Owens Corning, and CertainTeed.' },
-      { q: 'How does humidity affect my shingle roof?', a: 'Upstate SC\'s humidity promotes algae and moss growth, accelerates granule loss, and can trap moisture under shingles if ventilation is inadequate. Algae-resistant shingles with copper granules and proper attic ventilation are critical here. We\'ve seen roofs fail 5–7 years early due to poor ventilation.' },
+      { q: 'What type of asphalt shingle do you recommend for this climate?', a: 'For most homeowners, we recommend architectural shingles with a Class 4 impact rating. They handle our wind, hail, and UV exposure far better than 3-tab, and the 25–30 year lifespan makes them the best cost-per-year investment. We work primarily with GAF, Owens Corning, and CertainTeed.' },
+      { q: 'How does humidity affect my shingle roof?', a: 'The humidity we live in eight months of the year promotes algae and moss growth, accelerates granule loss, and can trap moisture under shingles if ventilation is inadequate. Algae-resistant shingles with copper granules and proper attic ventilation are critical here. We\'ve seen roofs fail 5–7 years early due to poor ventilation.' },
       { q: 'Are 3-tab shingles still worth installing?', a: 'Honestly, we rarely recommend them anymore. The per-square-foot savings is real but small, and what you give up for it is wind rating, lifespan, and curb appeal. Labor, tear-off, and disposal cost the same either way, so the discount only applies to a fraction of the job. Spread across the years you actually own the roof, 3-tab ends up costing more. If the upfront number is the constraint, we\'d rather talk financing on architectural.' },
       { q: 'How long does a shingle roof installation take?', a: 'A standard residential tear-off and replacement typically takes 1–3 days depending on roof size, complexity, and weather. We don\'t cut corners on cleanup — you shouldn\'t find a single nail in your yard when we\'re done.' },
       { q: 'Will my insurance cover storm damage to my shingle roof?', a: 'In most cases, yes. Homeowner\'s insurance typically covers sudden, accidental damage from hail, wind, and fallen trees. It does not cover normal wear or neglected maintenance. We work with all major carriers and can perform a damage assessment to support your claim.' },
@@ -80,7 +80,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { item: 'Architectural Shingles', cost: 'Valleys, hips, and dormers drive the waste factor', lifespan: '25–30 years' },
       { item: 'Designer Shingles', cost: 'Heavy multi-layer product; slower to carry, load, and lay', lifespan: '30–40 years' },
     ],
-    seoKeywords: ['shingle roofing Greenville SC', 'asphalt shingle installation', 'architectural shingles Upstate SC', 'roof shingle replacement near me'],
+    seoKeywords: ['shingle roofing Greenville SC', 'architectural shingle installation Easley SC', 'asphalt shingle roofer Anderson SC', 'shingle roof replacement near me'],
   },
 
   // ═══ 2. METAL ROOFING ═══
@@ -107,7 +107,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'Materials & Performance',
-        content: 'Most residential metal roofing in our area is steel (galvanized or Galvalume-coated) or aluminum. Steel prices below aluminum per square and carries more strength; aluminum is lighter, naturally corrosion-resistant, and priced above steel — worth the step up in our humid climate. Standing seam roofs withstand winds up to 140 mph and shed rain and debris efficiently. Metal reflects solar radiant heat rather than absorbing it — Energy Star-rated metal roofs can reduce cooling costs by 10–25%.',
+        content: 'Most of the residential metal we install is steel (galvanized or Galvalume-coated) or aluminum. Steel prices below aluminum per square and carries more strength; aluminum is lighter, naturally corrosion-resistant, and priced above steel — worth the step up in our humid climate. Standing seam roofs withstand winds up to 140 mph and shed rain and debris efficiently. Metal reflects solar radiant heat rather than absorbing it — Energy Star-rated metal roofs can reduce cooling costs by 10–25%.',
       },
       {
         heading: 'Where the Money Goes',
@@ -115,7 +115,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'Why It Makes Sense Here',
-        content: 'Upstate South Carolina throws everything at a roof: UV bombardment, humidity, hail, high winds, and heavy rain. Metal handles all of it. No granule loss, no moss growth, no rotting. The reflective properties directly combat our biggest climate challenge — sustained summer heat. We\'ve been installing metal roofing here for over two decades and have seen firsthand how it outperforms.',
+        content: 'The climate here throws everything at a roof: UV bombardment, humidity, hail, high winds, and heavy rain. It does it the same way in Pickens County as it does over the line in Henderson County, North Carolina, or down in Rabun County, Georgia. Metal handles all of it. No granule loss, no moss growth, no rotting. The reflective properties directly combat our biggest climate challenge — sustained summer heat. We\'ve been installing metal roofing across this region for over two decades and have seen firsthand how it outperforms.',
       },
     ],
     warningSigns: [
@@ -145,7 +145,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     faq: [
       { q: 'Is metal roofing louder than shingles during rain?', a: 'With proper installation over solid sheathing and underlayment, a metal roof is no louder than asphalt shingles. The old perception comes from agricultural buildings installed directly on open framing with no insulation beneath.' },
       { q: 'Does metal roofing attract lightning?', a: 'No. Lightning strikes the highest point in an area regardless of material. Metal is actually one of the safest materials in a lightning event because it\'s non-combustible — it won\'t catch fire like wood shake can.' },
-      { q: 'Which metal roofing style do you recommend?', a: 'For most residential applications in Upstate SC, we recommend standing seam. The hidden-fastener system eliminates the biggest maintenance concern, the wind rating handles our worst storms, and the energy savings are substantial.' },
+      { q: 'Which metal roofing style do you recommend?', a: 'For most residential work in our market, we recommend standing seam. The hidden-fastener system eliminates the biggest maintenance concern, the wind rating handles our worst storms, and the energy savings are substantial.' },
       { q: 'How long does metal roof installation take?', a: 'Typically 2–5 days for a standard home, depending on roof size, complexity, and whether we\'re doing a tear-off or overlay. Standing seam takes longer than corrugated due to fabrication precision.' },
       { q: 'Will a metal roof interfere with cell signal or Wi-Fi?', a: 'No. Your signals originate from inside and outside your home through windows, walls, and other openings. Metal roofing does not create a meaningful barrier to wireless signals.' },
     ],
@@ -154,7 +154,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { item: 'Standing Seam (Steel/Aluminum)', cost: 'On-site roll-forming, clip labor, custom flashing at every transition', lifespan: '40–70 years' },
       { item: 'Metal Shingles', cost: 'Installed piece by piece — roof complexity multiplies the hours', lifespan: '30–50 years' },
     ],
-    seoKeywords: ['metal roofing Greenville SC', 'standing seam roof installation', 'metal roof contractor Upstate SC', 'steel roofing near me'],
+    seoKeywords: ['metal roofing Greenville SC', 'standing seam roof installation Easley SC', 'metal roof contractor western North Carolina', 'steel roofing Spartanburg SC'],
   },
 
   // ═══ 3. FLAT / LOW-SLOPE ROOFING ═══
@@ -188,8 +188,8 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
         content: 'Flat roofs price by the square foot of deck, but the deck is the easy part — the number is really set by everything sticking up through it. Every curb, drain, scupper, vent stack, skylight, and HVAC unit needs flashed detail work, and detail work is hand labor that doesn\'t scale with area. Insulation is the other big lever: if the existing roof has no slope built in, tapered insulation has to be laid out and stacked to move water to the drains, which adds both material and design time. Then there\'s what\'s under the membrane. Saturated insulation or soft decking found at tear-off changes the scope, which is why we moisture-test before we quote instead of after. Across the four systems, EPDM sits at the low end, TPO and modified bitumen in the middle, and built-up at the top because it\'s multiple layers applied one at a time. Lifespans track the material: EPDM 25–30 years, TPO 20–30, modified bitumen 20–25, BUR 20–30. TPO\'s white reflective surface runs 50–60 degrees cooler than dark alternatives at peak summer, and that temperature difference is what you\'re actually buying in membrane life.',
       },
       {
-        heading: 'The Upstate SC Factor',
-        content: 'Our combination of high UV exposure, extreme heat, humidity, and heavy storm rainfall makes flat roof material selection and installation quality especially critical. Ponding water — any water still sitting 48 hours after rain — is the number one enemy of flat roofs, and our heavy downpours test drainage systems hard. Proper slope-to-drain design and fully sealed seams aren\'t optional here — they\'re survival requirements.',
+        heading: 'What This Climate Does to a Flat Roof',
+        content: 'High UV exposure, extreme heat, humidity, and heavy storm rainfall together make material selection and installation quality especially critical on a low-slope roof. Ponding water — any water still sitting 48 hours after rain — is the number one enemy of flat roofs, and the downpours we get from spring through hurricane season test drainage hard. Proper slope-to-drain design and fully sealed seams aren\'t optional here; they\'re survival requirements. We hold roofing licenses in South Carolina, North Carolina, and Georgia, so an owner with buildings on both sides of a state line gets one contractor and one standard of work instead of three.',
       },
     ],
     warningSigns: [
@@ -217,8 +217,8 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { num: '05', title: 'Inspection, Testing & Documentation', description: 'We perform flood testing or infrared scanning to verify watertight integrity, document the installation, and provide manufacturer warranty registration alongside our workmanship guarantee.' },
     ],
     faq: [
-      { q: 'Which flat roof system do you recommend for this area?', a: 'For most commercial and mixed-use applications, we lean toward TPO. Heat-welded seams are virtually leak-proof, the reflective surface fights our summer heat, and the lifespan holds up against anything else in the category. For residential flat sections, modified bitumen often fits best.' },
-      { q: 'Can a flat roof handle heavy SC rainstorms?', a: 'Absolutely, when properly designed. The key is adequate slope-to-drain (minimum 1/4 inch per foot), properly sized drains, and fully sealed seams. We design drainage paths that handle our worst downpours, not just average rainfall.' },
+      { q: 'Which flat roof system do you recommend around here?', a: 'For most commercial and mixed-use applications, we lean toward TPO. Heat-welded seams are virtually leak-proof, the reflective surface fights our summer heat, and the lifespan holds up against anything else in the category. For residential flat sections, modified bitumen often fits best.' },
+      { q: 'Can a flat roof handle the downpours we get here?', a: 'Absolutely, when properly designed. The key is adequate slope-to-drain (minimum 1/4 inch per foot), properly sized drains, and fully sealed seams. We design drainage paths for the worst afternoon storm of the summer, not for average rainfall.' },
       { q: 'Is a flat roof more likely to leak?', a: 'A properly installed and maintained flat roof is extremely reliable. The "leak-prone" reputation comes from poor installation, inadequate drainage, and deferred maintenance — not from the materials themselves.' },
       { q: 'Can you install over an existing flat roof?', a: 'In some cases, yes. If the existing roof has only one layer, the decking is sound, and the insulation is dry, an overlay can save significant cost. We always recommend thorough inspection first, including moisture testing.' },
     ],
@@ -228,7 +228,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { item: 'Modified Bitumen', cost: 'Layer count, plus torch-applied versus self-adhered', lifespan: '20–25 years' },
       { item: 'Built-Up (BUR)', cost: 'Layers built up on site — the heaviest labor load of the four', lifespan: '20–30 years' },
     ],
-    seoKeywords: ['flat roof repair Greenville SC', 'TPO roofing contractor', 'commercial flat roof Upstate SC', 'EPDM roof installation'],
+    seoKeywords: ['flat roof repair Greenville SC', 'TPO roofing contractor Spartanburg SC', 'commercial flat roofing SC NC GA', 'EPDM roof installation near me'],
   },
 
   // ═══ 4. ROOF REPAIR ═══
@@ -254,8 +254,8 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
         content: 'Roof repair covers a wide range of services aimed at restoring your roof\'s protective function without full replacement. Leak repair targets specific points of water infiltration — often around flashing, in valleys, or where shingles have been compromised. Storm damage repair addresses the aftermath of hail, wind, and fallen debris. Flashing repair focuses on the metal components that seal transitions at chimneys, skylights, walls, and vents — the most common source of roof leaks.',
       },
       {
-        heading: 'Common Repair Scenarios in Our Area',
-        content: 'Upstate South Carolina\'s weather creates predictable repair needs. Spring and summer thunderstorms bring hail that bruises shingles and cracks flashing sealant. High winds lift and tear shingles, especially on roofs over 15 years old. We see the same failure points year after year — chimney flashing, pipe boot failures, valley deterioration, and wind-damaged ridge caps.',
+        heading: 'What We Get Called Out For',
+        content: 'The weather here creates predictable repair needs. Spring and summer thunderstorms bring hail that bruises shingles and cracks flashing sealant. High winds lift and tear shingles, especially on roofs over 15 years old. Whether the house is in Greenville County or an hour up the road in North Carolina, we see the same failure points year after year — chimney flashing, pipe boot failures, valley deterioration, and wind-damaged ridge caps.',
       },
       {
         heading: 'How We Price a Repair',
@@ -290,7 +290,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { num: '05', title: 'Verification & Follow-Up', description: 'We verify the repair resolved the issue, clean up completely, and provide documentation. For insurance claims, all necessary paperwork. We check back after the next significant rain.' },
     ],
     faq: [
-      { q: 'How quickly can you respond to an emergency?', a: 'For active leaks and storm emergencies in the Upstate SC area, we aim for same-day response. Emergency service includes temporary tarping and patching, followed by a permanent repair plan once conditions allow.' },
+      { q: 'How quickly can you respond to an emergency?', a: 'Close to home — Greenville, Easley, Pickens, Anderson, Spartanburg — we aim for same-day on an active leak. Farther out into North Carolina or Georgia, we\'ll tell you honestly what time we can be on your roof instead of promising a window we can\'t hit. Either way, emergency service starts with temporary tarping and patching, and the permanent repair plan follows once conditions allow.' },
       { q: 'Should I file an insurance claim for roof damage?', a: 'If the damage is from a covered event (hail, wind, fallen tree), yes. File promptly — most policies have time limits. We provide detailed damage assessments with photo documentation that adjusters need.' },
       { q: 'Can I repair just part of my roof?', a: 'Often, yes. If damage is localized and the rest of the roof is in good condition, targeted repair is absolutely appropriate. We\'ll give you an honest assessment.' },
       { q: 'Why does the leak seem worse sometimes?', a: 'Wind direction matters. Many leaks only manifest when rain is driven from a specific direction, which is why professional assessment is important — the entry point may only be visible under certain conditions.' },
@@ -301,7 +301,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { item: 'Leak Repair', cost: 'How far the water traveled before you saw the stain', lifespan: 'Varies by cause' },
       { item: 'Storm Damage Repair', cost: 'Slopes affected, decking condition, whether a carrier is involved', lifespan: 'Varies by extent' },
     ],
-    seoKeywords: ['roof repair Greenville SC', 'emergency roof repair near me', 'storm damage roof repair Upstate SC', 'roof leak fix'],
+    seoKeywords: ['roof repair Greenville SC', 'emergency roof repair Easley SC', 'storm damage roof repair Anderson SC', 'roof leak repair near me'],
   },
 
   // ═══ 5. ROOF REPLACEMENT ═══
@@ -328,7 +328,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'Tear-Off vs. Overlay',
-        content: 'A full tear-off prices off square footage, pitch, how many layers are coming off, and how cut-up the roofline is — every valley, hip, dormer, chimney, and pipe penetration is hand work that area alone doesn\'t capture. An overlay comes in meaningfully lower because there\'s no tear-off labor and no dumpster. It also lasts roughly half as long: new shingles conform to the old surface\'s imperfections, and the heat trapped between the two layers cooks the new one from below. More importantly, an overlay means nobody ever looks at your decking — you\'re roofing over an unknown. Building code caps you at two layers, so an overlay also spends the one shot you get; the next roof is a full tear-off regardless, and it\'ll be a tear-off of two layers instead of one.',
+        content: 'A full tear-off prices off square footage, pitch, how many layers are coming off, and how cut-up the roofline is — every valley, hip, dormer, chimney, and pipe penetration is hand work that area alone doesn\'t capture. An overlay comes in meaningfully lower because there\'s no tear-off labor and no dumpster. It also lasts roughly half as long: new shingles conform to the old surface\'s imperfections, and the heat trapped between the two layers cooks the new one from below. More importantly, an overlay means nobody ever looks at your decking — you\'re roofing over an unknown. Code in all three states we work in caps you at two layers, so an overlay also spends the one shot you get; the next roof is a full tear-off regardless, and it\'ll be a tear-off of two layers instead of one.',
       },
       {
         heading: 'When to Replace vs. Repair',
@@ -336,11 +336,11 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'What Sets Your Number — and Your Schedule',
-        content: 'Ask a roofer to price a replacement sight-unseen and you\'ll get a guess. Here\'s what actually decides it: total square footage and pitch, since a steep roof needs staging and slows every stage; the number of layers coming off; roof complexity; access and staging — whether a dump trailer can sit under the eave or every bundle gets carried; the material tier you choose; and decking condition once we\'re down to bare deck. We carry a stated sheet allowance in every estimate and bill only the sheets we actually swap, so rotten sheathing is a known variable instead of a surprise. On timing, a standard tear-off and replace is a 1–3 day job, 3–5 for larger or complex roofs. We stage it so the deck is never open overnight and we don\'t strip a slope we can\'t dry in the same day. Summer heat is the real scheduling constraint here — asphalt softens and scuffs underfoot on a 95-degree afternoon, so we start at first light and shut down the hot side of the roof early. Below roughly 40 degrees the self-sealing strips won\'t bond on their own and every tab has to be hand-sealed, which is why winter work gets planned around a warm stretch. Insurance jobs run on the carrier\'s clock, not ours: adjuster visit, then an approved scope, then a supplement if what we uncover on the deck exceeds it — build that into your expectations. A new roof is consistently ranked among the highest-return home improvements and removes the number one objection buyers raise.',
+        content: 'Ask a roofer to price a replacement sight-unseen and you\'ll get a guess. Here\'s what actually decides it: total square footage and pitch, since a steep roof needs staging and slows every stage; the number of layers coming off; roof complexity; access and staging — whether a dump trailer can sit under the eave or every bundle gets carried; the material tier you choose; and decking condition once we\'re down to bare deck. We carry a stated sheet allowance in every estimate and bill only the sheets we actually swap, so rotten sheathing is a known variable instead of a surprise. On timing, a standard tear-off and replace is a 1–3 day job, 3–5 for larger or complex roofs. We stage it so the deck is never open overnight and we don\'t strip a slope we can\'t dry in the same day. Summer heat is the real scheduling constraint here — asphalt softens and scuffs underfoot on a 95-degree afternoon, so we start at first light and shut down the hot side of the roof early. Below roughly 40 degrees the self-sealing strips won\'t bond on their own and every tab has to be hand-sealed, which is why winter work gets planned around a warm stretch, and why a job up in the mountain counties can need a different week than the same job in Anderson. Permitting is the other thing that moves with the address: we hold licenses in South Carolina, North Carolina, and Georgia, and every county and municipality runs its own permit and inspection process, so we tell you up front which one applies to your house and whether it adds a day. Insurance jobs run on the carrier\'s clock, not ours: adjuster visit, then an approved scope, then a supplement if what we uncover on the deck exceeds it — build that into your expectations. A new roof is consistently ranked among the highest-return home improvements and removes the number one objection buyers raise.',
       },
     ],
     warningSigns: [
-      { trigger: 'Your roof is 20+ years old', detail: 'Even without visible leaks, a roof nearing end of life is living on borrowed time, especially after our storm seasons.' },
+      { trigger: 'Your roof is 20+ years old', detail: 'Even without visible leaks, a roof nearing end of life is living on borrowed time, especially after a couple of our storm seasons back to back.' },
       { trigger: 'Widespread granule loss creating bald patches', detail: 'When more than 30% of the surface has significant granule loss, repair is no longer practical.' },
       { trigger: 'Multiple active leaks in different areas', detail: 'This indicates systemic failure, not isolated damage.' },
       { trigger: 'Shingles curling, buckling, or cracking across large sections', detail: 'Widespread deterioration means the entire system is failing, not just individual shingles.' },
@@ -375,7 +375,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { item: 'Overlay', cost: 'No tear-off, no dumpster — and no look at the decking', lifespan: '12–18 years' },
       { item: 'Metal Roof Replacement', cost: 'Panel fabrication and flashing detail at every transition', lifespan: '40–70 years' },
     ],
-    seoKeywords: ['roof replacement Greenville SC', 'new roof cost Upstate SC', 'roof tear-off near me', 'roof replacement contractor'],
+    seoKeywords: ['roof replacement Greenville SC', 'new roof cost Easley SC', 'roof replacement contractor Pickens SC', 'licensed roofing contractor SC NC GA'],
   },
 
   // ═══ 6. ROOF INSPECTIONS ═══
@@ -406,11 +406,11 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'What Sets the Fee — and What It Saves',
-        content: 'A standard inspection prices off roof size, pitch, and how much of it we can safely walk — a walkable ranch takes a fraction of the time a steep, cut-up two-story does. Add-ons move the number: drone work when pitch or fragile material rules out walking, and infrared scanning when we need to find moisture trapped inside decking or under a membrane that looks fine from the surface. Storm damage assessments for an insurance claim we usually provide at no charge, because if a claim is coming, we want the documentation done right from the first visit. Set any of that against what an inspection heads off — a leak quietly rotting decking and framing, buying a house that needs a full roof the month you close, or missing your carrier\'s filing window entirely. Plan on 45–90 minutes on site and a written report with photos.',
+        content: 'A standard inspection prices off roof size, pitch, and how much of it we can safely walk — a walkable ranch takes a fraction of the time a steep, cut-up two-story does. Add-ons move the number: drone work when pitch or fragile material rules out walking, and infrared scanning when we need to find moisture trapped inside decking or under a membrane that looks fine from the surface. Storm damage assessments for an insurance claim we usually provide at no charge, because if a claim is coming, we want the documentation done right from the first visit. Distance factors in once you\'re well outside the Greenville area — we\'d rather group a run into western North Carolina or north Georgia with other work we already have that direction than bill you for the windshield time. Set any of that against what an inspection heads off — a leak quietly rotting decking and framing, buying a house that needs a full roof the month you close, or missing your carrier\'s filing window entirely. Plan on 45–90 minutes on site and a written report with photos.',
       },
       {
         heading: 'Why Frequency Matters',
-        content: 'We recommend inspections twice yearly (spring and fall) and after any significant storm. Our storm season runs roughly April through September. A spring inspection catches winter damage; a fall inspection catches storm season damage. This rhythm catches problems at the earliest and least expensive stage.',
+        content: 'We recommend inspections twice yearly (spring and fall) and after any significant storm. Storm season across the region runs roughly April through September. A spring inspection catches winter damage; a fall inspection catches storm season damage. This rhythm catches problems at the earliest and least expensive stage.',
       },
     ],
     warningSigns: [
@@ -447,7 +447,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { item: 'Drone Inspection', cost: 'For pitch or fragile material that rules out walking it', lifespan: 'N/A' },
       { item: 'Infrared Inspection', cost: 'Scan time plus equipment; finds moisture the eye can\'t', lifespan: 'N/A' },
     ],
-    seoKeywords: ['roof inspection Greenville SC', 'roof inspection cost', 'pre-purchase roof inspection Upstate SC', 'storm damage assessment'],
+    seoKeywords: ['roof inspection Greenville SC', 'pre-purchase roof inspection Easley SC', 'storm damage roof assessment Anderson SC', 'roof inspection near me'],
   },
 
   // ═══ 7. GUTTER SYSTEMS ═══
@@ -456,7 +456,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     slug: 'gutter-systems',
     title: 'Gutter Systems',
     tagline: 'Directing Every Drop Away from Your Foundation',
-    heroDescription: 'Your gutters are your roof\'s exit strategy for water — and in Upstate South Carolina, where we average 50+ inches of rainfall per year, a properly functioning gutter system is not optional. We install seamless aluminum gutters, gutter guard systems, and complete drainage solutions designed to handle the volume our storms deliver.',
+    heroDescription: 'Your gutters are your roof\'s exit strategy for water — and across the foothills, where 50-plus inches of rain a year is normal from Anderson to the mountain counties, a properly functioning gutter system is not optional. We install seamless aluminum gutters, gutter guard systems, and complete drainage solutions designed to handle the volume our storms deliver.',
     heroImage: '/images/services/roofing/subs/gutter-hero.jpg',
     cardImage: '/images/services/roofing/subs/gutter-card.jpg',
     galleryImages: [
@@ -499,7 +499,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { tip: 'Clean gutters at least twice a year', detail: 'Late fall after leaves drop and spring after pollen season. In heavily wooded areas, quarterly cleaning may be necessary.' },
       { tip: 'Inspect pitch and fasteners annually', detail: 'Gutters should slope toward downspouts at approximately 1/4 inch per 10 feet. Re-secure loose brackets before they cause sagging.' },
       { tip: 'Flush downspouts with a garden hose', detail: 'Clogs often form at the elbow. Flushing confirms water flows freely all the way to the ground.' },
-      { tip: 'Ensure downspouts discharge 4–6 feet from foundation', detail: 'Add extensions or underground drainage. In our clay-heavy Upstate SC soils, poor drainage causes foundation movement.' },
+      { tip: 'Ensure downspouts discharge 4–6 feet from foundation', detail: 'Add extensions or underground drainage. The red clay under most of this region drains slowly, and water dumped at the corner of the house is what starts foundation movement.' },
       { tip: 'Check for rust or corrosion', detail: 'Steel or galvanized gutters develop rust spots that become holes. Aluminum doesn\'t rust but can corrode at contact points with dissimilar metals.' },
       { tip: 'Consider gutter guards', detail: 'The investment pays for itself within 3–5 years in eliminated cleaning costs and prevented damage. Modern micro-mesh systems have extremely high satisfaction.' },
     ],
@@ -512,8 +512,8 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     ],
     faq: [
       { q: 'Why seamless gutters instead of sectional?', a: 'Every seam is a future leak. Joint sealant degrades within 5–10 years, and temperature swings open gaps. Seamless gutters are formed from a continuous piece — the only joints are at corners and downspouts. They look cleaner, perform better, and last longer.' },
-      { q: 'What size gutters do I need?', a: 'Most Upstate SC homes need 5-inch K-style with 2x3-inch downspouts. Large roof areas, steep pitches, or multi-plane runoff may need 6-inch with 3x4-inch downspouts. We calculate requirements based on your roof area and rainfall intensity.' },
-      { q: 'Are gutter guards worth the investment?', a: 'For most Upstate SC homeowners, absolutely. Pine trees, hardwoods, and pollen create constant clogging. Quality micro-mesh guards reduce cleaning from 2–4 times per year to once every 2–3 years. Typical payback is 3–5 years.' },
+      { q: 'What size gutters do I need?', a: 'Most homes we gutter take 5-inch K-style with 2x3-inch downspouts. Large roof areas, steep pitches, or multi-plane runoff may need 6-inch with 3x4-inch downspouts. We calculate requirements based on your roof area and rainfall intensity.' },
+      { q: 'Are gutter guards worth the investment?', a: 'On most properties around here, absolutely. Pine, hardwoods, and the spring pollen that coats everything create constant clogging. Quality micro-mesh guards reduce cleaning from 2–4 times per year to once every 2–3 years. Typical payback is 3–5 years.' },
       { q: 'How long do seamless gutters last?', a: 'Aluminum seamless gutters last 20–30 years with proper maintenance. The typical failure point isn\'t the channel — it\'s the fascia behind it. Proper installation pitch and regular maintenance are what make gutters last.' },
       { q: 'Do you handle gutter repair too?', a: 'Yes — we repair leaking joints, re-pitch sagging sections, replace damaged runs, reattach loose gutters, and extend downspouts. If your system is fundamentally sound, we\'ll repair rather than selling you a replacement.' },
     ],
@@ -523,7 +523,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { item: 'Downspouts', cost: 'Count, drop height, and where the water has to end up', lifespan: '20–30 years' },
       { item: 'Complete System (typical home)', cost: 'Roof planes, downspout count, and any underground drainage', lifespan: '20–30 years' },
     ],
-    seoKeywords: ['seamless gutters Greenville SC', 'gutter installation Upstate SC', 'gutter guards near me', 'gutter repair contractor'],
+    seoKeywords: ['seamless gutters Greenville SC', 'gutter installation Easley SC', 'gutter guards Spartanburg SC', 'gutter repair contractor near me'],
   },
 
   // ═══ 8. ROOF VENTILATION ═══
@@ -550,11 +550,11 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'Why It Matters So Much Here',
-        content: 'An unventilated Upstate SC attic can reach 150–160 degrees in summer, literally cooking your roof from the inside. That trapped heat degrades shingle adhesives, underlayment, and decking while radiating into your living space. Balanced ventilation reduces attic temperatures by 20–30 degrees and cuts cooling costs by up to 30%. In our humid climate, moisture is equally destructive — condensation on the cold underside of the roof deck causes mold, wood rot, and metal corrosion.',
+        content: 'An unventilated attic in this climate can reach 150–160 degrees in summer, literally cooking your roof from the inside. That trapped heat degrades shingle adhesives, underlayment, and decking while radiating into your living space. Balanced ventilation reduces attic temperatures by 20–30 degrees and cuts cooling costs by up to 30%. In humidity like ours, moisture is equally destructive — condensation on the cold underside of the roof deck causes mold, wood rot, and metal corrosion.',
       },
       {
         heading: 'Types of Ventilation',
-        content: 'Ridge vents run along the entire peak providing the most uniform exhaust when paired with continuous soffit vents. Box vents are individual exhaust points near the ridge. Powered attic fans actively pull air through the attic. The key is balance: intake area (soffit vents) should equal or slightly exceed exhaust area. Building code requires a minimum of 1 square foot of net free ventilation per 150 square feet of attic floor.',
+        content: 'Ridge vents run along the entire peak providing the most uniform exhaust when paired with continuous soffit vents. Box vents are individual exhaust points near the ridge. Powered attic fans actively pull air through the attic. The key is balance: intake area (soffit vents) should equal or slightly exceed exhaust area. Code in South Carolina, North Carolina, and Georgia alike requires a minimum of 1 square foot of net free ventilation per 150 square feet of attic floor, and your local inspector will check it.',
       },
       {
         heading: 'What the Work Actually Involves',
@@ -599,6 +599,6 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { item: 'Powered Attic Fan', cost: 'Unit type, plus running power up to it', lifespan: '10–15 years' },
       { item: 'Complete Balanced System', cost: 'Intake and exhaust together; attic size sets the ratio', lifespan: 'Life of roof' },
     ],
-    seoKeywords: ['roof ventilation Greenville SC', 'attic ventilation installation', 'ridge vent contractor Upstate SC', 'attic fan installation'],
+    seoKeywords: ['roof ventilation Greenville SC', 'ridge vent installation Easley SC', 'attic ventilation contractor Anderson SC', 'attic fan installation near me'],
   },
 ];

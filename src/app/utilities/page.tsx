@@ -35,7 +35,7 @@ const CAPABILITIES = [
   { num: '04', slug: 'storm-drainage', title: 'Storm Drainage Systems', img: '/images/utilities/px-37627672.jpg',
     desc: 'PVC and black corrugated HDPE storm runs, catch basins, and drainage structures \u2014 the package that gets your site through inspection.' },
   { num: '05', slug: 'commercial-septic', title: 'Tier 2 Septic Systems', img: '/images/utilities/jr-septic-tank-set.jpg',
-    desc: 'Engineered and conventional septic under a Tier 2 license \u2014 commercial-scale systems, pump tanks, and drain fields.' },
+    desc: 'Engineered and conventional septic under a South Carolina Tier 2 license \u2014 commercial-scale systems, pump tanks, and drain fields.' },
   { num: '06', slug: 'grease-interceptors', title: 'Commercial Grease Traps', img: '/images/utilities/jr-grease-interceptor.jpg',
     desc: 'Interceptors and grease traps for restaurants and QSR builds \u2014 sized, set, plumbed, and inspection-ready.' },
 ];
@@ -59,7 +59,8 @@ const GALLERY = [
 const FAQS = [
   { q: 'Can you tap into a live water main?', a: 'Yes \u2014 that\u2019s exactly what our water & sewer license covers. We perform hot taps on live mains with tapping sleeves and valves, so the surrounding system stays in service while your property gets connected.' },
   { q: 'Do you sub out the utility work?', a: 'No. Underground utilities are self-performed \u2014 our crews, our equipment, our licenses. That\u2019s the point: when the same contractor controls the sitework and the underground package, the critical path doesn\u2019t slip waiting on someone else\u2019s schedule.' },
-  { q: 'What does a Tier 2 septic license cover?', a: 'South Carolina is specific about this. A Tier 1 installer may install gravity-fed residential systems only, and is not authorized to conduct repairs on existing systems at all. Tier 2 adds pumps, grease traps, curtain drains, elevated and mounded systems, and every commercial, large, and community onsite wastewater system \u2014 plus repairs. That is the license line commercial work sits on, and most residential installers don\u2019t hold it.' },
+  { q: 'What does a Tier 2 septic license cover?', a: 'South Carolina is specific about this. A Tier 1 installer may install gravity-fed residential systems only, and is not authorized to conduct repairs on existing systems at all. Tier 2 adds pumps, grease traps, curtain drains, elevated and mounded systems, and every commercial, large, and community onsite wastewater system \u2014 plus repairs. That is the South Carolina license line commercial work sits on, and most residential installers don\u2019t hold it. Tier 1, 2, and 3 are a South Carolina classification, so on a job across the line we work under that state\u2019s onsite program instead \u2014 we hold licensing in all three.' },
+  { q: 'How far will you travel for a job?', a: 'We run out of Easley, so the Greenville area is home ground and most weeks our iron never leaves it. Past that we work the whole tri-state \u2014 upstate South Carolina, western North Carolina, and northeast Georgia \u2014 and we are licensed in all three, which matters because the permitting path changes the moment you cross a line. For a job worth mobilizing for, distance is a scheduling conversation, not a no.' },
   { q: 'Can you handle the full site, not just utilities?', a: 'That\u2019s our model. We clear it, grade it, pipe it, and build on it \u2014 site development, underground utilities, and vertical construction under one contract with one accountable contractor.' },
 ];
 
@@ -190,7 +191,7 @@ export default function UtilitiesPage() {
           <div className="hero-gold-line w-10 h-[2px] bg-gradient-to-r from-ro-gold/80 to-transparent mb-6" />
 
           <p className="hero-desc text-sm sm:text-base leading-relaxed mb-8 max-w-sm text-ro-gray-200 border-l-2 border-ro-gold/70 bg-ro-black/50 backdrop-blur-md pl-4 pr-4 py-3.5" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>
-            Water mains. Sewer taps. Storm drainage. Tier 2 septic. Nobody sees it when it&apos;s done &mdash; but every building in the Upstate stands on it. Licensed, self-performed, and photographed before backfill.
+            Water mains. Sewer taps. Storm drainage. Tier 2 septic. Nobody sees it when it&apos;s done &mdash; but every building on the site stands on it. Run out of our Easley shop, licensed in South Carolina, North Carolina, and Georgia, and photographed before backfill.
           </p>
 
           <div className="hero-btns flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3">
@@ -274,7 +275,7 @@ export default function UtilitiesPage() {
               <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase mb-6 leading-[0.95]">Most Contractors<br /><span className="gradient-text-gold">Can&apos;t Legally Touch This</span></h2>
               <div className="w-24 gold-line mb-6" />
               <p className="text-ro-gray-400 leading-relaxed mb-4">Tapping a live water main. Running ductile iron under a parking lot. Setting a commercial grease trap. This work takes state licensing most general contractors don&apos;t hold &mdash; so it gets subbed out, and schedules slip.</p>
-              <p className="text-ro-gray-400 leading-relaxed">We hold the licenses and run our own crews and equipment. When RO Unlimited does your sitework, the underground package stays in-house &mdash; <span className="text-ro-gold">one contractor controlling the critical path from first cut to final tap.</span></p>
+              <p className="text-ro-gray-400 leading-relaxed">We hold the licenses in all three states we work &mdash; South Carolina, North Carolina, and Georgia &mdash; and we run our own crews and equipment out of Easley. When RO Unlimited does your sitework, the underground package stays in-house &mdash; <span className="text-ro-gold">one contractor controlling the critical path from first cut to final tap.</span></p>
             </div>
             <div className="moat-side space-y-3">
               {[
@@ -355,7 +356,7 @@ export default function UtilitiesPage() {
                   <span className="text-ro-white font-heading text-sm sm:text-base tracking-wider uppercase">{f.q}</span>
                   <ChevronDown size={16} className={`text-ro-gold shrink-0 transition-transform duration-300 ${expandedFaq === i ? 'rotate-180' : ''}`} />
                 </button>
-                <div className="overflow-hidden transition-all duration-500" style={{ maxHeight: expandedFaq === i ? 240 : 0, opacity: expandedFaq === i ? 1 : 0 }}>
+                <div className="overflow-hidden transition-all duration-500" style={{ maxHeight: expandedFaq === i ? 360 : 0, opacity: expandedFaq === i ? 1 : 0 }}>
                   <p className="px-5 sm:px-6 pb-5 text-ro-gray-400 text-sm leading-relaxed">{f.a}</p>
                 </div>
               </div>
