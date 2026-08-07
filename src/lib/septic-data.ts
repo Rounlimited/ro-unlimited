@@ -390,13 +390,13 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
     tagline: 'When Repair Doesn\'t Make Sense — A Full New System',
     heroDescription: 'Some systems are beyond repair: rusted-through steel tanks, collapsed drain fields, repeated failures despite maintenance. Full replacement is a major investment but the right move when the math doesn\'t favor repeated repairs. RO handles permitting, demolition, design, and installation — so you go from a failing system to a fresh 30-year asset in 2–3 weeks.',
     heroImage: '/images/services/septic/subs/backhoe-loading.jpg',
-    cardImage: '/images/services/septic/subs/mini-excavator-demo.jpg',
+    cardImage: '/images/services/septic/subs/mini-excavator-demo-v2.jpg',
     galleryImages: [
       '/images/services/septic/subs/backhoe-loading.jpg',
       '/images/services/septic/subs/septic-pump-truck.jpg',
       '/images/services/septic/subs/open-trench.jpg',
       '/images/services/septic/subs/excavator-site.jpg',
-      '/images/services/septic/subs/excavation-site-wide.jpg',
+      '/images/services/septic/subs/excavation-site-wide-v2.jpg',
       '/images/services/septic/subs/bedded-pipe-trench.jpg',
     ],
     overview: [
@@ -546,7 +546,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       '/images/services/septic/subs/flood-pump-response.jpg',
       '/images/services/septic/subs/tanker-truck.jpg',
       '/images/services/septic/subs/pipe-install-crew.jpg',
-      '/images/services/septic/subs/mini-excavator-site.jpg',
+      '/images/services/septic/subs/mini-excavator-site-v2.jpg',
     ],
     overview: [
       {

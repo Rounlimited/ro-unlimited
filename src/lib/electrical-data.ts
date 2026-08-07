@@ -167,7 +167,7 @@ export const ELECTRICAL_SUB_SERVICES: ElectricalSubService[] = [
     heroImage: '/images/services/electrical/subs/generator-hero.jpg',
     cardImage: '/images/services/electrical/subs/generator-card.jpg',
     galleryImages: [
-      '/images/services/electrical/subs/home-generator.jpg',
+      '/images/services/electrical/subs/home-generator-v2.jpg',
       '/images/services/electrical/subs/generator-hero.jpg',
       '/images/services/electrical/subs/electrician-switchboard.jpg',
       '/images/services/electrical/switchboard-closeup.jpg',

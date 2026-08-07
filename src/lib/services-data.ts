@@ -113,7 +113,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
       'New Septic Installation': '/images/services/septic/subs/backhoe-field.jpg',
       'Septic Tank Repair': '/images/services/septic/subs/pipe-connection-closeup.jpg',
       'Drain Field Repair': '/images/services/septic/subs/hand-digging-trench.jpg',
-      'Full System Replacement': '/images/services/septic/subs/system-replacement-card.jpg',
+      'Full System Replacement': '/images/services/septic/subs/system-replacement-card-v2.jpg',
       'Sewer Line Cleaning': '/images/services/septic/subs/line-cleaning-truck.jpg',
       'Emergency Septic Service': '/images/services/septic/subs/excavator-lifting-structure.jpg',
     },

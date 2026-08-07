@@ -319,8 +319,8 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
     galleryImages: [
       '/images/services/repairs/subs/fence-installation-hero.jpg',
       '/images/services/repairs/subs/wood-fence.jpg',
-      '/images/services/repairs/subs/post-setting.jpg',
-      '/images/services/repairs/subs/vinyl-fence.jpg',
+      '/images/services/repairs/subs/post-setting-v2.jpg',
+      '/images/services/repairs/subs/vinyl-fence-v2.jpg',
       '/images/services/repairs/subs/fence-gate.jpg',
       '/images/services/repairs/subs/finished-fence.jpg',
     ],
@@ -468,7 +468,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
     cardImage: '/images/services/repairs/subs/concrete-card.jpg',
     galleryImages: [
       '/images/services/repairs/subs/concrete-hero.jpg',
-      '/images/services/repairs/subs/concrete-pour.jpg',
+      '/images/services/repairs/subs/concrete-pour-v2.jpg',
       '/images/services/repairs/subs/concrete-finishing.jpg',
       '/images/services/repairs/subs/sidewalk-repair.jpg',
       '/images/services/repairs/subs/driveway-concrete.jpg',
