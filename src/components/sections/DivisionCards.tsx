@@ -318,7 +318,7 @@ export default function DivisionCards() {
               <div className="mt-3 text-center">
                 <p className="font-mono uppercase tracking-[0.35em] text-[10px] sm:text-[11px]"
                   style={{ color: 'rgba(201,168,76,0.7)' }}>
-                  Ground Up.
+                  Underground Up.
                 </p>
                 <p className="font-mono uppercase tracking-[0.35em] text-[10px] sm:text-[11px] mt-0.5"
                   style={{ color: 'rgba(255,255,255,0.35)' }}>

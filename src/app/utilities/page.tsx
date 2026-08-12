@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { COMPANY } from '@/lib/constants';
-import { ArrowRight, Phone, Droplets, ShieldCheck, ChevronDown, Waves, Flame, Layers } from 'lucide-react';
+import { ArrowRight, Phone, Droplets, ShieldCheck, ChevronDown, Waves, Layers, Building2, Drill, Route, BrickWall, Cuboid } from 'lucide-react';
 import { gsap } from '@/components/animations/GSAPProvider';
 import { UTILITY_SUB_SERVICES } from '@/lib/utilities-data';
 
@@ -267,23 +267,27 @@ export default function UtilitiesPage() {
 
       {/* â•â•â• LICENSE MOAT â•â•â• */}
       <section ref={licenseRef} className="py-24 sm:py-28 relative border-t border-ro-gray-800 overflow-hidden">
-        <Image src="/images/services/septic/excavator-digging.jpg" alt="" fill className="object-cover opacity-[0.08]" sizes="100vw" aria-hidden="true" />
+        <Image src="/images/services/septic/cat-excavator-jobsite.jpg" alt="" fill className="object-cover opacity-[0.08]" sizes="100vw" aria-hidden="true" />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="moat-copy">
               <span className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-4 block">Licensed &amp; Self-Performed</span>
               <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase mb-6 leading-[0.95]">Most Contractors<br /><span className="gradient-text-gold">Can&apos;t Legally Touch This</span></h2>
               <div className="w-24 gold-line mb-6" />
-              <p className="text-ro-gray-400 leading-relaxed mb-4">Tapping a live water main. Running ductile iron under a parking lot. Setting a commercial grease trap. This work takes state licensing most general contractors don&apos;t hold &mdash; so it gets subbed out, and schedules slip.</p>
-              <p className="text-ro-gray-400 leading-relaxed">We hold the licenses in all three states we work &mdash; South Carolina, North Carolina, and Georgia &mdash; and we run our own crews and equipment out of Easley. When RO Unlimited does your sitework, the underground package stays in-house &mdash; <span className="text-ro-gold">one contractor controlling the critical path from first cut to final tap.</span></p>
+              <p className="text-ro-gray-400 leading-relaxed mb-4">Tapping a live water main. Boring under a road that can&apos;t be cut. Running ductile iron beneath a parking lot. This work takes state license classifications most general contractors don&apos;t hold &mdash; so it gets subbed out, and schedules slip.</p>
+              <p className="text-ro-gray-400 leading-relaxed">We hold seven of them, in all three states we work &mdash; South Carolina, North Carolina, and Georgia &mdash; and we run our own crews and equipment out of Easley. When RO Unlimited does your sitework, the underground package stays in-house &mdash; <span className="text-ro-gold">one contractor controlling the critical path from first cut to final tap.</span></p>
             </div>
             <div className="moat-side space-y-3">
               {[
-                { icon: Waves, label: 'Water & Sewer License' },
-                { icon: Layers, label: 'Grading License' },
-                { icon: Flame, label: 'Tier 2 Septic / Grease Trap License' },
+                { icon: Waves, label: 'Water & Sewer' },
+                { icon: Drill, label: 'Boring & Tunneling' },
+                { icon: Route, label: 'Highway — Roads & Bridges' },
+                { icon: Layers, label: 'Grading' },
+                { icon: Building2, label: 'General Contractor — Building' },
+                { icon: Cuboid, label: 'Specialty Concrete' },
+                { icon: BrickWall, label: 'Specialty Masonry' },
               ].map(({ icon: Ic, label }) => (
-                <div key={label} className="lic-card flex items-center gap-4 p-5 border border-ro-gold/20 bg-ro-black/70 backdrop-blur-sm hover:border-ro-gold/40 transition-colors duration-300">
+                <div key={label} className="lic-card flex items-center gap-4 p-4 border border-ro-gold/20 bg-ro-black/70 backdrop-blur-sm hover:border-ro-gold/40 transition-colors duration-300">
                   <div className="w-10 h-10 flex items-center justify-center border border-ro-gold/30 bg-ro-gold/5 shrink-0"><Ic size={18} className="text-ro-gold" /></div>
                   <div>
                     <div className="text-ro-white font-heading text-sm tracking-wider uppercase">{label}</div>

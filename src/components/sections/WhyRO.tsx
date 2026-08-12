@@ -7,7 +7,7 @@ import BlueprintGrid from '@/components/animations/BlueprintGrid';
 
 const REASONS = [
   { icon: Shield, title: '25+ Years Showing Up', description: 'Two generations of earning trust across three states. Not because of marketing — because the work speaks for itself.' },
-  { icon: Wrench, title: 'One Company. Ground Up.', description: 'Land grading, foundation, structural, finishes — we don\'t hand your project off to someone else.' },
+  { icon: Wrench, title: 'One Company. Underground Up.', description: 'Utilities, grading, foundation, structural, finishes — we don\'t hand your project off to someone else.' },
   { icon: Clock, title: 'Built to Last', description: "Clients call us 20 years later because the work held up. That's the kind of builder you want." },
   { icon: Award, title: 'We Take the Hard Jobs', description: "Difficult sites, tight timelines, complex specs — we've built through all of it and came out the other side." },
 ];

@@ -179,8 +179,18 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* License classifications — sitewide E-E-A-T strip. GCs screenshot
+            this into vendor packets; it's prequal data, not decoration. */}
+        <div className="mt-16 pt-8 border-t border-ro-gray-800">
+          <p className="text-ro-gray-500 text-xs tracking-wide leading-relaxed text-center sm:text-left">
+            <span className="text-ro-gold/70 font-mono uppercase tracking-wider">Licensed in SC &middot; NC &middot; GA</span>
+            <span className="text-ro-gray-700"> — </span>
+            General Contractor (Building) &middot; Boring &amp; Tunneling &middot; Water &amp; Sewer &middot; Highway, Roads &amp; Bridges &middot; Grading &middot; Specialty Concrete &middot; Specialty Masonry. Fully insured. License documentation available for prequalification.
+          </p>
+        </div>
+
         {/* Bottom bar */}
-        <div ref={bottomBarRef} className="mt-16 pt-8 border-t border-ro-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div ref={bottomBarRef} className="mt-8 pt-8 border-t border-ro-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-ro-gray-600 text-xs tracking-wide">&copy; {new Date().getFullYear()} {COMPANY.fullName}. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <p className="text-ro-gray-700 text-xs italic">{COMPANY.tagline}</p>

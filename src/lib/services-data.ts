@@ -99,7 +99,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     cardImage: '/images/services/hub/hub-septic.jpg',
     galleryImages: [
       '/images/services/septic/septic-hero.jpg',
-      '/images/services/septic/excavator-digging.jpg',
+      '/images/services/septic/cat-excavator-jobsite.jpg',
       '/images/services/septic/drain-field.jpg',
       '/images/services/septic/equipment-jobsite.jpg',
       '/images/services/septic/subs/vacuum-truck-hero.jpg',

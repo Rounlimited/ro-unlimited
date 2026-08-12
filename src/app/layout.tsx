@@ -14,11 +14,14 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], weight: ['400', '500'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  // Title = keyword + geo + brand; the slogan never displaces the keyword here.
+  // "From the Underground Up" lives in the meta description (CTR copy) and on
+  // the page itself, where taglines belong.
   title: {
-    default: `${COMPANY.fullName} | ${COMPANY.serviceArea}`,
+    default: 'Underground Utility & Sitework Contractor | Greenville–Easley SC | RO Unlimited',
     template: `%s | ${COMPANY.name}`,
   },
-  description: `${COMPANY.experience} years of commercial and residential construction in ${COMPANY.serviceArea}. Land grading, custom homes, commercial builds, roofing, electrical, plumbing, septic, and full-service repairs.`,
+  description: 'From the underground up: water mains, hot taps, sewer, storm drainage, and septic for commercial sites — plus grading and full construction. Licensed in SC, NC & GA. Based in Easley, SC.',
   applicationName: COMPANY.name,
   authors: [{ name: COMPANY.fullName, url: SITE_URL }],
   creator: COMPANY.fullName,
@@ -29,8 +32,8 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: SITE_URL,
     siteName: COMPANY.name,
-    title: `${COMPANY.fullName} | ${COMPANY.serviceArea}`,
-    description: `${COMPANY.experience} years of construction across the tri-state. Custom homes, commercial builds, roofing, electrical, plumbing, septic, and repairs.`,
+    title: `${COMPANY.fullName} | Underground Utility & Sitework Contractor`,
+    description: 'From the underground up — water mains, sewer, storm, septic, grading, and full construction. Licensed in SC, NC & GA.',
     images: [{ url: `${SITE_URL}/og-default.jpg`, width: 1200, height: 630, alt: COMPANY.fullName }],
   },
   twitter: {
@@ -100,10 +103,28 @@ const organizationJsonLd = {
   logo: `${SITE_URL}/icons/icon-512x512.png`,
   image: `${SITE_URL}/og-default.jpg`,
   knowsAbout: [
-    'Residential Construction', 'Commercial Construction', 'Land Grading', 'Site Preparation',
-    'Roofing', 'Electrical Services', 'Plumbing', 'Septic Systems', 'Drywall Repair',
-    'Deck Building', 'Fence Installation', 'Concrete Work',
+    'Underground Utilities', 'Water Main Taps', 'Hot Taps', 'Water Line Installation',
+    'Sanitary Sewer Installation', 'Storm Drainage', 'Commercial Septic Systems',
+    'Grease Interceptors', 'Boring and Tunneling', 'Directional Boring',
+    'Highway and Bridge Construction', 'Residential Construction', 'Commercial Construction',
+    'Land Grading', 'Site Preparation', 'Roofing', 'Electrical Services', 'Plumbing',
+    'Septic Systems', 'Drywall Repair', 'Deck Building', 'Fence Installation', 'Concrete Work',
   ],
+  // The seven state license classifications RO holds (owner-confirmed 2026-08).
+  // E-E-A-T: license specifics are prequalification data for GCs, not wallpaper.
+  hasCredential: [
+    'General Contractor — Building',
+    'Boring & Tunneling',
+    'Water & Sewer Lines',
+    'Highway — Roads & Bridges',
+    'Grading',
+    'Specialty Concrete',
+    'Specialty Masonry',
+  ].map((name) => ({
+    '@type': 'EducationalOccupationalCredential',
+    credentialCategory: 'license',
+    name: `${name} License`,
+  })),
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

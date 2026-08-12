@@ -329,11 +329,23 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
             desktop. Neutral grey so the pocket reads as desaturated rather
             than merely dark, faded out by 80% so the video stays vivid around
             it with no visible edge. */}
+        {/* Desktop/tablet: centered pocket behind the centered copy. */}
         <div
-          className="absolute inset-0 z-[2] pointer-events-none"
+          className="absolute inset-0 z-[2] pointer-events-none hidden sm:block"
           style={{
             background:
               'radial-gradient(ellipse clamp(300px, 48%, 680px) 66% at 50% 50%, rgba(38,38,41,0.70) 0%, rgba(38,38,41,0.58) 42%, rgba(38,38,41,0.22) 66%, rgba(38,38,41,0) 80%)',
+          }}
+        />
+        {/* Mobile: the copy is left-aligned, so the pocket anchors left of
+            center and runs a bit wider — otherwise the text sits on the bright
+            half of the video and we're back to the legibility problem this
+            layer exists to solve. */}
+        <div
+          className="absolute inset-0 z-[2] pointer-events-none sm:hidden"
+          style={{
+            background:
+              'radial-gradient(ellipse 130% 62% at 38% 50%, rgba(38,38,41,0.72) 0%, rgba(38,38,41,0.60) 40%, rgba(38,38,41,0.24) 68%, rgba(38,38,41,0) 82%)',
           }}
         />
         {/* Faint grey wash — just enough matte film character across the frame.
@@ -341,8 +353,12 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
             whole video, so the vignette above carries most of it. */}
         <div className="absolute inset-0 z-[2] pointer-events-none" style={{ background: 'rgba(115,115,115,0.06)' }} />
 
-        <div className="relative z-[10] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-4 lg:pt-8 lg:pb-8">
-          <div className="text-center">
+        <div className="relative z-[10] w-full max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-4 pb-4 lg:pt-8 lg:pb-8">
+          {/* Mobile is left-aligned (editorial, thumb-scannable); sm+ keeps the
+              centered monument layout. Every centered child below carries the
+              same sm: split — and so does the vignette overlay above, which has
+              to follow the copy column or the text slides off its dark pocket. */}
+          <div className="text-left sm:text-center">
 
             {/* Badge */}
             <div ref={badgeRef} className="inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/20 bg-ro-gold/5 mb-8">
@@ -360,37 +376,44 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
               <span ref={line2Ref} className="block gradient-text-gold font-heading text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight uppercase leading-[0.9] mb-4 drop-shadow-[0_2px_14px_rgba(0,0,0,0.75)]">
                 Everything
               </span>
-              <span ref={line3Ref} className="block text-ro-white font-heading text-3xl sm:text-4xl md:text-5xl tracking-wider uppercase leading-[0.9] drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
-                From the Ground Up
+              {/* The char-rise animation IS this line's meaning: the letters
+                  climb up from below the mask — from the underground, up —
+                  with the gold weld line drawing "grade level" right beneath.
+                  Mobile breaks after "From the" so the pun lands on its own
+                  line instead of wrapping mid-word. */}
+              <span ref={line3Ref} className="block text-ro-white font-heading text-3xl sm:text-4xl md:text-5xl tracking-wider uppercase leading-[1.05] sm:leading-[0.9] drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
+                From the <br className="sm:hidden" />Underground Up
               </span>
             </h1>
 
             {/* Gold welding line */}
-            <div ref={goldLineRef} className="mx-auto my-8 w-32 h-[2px] bg-ro-gold"
+            <div ref={goldLineRef} className="sm:mx-auto my-8 w-32 h-[2px] bg-ro-gold"
               style={{ boxShadow: '0 0 8px rgba(201,168,76,0.4), 0 0 16px rgba(201,168,76,0.2)' }}
             />
 
             {/* Description */}
-            <p ref={descRef} className="max-w-2xl mx-auto text-ro-white/90 text-lg sm:text-xl font-body leading-relaxed tracking-wide mb-12 drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]">
-              Commercial. Residential. Ground-up construction &mdash; from site prep to luxury finishes. One company that shows up, builds right, and stands behind every job.
+            <p ref={descRef} className="max-w-2xl sm:mx-auto text-ro-white/90 text-lg sm:text-xl font-body leading-relaxed tracking-wide mb-12 drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]">
+              Underground utilities. Sitework. Commercial and residential construction &mdash; one company, licensed in SC, NC &amp; GA, from the first cut to the finished build.
             </p>
 
             {/* CTAs */}
-            <div ref={ctaRef} className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-              <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300">
+            {/* Mobile: full-width stacked buttons (whole-thumb tap targets);
+                sm+: the original centered pair. */}
+            <div ref={ctaRef} className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-center gap-4 mb-16">
+              <Link href="/contact" className="group flex items-center justify-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300">
                 Send Us Your Project <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </Link>
-              <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="group flex items-center gap-3 px-8 py-4 border border-ro-gold/30 text-ro-gold font-heading text-sm tracking-wider uppercase hover:bg-ro-gold/5 hover:border-ro-gold/50 transition-all duration-300">
+              <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="group flex items-center justify-center gap-3 px-8 py-4 border border-ro-gold/30 text-ro-gold font-heading text-sm tracking-wider uppercase hover:bg-ro-gold/5 hover:border-ro-gold/50 transition-all duration-300">
                 <Phone size={16} />{COMPANY.phone}
               </a>
             </div>
 
             {/* Trust Stats */}
-            <div ref={statsRef} className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
+            <div ref={statsRef} className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl sm:mx-auto">
               {TRUST_STATS.map((stat) => {
                 const { num, suffix } = parseStatValue(stat.value);
                 return (
-                  <div key={stat.label} className="text-center">
+                  <div key={stat.label} className="text-left sm:text-center">
                     <div className="text-ro-gold font-heading text-3xl sm:text-4xl mb-1">
                       <CountUp end={num} suffix={suffix} duration={2} />
                     </div>

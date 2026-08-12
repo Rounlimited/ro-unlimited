@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { gsap } from '@/components/animations/GSAPProvider';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import StickyCallBar from '@/components/layout/StickyCallBar';
 
 /**
  * Shared RO loading screen for the main public site.
@@ -111,6 +112,7 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
       <Navbar />
       <main className="min-h-screen">{children}</main>
       <Footer />
+      <StickyCallBar />
     </>
   );
 }
