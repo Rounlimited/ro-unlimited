@@ -7,6 +7,7 @@ import { COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone, Droplets, ShieldCheck, ChevronDown, Waves, Layers, Building2, Drill, Route, BrickWall, Cuboid } from 'lucide-react';
 import { gsap } from '@/components/animations/GSAPProvider';
 import { UTILITY_SUB_SERVICES } from '@/lib/utilities-data';
+import UtilityPlanBackdrop from '@/components/sections/UtilityPlanBackdrop';
 
 // Slugs that have a built-out detail page today. Cards for anything not in
 // here stay non-clickable rather than linking to a 404.
@@ -190,7 +191,8 @@ export default function UtilitiesPage() {
   }, [mounted]);
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} className="relative">
+      <UtilityPlanBackdrop />
       <style>{`
         @keyframes util-ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
         .util-ticker-track { animation: util-ticker 40s linear infinite; }

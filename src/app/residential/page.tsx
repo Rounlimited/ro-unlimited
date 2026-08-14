@@ -78,7 +78,7 @@ export default function ResidentialPage() {
   const [videoScale, setVideoScale] = useState(1);
 
   useEffect(() => {
-    fetch('/api/admin/settings')
+    fetch('/api/public/site-media')
       .then(r => r.json())
       .then(data => {
         if (data?.residentialVideoUrl) setVideoUrl(data.residentialVideoUrl);

@@ -292,7 +292,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
           </p>
 
           <div className="hero-btns flex flex-col sm:flex-row gap-3">
-            <Link href="/contact" className="group inline-flex items-center gap-2 px-6 py-3 bg-ro-gold text-ro-black font-heading text-xs tracking-[0.15em] uppercase hover:bg-ro-gold-light transition-all duration-300 whitespace-nowrap">
+            <Link href="/contact" className="gold-pin group inline-flex items-center gap-2 px-6 py-3 bg-ro-gold text-ro-black font-heading text-xs tracking-[0.15em] uppercase hover:bg-ro-gold-light transition-all duration-300 whitespace-nowrap">
               Get a Quote <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
             </Link>
             <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="inline-flex items-center gap-2 px-6 py-3 border border-ro-gold/30 text-ro-gold font-heading text-xs tracking-[0.15em] uppercase hover:bg-ro-gold/5 hover:border-ro-gold/50 transition-all duration-300 backdrop-blur-sm whitespace-nowrap">
@@ -692,7 +692,7 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
               <Phone size={24} className="flex-shrink-0" /> {COMPANY.phone}
             </a>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/contact" className="group flex items-center gap-3 px-10 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-[0.15em] uppercase hover:bg-ro-gold-light transition-all duration-300">
+              <Link href="/contact" className="gold-pin group flex items-center gap-3 px-10 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-[0.15em] uppercase hover:bg-ro-gold-light transition-all duration-300">
                 Request a Quote <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>

@@ -84,7 +84,7 @@ export default function CommercialPage() {
   const [videoScale, setVideoScale] = useState(1);
 
   useEffect(() => {
-    fetch('/api/admin/settings')
+    fetch('/api/public/site-media')
       .then(r => r.json())
       .then(data => {
         if (data?.commercialVideoUrl) setVideoUrl(data.commercialVideoUrl);

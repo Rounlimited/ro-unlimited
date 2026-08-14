@@ -10,9 +10,13 @@ const config: Config = {
       colors: {
         ro: {
           black: '#1A1A1A',
-          gold: '#C9A84C',
-          'gold-light': '#D4B965',
-          'gold-dark': '#A88A3D',
+          // Gold is var-driven so a wrapper class can re-theme a subtree
+          // (.ud-theme flips these to Utility Division orange). Defaults in
+          // globals.css :root are the exact same values as before — zero
+          // visual change anywhere the vars aren't overridden.
+          gold: 'rgb(var(--ro-gold-rgb) / <alpha-value>)',
+          'gold-light': 'rgb(var(--ro-gold-light-rgb) / <alpha-value>)',
+          'gold-dark': 'rgb(var(--ro-gold-dark-rgb) / <alpha-value>)',
           white: '#FFFFFF',
           gray: {
             100: '#F5F5F5', 200: '#E5E5E5', 300: '#D4D4D4', 400: '#A3A3A3',

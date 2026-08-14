@@ -8,6 +8,11 @@
     --ro-gold: #C9A84C;
     --ro-gold-light: #D4B965;
     --ro-gold-dark: #A88A3D;
+    /* RGB triplets backing the Tailwind ro-gold tokens (tailwind.config.ts).
+       Same values as the hex vars above — overridden only inside .ud-theme. */
+    --ro-gold-rgb: 201 168 76;
+    --ro-gold-light-rgb: 212 185 101;
+    --ro-gold-dark-rgb: 168 138 61;
     --ro-white: #FFFFFF;
     --ro-navy: #0F1F3D;
     --ro-navy-mid: #1B3060;
@@ -104,6 +109,28 @@
     -moz-osx-font-smoothing: grayscale;
   }
   ::selection { background-color: rgba(201,168,76,0.3); color: #FFFFFF; }
+}
+
+/* ── Utility Division theme ──────────────────────────────────────────────── */
+/* Wrap a subtree in .ud-theme and every ro-gold Tailwind class inside it
+   (text/border/bg + alpha variants, gradient-text-gold, gold-line) renders in
+   the division orange from JR's Utility Division badge. Used on
+   /utilities/[sub]. .gold-pin re-pins CTAs back to brand gold inside it. */
+.ud-theme {
+  --ro-gold-rgb: 248 75 12;        /* #F84B0C */
+  --ro-gold-light-rgb: 255 138 80; /* #FF8A50 */
+  --ro-gold-dark-rgb: 201 58 6;    /* #C93A06 */
+  --ro-gold: #F84B0C;
+  --ro-gold-light: #FF8A50;
+  --ro-gold-dark: #C93A06;
+}
+.gold-pin {
+  --ro-gold-rgb: 201 168 76;
+  --ro-gold-light-rgb: 212 185 101;
+  --ro-gold-dark-rgb: 168 138 61;
+  --ro-gold: #C9A84C;
+  --ro-gold-light: #D4B965;
+  --ro-gold-dark: #A88A3D;
 }
 
 /* ── Neon Glow Icon Utilities ────────────────────────────────────────────── */
