@@ -74,6 +74,8 @@ interface EmailAccount {
   display_name: string;
 }
 
+import EstimatePhotos, { EstimatePhoto } from '@/components/admin/estimates/EstimatePhotos';
+
 interface Estimate {
   id: string;
   estimate_number: string;
@@ -88,6 +90,7 @@ interface Estimate {
   version: number;
   scope_of_work: string | null;
   description: string | null;
+  photos: EstimatePhoto[] | null;
   overhead_percent: number;
   markup_percent: number;
   tax_percent: number;
@@ -360,6 +363,7 @@ export default function EstimateDetailPage() {
           contract_type: estimate.contract_type,
           scope_of_work: estimate.scope_of_work,
           description: estimate.description,
+          photos: estimate.photos || [],
           overhead_percent: estimate.overhead_percent,
           markup_percent: estimate.markup_percent,
           tax_percent: estimate.tax_percent,
@@ -774,6 +778,28 @@ export default function EstimateDetailPage() {
                 />
               </div>
             )}
+
+            {/* Job-Site Photos — editable in place; each change PATCHes
+                immediately so nothing is lost on navigation */}
+            <div className="bg-[#111] border border-white/5 rounded-xl p-5">
+              <h3 className="text-[17px] font-semibold text-white mb-3">Job-Site Photos</h3>
+              <EstimatePhotos
+                compact
+                photos={estimate.photos || []}
+                onChange={async (next) => {
+                  setEstimate({ ...estimate, photos: next });
+                  try {
+                    await fetch(`/api/admin/estimates/${estimate.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ photos: next }),
+                    });
+                  } catch (e) {
+                    console.error('Failed to save photos', e);
+                  }
+                }}
+              />
+            </div>
 
             {/* Quick Financial Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

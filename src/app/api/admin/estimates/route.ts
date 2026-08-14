@@ -132,6 +132,7 @@ export async function POST(req: NextRequest) {
         project_duration_days: body.project_duration_days || null,
         weather_days: body.weather_days ?? 0,
         schedule_notes: body.schedule_notes || null,
+        photos: Array.isArray(body.photos) ? body.photos : [],
       })
       .select()
       .single();

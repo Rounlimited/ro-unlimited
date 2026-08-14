@@ -400,6 +400,33 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
         </View>
         {/* ═══ END Rule 8 page-1 block ═══ */}
 
+        {/* ═══ 3A-2. JOB-SITE PHOTOS — if present ═══
+            Sanity CDN urls get fm=jpg forced: @react-pdf can't decode webp,
+            and auto=format would happily serve it. Two per row, captioned,
+            wrap={false} per card so a photo never splits across pages. */}
+        {Array.isArray(estimate.photos) && estimate.photos.length > 0 && (
+          <View style={{ marginBottom: sectionGap }}>
+            <Text style={s.sectionLabel}>Job-Site Photos</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {estimate.photos.map((photo: any, i: number) => (
+                <View key={i} wrap={false} style={{ width: '48%', marginBottom: 6 }}>
+                  <Image
+                    src={photo.url.includes('cdn.sanity.io')
+                      ? `${photo.url}${photo.url.includes('?') ? '&' : '?'}w=800&fm=jpg`
+                      : photo.url}
+                    style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 3 }}
+                  />
+                  {photo.caption ? (
+                    <Text style={{ fontSize: 8.5, color: c.textMed, marginTop: 3, lineHeight: 1.4 }}>
+                      {photo.caption}
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* ═══ 3B. INCLUSIONS — if present ═══ */}
         {inclusionsList.length > 0 && (
           <View style={{ marginBottom: sectionGap }} wrap={false}>

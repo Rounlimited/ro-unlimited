@@ -10,6 +10,7 @@ import {
 import WizardStep1 from '@/components/admin/estimates/WizardStep1';
 import WizardStep2 from '@/components/admin/estimates/WizardStep2';
 import WizardStep3 from '@/components/admin/estimates/WizardStep3';
+import EstimatePhotos, { EstimatePhoto } from '@/components/admin/estimates/EstimatePhotos';
 import WizardStep4 from '@/components/admin/estimates/WizardStep4';
 import WizardStep5 from '@/components/admin/estimates/WizardStep5';
 import WizardStep6 from '@/components/admin/estimates/WizardStep6';
@@ -105,6 +106,7 @@ export default function NewEstimateWizard() {
 
   // Step 3 data
   const [scopeHtml, setScopeHtml] = useState('');
+  const [photos, setPhotos] = useState<EstimatePhoto[]>([]);
 
   // Step 4 data
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -177,6 +179,7 @@ export default function NewEstimateWizard() {
 
         // Step 3
         setScopeHtml(data.scope_of_work || data.project_description || '');
+        if (Array.isArray(data.photos) && data.photos.length) setPhotos(data.photos);
 
         // Step 4 — line items
         if (data.line_items?.length) {
@@ -492,7 +495,7 @@ export default function NewEstimateWizard() {
           break;
         }
         case 3: {
-          await patchEstimate({ scope_of_work: scopeHtml });
+          await patchEstimate({ scope_of_work: scopeHtml, photos });
           break;
         }
         case 4: {
@@ -560,7 +563,7 @@ export default function NewEstimateWizard() {
           });
           break;
         case 3:
-          await patchEstimate({ scope_of_work: scopeHtml });
+          await patchEstimate({ scope_of_work: scopeHtml, photos });
           break;
         case 4:
           await saveLineItems();
@@ -641,6 +644,7 @@ export default function NewEstimateWizard() {
           estimate_type: step1.estimate_type,
           contract_type: step1.contract_type,
           scope_of_work: scopeHtml,
+          photos,
           overhead_percent: financials.overhead_percent,
           markup_percent: financials.markup_percent,
           tax_percent: financials.tax_percent,
@@ -875,10 +879,24 @@ export default function NewEstimateWizard() {
             />
           )}
           {currentStep === 3 && (
-            <WizardStep3
-              content={scopeHtml}
-              onSave={html => setScopeHtml(html)}
-            />
+            <div className="space-y-8">
+              <WizardStep3
+                content={scopeHtml}
+                onSave={html => setScopeHtml(html)}
+              />
+              <div>
+                <div className="text-[17px] font-semibold text-white mb-3">Job-Site Photos</div>
+                <EstimatePhotos
+                  photos={photos}
+                  onChange={(next) => {
+                    setPhotos(next);
+                    // Persist right away — an uploaded photo shouldn't be lost
+                    // if the user backs out without hitting Next.
+                    patchEstimate({ photos: next }).catch(() => {});
+                  }}
+                />
+              </div>
+            </div>
           )}
           {currentStep === 4 && (
             <WizardStep4

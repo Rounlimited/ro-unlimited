@@ -52,6 +52,7 @@ interface EstimateData {
   estimate_type: string | null;
   contract_type: string | null;
   scope_of_work: string | null;
+  photos: { url: string; caption?: string }[] | null;
   project_description: string | null;
   subtotal: number;
   overhead_percent: number;
@@ -363,6 +364,37 @@ export default function PublicEstimatePage() {
               className="text-[14px] text-gray-700 leading-relaxed prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{ __html: scopeHtml }}
             />
+          </div>
+        )}
+
+        {/* ─── Job-Site Photos ────────────────────────────────── */}
+        {Array.isArray(estimate.photos) && estimate.photos.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+            <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-4">Job-Site Photos</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {estimate.photos.map((photo, i) => (
+                <a
+                  key={i}
+                  href={photo.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block group"
+                >
+                  <div className="aspect-[4/3] rounded-lg overflow-hidden bg-gray-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photo.url.includes('cdn.sanity.io') ? `${photo.url}?w=640&auto=format` : photo.url}
+                      alt={photo.caption || `Job-site photo ${i + 1}`}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  {photo.caption && (
+                    <p className="text-[13px] text-gray-600 mt-1.5 leading-snug">{photo.caption}</p>
+                  )}
+                </a>
+              ))}
+            </div>
           </div>
         )}
 
