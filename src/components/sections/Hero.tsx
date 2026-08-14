@@ -382,7 +382,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
                   Mobile breaks after "From the" so the pun lands on its own
                   line instead of wrapping mid-word. */}
               <span ref={line3Ref} className="block text-ro-white font-heading text-3xl sm:text-4xl md:text-5xl tracking-wider uppercase leading-[1.05] sm:leading-[0.9] drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
-                From the <br className="sm:hidden" />Underground Up
+                From the <br className="sm:hidden" />&ldquo;Underground Up&rdquo;
               </span>
             </h1>
 
