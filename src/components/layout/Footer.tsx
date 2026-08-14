@@ -189,6 +189,10 @@ export default function Footer() {
           </p>
           <p className="text-ro-gray-600 text-xs tracking-wide mt-1.5 text-center sm:text-left font-mono">
             GC Lic #CLG 127704 &middot; Onsite Wastewater Lic #OSWW10837 &middot; Mechanical Lic #CLM119115
+            <span className="text-ro-gray-700"> &middot; </span>
+            <a href="/api/capability-statement" target="_blank" rel="noopener" className="text-ro-gold/70 hover:text-ro-gold underline underline-offset-2 transition-colors">
+              Download Capability Statement (PDF)
+            </a>
           </p>
         </div>
 

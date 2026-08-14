@@ -336,7 +336,12 @@ export default function UtilitiesPage() {
                   </div>
                 </div>
               ))}
-              <p className="text-ro-gray-600 text-xs pt-2">License documentation available on request for prequalification and lender packages.</p>
+              <p className="text-ro-gray-600 text-xs pt-2">
+                License documentation available on request for prequalification and lender packages.{' '}
+                <a href="/api/capability-statement" target="_blank" rel="noopener" className="underline underline-offset-2 transition-colors" style={{ color: UD.orange }}>
+                  Download our capability statement (PDF)
+                </a>.
+              </p>
             </div>
           </div>
         </div>
