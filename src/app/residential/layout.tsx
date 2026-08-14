@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Residential Construction — Custom Homes & Luxury Renovations | RO Unlimited',
+  title: 'Residential Construction — Custom Homes & Luxury Renovations',
   description: 'Residential builder in Upstate SC by RO Unlimited. Custom home framing, ground-up new builds, complex structural shells, luxury interior renovations, modern industrial design, and vaulted ceilings. 25+ years experience. Call (864) 304-0139.',
   keywords: ['custom home builder Greenville SC', 'residential construction Upstate SC', 'luxury renovation SC', 'home framing contractor', 'new home builder Greenville', 'modern industrial home design'],
   alternates: { canonical: 'https://rounlimited.com/residential' },

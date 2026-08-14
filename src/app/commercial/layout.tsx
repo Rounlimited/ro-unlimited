@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Commercial Construction — Steel Builds & Retail Storefronts | RO Unlimited',
+  title: 'Commercial Construction — Steel Builds & Retail Storefronts',
   description: 'Commercial builder in Upstate SC by RO Unlimited. Steel and mixed-material construction, retail storefronts, complex sites, development consulting, and large-scale commercial projects. 25+ years experience. Call (864) 304-0139.',
   keywords: ['commercial contractor Greenville SC', 'steel building construction Upstate SC', 'retail storefront builder', 'commercial development SC', 'commercial construction tri-state', 'mixed material commercial build'],
   alternates: { canonical: 'https://rounlimited.com/commercial' },

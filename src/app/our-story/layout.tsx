@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Our Story — 25+ Years of Construction in the Tri-State | RO Unlimited',
+  title: 'Our Story — 25+ Years of Construction in the Tri-State',
   description: 'Learn the story behind RO Unlimited — 25+ years of residential, commercial, and service work across Georgia, South Carolina, and North Carolina. Family-owned. Built on showing up.',
   alternates: { canonical: 'https://rounlimited.com/our-story' },
   openGraph: {

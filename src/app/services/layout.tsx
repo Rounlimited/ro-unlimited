@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'RO Services — Roofing, Plumbing, Electrical, Septic & Repairs | RO Unlimited',
+  title: 'RO Services — Roofing, Plumbing, Electrical, Septic & Repairs',
   description: 'RO Unlimited\'s Services Division handles roofing, plumbing, electrical, septic systems, and general repairs across Upstate SC, Georgia, and North Carolina. Licensed, insured, 25+ years experience. Call (864) 304-0139.',
   openGraph: {
     title: 'RO Services — Roofing, Plumbing, Electrical, Septic & Repairs',

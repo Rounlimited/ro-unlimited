@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { DIVISIONS } from '@/lib/constants';
 import { ArrowRight, Home, Building2, Mountain, HardHat, Wrench, Droplets } from 'lucide-react';
 import { gsap, ScrollTrigger, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
-import BlueprintGrid from '@/components/animations/BlueprintGrid';
+import SitePlanBackdrop from '@/components/sections/SitePlanBackdrop';
 
 // Homepage shows featured divisions only — residential & small services
 // stay live as pages (SEO + referrals) but off the front door.
@@ -196,7 +196,7 @@ export default function DivisionCards() {
         ref={sectionRef}
         className="sticky top-0 h-screen overflow-hidden bg-ro-black"
       >
-        <BlueprintGrid intensity="medium" animate={true} />
+        <SitePlanBackdrop />
 
         {/* Gradient overlays */}
         <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-transparent to-ro-black pointer-events-none z-[1]" />

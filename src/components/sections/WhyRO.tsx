@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import { Shield, Clock, Wrench, Award } from 'lucide-react';
 import { gsap, ScrollTrigger, SplitText, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
-import BlueprintGrid from '@/components/animations/BlueprintGrid';
+import SitePlanBackdrop from '@/components/sections/SitePlanBackdrop';
 
 const REASONS = [
   { icon: Shield, title: '25+ Years Showing Up', description: 'Two generations of earning trust across three states. Not because of marketing — because the work speaks for itself.' },
@@ -275,7 +275,7 @@ export default function WhyRO() {
       ref={sectionRef}
       className="lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden bg-ro-black"
     >
-      <BlueprintGrid intensity="medium" animate={true} />
+      <SitePlanBackdrop />
 
       {/* Gradient overlays */}
       <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-transparent to-ro-black pointer-events-none z-[1]" />

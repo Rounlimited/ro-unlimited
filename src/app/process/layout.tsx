@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'The Build Process — How We Take Projects from Start to Finish | RO Unlimited',
+  title: 'The Build Process — How We Take Projects from Start to Finish',
   description: 'See how RO Unlimited takes projects from raw land to finished product. Architectural design, planning, permitting, construction management, quality assurance, and final delivery.',
   alternates: { canonical: 'https://rounlimited.com/process' },
   openGraph: {

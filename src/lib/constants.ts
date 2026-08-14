@@ -59,15 +59,17 @@ export const DIVISIONS = [
   },
 ] as const;
 
+// Order tells the story: what we do (the four divisions in build sequence —
+// dirt, underground, vertical, upkeep), then who we are, then contact.
 export const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Site Development', href: '/grading' },
   { label: 'Utilities', href: '/utilities' },
   { label: 'Commercial', href: '/commercial' },
-  { label: 'Our Process', href: '/process' },
-  { label: 'Our Story', href: '/our-story' },
   { label: 'Residential', href: '/residential' },
   { label: 'Services', href: '/services' },
+  { label: 'Our Process', href: '/process' },
+  { label: 'Our Story', href: '/our-story' },
   { label: 'Contact', href: '/contact' },
 ] as const;
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone } from 'lucide-react';
 import CraneAnimation from '@/components/animations/CraneAnimation';
+import SitePlanBackdrop from '@/components/sections/SitePlanBackdrop';
 
 export default function ConstructionCTA() {
   const [mounted, setMounted] = useState(false);
@@ -47,6 +48,7 @@ export default function ConstructionCTA() {
   if (!mounted) {
     return (
       <section className="relative py-24 overflow-hidden">
+        <SitePlanBackdrop />
         <div className="absolute inset-0 steel-texture" />
         <div className="absolute inset-0 blueprint-overlay opacity-50" />
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
