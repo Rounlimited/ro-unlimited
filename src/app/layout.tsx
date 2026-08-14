@@ -113,17 +113,21 @@ const organizationJsonLd = {
   // The seven state license classifications RO holds (owner-confirmed 2026-08).
   // E-E-A-T: license specifics are prequalification data for GCs, not wallpaper.
   hasCredential: [
-    'General Contractor — Building',
-    'Boring & Tunneling',
-    'Water & Sewer Lines',
-    'Highway — Roads & Bridges',
-    'Grading',
-    'Specialty Concrete',
-    'Specialty Masonry',
-  ].map((name) => ({
+    // License numbers as printed on the Utility Division seal (owner's badge)
+    { name: 'General Contractor — Building License', id: 'CLG 127704' },
+    { name: 'Onsite Wastewater License', id: 'OSWW10837' },
+    { name: 'Mechanical License', id: 'CLM119115' },
+    { name: 'Boring & Tunneling License' },
+    { name: 'Water & Sewer Lines License' },
+    { name: 'Highway — Roads & Bridges License' },
+    { name: 'Grading License' },
+    { name: 'Specialty Concrete License' },
+    { name: 'Specialty Masonry License' },
+  ].map(({ name, id }: { name: string; id?: string }) => ({
     '@type': 'EducationalOccupationalCredential',
     credentialCategory: 'license',
-    name: `${name} License`,
+    name,
+    ...(id ? { identifier: id } : {}),
   })),
 };
 

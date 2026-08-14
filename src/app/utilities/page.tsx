@@ -56,6 +56,33 @@ const GALLERY = [
   '/images/utilities/jr-grease-interceptor.jpg',
 ];
 
+/* ── Utility Division palette — lifted from JR's Utility Division badge.
+   Orange #F84B0C + blue #014BE6: APWA locate-paint colors (orange = comms,
+   blue = potable water) — the marks crews spray on grade before digging.
+   Gold stays reserved for CTAs so the division accent never fights the
+   sitewide brand. */
+const UD = { orange: '#F84B0C', blue: '#3D7BFF', blueDeep: '#014BE6' };
+
+/** Divider drawn as locate marks — short paint dashes, alternating colors. */
+function LocateMarks({ className = '' }: { className?: string }) {
+  return (
+    <div className={`flex items-center gap-2 ${className}`} aria-hidden="true">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <span
+          key={i}
+          className="h-[3px] rounded-full"
+          style={{
+            width: i % 3 === 1 ? 26 : 16,
+            background: i % 2 === 0 ? UD.orange : UD.blueDeep,
+            transform: `rotate(${i % 2 === 0 ? -4 : 3}deg)`,
+            opacity: i % 3 === 2 ? 0.55 : 0.9,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 const FAQS = [
   { q: 'Can you tap into a live water main?', a: 'Yes \u2014 that\u2019s exactly what our water & sewer license covers. We perform hot taps on live mains with tapping sleeves and valves, so the surrounding system stays in service while your property gets connected.' },
   { q: 'Do you sub out the utility work?', a: 'No. Underground utilities are self-performed \u2014 our crews, our equipment, our licenses. That\u2019s the point: when the same contractor controls the sitework and the underground package, the critical path doesn\u2019t slip waiting on someone else\u2019s schedule.' },
@@ -178,19 +205,19 @@ export default function UtilitiesPage() {
         <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ zIndex: 2, background: 'radial-gradient(circle, rgba(201,168,76,0.05) 0%, transparent 70%)' }} />
 
         <div className="relative z-10 flex flex-col justify-center flex-1 px-6 sm:px-10 lg:pl-16 pt-28 pb-6" style={{ maxWidth: 'min(560px, 100%)' }}>
-          <div className="hero-badge inline-flex items-center gap-2 px-4 py-1.5 border border-ro-gold/25 bg-ro-black/40 backdrop-blur-sm mb-7 self-start">
-            <Droplets size={12} className="text-ro-gold flex-shrink-0" />
-            <span className="text-ro-gold text-[10px] font-mono tracking-[0.3em] uppercase">Underground Utilities Division</span>
+          <div className="hero-badge inline-flex items-center gap-2 px-4 py-1.5 bg-ro-black/40 backdrop-blur-sm mb-7 self-start" style={{ border: `1px solid ${UD.orange}40` }}>
+            <Droplets size={12} className="flex-shrink-0" style={{ color: UD.blue }} />
+            <span className="text-[10px] font-mono tracking-[0.3em] uppercase" style={{ color: UD.orange }}>Underground Utilities Division</span>
           </div>
 
           <h1 className="font-heading uppercase leading-[0.88] tracking-tight mb-6" style={{ fontSize: 'clamp(2.6rem, 5.5vw, 4.6rem)' }}>
             <span className="hero-text-fade">The Best Work</span><br />
-            <span className="gradient-text-gold">Gets Buried.</span>
+            <span style={{ background: `linear-gradient(135deg, ${UD.orange}, #FF8A50)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Gets Buried.</span>
           </h1>
 
-          <div className="hero-gold-line w-10 h-[2px] bg-gradient-to-r from-ro-gold/80 to-transparent mb-6" />
+          <div className="hero-gold-line w-10 h-[2px] mb-6" style={{ background: `linear-gradient(to right, ${UD.orange}cc, transparent)` }} />
 
-          <p className="hero-desc text-sm sm:text-base leading-relaxed mb-8 max-w-sm text-ro-gray-200 border-l-2 border-ro-gold/70 bg-ro-black/50 backdrop-blur-md pl-4 pr-4 py-3.5" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>
+          <p className="hero-desc text-sm sm:text-base leading-relaxed mb-8 max-w-sm text-ro-gray-200 border-l-2 bg-ro-black/50 backdrop-blur-md pl-4 pr-4 py-3.5" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.6)', borderLeftColor: UD.blue + 'b3' }}>
             Water mains. Sewer taps. Storm drainage. Tier 2 septic. Nobody sees it when it&apos;s done &mdash; but every building on the site stands on it. Run out of our Easley shop, licensed in South Carolina, North Carolina, and Georgia, and photographed before backfill.
           </p>
 
@@ -205,10 +232,10 @@ export default function UtilitiesPage() {
         </div>
 
         <div className="hero-stats relative z-10 mt-auto">
-          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-ro-gold/10 border-t border-ro-gold/10" style={{ background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(12px)' }}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-white/10 border-t border-white/10" style={{ background: 'rgba(10,10,10,0.85)', backdropFilter: 'blur(12px)' }}>
             {HERO_STATS.map((s, i) => (
               <div key={i} className="px-4 sm:px-6 py-4 text-center">
-                <div className="font-heading text-xl sm:text-2xl text-ro-gold tracking-tight">{s.value}</div>
+                <div className="font-heading text-xl sm:text-2xl tracking-tight" style={{ color: UD.orange }}>{s.value}</div>
                 <div className="text-ro-gray-600 text-[10px] font-mono tracking-wider uppercase mt-0.5">{s.label}</div>
               </div>
             ))}
@@ -217,10 +244,10 @@ export default function UtilitiesPage() {
       </section>
 
       {/* â•â•â• SPEC TICKER â•â•â• */}
-      <div className="relative overflow-hidden border-y border-ro-gold/15 bg-ro-black py-3 select-none" aria-hidden="true">
+      <div className="relative overflow-hidden border-y bg-ro-black py-3 select-none" style={{ borderColor: `${UD.orange}26` }} aria-hidden="true">
         <div className="util-ticker-track flex whitespace-nowrap w-max">
-          <span className="text-ro-gold/60 font-mono text-[11px] tracking-[0.3em]">{TICKER}</span>
-          <span className="text-ro-gold/60 font-mono text-[11px] tracking-[0.3em]">{TICKER}</span>
+          <span className="font-mono text-[11px] tracking-[0.3em]" style={{ color: `${UD.orange}99` }}>{TICKER}</span>
+          <span className="font-mono text-[11px] tracking-[0.3em]" style={{ color: `${UD.orange}99` }}>{TICKER}</span>
         </div>
       </div>
 
@@ -229,9 +256,9 @@ export default function UtilitiesPage() {
         <div className="absolute inset-0 blueprint-overlay opacity-30" />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="section-head text-center mb-14 sm:mb-20">
-            <span className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-4 block">What We Put In The Ground</span>
+            <span className="text-xs font-mono tracking-[0.3em] uppercase mb-4 block" style={{ color: UD.orange }}>What We Put In The Ground</span>
             <h2 className="text-ro-white font-heading text-3xl sm:text-4xl lg:text-5xl tracking-tight uppercase">Water &middot; Sewer &middot; Storm &middot; Septic</h2>
-            <div className="mx-auto w-24 gold-line mt-5" />
+            <LocateMarks className="justify-center mt-5" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {CAPABILITIES.map((cap) => {
@@ -241,21 +268,21 @@ export default function UtilitiesPage() {
               const Wrapper = (hasDetail ? Link : 'div') as React.ElementType;
               const wrapperProps = hasDetail ? { href: `/utilities/${cap.slug}` } : {};
               return (
-              <Wrapper key={cap.num} {...wrapperProps} className="cap-card group relative border border-ro-gray-800 hover:border-ro-gold/30 bg-ro-black/60 overflow-hidden transition-colors duration-500 block">
+              <Wrapper key={cap.num} {...wrapperProps} className="cap-card group relative border border-ro-gray-800 hover:border-[#3D7BFF]/50 bg-ro-black/60 overflow-hidden transition-colors duration-500 block">
                 <div className="relative h-44 sm:h-48 overflow-hidden">
                   <Image src={cap.img} alt={cap.title} fill className="object-cover transition-transform duration-700 group-hover:scale-110" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
                   <div className="absolute inset-0 bg-gradient-to-t from-ro-black via-ro-black/30 to-transparent" />
-                  <div className="absolute bottom-3 left-4 text-ro-gold font-mono text-xs tracking-widest">{cap.num}</div>
+                  <div className="absolute bottom-3 left-4 font-mono text-xs tracking-widest" style={{ color: UD.orange }}>{cap.num}</div>
                 </div>
                 <div className="p-5 sm:p-6">
-                  <h3 className="text-ro-white font-heading text-base sm:text-lg tracking-wider uppercase mb-2 group-hover:text-ro-gold transition-colors duration-300">{cap.title}</h3>
+                  <h3 className="text-ro-white font-heading text-base sm:text-lg tracking-wider uppercase mb-2 group-hover:text-[#FF8A50] transition-colors duration-300">{cap.title}</h3>
                   <p className="text-ro-gray-500 text-sm leading-relaxed">{cap.desc}</p>
                   {hasDetail ? (
-                    <span className="mt-4 inline-flex items-center gap-2 text-ro-gold/70 text-xs font-mono tracking-widest uppercase group-hover:text-ro-gold transition-colors">
+                    <span className="mt-4 inline-flex items-center gap-2 text-[#3D7BFF]/80 text-xs font-mono tracking-widest uppercase group-hover:text-[#3D7BFF] transition-colors">
                       Read More <ArrowRight size={13} />
                     </span>
                   ) : (
-                    <div className="w-8 h-[1px] bg-ro-gold/30 mt-4 group-hover:w-16 transition-all duration-500" />
+                    <div className="w-8 h-[1px] mt-4 group-hover:w-16 transition-all duration-500" style={{ background: `${UD.blue}4d` }} />
                   )}
                 </div>
               </Wrapper>
@@ -271,11 +298,23 @@ export default function UtilitiesPage() {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="moat-copy">
-              <span className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-4 block">Licensed &amp; Self-Performed</span>
-              <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase mb-6 leading-[0.95]">Most Contractors<br /><span className="gradient-text-gold">Can&apos;t Legally Touch This</span></h2>
-              <div className="w-24 gold-line mb-6" />
+              <span className="text-xs font-mono tracking-[0.3em] uppercase mb-4 block" style={{ color: UD.orange }}>Licensed &amp; Self-Performed</span>
+              <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase mb-6 leading-[0.95]">Most Contractors<br /><span style={{ background: `linear-gradient(135deg, ${UD.orange}, #FF8A50)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Can&apos;t Legally Touch This</span></h2>
+              <LocateMarks className="mb-6" />
               <p className="text-ro-gray-400 leading-relaxed mb-4">Tapping a live water main. Boring under a road that can&apos;t be cut. Running ductile iron beneath a parking lot. This work takes state license classifications most general contractors don&apos;t hold &mdash; so it gets subbed out, and schedules slip.</p>
-              <p className="text-ro-gray-400 leading-relaxed">We hold seven of them, in all three states we work &mdash; South Carolina, North Carolina, and Georgia &mdash; and we run our own crews and equipment out of Easley. When RO Unlimited does your sitework, the underground package stays in-house &mdash; <span className="text-ro-gold">one contractor controlling the critical path from first cut to final tap.</span></p>
+              <p className="text-ro-gray-400 leading-relaxed">We hold seven of them, in all three states we work &mdash; South Carolina, North Carolina, and Georgia &mdash; and we run our own crews and equipment out of Easley. When RO Unlimited does your sitework, the underground package stays in-house &mdash; <span style={{ color: UD.orange }}>one contractor controlling the critical path from first cut to final tap.</span></p>
+              {/* Utility Division seal — JR's badge, license numbers printed on
+                  it (GC CLG 127704 · OSWW10837 · Mech CLM119115). Rendered as a
+                  credential stamp, not decoration: modest size, no effects. */}
+              <div className="mt-8 flex justify-center lg:justify-start">
+                <Image
+                  src="/images/utilities/utility-division-badge.png"
+                  alt="RO Unlimited Utility Division seal — GC License CLG 127704, Onsite Wastewater License OSWW10837, Mechanical License CLM119115"
+                  width={260}
+                  height={259}
+                  className="w-52 sm:w-60 h-auto drop-shadow-[0_8px_24px_rgba(0,0,0,0.6)]"
+                />
+              </div>
             </div>
             <div className="moat-side space-y-3">
               {[
@@ -287,11 +326,11 @@ export default function UtilitiesPage() {
                 { icon: Cuboid, label: 'Specialty Concrete' },
                 { icon: BrickWall, label: 'Specialty Masonry' },
               ].map(({ icon: Ic, label }) => (
-                <div key={label} className="lic-card flex items-center gap-4 p-4 border border-ro-gold/20 bg-ro-black/70 backdrop-blur-sm hover:border-ro-gold/40 transition-colors duration-300">
-                  <div className="w-10 h-10 flex items-center justify-center border border-ro-gold/30 bg-ro-gold/5 shrink-0"><Ic size={18} className="text-ro-gold" /></div>
+                <div key={label} className="lic-card flex items-center gap-4 p-4 border border-white/10 bg-ro-black/70 backdrop-blur-sm hover:border-[#3D7BFF]/50 transition-colors duration-300">
+                  <div className="w-10 h-10 flex items-center justify-center shrink-0" style={{ border: `1px solid ${UD.blue}4d`, background: `${UD.blueDeep}14` }}><Ic size={18} style={{ color: UD.blue }} /></div>
                   <div>
                     <div className="text-ro-white font-heading text-sm tracking-wider uppercase">{label}</div>
-                    <div className="text-ro-gray-600 text-[10px] font-mono tracking-wider uppercase mt-0.5 flex items-center gap-1"><ShieldCheck size={10} className="text-ro-gold/60" /> State Licensed &middot; Fully Insured</div>
+                    <div className="text-ro-gray-600 text-[10px] font-mono tracking-wider uppercase mt-0.5 flex items-center gap-1"><ShieldCheck size={10} style={{ color: `${UD.orange}b3` }} /> State Licensed &middot; Fully Insured</div>
                   </div>
                 </div>
               ))}
@@ -306,16 +345,16 @@ export default function UtilitiesPage() {
         <div className="absolute inset-0 blueprint-overlay opacity-20" />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14 sm:mb-16">
-            <span className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-4 block">How It Goes In</span>
+            <span className="text-xs font-mono tracking-[0.3em] uppercase mb-4 block" style={{ color: UD.orange }}>How It Goes In</span>
             <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">Trench To Backfill</h2>
-            <div className="mx-auto w-24 gold-line mt-5" />
+            <LocateMarks className="justify-center mt-5" />
           </div>
           <div className="relative">
-            <div className="process-line hidden lg:block absolute top-7 left-[12%] right-[12%] h-[1px] bg-gradient-to-r from-ro-gold/10 via-ro-gold/50 to-ro-gold/10" />
+            <div className="process-line hidden lg:block absolute top-7 left-[12%] right-[12%] h-[1px]" style={{ background: `linear-gradient(to right, ${UD.orange}1a, ${UD.orange}80 30%, ${UD.blueDeep}80 70%, ${UD.blueDeep}1a)` }} />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
               {PROCESS.map((step) => (
                 <div key={step.num} className="process-step relative text-center lg:text-left">
-                  <div className="mx-auto lg:mx-0 w-14 h-14 flex items-center justify-center border border-ro-gold/40 bg-ro-black text-ro-gold font-heading text-lg mb-5 relative z-10">{step.num}</div>
+                  <div className="mx-auto lg:mx-0 w-14 h-14 flex items-center justify-center bg-ro-black font-heading text-lg mb-5 relative z-10" style={{ border: `1px solid ${UD.orange}66`, color: UD.orange }}>{step.num}</div>
                   <h3 className="text-ro-white font-heading text-base tracking-wider uppercase mb-2">{step.title}</h3>
                   <p className="text-ro-gray-500 text-sm leading-relaxed max-w-xs mx-auto lg:mx-0">{step.desc}</p>
                 </div>
@@ -329,14 +368,14 @@ export default function UtilitiesPage() {
       <section ref={galleryRef} className="py-24 sm:py-28 relative border-t border-ro-gray-800">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <span className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-4 block">Before It Disappears</span>
+            <span className="text-xs font-mono tracking-[0.3em] uppercase mb-4 block" style={{ color: UD.orange }}>Before It Disappears</span>
             <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">Shot Before Backfill</h2>
-            <div className="mx-auto w-24 gold-line mt-5" />
+            <LocateMarks className="justify-center mt-5" />
             <p className="text-ro-gray-500 text-sm mt-5 max-w-md mx-auto">Underground work only gets seen once. We photograph every run, tap, and tank before it&apos;s covered &mdash; proof of what&apos;s under your site.</p>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {GALLERY.map((img, i) => (
-              <div key={img} className={`gallery-item group relative overflow-hidden border border-ro-gray-800 hover:border-ro-gold/30 transition-colors duration-500 ${i === 0 ? 'col-span-2 lg:col-span-1 h-56 sm:h-64' : 'h-40 sm:h-56'}`}>
+              <div key={img} className={`gallery-item group relative overflow-hidden border border-ro-gray-800 hover:border-[#F84B0C]/40 transition-colors duration-500 ${i === 0 ? 'col-span-2 lg:col-span-1 h-56 sm:h-64' : 'h-40 sm:h-56'}`}>
                 <Image src={img} alt="RO Unlimited underground utility work" fill className="object-cover transition-transform duration-700 group-hover:scale-110" sizes="(max-width: 1024px) 50vw, 33vw" />
                 <div className="absolute inset-0 bg-gradient-to-t from-ro-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-20 transition-opacity duration-500" />
               </div>
@@ -349,16 +388,16 @@ export default function UtilitiesPage() {
       <section ref={faqRef} className="py-24 sm:py-28 relative border-t border-ro-gray-800">
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <span className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-4 block">Straight Answers</span>
+            <span className="text-xs font-mono tracking-[0.3em] uppercase mb-4 block" style={{ color: UD.orange }}>Straight Answers</span>
             <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">Developer FAQ</h2>
-            <div className="mx-auto w-24 gold-line mt-5" />
+            <LocateMarks className="justify-center mt-5" />
           </div>
           <div className="space-y-3">
             {FAQS.map((f, i) => (
-              <div key={i} className="faq-item border border-ro-gray-800 hover:border-ro-gold/20 transition-colors duration-300 bg-ro-black/50">
+              <div key={i} className="faq-item border border-ro-gray-800 hover:border-[#3D7BFF]/30 transition-colors duration-300 bg-ro-black/50">
                 <button onClick={() => setExpandedFaq(expandedFaq === i ? null : i)} className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-4 sm:py-5 text-left">
                   <span className="text-ro-white font-heading text-sm sm:text-base tracking-wider uppercase">{f.q}</span>
-                  <ChevronDown size={16} className={`text-ro-gold shrink-0 transition-transform duration-300 ${expandedFaq === i ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={16} style={{ color: UD.blue }} className={`shrink-0 transition-transform duration-300 ${expandedFaq === i ? 'rotate-180' : ''}`} />
                 </button>
                 <div className="overflow-hidden transition-all duration-500" style={{ maxHeight: expandedFaq === i ? 360 : 0, opacity: expandedFaq === i ? 1 : 0 }}>
                   <p className="px-5 sm:px-6 pb-5 text-ro-gray-400 text-sm leading-relaxed">{f.a}</p>

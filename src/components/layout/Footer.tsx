@@ -187,6 +187,9 @@ export default function Footer() {
             <span className="text-ro-gray-700"> — </span>
             General Contractor (Building) &middot; Boring &amp; Tunneling &middot; Water &amp; Sewer &middot; Highway, Roads &amp; Bridges &middot; Grading &middot; Specialty Concrete &middot; Specialty Masonry. Fully insured. License documentation available for prequalification.
           </p>
+          <p className="text-ro-gray-600 text-xs tracking-wide mt-1.5 text-center sm:text-left font-mono">
+            GC Lic #CLG 127704 &middot; Onsite Wastewater Lic #OSWW10837 &middot; Mechanical Lic #CLM119115
+          </p>
         </div>
 
         {/* Bottom bar */}
