@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { gsap } from 'gsap';
 import {
   Video, FileText, ArrowUpRight, CheckCircle2,
-  AlertCircle, Camera, Clock, MessageCircle, Mail, Users, Calculator, HardDrive, CheckSquare
+  AlertCircle, Camera, Clock, MessageCircle, Mail, Users, Calculator, HardDrive, CheckSquare, Receipt
 } from 'lucide-react';
 
 interface SiteSettings { heroVideoUrl?: string; }
@@ -16,6 +16,7 @@ export default function AdminDashboard() {
   const [employeeCount, setEmployeeCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [estimateCount, setEstimateCount] = useState({ drafts: 0, sent: 0 });
+  const [invoiceAR, setInvoiceAR] = useState<{ outstanding: number; open_count: number } | null>(null);
   const [recentActivity, setRecentActivity] = useState<{ action: string; details: string; created_at: string }[]>([]);
   const [taskStats, setTaskStats] = useState({ dueToday: 0, overdue: 0, upcoming: 0 });
   // briefing moved to NotificationBell
@@ -56,6 +57,9 @@ export default function AdminDashboard() {
           sent: d.filter((e: any) => ['sent', 'viewed'].includes(e.status)).length,
         });
       }
+    }).catch(() => {});
+    fetch('/api/admin/invoices').then(r => r.json()).then(d => {
+      if (d?.summary) setInvoiceAR({ outstanding: d.summary.outstanding, open_count: d.summary.open_count });
     }).catch(() => {});
     // Fetch unread inbox count
     fetch('/api/email/threads?folder=inbox')
@@ -371,10 +375,10 @@ export default function AdminDashboard() {
         </Link>
 
         {/* Row 3: Hero buttons — Email + Estimates + Team */}
-        <div ref={row3Ref} data-tour="hero-buttons" className="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-3 relative z-10">
+        <div ref={row3Ref} data-tour="hero-buttons" className="grid grid-cols-4 lg:grid-cols-6 gap-1.5 lg:gap-3 relative z-10">
           {/* Email — blue */}
           <Link href="/admin/inbox"
-            className="theme-card-blue relative overflow-hidden border border-[#2a6aaa]/30 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
+            className="theme-card-blue relative overflow-hidden border border-[#2a6aaa]/30 rounded-2xl p-2.5 lg:p-3 flex flex-col items-center gap-1.5 lg:gap-2 group active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(145deg, #0c1a2e, #0a1220)' }}
           >
             <div className="relative flex-shrink-0">
@@ -396,7 +400,7 @@ export default function AdminDashboard() {
               )}
             </div>
             <div className="text-center min-w-0">
-              <p className="text-[13px] font-bold leading-tight" style={{ color: '#5ba3dc' }}>Email</p>
+              <p className="text-[12px] lg:text-[13px] font-bold leading-tight" style={{ color: '#5ba3dc' }}>Email</p>
               <p className="text-[10px] text-white/25 mt-0.5">{unreadCount > 0 ? `${unreadCount} new` : 'Inbox'}</p>
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #3b8dd4, transparent)' }} />
@@ -404,7 +408,7 @@ export default function AdminDashboard() {
 
           {/* Estimates — gold/green */}
           <Link href="/admin/estimates"
-            className="theme-card-gold relative overflow-hidden border border-[#C9A84C]/25 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
+            className="theme-card-gold relative overflow-hidden border border-[#C9A84C]/25 rounded-2xl p-2.5 lg:p-3 flex flex-col items-center gap-1.5 lg:gap-2 group active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(145deg, #1a1508, #120f04)' }}
           >
             <div className="relative flex-shrink-0">
@@ -423,7 +427,7 @@ export default function AdminDashboard() {
               )}
             </div>
             <div className="text-center min-w-0">
-              <p className="text-[13px] font-bold leading-tight text-[#C9A84C]">Estimates</p>
+              <p className="text-[12px] lg:text-[13px] font-bold leading-tight text-[#C9A84C]">Estimates</p>
               <p className="text-[10px] text-white/25 mt-0.5">{estimateCount.drafts > 0 ? `${estimateCount.drafts} drafts` : 'Create new'}</p>
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #C9A84C, transparent)' }} />
@@ -431,7 +435,7 @@ export default function AdminDashboard() {
 
           {/* Team — orange */}
           <Link href="/admin/employees"
-            className="theme-card-orange relative overflow-hidden border border-[#D4772C]/25 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
+            className="theme-card-orange relative overflow-hidden border border-[#D4772C]/25 rounded-2xl p-2.5 lg:p-3 flex flex-col items-center gap-1.5 lg:gap-2 group active:scale-[0.97] transition-transform"
             style={{ background: 'linear-gradient(145deg, #1a1208, #140e06)' }}
           >
             <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -442,10 +446,42 @@ export default function AdminDashboard() {
               <Users size={20} className="text-white" />
             </div>
             <div className="text-center min-w-0">
-              <p className="text-[13px] font-bold leading-tight text-[#D4772C]">Team</p>
+              <p className="text-[12px] lg:text-[13px] font-bold leading-tight text-[#D4772C]">Team</p>
               <p className="text-[10px] text-white/25 mt-0.5">{employeeCount > 0 ? `${employeeCount} active` : 'Employees'}</p>
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #D4772C, transparent)' }} />
+          </Link>
+
+          {/* Invoices — money green, the fancy one: conic border sweep + shimmer.
+              CSS lives in globals.css (.inv-fancy-*) so this stays a plain card. */}
+          <Link href="/admin/invoices"
+            className="inv-fancy-border relative rounded-2xl p-[1.5px] group active:scale-[0.97] transition-transform overflow-hidden"
+          >
+            <div className="relative overflow-hidden rounded-[14.5px] p-2.5 lg:p-3 flex flex-col items-center gap-1.5 lg:gap-2 h-full"
+              style={{ background: 'linear-gradient(145deg, #06180f, #041108)' }}>
+              <div className="inv-fancy-shimmer absolute inset-0 pointer-events-none" />
+              <div className="relative flex-shrink-0">
+                <div className="inv-fancy-glow w-10 h-10 lg:w-11 lg:h-11 rounded-xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(145deg, #35d07f, #1e9e5c)' }}>
+                  <Receipt size={20} className="text-white" />
+                </div>
+                {invoiceAR && invoiceAR.open_count > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[8px] font-bold px-0.5"
+                    style={{ background: '#35d07f', color: '#000', boxShadow: '0 2px 8px rgba(53,208,127,0.5)' }}>
+                    {invoiceAR.open_count}
+                  </span>
+                )}
+              </div>
+              <div className="text-center min-w-0">
+                <p className="text-[12px] lg:text-[13px] font-bold leading-tight" style={{ color: '#35d07f' }}>Invoices</p>
+                <p className="text-[10px] text-white/25 mt-0.5">
+                  {invoiceAR && invoiceAR.outstanding > 0
+                    ? '$' + Math.round(invoiceAR.outstanding).toLocaleString() + ' due'
+                    : 'Get paid'}
+                </p>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #35d07f, transparent)' }} />
+            </div>
           </Link>
         </div>
 

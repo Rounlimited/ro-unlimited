@@ -836,3 +836,28 @@ body.admin-mode > div > div > div > main.min-h-screen { min-height: auto !import
   .ro-ai-panel-in, .ro-ai-pill-in { animation: none; }
   .ro-ai-panel-out { transition: opacity 120ms linear; transform: none; }
 }
+
+/* ── Invoices fancy button (admin dashboard) ─────────────────────────────── */
+@property --inv-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+.inv-fancy-border {
+  background: conic-gradient(from var(--inv-angle, 0deg), rgba(53,208,127,0.05), rgba(53,208,127,0.7), rgba(201,168,76,0.5), rgba(53,208,127,0.05));
+  animation: inv-border-spin 4s linear infinite;
+}
+.inv-fancy-shimmer {
+  background: linear-gradient(105deg, transparent 40%, rgba(53,208,127,0.12) 50%, transparent 60%);
+  background-size: 250% 100%;
+  animation: inv-shimmer 3.2s ease-in-out infinite;
+}
+.inv-fancy-glow {
+  box-shadow: 0 4px 18px rgba(53,208,127,0.4), inset 0 1px 0 rgba(255,255,255,0.25);
+  animation: inv-glow 2.6s ease-in-out infinite;
+}
+@keyframes inv-border-spin { to { --inv-angle: 360deg; } }
+@keyframes inv-shimmer { 0%, 100% { background-position: 200% 0; } 50% { background-position: -50% 0; } }
+@keyframes inv-glow {
+  0%, 100% { box-shadow: 0 4px 18px rgba(53,208,127,0.35), inset 0 1px 0 rgba(255,255,255,0.25); }
+  50% { box-shadow: 0 4px 26px rgba(53,208,127,0.6), inset 0 1px 0 rgba(255,255,255,0.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .inv-fancy-border, .inv-fancy-shimmer, .inv-fancy-glow { animation: none; }
+}
