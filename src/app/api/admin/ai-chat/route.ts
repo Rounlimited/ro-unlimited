@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, getServerUser } from '@/lib/supabase/server';
+import { createInvoice, effectiveStatus, reconcilePayments } from '@/lib/invoices';
+import { sendInvoiceEmail } from '@/lib/invoice-send';
 import { recalcEstimateTotals } from '@/lib/estimates';
 
 export const dynamic = 'force-dynamic';
@@ -219,7 +221,36 @@ const READ_TOOLS = [
 ];
 
 // ── WRITE TOOLS ──
+const INVOICE_READ_TOOLS = [
+  { name: 'search_invoices', description: 'Search invoices by customer name, company, project, invoice number, or status. Returns invoice list with balances.',
+    input_schema: { type: 'object' as const, properties: { query: { type: 'string', description: 'Free text; omit to list recent' }, status: { type: 'string', description: 'draft|sent|partial|paid|overdue|cancelled|open' }, limit: { type: 'number' } } } },
+  { name: 'get_invoice_details', description: 'Full invoice: line items, payment ledger, view count, share link.',
+    input_schema: { type: 'object' as const, properties: { invoice_id: { type: 'string' }, invoice_number: { type: 'string', description: 'e.g. RO-INV-2026-0245' } } } },
+  { name: 'get_ar_summary', description: 'Accounts-receivable snapshot: total outstanding, overdue, aging buckets (current/1-30/31-60/60+), collected this month, and who owes what.',
+    input_schema: { type: 'object' as const, properties: {} } },
+];
+
+const INVOICE_WRITE_TOOLS = [
+  { name: 'create_invoice', description: 'Create a DRAFT invoice. Three modes: (a) from scratch with customer_id or customer_name or bill_to + line_items; (b) whole estimate via estimate_number; (c) milestone progress billing via estimate_number + milestone (matches the payment-schedule milestone name). Always returns the draft for review — it is NOT sent automatically.',
+    input_schema: { type: 'object' as const, properties: {
+      customer_id: { type: 'string' }, customer_name: { type: 'string', description: 'Name/company to look up an existing customer' },
+      bill_to: { type: 'object', description: 'Ad-hoc recipient when no customer record: {name, company, email, phone, address}' },
+      estimate_number: { type: 'string', description: 'e.g. RO-EST-2026-0250 — pulls customer/project/lines' },
+      milestone: { type: 'string', description: 'Milestone name from the estimate payment schedule, e.g. "Deposit" or "Rough-in complete"' },
+      line_items: { type: 'array', items: { type: 'object', properties: { description: { type: 'string' }, quantity: { type: 'number' }, unit_price: { type: 'number' } } } },
+      tax_percent: { type: 'number' }, due_date: { type: 'string', description: 'YYYY-MM-DD' },
+      project_name: { type: 'string' }, notes: { type: 'string' },
+    } } },
+  { name: 'update_invoice', description: 'Update a draft/open invoice: due_date, notes, line_items, tax_percent, project_name, auto_remind, or status (only "cancelled" allowed here — payment status is ledger-driven).',
+    input_schema: { type: 'object' as const, properties: { invoice_id: { type: 'string' }, invoice_number: { type: 'string' }, due_date: { type: 'string' }, notes: { type: 'string' }, project_name: { type: 'string' }, tax_percent: { type: 'number' }, auto_remind: { type: 'boolean' }, status: { type: 'string', description: 'only "cancelled"' }, line_items: { type: 'array', items: { type: 'object' } } } } },
+  { name: 'record_invoice_payment', description: 'Record a payment on an invoice (check/ach/cash/zelle/card/other). Ledger recomputes balance and flips to partial/paid automatically. Set send_receipt true to email the customer a receipt.',
+    input_schema: { type: 'object' as const, properties: { invoice_id: { type: 'string' }, invoice_number: { type: 'string' }, amount: { type: 'number' }, method: { type: 'string' }, reference: { type: 'string', description: 'check # etc.' }, paid_date: { type: 'string' }, send_receipt: { type: 'boolean' } }, required: ['amount'] } },
+  { name: 'send_invoice', description: 'Email the invoice: branded PDF attached + online view link. Defaults to the customer/bill-to email; flips draft to sent and activates the share link. ALWAYS confirm recipient and amount with the user before calling.',
+    input_schema: { type: 'object' as const, properties: { invoice_id: { type: 'string' }, invoice_number: { type: 'string' }, to_email: { type: 'string' }, message: { type: 'string', description: 'Optional personal note at the top of the email' } } } },
+];
+
 const WRITE_TOOLS = [
+  ...INVOICE_WRITE_TOOLS,
   {
     name: 'create_customer',
     description: 'Create a new customer in the database. Requires first_name and last_name at minimum. Returns the created customer record with its ID.',
@@ -604,7 +635,7 @@ const WRITE_TOOLS = [
   },
 ];
 
-const ALL_TOOLS = [...READ_TOOLS, ...WRITE_TOOLS];
+const ALL_TOOLS = [...READ_TOOLS, ...INVOICE_READ_TOOLS, ...WRITE_TOOLS];
 
 // Trivial one-liner greetings on a fresh conversation don't need tools.
 // Everything else always gets the FULL tool set in deterministic order —
@@ -770,6 +801,179 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
     }
 
     // ── WRITE TOOLS ──
+    case 'search_invoices': {
+      let q = supabase.from('invoices')
+        .select('id, invoice_number, status, due_date, total, amount_paid, project_name, milestone_label, sent_at, customer:customers(first_name, last_name, company_name), bill_to')
+        .order('created_at', { ascending: false })
+        .limit(Math.min(input.limit || 15, 50));
+      if (input.status && !['overdue', 'open'].includes(input.status)) q = q.eq('status', input.status);
+      const { data, error } = await q;
+      if (error) return { result: `Error: ${error.message}` };
+      let rows = (data || []).map((inv: any) => ({ ...inv, effective_status: effectiveStatus(inv) }));
+      if (input.status === 'overdue') rows = rows.filter((r: any) => r.effective_status === 'overdue');
+      if (input.status === 'open') rows = rows.filter((r: any) => !['draft', 'paid', 'cancelled'].includes(r.effective_status));
+      if (input.query) {
+        const needle = String(input.query).toLowerCase();
+        rows = rows.filter((r: any) => [r.invoice_number, r.project_name, r.milestone_label,
+          r.customer?.company_name, r.customer?.first_name, r.customer?.last_name, r.bill_to?.name, r.bill_to?.company]
+          .filter(Boolean).join(' ').toLowerCase().includes(needle));
+      }
+      const out = rows.map((r: any) => ({
+        id: r.id, number: r.invoice_number, status: r.effective_status,
+        customer: r.customer ? (r.customer.company_name || `${r.customer.first_name || ''} ${r.customer.last_name || ''}`.trim()) : (r.bill_to?.company || r.bill_to?.name),
+        project: r.project_name, milestone: r.milestone_label,
+        total: Number(r.total), balance: Number(r.total) - Number(r.amount_paid), due: r.due_date,
+      }));
+      return { result: JSON.stringify(out) };
+    }
+
+    case 'get_invoice_details': {
+      let q = supabase.from('invoices').select('*, customer:customers(first_name, last_name, company_name, email, phone)');
+      if (input.invoice_id) q = q.eq('id', input.invoice_id);
+      else if (input.invoice_number) q = q.eq('invoice_number', String(input.invoice_number).trim());
+      else return { result: 'Error: invoice_id or invoice_number required.' };
+      const { data: inv, error } = await q.single();
+      if (error || !inv) return { result: 'Invoice not found.' };
+      const [{ data: pays }, { count }] = await Promise.all([
+        supabase.from('invoice_payments').select('amount, method, reference, paid_date').eq('invoice_id', inv.id).order('paid_date'),
+        supabase.from('invoice_views').select('*', { count: 'exact', head: true }).eq('invoice_id', inv.id),
+      ]);
+      return {
+        result: JSON.stringify({
+          id: inv.id, number: inv.invoice_number, status: effectiveStatus(inv),
+          customer: inv.customer ? { name: inv.customer.company_name || `${inv.customer.first_name || ''} ${inv.customer.last_name || ''}`.trim(), email: inv.customer.email } : inv.bill_to,
+          project: inv.project_name, milestone: inv.milestone_label,
+          line_items: inv.line_items, subtotal: Number(inv.subtotal), tax: Number(inv.tax_amount),
+          total: Number(inv.total), paid: Number(inv.amount_paid), balance: Number(inv.total) - Number(inv.amount_paid),
+          issued: inv.issued_date, due: inv.due_date, sent_at: inv.sent_at,
+          payments: pays || [], view_count: count || 0, auto_remind: inv.auto_remind,
+          share_link: inv.share_token && inv.status !== 'draft' ? `https://rounlimited.com/i/${inv.share_token}` : null,
+        }),
+        action: { type: 'navigate', path: `/admin/invoices/${inv.id}`, description: `Open invoice ${inv.invoice_number}` },
+      };
+    }
+
+    case 'get_ar_summary': {
+      const { data, error } = await supabase.from('invoices')
+        .select('invoice_number, status, due_date, total, amount_paid, customer:customers(first_name, last_name, company_name), bill_to');
+      if (error) return { result: `Error: ${error.message}` };
+      const open = (data || []).map((i: any) => ({ ...i, eff: effectiveStatus(i) }))
+        .filter((i: any) => !['draft', 'paid', 'cancelled'].includes(i.eff));
+      const bal = (i: any) => Number(i.total) - Number(i.amount_paid);
+      const age = (d: string | null) => (d ? Math.floor((Date.now() - new Date(d + 'T00:00:00').getTime()) / 86400000) : 0);
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+      const { data: mp } = await supabase.from('invoice_payments').select('amount').gte('paid_date', monthStart.toISOString().slice(0, 10));
+      return { result: JSON.stringify({
+        outstanding: open.reduce((t: number, i: any) => t + bal(i), 0),
+        overdue: open.filter((i: any) => i.eff === 'overdue').reduce((t: number, i: any) => t + bal(i), 0),
+        open_count: open.length,
+        collected_this_month: (mp || []).reduce((t: number, x: any) => t + Number(x.amount), 0),
+        aging: {
+          current: open.filter((i: any) => age(i.due_date) <= 0).reduce((t: number, i: any) => t + bal(i), 0),
+          d1_30: open.filter((i: any) => age(i.due_date) > 0 && age(i.due_date) <= 30).reduce((t: number, i: any) => t + bal(i), 0),
+          d31_60: open.filter((i: any) => age(i.due_date) > 30 && age(i.due_date) <= 60).reduce((t: number, i: any) => t + bal(i), 0),
+          d61_plus: open.filter((i: any) => age(i.due_date) > 60).reduce((t: number, i: any) => t + bal(i), 0),
+        },
+        who_owes: open.map((i: any) => ({
+          number: i.invoice_number,
+          customer: i.customer ? (i.customer.company_name || `${i.customer.first_name || ''} ${i.customer.last_name || ''}`.trim()) : (i.bill_to?.company || i.bill_to?.name),
+          balance: bal(i), due: i.due_date, status: i.eff,
+        })).sort((a: any, b: any) => b.balance - a.balance),
+      }) };
+    }
+
+    case 'create_invoice': {
+      const args: any = { ...input };
+      // resolve customer by name
+      if (!args.customer_id && args.customer_name) {
+        const { data: matches } = await supabase.from('customers')
+          .select('id, first_name, last_name, company_name')
+          .or(`company_name.ilike.%${args.customer_name}%,first_name.ilike.%${args.customer_name}%,last_name.ilike.%${args.customer_name}%`)
+          .limit(3);
+        if (matches && matches.length === 1) args.customer_id = matches[0].id;
+        else if (matches && matches.length > 1) {
+          return { result: `Multiple customers match "${args.customer_name}": ${matches.map((m: any) => m.company_name || `${m.first_name} ${m.last_name}`).join(', ')}. Ask the user which one, then call again with customer_id.` };
+        }
+      }
+      // resolve estimate by number
+      if (args.estimate_number && !args.estimate_id) {
+        const { data: est } = await supabase.from('estimates').select('id').eq('estimate_number', String(args.estimate_number).trim()).single();
+        if (!est) return { result: `Estimate ${args.estimate_number} not found.` };
+        args.estimate_id = est.id;
+      }
+      // resolve milestone by name
+      if (args.estimate_id && args.milestone && !args.milestone_id) {
+        const { data: ms } = await supabase.from('estimate_payment_schedules')
+          .select('id, milestone, invoice_id').eq('estimate_id', args.estimate_id);
+        const hit = (ms || []).find((m: any) => m.milestone?.toLowerCase().includes(String(args.milestone).toLowerCase()));
+        if (!hit) return { result: `No milestone matching "${args.milestone}" on that estimate. Available: ${(ms || []).map((m: any) => m.milestone).join(', ') || 'none'}.` };
+        if (hit.invoice_id) return { result: `Milestone "${hit.milestone}" is already invoiced.` };
+        args.milestone_id = hit.id;
+      }
+      const created = await createInvoice(args);
+      if ('error' in created) return { result: `Error: ${created.error}` };
+      const inv = created.invoice;
+      return {
+        result: JSON.stringify({ success: true, id: inv.id, number: inv.invoice_number, total: Number(inv.total), status: 'draft', note: 'Draft created — review it, then use send_invoice after confirming with the user.' }),
+        action: { type: 'navigate', path: `/admin/invoices/${inv.id}`, description: `Review draft ${inv.invoice_number}` },
+      };
+    }
+
+    case 'update_invoice': {
+      let invId = input.invoice_id;
+      if (!invId && input.invoice_number) {
+        const { data: found } = await supabase.from('invoices').select('id').eq('invoice_number', String(input.invoice_number).trim()).single();
+        if (!found) return { result: 'Invoice not found.' };
+        invId = found.id;
+      }
+      if (!invId) return { result: 'Error: invoice_id or invoice_number required.' };
+      const fields: any = {};
+      for (const k of ['due_date', 'notes', 'project_name', 'tax_percent', 'auto_remind', 'line_items']) {
+        if (input[k] !== undefined) fields[k] = input[k];
+      }
+      if (input.status === 'cancelled') fields.status = 'cancelled';
+      else if (input.status) return { result: 'Only "cancelled" is allowed for status here — payment states come from the ledger.' };
+      if (!Object.keys(fields).length) return { result: 'No valid fields to update.' };
+      // reuse route math for totals when line items/tax change
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/api/admin/invoices/${invId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields),
+      });
+      const data = await res.json();
+      if (!res.ok) return { result: `Error: ${data.error || 'update failed'}` };
+      return { result: JSON.stringify({ success: true, number: data.invoice_number, total: Number(data.total), status: data.effective_status }) };
+    }
+
+    case 'record_invoice_payment': {
+      let invId = input.invoice_id;
+      if (!invId && input.invoice_number) {
+        const { data: found } = await supabase.from('invoices').select('id').eq('invoice_number', String(input.invoice_number).trim()).single();
+        if (!found) return { result: 'Invoice not found.' };
+        invId = found.id;
+      }
+      if (!invId) return { result: 'Error: invoice_id or invoice_number required.' };
+      if (!input.amount || Number(input.amount) <= 0) return { result: 'Error: positive amount required.' };
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/api/admin/invoices/${invId}/payments`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: Number(input.amount), method: input.method || 'check', reference: input.reference || null, paid_date: input.paid_date, send_receipt: !!input.send_receipt }),
+      });
+      const data = await res.json();
+      if (!res.ok) return { result: `Error: ${data.error || 'payment failed'}` };
+      return { result: JSON.stringify({ success: true, number: data.invoice.invoice_number, status: data.invoice.status, paid: Number(data.invoice.amount_paid), balance: Number(data.invoice.total) - Number(data.invoice.amount_paid), receipt_sent: data.receipt_sent }) };
+    }
+
+    case 'send_invoice': {
+      let invId = input.invoice_id;
+      if (!invId && input.invoice_number) {
+        const { data: found } = await supabase.from('invoices').select('id').eq('invoice_number', String(input.invoice_number).trim()).single();
+        if (!found) return { result: 'Invoice not found.' };
+        invId = found.id;
+      }
+      if (!invId) return { result: 'Error: invoice_id or invoice_number required.' };
+      const sent = await sendInvoiceEmail(invId, { to_email: input.to_email, message: input.message });
+      if ('error' in sent) return { result: `Error: ${sent.error}` };
+      return { result: JSON.stringify({ success: true, sent_to: sent.to, view_link: sent.view_link }) };
+    }
+
     case 'create_customer': {
       if (!input.first_name || !input.last_name) {
         return { result: 'Error: first_name and last_name are required to create a customer.' };
@@ -1860,6 +2064,18 @@ Always name the specific numbers driving your call (e.g. "dew point 52°F with 8
 </property>`;
 
 // Builds the full system prompt from only the blocks needed for this request
+const PROMPT_INVOICES = `<invoices>
+Invoice rules (money — be careful):
+- Amounts and recipients get READ BACK to the user before create/send. Never send_invoice without the user confirming recipient and amount in this conversation. create_invoice always makes a DRAFT — that part is safe.
+- Progress billing off an estimate is the main flow: create_invoice with estimate_number + milestone (milestone names come from the estimate's payment schedule).
+- "Blank"/one-off customers: pass bill_to {name/company/email} — no customer record needed. Offer to save them as a customer afterward if it seems like repeat business.
+- Balances come from the payment ledger. To mark money received use record_invoice_payment (with send_receipt when the user wants the customer notified) — never update_invoice for payment states.
+- get_ar_summary answers "who owes us money" — lead with overdue, then largest balances. Money amounts in words when in voice mode.
+- Paid invoice links stay live as receipts. Draft links are dead until sent.
+</invoices>`;
+
+const INVOICE_TOOL_NAMES = new Set(['search_invoices','get_invoice_details','get_ar_summary','create_invoice','update_invoice','record_invoice_payment','send_invoice']);
+
 const ESTIMATE_TOOL_NAMES = new Set(['create_estimate','get_estimate_details','search_estimates','add_line_items','update_line_items','delete_line_items','update_estimate','update_estimate_status','set_payment_schedule','send_estimate','duplicate_estimate','check_estimate_pricing','search_cost_library','search_templates','search_disclaimers','generate_share_link']);
 const TASK_TOOL_NAMES = new Set(['create_task','list_tasks','complete_task','snooze_task','update_task','delete_task','get_daily_briefing']);
 
@@ -1871,6 +2087,7 @@ function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: stri
 
   const blocks = [PROMPT_CORE];
   if (hasEstimates) blocks.push(PROMPT_ESTIMATES);
+  if (names.some(n => INVOICE_TOOL_NAMES.has(n))) blocks.push(PROMPT_INVOICES);
   if (hasTasks) blocks.push(PROMPT_TASKS);
   if (hasProperty) blocks.push(PROMPT_PROPERTY);
   if (dynamicContext) blocks.push(dynamicContext);

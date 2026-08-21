@@ -124,7 +124,7 @@ export default function InvoiceDetailPage() {
             style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.1)' }}>
             <FileDown size={17} /> PDF
           </a>
-          {inv.share_token && (
+          {inv.share_token && inv.status !== 'draft' && (
             <button
               onClick={async () => {
                 await navigator.clipboard.writeText(window.location.origin + '/i/' + inv.share_token).catch(() => {});
@@ -135,7 +135,7 @@ export default function InvoiceDetailPage() {
               {copied ? <CheckCircle2 size={17} /> : <Copy size={17} />} {copied ? 'Copied!' : 'Copy Link'}
             </button>
           )}
-          {inv.share_token && (
+          {inv.share_token && inv.status !== 'draft' && (
             <button
               onClick={() => act('link', () => fetch('/api/admin/invoices/' + inv.id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ link_enabled: !inv.link_enabled }) }))}
               disabled={busy !== null}
@@ -145,6 +145,12 @@ export default function InvoiceDetailPage() {
                 : { background: 'rgba(248,113,113,0.1)', color: '#f87171', border: '1px solid rgba(248,113,113,0.25)' }}>
               <Link2 size={17} /> {inv.link_enabled ? 'Link On' : 'Link Off'}
             </button>
+          )}
+          {inv.status === 'draft' && (
+            <div className="col-span-2 min-h-[52px] rounded-xl flex items-center justify-center gap-2 text-[14px] font-semibold px-3 text-center"
+              style={{ background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.4)', border: '1px dashed rgba(255,255,255,0.15)' }}>
+              <Link2 size={15} /> Customer link activates when you send
+            </div>
           )}
         </div>
 
@@ -209,6 +215,20 @@ export default function InvoiceDetailPage() {
           )}
         </div>
 
+        {/* Auto-remind switch — the cron respects this per invoice */}
+        {!['paid', 'cancelled'].includes(inv.status) && (
+          <button
+            onClick={() => act('remind', () => fetch('/api/admin/invoices/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ auto_remind: !inv.auto_remind }) }))}
+            disabled={busy !== null}
+            className="w-full min-h-[52px] px-4 rounded-xl mb-4 flex items-center justify-between text-[16px] font-semibold active:scale-[0.99] transition-all"
+            style={inv.auto_remind
+              ? { background: 'rgba(53,208,127,0.08)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.25)' }
+              : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <span>Automatic payment reminders</span>
+            <span className="text-[14px]">{inv.auto_remind ? 'ON' : 'OFF'}</span>
+          </button>
+        )}
+
         {/* Danger row */}
         <div className="flex gap-2.5">
           {inv.status === 'draft' && !inv.sent_at && (
@@ -242,17 +262,18 @@ export default function InvoiceDetailPage() {
       {showPay && (
         <div className="fixed inset-0 z-[80] flex items-end sm:items-center sm:justify-center">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowPay(false)} />
-          <QuickPay id={String(id)} balance={balance} onDone={() => { setShowPay(false); load(); }} onClose={() => setShowPay(false)} />
+          <QuickPay id={String(id)} balance={balance} hasEmail={!!(inv.customer?.email || inv.bill_to?.email)} onDone={() => { setShowPay(false); load(); }} onClose={() => setShowPay(false)} />
         </div>
       )}
     </div>
   );
 }
 
-function QuickPay({ id, balance, onDone, onClose }: { id: string; balance: number; onDone: () => void; onClose: () => void }) {
+function QuickPay({ id, balance, hasEmail, onDone, onClose }: { id: string; balance: number; hasEmail: boolean; onDone: () => void; onClose: () => void }) {
   const [amount, setAmount] = useState(String(balance));
   const [method, setMethod] = useState('check');
   const [reference, setReference] = useState('');
+  const [sendReceipt, setSendReceipt] = useState(hasEmail);
   const [saving, setSaving] = useState(false);
   const inputCls = 'w-full min-h-[52px] px-4 rounded-xl bg-white/5 border border-white/10 text-[17px] placeholder:text-white/25 focus:outline-none focus:border-[#35d07f]/50';
 
@@ -260,7 +281,7 @@ function QuickPay({ id, balance, onDone, onClose }: { id: string; balance: numbe
     setSaving(true);
     const res = await fetch('/api/admin/invoices/' + id + '/payments', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: Number(amount), method, reference: reference || null }),
+      body: JSON.stringify({ amount: Number(amount), method, reference: reference || null, send_receipt: sendReceipt }),
     });
     if (res.ok) onDone(); else { alert((await res.json()).error || 'Failed'); setSaving(false); }
   };
@@ -284,7 +305,17 @@ function QuickPay({ id, balance, onDone, onClose }: { id: string; balance: numbe
           </button>
         ))}
       </div>
-      <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Check # / reference (optional)" className={inputCls + ' mb-4'} />
+      <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Check # / reference (optional)" className={inputCls + ' mb-3'} />
+      {hasEmail && (
+        <button onClick={() => setSendReceipt(!sendReceipt)}
+          className="w-full min-h-[52px] px-4 rounded-xl mb-4 flex items-center justify-between text-[16px] font-semibold active:scale-[0.99] transition-all"
+          style={sendReceipt
+            ? { background: 'rgba(53,208,127,0.1)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.35)' }
+            : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <span>Email receipt to customer</span>
+          <span className="text-[14px]">{sendReceipt ? 'ON' : 'OFF'}</span>
+        </button>
+      )}
       <button disabled={saving || !(Number(amount) > 0)} onClick={submit}
         className="w-full min-h-[56px] rounded-xl text-[17px] font-bold text-black disabled:opacity-40 flex items-center justify-center gap-2"
         style={{ background: 'linear-gradient(145deg, #35d07f, #22b168)' }}>

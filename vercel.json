@@ -3,13 +3,19 @@
     {
       "source": "/images/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=2678400, stale-while-revalidate=86400" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=2678400, stale-while-revalidate=86400"
+        }
       ]
     },
     {
       "source": "/(og-default.jpg|ro-icon.svg|ro-unlimited-logo-transparent.png|ro-unlimited-logo.png)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=86400" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, stale-while-revalidate=86400"
+        }
       ]
     }
   ],
@@ -39,6 +45,10 @@
     {
       "path": "/api/cron/email-cleanup",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/invoice-reminders",
+      "schedule": "30 13 * * *"
     }
   ]
 }

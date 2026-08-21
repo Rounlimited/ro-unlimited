@@ -20,6 +20,7 @@ interface InvoiceRow {
   invoice_number: string;
   customer: { id: string; first_name: string | null; last_name: string | null; company_name: string | null; email: string | null } | null;
   bill_to: { name?: string; company?: string; email?: string } | null;
+  // email presence drives the receipt toggle default in PaymentSheet
   project_name: string | null;
   milestone_label: string | null;
   total: number;
@@ -40,6 +41,23 @@ interface Summary {
 }
 
 interface CustomerLite { id: string; first_name: string | null; last_name: string | null; company_name: string | null; email: string | null }
+
+/** Built-in line presets — always available; cost-library items merge in on top. */
+const LINE_PRESETS: { label: string; description: string }[] = [
+  { label: 'Progress billing', description: 'Progress billing — ' },
+  { label: 'Deposit', description: 'Project deposit — ' },
+  { label: 'Final balance', description: 'Final balance — ' },
+  { label: 'Mobilization', description: 'Mobilization & site setup' },
+  { label: 'Change order', description: 'Change order — ' },
+  { label: 'Site prep & grading', description: 'Site preparation & grading' },
+  { label: 'Storm drainage', description: 'Storm drainage installation' },
+  { label: 'Sewer tie-in', description: 'Sanitary sewer tie-in' },
+  { label: 'Water service', description: 'Water service installation' },
+  { label: 'Septic install', description: 'Septic system installation' },
+  { label: 'Materials', description: 'Materials' },
+  { label: 'Labor', description: 'Labor' },
+  { label: 'Equipment', description: 'Equipment & machine time' },
+];
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   draft:     { label: 'Draft',    color: '#9ca3af', bg: 'rgba(156,163,175,0.12)', icon: Clock },
@@ -339,6 +357,7 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 const inputCls = 'w-full min-h-[52px] px-4 rounded-xl bg-white/5 border border-white/10 text-[17px] placeholder:text-white/25 focus:outline-none focus:border-[#35d07f]/50 transition-colors';
+const inputNarrowCls = 'min-h-[52px] px-3 rounded-xl bg-white/5 border border-white/10 text-[17px] placeholder:text-white/25 focus:outline-none focus:border-[#35d07f]/50 transition-colors';
 const labelCls = 'block text-[14px] font-semibold text-white/50 uppercase tracking-wide mb-1.5';
 
 /* ── Create sheet: existing customer OR blank bill-to ───────── */
@@ -347,9 +366,14 @@ function CreateSheet({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const [customers, setCustomers] = useState<CustomerLite[]>([]);
   const [customerQ, setCustomerQ] = useState('');
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
+  const [newCust, setNewCust] = useState({ first_name: '', last_name: '', company_name: '', email: '', phone: '' });
+  const [creatingCust, setCreatingCust] = useState(false);
   const [billTo, setBillTo] = useState({ name: '', company: '', email: '', phone: '' });
   const [projectName, setProjectName] = useState('');
   const [lines, setLines] = useState([{ description: '', quantity: 1, unit_price: '' }]);
+  const [activeLine, setActiveLine] = useState<number | null>(null);
+  const [costItems, setCostItems] = useState<{ name: string; unit_cost?: number }[]>([]);
   const [dueDate, setDueDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -358,6 +382,10 @@ function CreateSheet({ onClose, onCreated }: { onClose: () => void; onCreated: (
     fetch('/api/admin/customers').then((r) => r.json()).then((d) => {
       const list = Array.isArray(d) ? d : d.customers;
       if (Array.isArray(list)) setCustomers(list);
+    }).catch(() => {});
+    fetch('/api/admin/cost-library').then((r) => r.json()).then((d) => {
+      const list = Array.isArray(d) ? d : d.items;
+      if (Array.isArray(list)) setCostItems(list);
     }).catch(() => {});
   }, []);
 
@@ -371,6 +399,30 @@ function CreateSheet({ onClose, onCreated }: { onClose: () => void; onCreated: (
 
   const selected = customers.find((cst) => cst.id === customerId) || null;
   const total = lines.reduce((s, l) => s + (Number(l.quantity) || 1) * (Number(l.unit_price) || 0), 0);
+
+  const createCustomer = async () => {
+    setError(null);
+    if (!newCust.first_name.trim() || !newCust.last_name.trim()) { setError('First and last name are required'); return; }
+    setCreatingCust(true);
+    try {
+      const res = await fetch('/api/admin/customers', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: newCust.first_name.trim(), last_name: newCust.last_name.trim(),
+          company_name: newCust.company_name.trim() || null,
+          email: newCust.email.trim() || null, phone: newCust.phone.trim() || null,
+          type: newCust.company_name.trim() ? 'commercial' : 'residential', source: 'invoice',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) { setError(data.error || 'Could not create customer'); setCreatingCust(false); return; }
+      const created = data.customer || data;
+      setCustomers([created, ...customers]);
+      setCustomerId(created.id);
+      setShowNewCustomer(false);
+    } catch { setError('Network error'); }
+    setCreatingCust(false);
+  };
 
   const submit = async () => {
     setError(null);
@@ -422,17 +474,50 @@ function CreateSheet({ onClose, onCreated }: { onClose: () => void; onCreated: (
             </div>
           ) : (
             <>
-              <input value={customerQ} onChange={(e) => setCustomerQ(e.target.value)} placeholder="Search customers…" className={inputCls} />
-              <div className="mt-2 space-y-1.5 max-h-56 overflow-y-auto">
-                {matches.map((cst) => (
-                  <button key={cst.id} onClick={() => setCustomerId(cst.id)}
-                    className="w-full text-left min-h-[52px] px-4 rounded-xl bg-white/4 border border-white/8 flex items-center justify-between active:scale-[0.99]">
-                    <span className="text-[16px]">{cst.company_name || [cst.first_name, cst.last_name].filter(Boolean).join(' ')}</span>
-                    <ChevronRight size={16} className="text-white/25" />
+              {showNewCustomer ? (
+                <div className="rounded-xl border border-[#35d07f]/30 p-3.5 space-y-2.5" style={{ background: 'rgba(53,208,127,0.05)' }}>
+                  <p className="text-[15px] font-bold" style={{ color: '#35d07f' }}>New Customer</p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <input value={newCust.first_name} onChange={(e) => setNewCust({ ...newCust, first_name: e.target.value })} placeholder="First name *" className={inputCls} />
+                    <input value={newCust.last_name} onChange={(e) => setNewCust({ ...newCust, last_name: e.target.value })} placeholder="Last name *" className={inputCls} />
+                  </div>
+                  <input value={newCust.company_name} onChange={(e) => setNewCust({ ...newCust, company_name: e.target.value })} placeholder="Company (optional)" className={inputCls} />
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <input value={newCust.email} onChange={(e) => setNewCust({ ...newCust, email: e.target.value })} placeholder="Email" type="email" className={inputCls} />
+                    <input value={newCust.phone} onChange={(e) => setNewCust({ ...newCust, phone: e.target.value })} placeholder="Phone" type="tel" className={inputCls} />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={createCustomer} disabled={creatingCust}
+                      className="flex-1 min-h-[48px] rounded-xl text-[15px] font-bold text-black disabled:opacity-40 flex items-center justify-center gap-2"
+                      style={{ background: 'linear-gradient(145deg, #35d07f, #22b168)' }}>
+                      {creatingCust ? <Loader2 size={17} className="animate-spin" /> : <Plus size={17} />} Create & Use
+                    </button>
+                    <button onClick={() => setShowNewCustomer(false)}
+                      className="min-h-[48px] px-4 rounded-xl text-[15px] font-semibold bg-white/5 text-white/60 border border-white/10">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <input value={customerQ} onChange={(e) => setCustomerQ(e.target.value)} placeholder="Search customers…" className={inputCls} />
+                  <div className="mt-2 space-y-1.5 max-h-56 overflow-y-auto">
+                    {matches.map((cst) => (
+                      <button key={cst.id} onClick={() => setCustomerId(cst.id)}
+                        className="w-full text-left min-h-[52px] px-4 rounded-xl bg-white/4 border border-white/8 flex items-center justify-between active:scale-[0.99]">
+                        <span className="text-[16px]">{cst.company_name || [cst.first_name, cst.last_name].filter(Boolean).join(' ')}</span>
+                        <ChevronRight size={16} className="text-white/25" />
+                      </button>
+                    ))}
+                    {matches.length === 0 && <p className="text-[15px] text-white/35 px-1 py-2">No matches yet.</p>}
+                  </div>
+                  <button onClick={() => { setShowNewCustomer(true); if (customerQ.trim()) { const parts = customerQ.trim().split(/\s+/); setNewCust({ ...newCust, first_name: parts[0] || '', last_name: parts.slice(1).join(' ') }); } }}
+                    className="mt-2 w-full min-h-[48px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+                    style={{ background: 'rgba(53,208,127,0.1)', color: '#35d07f', border: '1px dashed rgba(53,208,127,0.4)' }}>
+                    <Plus size={17} /> Create New Customer
                   </button>
-                ))}
-                {matches.length === 0 && <p className="text-[15px] text-white/35 px-1 py-2">No matches — use Quick Bill-To instead.</p>}
-              </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -453,19 +538,60 @@ function CreateSheet({ onClose, onCreated }: { onClose: () => void; onCreated: (
       {/* lines */}
       <label className={labelCls}>Line Items</label>
       <div className="space-y-2 mb-2">
-        {lines.map((l, i) => (
-          <div key={i} className="flex gap-2">
-            <input value={l.description} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
-              placeholder="Description" className={inputCls + ' flex-1'} />
-            <input value={l.unit_price} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, unit_price: e.target.value } : x))}
-              placeholder="$" type="number" inputMode="decimal" className={inputCls + ' w-28 text-right'} />
-            {lines.length > 1 && (
-              <button onClick={() => setLines(lines.filter((_, j) => j !== i))} className="w-12 shrink-0 rounded-xl bg-white/4 flex items-center justify-center active:scale-95">
-                <Trash2 size={17} className="text-white/40" />
-              </button>
-            )}
-          </div>
-        ))}
+        {lines.map((l, i) => {
+          const q = l.description.trim().toLowerCase();
+          const librarySugg = costItems
+            .filter((ci) => ci.name && (!q || ci.name.toLowerCase().includes(q)))
+            .slice(0, 4)
+            .map((ci) => ({ label: ci.name, description: ci.name, price: (ci as any).unit_cost }));
+          const presetSugg = LINE_PRESETS
+            .filter((ps) => !q || ps.label.toLowerCase().includes(q) || ps.description.toLowerCase().includes(q))
+            .slice(0, 8 - librarySugg.length)
+            .map((ps) => ({ ...ps, price: undefined as number | undefined }));
+          const suggestions = [...librarySugg, ...presetSugg];
+          return (
+            <div key={i}>
+              <div className="flex gap-2 min-w-0">
+                <input
+                  value={l.description}
+                  onFocus={() => setActiveLine(i)}
+                  onBlur={() => setTimeout(() => setActiveLine((a) => (a === i ? null : a)), 150)}
+                  onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
+                  placeholder="Description"
+                  className={inputNarrowCls + ' flex-1 min-w-0'}
+                />
+                <input
+                  value={l.unit_price}
+                  onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, unit_price: e.target.value } : x))}
+                  placeholder="$" type="number" inputMode="decimal"
+                  className={inputNarrowCls + ' w-24 shrink-0 text-right'}
+                />
+                {lines.length > 1 && (
+                  <button onClick={() => setLines(lines.filter((_, j) => j !== i))} className="w-12 shrink-0 rounded-xl bg-white/4 flex items-center justify-center active:scale-95">
+                    <Trash2 size={17} className="text-white/40" />
+                  </button>
+                )}
+              </div>
+              {activeLine === i && suggestions.length > 0 && (
+                <div className="flex gap-1.5 overflow-x-auto py-2 -mx-1 px-1">
+                  {suggestions.map((sg, k) => (
+                    <button
+                      key={k}
+                      onMouseDown={(e) => e.preventDefault() /* keep input focus */}
+                      onClick={() => setLines(lines.map((x, j) => j === i
+                        ? { ...x, description: sg.description, unit_price: sg.price != null ? String(sg.price) : x.unit_price }
+                        : x))}
+                      className="shrink-0 min-h-[40px] px-3.5 rounded-full text-[14px] font-semibold whitespace-nowrap active:scale-95 transition-transform"
+                      style={{ background: 'rgba(53,208,127,0.1)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.3)' }}
+                    >
+                      {sg.label}{sg.price != null ? ' · $' + Number(sg.price).toLocaleString() : ''}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
       <button onClick={() => setLines([...lines, { description: '', quantity: 1, unit_price: '' }])}
         className="text-[15px] font-semibold mb-4 min-h-[44px] px-1" style={{ color: '#35d07f' }}>
@@ -498,9 +624,11 @@ function CreateSheet({ onClose, onCreated }: { onClose: () => void; onCreated: (
 /* ── Record payment sheet ───────────────────────────────────── */
 function PaymentSheet({ invoice, onClose, onDone }: { invoice: InvoiceRow; onClose: () => void; onDone: () => void }) {
   const balance = Number(invoice.total) - Number(invoice.amount_paid);
+  const hasEmail = !!(invoice.customer?.email || invoice.bill_to?.email);
   const [amount, setAmount] = useState(String(balance));
   const [method, setMethod] = useState('check');
   const [reference, setReference] = useState('');
+  const [sendReceipt, setSendReceipt] = useState(hasEmail);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -509,7 +637,7 @@ function PaymentSheet({ invoice, onClose, onDone }: { invoice: InvoiceRow; onClo
     try {
       const res = await fetch('/api/admin/invoices/' + invoice.id + '/payments', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: Number(amount), method, reference: reference || null }),
+        body: JSON.stringify({ amount: Number(amount), method, reference: reference || null, send_receipt: sendReceipt }),
       });
       const data = await res.json();
       if (!res.ok || data.error) { setError(data.error || 'Failed'); setSaving(false); return; }
@@ -537,7 +665,17 @@ function PaymentSheet({ invoice, onClose, onDone }: { invoice: InvoiceRow; onClo
         ))}
       </div>
       <label className={labelCls}>Reference (check # etc, optional)</label>
-      <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="#1042" className={inputCls + ' mb-5'} />
+      <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="#1042" className={inputCls + ' mb-4'} />
+      {hasEmail && (
+        <button onClick={() => setSendReceipt(!sendReceipt)}
+          className="w-full min-h-[52px] px-4 rounded-xl mb-5 flex items-center justify-between text-[16px] font-semibold active:scale-[0.99] transition-all"
+          style={sendReceipt
+            ? { background: 'rgba(53,208,127,0.1)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.35)' }
+            : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <span>Email receipt to customer</span>
+          <span className="text-[14px]">{sendReceipt ? 'ON' : 'OFF'}</span>
+        </button>
+      )}
       {error && <p className="text-[15px] text-[#f87171] mb-3">{error}</p>}
       <button disabled={saving || !(Number(amount) > 0)} onClick={submit}
         className="w-full min-h-[56px] rounded-xl text-[17px] font-bold text-black disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.99] transition-all"
