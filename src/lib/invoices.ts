@@ -69,7 +69,27 @@ export async function nextInvoiceNumber(supabase: ReturnType<typeof createAdminC
   return `${prefix}${String(next).padStart(4, '0')}`;
 }
 
+/**
+ * Short, textable tokens: 8 chars from an alphabet with no lookalikes
+ * (no 0/O, 1/l/I) -> links like rounlimited.com/i/x7K2mQ9p. 55^8 ≈ 8e13
+ * possibilities — unguessable for invoice links, short enough for SMS.
+ */
+const TOKEN_ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export function newShareToken(): string {
+  const bytes = crypto.randomBytes(8);
+  let out = '';
+  for (let i = 0; i < 8; i++) out += TOKEN_ALPHABET[bytes[i] % TOKEN_ALPHABET.length];
+  return out;
+}
+
+/** Token that's proven unused — the unique column would reject a collision anyway. */
+export async function newUniqueShareToken(supabase: ReturnType<typeof createAdminClient>): Promise<string> {
+  for (let i = 0; i < 4; i++) {
+    const t = newShareToken();
+    const { data } = await supabase.from('invoices').select('id').eq('share_token', t).limit(1);
+    if (!data || data.length === 0) return t;
+  }
+  // 4 collisions in a 55^8 space means something is very wrong — fall back long
   return crypto.randomBytes(24).toString('base64url');
 }
 
@@ -176,6 +196,7 @@ export async function createInvoice(body: any) {
 
   const { subtotal, tax_amount, total } = calcTotals(lineItems, taxPercent);
   const invoice_number = await nextInvoiceNumber(supabase);
+  const share_token = await newUniqueShareToken(supabase);
 
   const { data, error } = await supabase
     .from('invoices')
@@ -200,7 +221,7 @@ export async function createInvoice(body: any) {
       terms: body.terms || null,
       payment_instructions: body.payment_instructions || null,
       photos,
-      share_token: newShareToken(),
+      share_token,
     })
     .select('*, customer:customers(id, first_name, last_name, company_name, email, phone)')
     .single();
@@ -228,7 +249,13 @@ export async function activateInvoiceLink(invoiceId: string): Promise<{ view_lin
   if (!inv) return { error: 'Invoice not found' };
   if (inv.status === 'cancelled') return { error: 'Invoice is cancelled' };
 
-  const token = inv.share_token || newShareToken();
+  let token = inv.share_token;
+  if (!token) token = await newUniqueShareToken(supabase);
+  else if (token.length > 12) {
+    // legacy long token — shorten it if nobody has ever opened the link
+    const { count } = await supabase.from('invoice_views').select('*', { count: 'exact', head: true }).eq('invoice_id', invoiceId);
+    if (!count) token = await newUniqueShareToken(supabase);
+  }
   const minExpiry = new Date();
   minExpiry.setDate(minExpiry.getDate() + 180);
   const expiresAt = inv.share_token_expires_at && new Date(inv.share_token_expires_at) > minExpiry
