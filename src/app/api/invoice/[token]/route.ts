@@ -34,11 +34,10 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
       ip_hash: crypto.createHash('sha256').update(ip).digest('hex').slice(0, 24),
     });
 
-    const { data: payments } = await supabase
-      .from('invoice_payments')
-      .select('amount, method, paid_date')
-      .eq('invoice_id', inv.id)
-      .order('paid_date');
+    const [{ data: payments }, { data: comments }] = await Promise.all([
+      supabase.from('invoice_payments').select('amount, method, paid_date').eq('invoice_id', inv.id).order('paid_date'),
+      supabase.from('invoice_comments').select('author, name, body, created_at').eq('invoice_id', inv.id).order('created_at'),
+    ]);
 
     const who = inv.customer
       ? inv.customer.company_name || [inv.customer.first_name, inv.customer.last_name].filter(Boolean).join(' ')
@@ -63,6 +62,10 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
       payment_instructions: inv.payment_instructions,
       photos: inv.photos,
       payments: payments || [],
+      comments: comments || [],
+      signed_at: inv.signed_at,
+      signed_name: inv.signed_name,
+      signature_data: inv.signature_data,
     });
   } catch (err) {
     console.error('[public invoice] error:', err);

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Receipt, DollarSign, Loader2, Trash2, Ban, X,
   CheckCircle2, AlertTriangle, Clock, Eye, Send, FileDown, Link2, Copy, Share2,
+  PenLine, MessageSquare,
 } from 'lucide-react';
 
 /** Invoice detail — status, lines, ledger, record payment. JR-sized. */
@@ -252,6 +253,58 @@ export default function InvoiceDetailPage() {
           )}
         </div>
 
+        {/* Customer signature */}
+        {inv.signed_at && (
+          <div className="rounded-2xl border border-white/8 bg-[#111] p-5 mb-4">
+            <h2 className="text-[15px] font-bold uppercase tracking-wide text-white/40 mb-3 flex items-center gap-2">
+              <PenLine size={15} /> Customer Approval
+            </h2>
+            <div className="flex items-center gap-4">
+              {inv.signature_data && (
+                <div className="bg-white rounded-lg p-2 shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={inv.signature_data} alt="Signature" className="h-14 w-auto" />
+                </div>
+              )}
+              <div>
+                <p className="text-[17px] font-semibold" style={{ color: '#35d07f' }}>{inv.signed_name}</p>
+                <p className="text-[14px] text-white/40">Signed {fmtDate(inv.signed_at)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notes thread — customer questions + admin replies (public on the link) */}
+        <div className="rounded-2xl border border-white/8 bg-[#111] p-5 mb-4">
+          <h2 className="text-[15px] font-bold uppercase tracking-wide text-white/40 mb-3 flex items-center gap-2">
+            <MessageSquare size={15} /> Notes &amp; Questions
+            {(inv.comments || []).length > 0 && (
+              <span className="text-[13px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(53,208,127,0.15)', color: '#35d07f' }}>
+                {(inv.comments || []).length}
+              </span>
+            )}
+          </h2>
+          {(inv.comments || []).length === 0 ? (
+            <p className="text-[15px] text-white/30 mb-3">No notes yet — anything you post here shows on the customer link too.</p>
+          ) : (
+            <div className="space-y-2.5 mb-3">
+              {(inv.comments || []).map((cm: any) => (
+                <div key={cm.id} className="rounded-xl p-3.5"
+                  style={cm.author === 'admin'
+                    ? { background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)' }
+                    : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <p className="text-[13px] font-bold mb-1" style={{ color: cm.author === 'admin' ? '#D4B965' : 'rgba(255,255,255,0.6)' }}>
+                    {cm.author === 'admin' ? (cm.name || 'RO Unlimited') : (cm.name || 'Customer')}
+                    <span className="font-normal text-white/30"> · {fmtDate(cm.created_at)}</span>
+                  </p>
+                  <p className="text-[16px] text-white/80 leading-relaxed whitespace-pre-wrap">{cm.body}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <ReplyBox id={String(id)} onPosted={load} />
+        </div>
+
         {/* Auto-remind switch — the cron respects this per invoice */}
         {!['paid', 'cancelled'].includes(inv.status) && (
           <button
@@ -407,6 +460,39 @@ function SendSheet({ inv, onClose, onSent }: { inv: any; onClose: () => void; on
           {sending ? <Loader2 size={20} className="animate-spin" /> : <Send size={18} />} Send Invoice
         </button>
       </div>
+    </div>
+  );
+}
+
+
+function ReplyBox({ id, onPosted }: { id: string; onPosted: () => void }) {
+  const [body, setBody] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    if (!body.trim()) return;
+    setBusy(true);
+    const res = await fetch('/api/admin/invoices/' + id + '/comments', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: body.trim() }),
+    });
+    if (res.ok) { setBody(''); onPosted(); }
+    else alert((await res.json()).error || 'Failed');
+    setBusy(false);
+  };
+  return (
+    <div className="flex gap-2">
+      <input
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }}
+        placeholder="Reply — the customer sees this on their link…"
+        className="flex-1 min-w-0 min-h-[48px] px-4 rounded-xl bg-white/5 border border-white/10 text-[16px] placeholder:text-white/25 focus:outline-none focus:border-[#35d07f]/50"
+      />
+      <button onClick={submit} disabled={busy || !body.trim()}
+        className="min-h-[48px] px-5 rounded-xl text-[15px] font-bold text-black disabled:opacity-40 shrink-0"
+        style={{ background: 'linear-gradient(145deg, #35d07f, #22b168)' }}>
+        {busy ? '…' : 'Reply'}
+      </button>
     </div>
   );
 }

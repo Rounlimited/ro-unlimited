@@ -17,6 +17,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       supabase.from('invoice_payments').select('*').eq('invoice_id', params.id).order('paid_date', { ascending: false }),
       supabase.from('invoice_views').select('viewed_at').eq('invoice_id', params.id).order('viewed_at', { ascending: false }).limit(1),
     ]);
+    const { data: comments } = await supabase
+      .from('invoice_comments').select('*').eq('invoice_id', params.id).order('created_at');
     if (error || !invoice) return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
 
     const { count } = await supabase
@@ -28,6 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       ...invoice,
       effective_status: effectiveStatus(invoice),
       payments: payments || [],
+      comments: comments || [],
       view_count: count || 0,
       last_viewed_at: views?.[0]?.viewed_at || null,
     });

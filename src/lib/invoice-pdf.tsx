@@ -183,6 +183,23 @@ function InvoicePDFDocument({ invoice, payments }: { invoice: any; payments: any
           </View>
         )}
 
+        {/* Signature — customer approval, DocuSign-lite */}
+        {invoice.signed_at && invoice.signature_data ? (
+          <View style={{ marginTop: 16, borderWidth: 1, borderColor: c.borderLight, borderRadius: 3, padding: 10 }} wrap={false}>
+            <Text style={s.sectionLabel}>Customer Approval</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 16 }}>
+              {/* eslint-disable-next-line jsx-a11y/alt-text */}
+              <Image src={invoice.signature_data} style={{ width: 160, height: 50, objectFit: 'contain' }} />
+              <View>
+                <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: c.navy }}>{invoice.signed_name}</Text>
+                <Text style={{ fontSize: 8.5, color: c.label }}>
+                  Signed {new Date(invoice.signed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
         {/* Notes */}
         {invoice.notes ? (
           <View style={{ marginTop: 14 }} wrap={false}>
