@@ -75,6 +75,7 @@ interface EmailAccount {
 }
 
 import EstimatePhotos, { EstimatePhoto } from '@/components/admin/estimates/EstimatePhotos';
+import OptionsBuilder from '@/components/admin/estimates/OptionsBuilder';
 
 interface Estimate {
   id: string;
@@ -143,11 +144,14 @@ const DIVISION_CONFIG: Record<string, { label: string; icon: any; text: string }
   residential: { label: 'Residential', icon: Home,      text: 'text-blue-400' },
   commercial:  { label: 'Commercial',  icon: Building2, text: 'text-[#D4772C]' },
   grading:     { label: 'Grading',     icon: Mountain,  text: 'text-green-400' },
+  utilities:   { label: 'Underground Utilities', icon: Mountain, text: 'text-[#F84B0C]' },
+  septic:      { label: 'Septic',      icon: Mountain,  text: 'text-green-400' },
 };
 
 const TABS = [
   { id: 'overview',   label: 'Overview' },
   { id: 'line-items', label: 'Line Items' },
+  { id: 'options',    label: 'Options' },
   { id: 'financials', label: 'Financials' },
   { id: 'schedule',   label: 'Schedule' },
   { id: 'terms',      label: 'Terms' },
@@ -926,6 +930,16 @@ export default function EstimateDetailPage() {
         )}
 
         {/* FINANCIALS TAB */}
+        {activeTab === 'options' && (
+          <div className="space-y-4">
+            <p className="text-[15px] text-white/40 leading-relaxed">
+              Customer-selectable options for this document — photos, price differences, live total
+              on their link. Their picks lock in when they sign.
+            </p>
+            <OptionsBuilder estimateId={String(estimate.id)} />
+          </div>
+        )}
+
         {activeTab === 'financials' && (
           <div className="space-y-4">
             <div className="bg-[#111] border border-white/5 rounded-xl p-5">

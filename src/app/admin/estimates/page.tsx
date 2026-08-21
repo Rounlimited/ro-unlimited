@@ -43,6 +43,8 @@ const DIVISION_OPTIONS = [
   { value: 'residential', label: 'Residential' },
   { value: 'commercial', label: 'Commercial' },
   { value: 'grading', label: 'Grading' },
+  { value: 'utilities', label: 'Utilities' },
+  { value: 'septic', label: 'Septic' },
 ];
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; label: string }> = {

@@ -11,6 +11,7 @@ import WizardStep1 from '@/components/admin/estimates/WizardStep1';
 import WizardStep2 from '@/components/admin/estimates/WizardStep2';
 import WizardStep3 from '@/components/admin/estimates/WizardStep3';
 import EstimatePhotos, { EstimatePhoto } from '@/components/admin/estimates/EstimatePhotos';
+import OptionsBuilder from '@/components/admin/estimates/OptionsBuilder';
 import WizardStep4 from '@/components/admin/estimates/WizardStep4';
 import WizardStep5 from '@/components/admin/estimates/WizardStep5';
 import WizardStep6 from '@/components/admin/estimates/WizardStep6';
@@ -899,13 +900,21 @@ export default function NewEstimateWizard() {
             </div>
           )}
           {currentStep === 4 && (
-            <WizardStep4
-              lineItems={lineItems}
-              onChange={setLineItems}
-              division={step1.division}
-              documentMode={step1.document_mode}
-              projectName={step1.project_name}
-            />
+            <div className="space-y-8">
+              <WizardStep4
+                lineItems={lineItems}
+                onChange={setLineItems}
+                division={step1.division}
+                documentMode={step1.document_mode}
+                projectName={step1.project_name}
+              />
+              {estimateId && (
+                <div>
+                  <div className="text-[17px] font-semibold text-white mb-1">Customer Options</div>
+                  <OptionsBuilder estimateId={estimateId} />
+                </div>
+              )}
+            </div>
           )}
           {currentStep === 5 && (
             <WizardStep5

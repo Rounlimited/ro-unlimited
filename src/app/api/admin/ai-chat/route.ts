@@ -304,7 +304,7 @@ const WRITE_TOOLS = [
         customer_id: { type: 'string', description: 'Customer UUID (required)' },
         document_mode: { type: 'string', description: 'Type: estimate, contract, change_order, quick_quote (default estimate)' },
         project_name: { type: 'string', description: 'Project name/title' },
-        division: { type: 'string', description: 'Division value (use exact lowercase): residential, commercial, grading, concrete, foundation, framing, roofing, siding, electrical, plumbing, hvac, painting, flooring, demolition, drywall, landscaping, fencing, other' },
+        division: { type: 'string', description: 'Division value (use exact lowercase): residential, commercial, grading, utilities, septic, concrete, foundation, framing, roofing, siding, electrical, plumbing, hvac, painting, flooring, demolition, drywall, landscaping, fencing, other' },
         estimate_type: { type: 'string', description: 'Estimate type (use exact value): new_construction, renovation, repair, addition, remodel, commercial, quick_quote, preliminary, detailed, change_order, time_materials' },
         contract_type: { type: 'string', description: 'Contract type (use exact value): fixed_price, cost_plus, time_materials, unit_price' },
         project_address: { type: 'string', description: 'Project street address' },
@@ -329,7 +329,7 @@ const WRITE_TOOLS = [
       properties: {
         id: { type: 'string', description: 'Estimate UUID (required)' },
         project_name: { type: 'string', description: 'Project name' },
-        division: { type: 'string', description: 'Division (exact value): residential, commercial, grading, concrete, foundation, framing, roofing, siding, electrical, plumbing, hvac, painting, flooring, demolition, drywall, landscaping, fencing, other' },
+        division: { type: 'string', description: 'Division (exact value): residential, commercial, grading, utilities, septic, concrete, foundation, framing, roofing, siding, electrical, plumbing, hvac, painting, flooring, demolition, drywall, landscaping, fencing, other' },
         estimate_type: { type: 'string', description: 'Estimate type (exact value): quick_quote, preliminary, detailed, change_order, time_materials' },
         contract_type: { type: 'string', description: 'Contract type (exact value): fixed_price, cost_plus, time_materials, unit_price' },
         document_mode: { type: 'string', description: 'Document mode: estimate, contract, change_order, quick_quote' },
@@ -2012,7 +2012,7 @@ Phase sequences (user can adjust — array position sets sort_order):
 
 Doc prefixes: Estimate=RO-EST · Proposal=RO-CON · Change Order=RO-CO · Quick Quote=RO-QQ
 Status: draft→sent→viewed→accepted/declined/expired · any→revised
-Divisions: residential, commercial, grading, concrete, foundation, framing, roofing, siding, electrical, plumbing, hvac, painting, flooring, demolition, drywall, landscaping, fencing, other
+Divisions: residential, commercial, grading, utilities, septic, concrete, foundation, framing, roofing, siding, electrical, plumbing, hvac, painting, flooring, demolition, drywall, landscaping, fencing, other
 Types: new_construction, renovation, repair, addition, remodel, commercial, quick_quote, preliminary, detailed, change_order, time_materials
 
 SC pricing (2025–26): Concrete $6-10/sqft · Framing $8-16 · Shingles $4-7 · Metal roof $8-14 · Plumbing $800-1500/fixture · HVAC $3-5K/ton · Electrical $150-300/outlet · Drywall $3-5 · Paint $2-4 · LVP $5-9 · Tile $8-20 · Cabinets $150-350/lnft · Demo $4-10 · Windows $400-1200ea · Insulation $1.50-3.50/sqft

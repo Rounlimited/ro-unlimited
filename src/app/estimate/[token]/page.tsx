@@ -113,6 +113,8 @@ const DIVISION_LABELS: Record<string, string> = {
   residential: 'Residential',
   commercial: 'Commercial',
   grading: 'Grading',
+  utilities: 'Underground Utilities',
+  septic: 'Septic',
 };
 /** Internal values like "other:Utility" render as "Utility". */
 function divisionLabel(v: string): string {

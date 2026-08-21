@@ -34,7 +34,7 @@ interface Props {
 const MAX_DIM = 1920;
 const JPEG_QUALITY = 0.85;
 
-async function compressImage(file: File): Promise<Blob> {
+export async function compressImage(file: File): Promise<Blob> {
   // createImageBitmap handles EXIF orientation on every modern browser
   const bitmap = await createImageBitmap(file).catch(() => null);
   if (!bitmap) return file; // undecodable → let the server try the original
