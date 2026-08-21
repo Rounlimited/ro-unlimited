@@ -685,14 +685,33 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           <View style={s.sigRow}>
             <View style={s.sigCol}>
               <Text style={s.sigColLabel}>Client</Text>
-              <View style={s.sigLine} />
-              <Text style={s.sigLabel}>Signature</Text>
-              <View style={s.sigLineLight}>
-                {customer && <Text style={{ fontSize: 9, color: c.textMed }}>{customer.first_name} {customer.last_name}</Text>}
-              </View>
-              <Text style={s.sigLabel}>Printed Name</Text>
-              <View style={s.sigLineLight} />
-              <Text style={s.sigLabel}>Date</Text>
+              {estimate.signed_at && estimate.client_signature ? (
+                <View>
+                  {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                  <Image src={estimate.client_signature} style={{ width: 140, height: 40, objectFit: 'contain', marginBottom: 2 }} />
+                  <View style={s.sigLine} />
+                  <Text style={s.sigLabel}>Signature (signed electronically)</Text>
+                  <View style={s.sigLineLight}>
+                    <Text style={{ fontSize: 9, color: c.textMed }}>{estimate.signed_name}</Text>
+                  </View>
+                  <Text style={s.sigLabel}>Printed Name</Text>
+                  <View style={s.sigLineLight}>
+                    <Text style={{ fontSize: 9, color: c.textMed }}>{new Date(estimate.signed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</Text>
+                  </View>
+                  <Text style={s.sigLabel}>Date</Text>
+                </View>
+              ) : (
+                <View>
+                  <View style={s.sigLine} />
+                  <Text style={s.sigLabel}>Signature</Text>
+                  <View style={s.sigLineLight}>
+                    {customer && <Text style={{ fontSize: 9, color: c.textMed }}>{customer.first_name} {customer.last_name}</Text>}
+                  </View>
+                  <Text style={s.sigLabel}>Printed Name</Text>
+                  <View style={s.sigLineLight} />
+                  <Text style={s.sigLabel}>Date</Text>
+                </View>
+              )}
             </View>
             <View style={s.sigCol}>
               <Text style={s.sigColLabel}>Contractor</Text>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import SignaturePad from '@/components/public/SignaturePad';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 
 /* ─── Types ──────────────────────────────────────────────── */
@@ -53,6 +54,9 @@ interface EstimateData {
   contract_type: string | null;
   scope_of_work: string | null;
   photos: { url: string; caption?: string }[] | null;
+  signed_at?: string | null;
+  signed_name?: string | null;
+  document_mode?: string | null;
   project_description: string | null;
   subtotal: number;
   overhead_percent: number;
@@ -420,15 +424,13 @@ export default function PublicEstimatePage() {
             Download PDF
           </button>
           <button
-            disabled
-            className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 text-[14px] font-semibold text-gray-400 bg-gray-100 border border-gray-200 rounded-xl cursor-not-allowed"
-            title="Coming soon"
+            onClick={() => document.getElementById('accept-sign')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 text-[14px] font-bold text-black bg-[#C9A84C] rounded-xl active:scale-[0.98] transition-transform"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            Accept Estimate
-            <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full ml-1">Soon</span>
+            {estimate.signed_at ? 'Signed' : (estimate.document_mode === 'contract' ? 'Accept & Sign Contract' : 'Accept & Sign')}
           </button>
         </div>
 
@@ -598,6 +600,15 @@ export default function PublicEstimatePage() {
         </div>
       </main>
 
+      {/* ─── Accept & Sign ──────────────────────────────────── */}
+      <div id="accept-sign" className="max-w-2xl mx-auto px-4 pb-4">
+        <EstimateSignCard
+          token={String(token)}
+          estimate={estimate}
+          onSigned={(name, at) => setEstimate({ ...estimate, signed_at: at, signed_name: name, status: 'accepted' } as any)}
+        />
+      </div>
+
       {/* ─── Footer ──────────────────────────────────────────── */}
       <footer className="border-t border-gray-200 mt-12">
         <div className="max-w-4xl mx-auto px-4 py-8 text-center">
@@ -619,6 +630,75 @@ export default function PublicEstimatePage() {
           estimateId={estimate.id}
         />
       )}
+    </div>
+  );
+}
+
+
+function EstimateSignCard({ token, estimate, onSigned }: { token: string; estimate: any; onSigned: (name: string, at: string) => void }) {
+  const [name, setName] = useState('');
+  const [sig, setSig] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isContract = estimate.document_mode === 'contract';
+
+  if (estimate.signed_at) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+        <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-3">Acceptance</h2>
+        <div className="flex items-center gap-3 rounded-xl p-4" style={{ background: '#e8f8f0', border: '1px solid #b5e6cd' }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#187a4b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+          <p className="text-[16px] font-semibold" style={{ color: '#187a4b' }}>
+            Accepted &amp; signed by {estimate.signed_name} on {new Date(estimate.signed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  if (['declined', 'expired'].includes(estimate.status)) return null;
+
+  const submit = async () => {
+    setError(null);
+    if (name.trim().length < 2) { setError('Enter your full name'); return; }
+    if (!sig) { setError('Draw your signature in the box'); return; }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/estimate/' + token + '/sign', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), signature_data: sig }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) { setError(data.error || 'Could not save signature'); setBusy(false); return; }
+      onSigned(data.signed_name, data.signed_at);
+    } catch { setError('Connection problem — try again'); setBusy(false); }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+      <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-1">
+        {isContract ? 'Accept & Sign Contract' : 'Accept & Sign'}
+      </h2>
+      <p className="text-[15px] text-gray-500 mb-4">
+        {isContract
+          ? 'Signing below enters a binding construction contract with RO Unlimited for the work described above, subject to the stated terms.'
+          : 'Signing below accepts this estimate and authorizes RO Unlimited to begin work as described above, subject to the stated terms.'}
+      </p>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Your full name"
+        className="w-full min-h-[52px] px-4 rounded-xl border border-gray-200 bg-white text-[17px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#C9A84C] mb-3"
+      />
+      <SignaturePad onChange={setSig} />
+      {error && <p className="text-[15px] text-[#b03434] mt-2">{error}</p>}
+      <button
+        onClick={submit}
+        disabled={busy}
+        className="mt-3 w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[52px] px-8 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold disabled:opacity-50 active:scale-[0.98] transition-transform"
+      >
+        {busy ? 'Saving…' : (isContract ? 'Sign Contract' : 'Accept & Sign')}
+      </button>
+      <p className="text-[13px] text-gray-400 mt-3">Your signature is recorded with a timestamp and appears on the final document.</p>
     </div>
   );
 }
