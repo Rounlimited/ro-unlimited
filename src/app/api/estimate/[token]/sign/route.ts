@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/server';
+import { materializeSelections } from '@/lib/estimate-options';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +54,10 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     }
     const { error } = await supabase.from('estimates').update(patch).eq('id', est.id);
     if (error) return NextResponse.json({ error: 'Could not save signature' }, { status: 500 });
+
+    // Fold the customer's selected options into real line items — the signed
+    // total must equal what they configured. Idempotent; no-op without options.
+    try { await materializeSelections(est.id); } catch (e) { console.error('[estimate sign] materialize failed:', e); }
 
     if (patch.status === 'accepted') {
       await supabase.from('estimate_status_history').insert({

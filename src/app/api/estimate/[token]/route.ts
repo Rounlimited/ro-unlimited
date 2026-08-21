@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { getOptionsWithChoices, selectionsDelta } from '@/lib/estimate-options';
 
 type RouteContext = { params: { token: string } };
 
@@ -56,11 +57,17 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       ...safeEstimate
     } = estimate;
 
+    const options = await getOptionsWithChoices(supabase, estimate.id);
+    const selections_total = estimate.options_materialized_at ? 0 : selectionsDelta(options);
+
     return NextResponse.json({
       ...safeEstimate,
       line_items: lineItems || [],
       payment_schedule: paymentSchedule || [],
       disclaimers: disclaimerResult?.data || [],
+      options,
+      selections_total,
+      final_total: Number(estimate.total) + selections_total,
     });
   } catch (err) {
     console.error('[estimate/token] GET error:', err);
