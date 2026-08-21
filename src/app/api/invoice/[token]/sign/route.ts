@@ -48,10 +48,9 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     await supabase.from('admin_notifications').insert({
       type: 'invoice_signed',
       title: `Invoice signed: ${inv.invoice_number}`,
-      message: `${name} signed invoice ${inv.invoice_number}${inv.project_name ? ` (${inv.project_name})` : ''}.`,
-      entity_type: 'invoice',
-      entity_id: inv.id,
-      action_url: `/admin/invoices/${inv.id}`,
+      body: `${name} signed invoice ${inv.invoice_number}${inv.project_name ? ` (${inv.project_name})` : ''}.`,
+      url: `/admin/invoices/${inv.id}`,
+      reference_id: inv.id,
     }).then(() => {}, () => {});
 
     return NextResponse.json({ signed: true, signed_at, signed_name: name });

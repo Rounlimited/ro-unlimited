@@ -43,10 +43,9 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     await supabase.from('admin_notifications').insert({
       type: 'invoice_comment',
       title: `Note on ${inv.invoice_number}`,
-      message: `${name || 'Customer'}: ${text.slice(0, 140)}`,
-      entity_type: 'invoice',
-      entity_id: inv.id,
-      action_url: `/admin/invoices/${inv.id}`,
+      body: `${name || 'Customer'}: ${text.slice(0, 140)}`,
+      url: `/admin/invoices/${inv.id}`,
+      reference_id: inv.id,
     }).then(() => {}, () => {});
 
     return NextResponse.json({ comment });
