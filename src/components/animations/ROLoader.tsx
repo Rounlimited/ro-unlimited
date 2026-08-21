@@ -20,7 +20,9 @@ import StickyCallBar from '@/components/layout/StickyCallBar';
 export default function ROLoader({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin');
-  const isBare = isAdmin || pathname?.startsWith('/maintenance');
+  // Customer document links (/i/ invoices, /estimate/ estimates) render as
+  // standalone pages — no navbar, footer, splash, or sticky call bar.
+  const isBare = isAdmin || pathname?.startsWith('/maintenance') || pathname?.startsWith('/i/') || pathname?.startsWith('/estimate/');
 
   const splashRef = useRef<HTMLDivElement>(null);
   const roRef = useRef<HTMLImageElement>(null);

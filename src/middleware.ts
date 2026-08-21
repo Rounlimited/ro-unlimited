@@ -51,6 +51,10 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/admin') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/maintenance') ||
+    // Customer document links must survive maintenance mode — an invoice
+    // shouldn't bounce because the marketing site is being worked on.
+    pathname.startsWith('/i/') ||
+    pathname.startsWith('/estimate/') ||
     pathname.startsWith('/_next')
   ) {
     return NextResponse.next();

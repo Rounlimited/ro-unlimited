@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Receipt, DollarSign, Loader2, Trash2, Ban, X,
-  CheckCircle2, AlertTriangle, Clock, Eye,
+  CheckCircle2, AlertTriangle, Clock, Eye, Send, FileDown, Link2, Copy,
 } from 'lucide-react';
 
 /** Invoice detail — status, lines, ledger, record payment. JR-sized. */
@@ -27,6 +27,8 @@ export default function InvoiceDetailPage() {
   const [inv, setInv] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showPay, setShowPay] = useState(false);
+  const [showSend, setShowSend] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -106,6 +108,44 @@ export default function InvoiceDetailPage() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Actions — send, pdf, share link */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
+          {inv.status !== 'cancelled' && (
+            <button onClick={() => setShowSend(true)}
+              className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 text-black active:scale-[0.98] transition-transform col-span-2 sm:col-span-1"
+              style={{ background: 'linear-gradient(145deg, #35d07f, #22b168)', boxShadow: '0 4px 16px rgba(53,208,127,0.3)' }}>
+              <Send size={17} /> {inv.sent_at ? 'Resend' : 'Send'}
+            </button>
+          )}
+          <a href={'/api/admin/invoices/' + inv.id + '/pdf'} target="_blank" rel="noopener"
+            className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <FileDown size={17} /> PDF
+          </a>
+          {inv.share_token && (
+            <button
+              onClick={async () => {
+                await navigator.clipboard.writeText(window.location.origin + '/i/' + inv.share_token).catch(() => {});
+                setCopied(true); setTimeout(() => setCopied(false), 1800);
+              }}
+              className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+              style={{ background: 'rgba(255,255,255,0.06)', color: copied ? '#35d07f' : 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              {copied ? <CheckCircle2 size={17} /> : <Copy size={17} />} {copied ? 'Copied!' : 'Copy Link'}
+            </button>
+          )}
+          {inv.share_token && (
+            <button
+              onClick={() => act('link', () => fetch('/api/admin/invoices/' + inv.id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ link_enabled: !inv.link_enabled }) }))}
+              disabled={busy !== null}
+              className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+              style={inv.link_enabled
+                ? { background: 'rgba(53,208,127,0.1)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.3)' }
+                : { background: 'rgba(248,113,113,0.1)', color: '#f87171', border: '1px solid rgba(248,113,113,0.25)' }}>
+              <Link2 size={17} /> {inv.link_enabled ? 'Link On' : 'Link Off'}
+            </button>
+          )}
         </div>
 
         {/* Line items */}
@@ -190,9 +230,15 @@ export default function InvoiceDetailPage() {
             </button>
           )}
         </div>
-        <p className="text-[13px] text-white/25 text-center mt-4">Send-by-email and the customer link arrive in the next phase.</p>
       </div>
 
+      {showSend && (
+        <SendSheet
+          inv={inv}
+          onClose={() => setShowSend(false)}
+          onSent={() => { setShowSend(false); load(); }}
+        />
+      )}
       {showPay && (
         <div className="fixed inset-0 z-[80] flex items-end sm:items-center sm:justify-center">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowPay(false)} />
@@ -244,6 +290,55 @@ function QuickPay({ id, balance, onDone, onClose }: { id: string; balance: numbe
         style={{ background: 'linear-gradient(145deg, #35d07f, #22b168)' }}>
         {saving ? <Loader2 size={20} className="animate-spin" /> : <DollarSign size={19} />} Record
       </button>
+    </div>
+  );
+}
+
+
+function SendSheet({ inv, onClose, onSent }: { inv: any; onClose: () => void; onSent: () => void }) {
+  const defaultEmail = inv.customer?.email || inv.bill_to?.email || '';
+  const [toEmail, setToEmail] = useState(defaultEmail);
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputCls = 'w-full min-h-[52px] px-4 rounded-xl bg-white/5 border border-white/10 text-[17px] placeholder:text-white/25 focus:outline-none focus:border-[#35d07f]/50';
+
+  const submit = async () => {
+    setError(null); setSending(true);
+    try {
+      const res = await fetch('/api/admin/invoices/' + inv.id + '/send', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to_email: toEmail.trim(), message: message.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) { setError(data.error || 'Send failed'); setSending(false); return; }
+      onSent();
+    } catch { setError('Network error'); setSending(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center sm:justify-center">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-[#121212] border-t sm:border border-white/10 p-5"
+        style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[20px] font-bold">Send {inv.invoice_number}</h2>
+          <button onClick={onClose} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5"><X size={20} className="text-white/60" /></button>
+        </div>
+        <label className="block text-[14px] font-semibold text-white/50 uppercase tracking-wide mb-1.5">To</label>
+        <input value={toEmail} onChange={(e) => setToEmail(e.target.value)} type="email" placeholder="customer@email.com" className={inputCls + ' mb-4'} />
+        <label className="block text-[14px] font-semibold text-white/50 uppercase tracking-wide mb-1.5">Message (optional)</label>
+        <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3}
+          placeholder="Short note at the top of the email…"
+          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-[17px] placeholder:text-white/25 focus:outline-none focus:border-[#35d07f]/50 mb-4" />
+        <p className="text-[14px] text-white/35 mb-4">Sends the branded PDF plus the online view link.</p>
+        {error && <p className="text-[15px] text-[#f87171] mb-3">{error}</p>}
+        <button disabled={sending || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(toEmail.trim())} onClick={submit}
+          className="w-full min-h-[56px] rounded-xl text-[17px] font-bold text-black disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+          style={{ background: 'linear-gradient(145deg, #35d07f, #22b168)', boxShadow: '0 4px 18px rgba(53,208,127,0.35)' }}>
+          {sending ? <Loader2 size={20} className="animate-spin" /> : <Send size={18} />} Send Invoice
+        </button>
+      </div>
     </div>
   );
 }

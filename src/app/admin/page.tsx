@@ -486,7 +486,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Row 4: Quick Actions */}
-        <div data-tour="quick-actions" className="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-3 relative z-10">
+        <div data-tour="quick-actions" className="grid grid-cols-4 lg:grid-cols-6 gap-1.5 lg:gap-3 relative z-10">
           {/* Portfolio — gold */}
           <Link href="/admin/projects"
             className="theme-card-gold relative overflow-hidden border border-[#C9A84C]/20 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
@@ -496,6 +496,17 @@ export default function AdminDashboard() {
               <Camera size={20} className="text-white" />
             </div>
             <p className="text-[11px] font-bold text-[#C9A84C] text-center leading-tight">Portfolio</p>
+            <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #C9A84C, transparent)' }} />
+          </Link>
+          {/* Customers — CRM, gold */}
+          <Link href="/admin/customers"
+            className="theme-card-gold relative overflow-hidden border border-[#C9A84C]/20 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
+            style={{ background: 'linear-gradient(145deg, #1a1508, #120f04)' }}>
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(145deg, #C9A84C, #a8893d)', boxShadow: '0 4px 15px rgba(201,168,76,0.3), inset 0 1px 0 rgba(255,255,255,0.2)' }}>
+              <Users size={20} className="text-white" />
+            </div>
+            <p className="text-[11px] font-bold text-[#C9A84C] text-center leading-tight">Customers</p>
             <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #C9A84C, transparent)' }} />
           </Link>
           {/* RO Drive — blue-cyan */}
