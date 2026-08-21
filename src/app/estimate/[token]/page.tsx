@@ -100,13 +100,13 @@ function getDaysUntil(d: string | null): number | null {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  draft:    { label: 'Draft',    color: '#666',    bg: '#f0f0f0' },
-  sent:     { label: 'Sent',     color: '#2563eb', bg: '#eff6ff' },
-  viewed:   { label: 'Viewed',   color: '#d97706', bg: '#fffbeb' },
-  accepted: { label: 'Accepted', color: '#16a34a', bg: '#f0fdf4' },
-  declined: { label: 'Declined', color: '#dc2626', bg: '#fef2f2' },
-  expired:  { label: 'Expired',  color: '#666',    bg: '#f0f0f0' },
-  revised:  { label: 'Revised',  color: '#7c3aed', bg: '#f5f3ff' },
+  draft:    { label: 'Draft',             color: '#666',    bg: '#f0f0f0' },
+  sent:     { label: 'Awaiting Approval', color: '#8a6d20', bg: '#fdf6e7' },
+  viewed:   { label: 'Awaiting Approval', color: '#8a6d20', bg: '#fdf6e7' },
+  accepted: { label: 'Accepted',          color: '#16a34a', bg: '#f0fdf4' },
+  declined: { label: 'Declined',          color: '#dc2626', bg: '#fef2f2' },
+  expired:  { label: 'Expired',           color: '#666',    bg: '#f0f0f0' },
+  revised:  { label: 'Revised',           color: '#7c3aed', bg: '#f5f3ff' },
 };
 
 const DIVISION_LABELS: Record<string, string> = {
@@ -114,6 +114,12 @@ const DIVISION_LABELS: Record<string, string> = {
   commercial: 'Commercial',
   grading: 'Grading',
 };
+/** Internal values like "other:Utility" render as "Utility". */
+function divisionLabel(v: string): string {
+  if (DIVISION_LABELS[v]) return DIVISION_LABELS[v];
+  const raw = v.includes(':') ? v.split(':').pop()! : v;
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
 
 /* ─── Component ──────────────────────────────────────────── */
 
@@ -267,27 +273,36 @@ export default function PublicEstimatePage() {
 
   return (
     <div className="min-h-screen bg-[#f8f8f6]">
-      {/* ─── Header ──────────────────────────────────────────── */}
-      <header className="bg-[#0a0a0a] border-b-2 border-[#C9A84C]">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/ro-shield.png"
-              alt="RO Unlimited"
-              className="h-10 w-auto"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-            <div>
-              <div className="text-[16px] font-bold text-white tracking-wide">RO Unlimited</div>
-              <div className="text-[11px] text-[#C9A84C] uppercase tracking-wider">Construction & Development</div>
-            </div>
-          </div>
-          <div className="text-[13px] text-white/50 hidden sm:block">Estimate</div>
-        </div>
-      </header>
+      <main className="max-w-4xl mx-auto px-4 py-6 sm:py-10 space-y-4">
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* ─── Brand header — same language as the invoice page ── */}
+        <div className="flex items-center justify-between">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/ro-unlimited-logo.png" alt="RO Unlimited" className="h-10 w-auto" />
+          <button
+            onClick={() => document.getElementById('accept-sign')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="inline-flex items-center gap-2 min-h-[48px] px-5 rounded-xl text-[15px] font-bold text-black shadow-sm active:scale-[0.98] transition-transform"
+            style={{ background: estimate.signed_at ? '#e8f8f0' : '#C9A84C', color: estimate.signed_at ? '#187a4b' : '#000' }}
+          >
+            {estimate.signed_at ? 'Signed ✓' : 'Review & Sign'}
+          </button>
+        </div>
+
+        {/* ─── Status banner ─────────────────────────────────── */}
+        {(() => {
+          const signed = !!estimate.signed_at;
+          const accepted = estimate.status === 'accepted';
+          const b = signed || accepted
+            ? { bg: '#e8f8f0', border: '#b5e6cd', color: '#187a4b', text: signed ? `Accepted & signed${estimate.signed_name ? ' by ' + estimate.signed_name : ''} — thank you.` : 'Accepted — thank you.' }
+            : ['declined', 'expired'].includes(estimate.status)
+              ? { bg: '#f3f4f6', border: '#e5e7eb', color: '#6b7280', text: 'This document is no longer open — call us at (864) 304-0139 for a current version.' }
+              : { bg: '#fdf6e7', border: '#ead9ac', color: '#8a6d20', text: `${estimate.document_mode === 'contract' ? 'Contract' : 'Estimate'} ready for your review — ${fmt(estimate.total)}. Sign below when you're ready.` };
+          return (
+            <div className="rounded-2xl p-4 border" style={{ background: b.bg, borderColor: b.border }}>
+              <p className="text-[16px] font-semibold" style={{ color: b.color }}>{b.text}</p>
+            </div>
+          );
+        })()}
 
         {/* ─── Header Card ───────────────────────────────────── */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -348,7 +363,7 @@ export default function PublicEstimatePage() {
             {estimate.division && (
               <div>
                 <span className="text-gray-400 text-[12px] uppercase tracking-wide">Division</span>
-                <p className="text-gray-900 mt-0.5">{DIVISION_LABELS[estimate.division] || estimate.division}</p>
+                <p className="text-gray-900 mt-0.5">{divisionLabel(estimate.division)}</p>
               </div>
             )}
             {estimate.estimate_type && (
