@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [estimateCount, setEstimateCount] = useState({ drafts: 0, sent: 0 });
   const [invoiceAR, setInvoiceAR] = useState<{ outstanding: number; open_count: number } | null>(null);
+  const [invoiceActivity, setInvoiceActivity] = useState(0);
   const [recentActivity, setRecentActivity] = useState<{ action: string; details: string; created_at: string }[]>([]);
   const [taskStats, setTaskStats] = useState({ dueToday: 0, overdue: 0, upcoming: 0 });
   // briefing moved to NotificationBell
@@ -60,6 +61,11 @@ export default function AdminDashboard() {
     }).catch(() => {});
     fetch('/api/admin/invoices').then(r => r.json()).then(d => {
       if (d?.summary) setInvoiceAR({ outstanding: d.summary.outstanding, open_count: d.summary.open_count });
+    }).catch(() => {});
+    // unread customer activity (views/signatures/notes) — the red badge
+    fetch('/api/admin/notifications?unread=true&limit=50').then(r => r.json()).then(d => {
+      const n = (d?.notifications || []).filter((x: any) => String(x.type || '').startsWith('invoice_')).length;
+      setInvoiceActivity(n);
     }).catch(() => {});
     // Fetch unread inbox count
     fetch('/api/email/threads?folder=inbox')
@@ -465,19 +471,26 @@ export default function AdminDashboard() {
                   style={{ background: 'linear-gradient(145deg, #35d07f, #1e9e5c)' }}>
                   <Receipt size={20} className="text-white" />
                 </div>
-                {invoiceAR && invoiceAR.open_count > 0 && (
+                {invoiceActivity > 0 ? (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[8px] font-bold px-0.5"
+                    style={{ background: '#f87171', color: '#000', boxShadow: '0 2px 10px rgba(248,113,113,0.6)', animation: 'inv-glow 2.6s ease-in-out infinite' }}>
+                    {invoiceActivity}
+                  </span>
+                ) : invoiceAR && invoiceAR.open_count > 0 ? (
                   <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[8px] font-bold px-0.5"
                     style={{ background: '#35d07f', color: '#000', boxShadow: '0 2px 8px rgba(53,208,127,0.5)' }}>
                     {invoiceAR.open_count}
                   </span>
-                )}
+                ) : null}
               </div>
               <div className="text-center min-w-0">
                 <p className="text-[12px] lg:text-[13px] font-bold leading-tight" style={{ color: '#35d07f' }}>Invoices</p>
                 <p className="text-[10px] text-white/25 mt-0.5">
-                  {invoiceAR && invoiceAR.outstanding > 0
-                    ? '$' + Math.round(invoiceAR.outstanding).toLocaleString() + ' due'
-                    : 'Get paid'}
+                  {invoiceActivity > 0
+                    ? invoiceActivity + ' new activit' + (invoiceActivity === 1 ? 'y' : 'ies')
+                    : invoiceAR && invoiceAR.outstanding > 0
+                      ? '$' + Math.round(invoiceAR.outstanding).toLocaleString() + ' due'
+                      : 'Get paid'}
                 </p>
               </div>
               <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #35d07f, transparent)' }} />

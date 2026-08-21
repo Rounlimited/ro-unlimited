@@ -125,6 +125,25 @@ export default function InvoicesPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Opening the invoices screen clears the activity badge: fetch unread
+  // invoice_* notifications and mark just those read.
+  useEffect(() => {
+    fetch('/api/admin/notifications?unread=true&limit=50')
+      .then((r) => r.json())
+      .then((d) => {
+        const ids = (d?.notifications || [])
+          .filter((x: any) => String(x.type || '').startsWith('invoice_'))
+          .map((x: any) => x.id);
+        if (ids.length) {
+          fetch('/api/admin/notifications', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids }),
+          }).catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const filtered = useMemo(() => {
     let list = invoices;
     if (filter === 'open') list = list.filter((i) => !['paid', 'cancelled'].includes(i.effective_status));

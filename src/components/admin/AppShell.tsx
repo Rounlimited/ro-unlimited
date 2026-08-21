@@ -676,6 +676,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [drawerSearch, setDrawerSearch] = useState('');
   const [featureModal, setFeatureModal] = useState<string | null>(null);
   const [taskCount, setTaskCount] = useState(0);
+  const [invoiceActivityCount, setInvoiceActivityCount] = useState(0);
+
+  // Unread invoice activity (first views, signatures, customer notes) —
+  // feeds the red badge on the Invoices operations icon.
+  useEffect(() => {
+    const check = () => {
+      fetch('/api/admin/notifications?unread=true&limit=50')
+        .then((r) => r.json())
+        .then((d) => {
+          const n = (d?.notifications || []).filter((x: any) => String(x.type || '').startsWith('invoice_')).length;
+          setInvoiceActivityCount(n);
+        })
+        .catch(() => {});
+    };
+    check();
+    const t = setInterval(check, 120_000);
+    return () => clearInterval(t);
+  }, []);
 
   // Fetch active task count for badge
   useEffect(() => {
@@ -1036,9 +1054,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center transition-all group-active:scale-90" style={{ background: app.bg }}>
                     <img src="/ro-icon.svg" alt="" aria-hidden="true" className="absolute pointer-events-none select-none" style={{ opacity: 0.08 }} />
                     <Icon size={26} style={{ color: app.color }} />
-                    {app.badge && (
+                    {app.id === 'invoicing' && invoiceActivityCount > 0 ? (
+                      <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-black text-[8px] font-bold rounded-full" style={{ background: '#f87171' }}>{invoiceActivityCount}</span>
+                    ) : app.badge ? (
                       <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-[#C9A84C] text-black text-[8px] font-bold rounded-full">{app.badge}</span>
-                    )}
+                    ) : null}
                   </div>
                   <span className="text-[12px] text-white/50 text-center leading-tight">{app.label}</span>
                 </button>

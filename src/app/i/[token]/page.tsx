@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   Download, Phone, CheckCircle2, AlertTriangle, Clock, Loader2, Receipt,
-  PenLine, MessageSquare, Send as SendIcon, Eraser,
+  PenLine, MessageSquare, Send as SendIcon, Eraser, Star,
 } from 'lucide-react';
 
 /**
@@ -35,6 +35,7 @@ interface PublicInvoice {
   signed_at: string | null;
   signed_name: string | null;
   signature_data: string | null;
+  feedback_rating: number | null;
 }
 
 const fmt$ = (n: number) => '$' + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -203,6 +204,15 @@ export default function PublicInvoicePage() {
               <Phone size={18} /> (864) 304-0139
             </a>
           </div>
+        )}
+
+        {/* How did we do? — paid invoices only */}
+        {isPaid && (
+          <FeedbackCard
+            token={String(token)}
+            existingRating={inv.feedback_rating}
+            onDone={(r) => setInv({ ...inv, feedback_rating: r })}
+          />
         )}
 
         {/* Approve & sign — DocuSign-lite */}
@@ -441,6 +451,102 @@ function CommentsCard({ inv, token, onPosted }: { inv: PublicInvoice; token: str
         className="inline-flex items-center gap-2 min-h-[48px] px-6 rounded-xl border border-gray-200 bg-gray-50 text-[15px] font-bold text-gray-700 disabled:opacity-50 active:scale-[0.98] transition-transform"
       >
         {busy ? <Loader2 size={17} className="animate-spin" /> : <SendIcon size={16} />} Send Note
+      </button>
+    </div>
+  );
+}
+
+
+/** RO doesn't have a public Google review link yet — set it here when the
+ *  Google Business Profile exists and 4-5 star feedback will funnel to it. */
+const GOOGLE_REVIEW_URL = '';
+
+function FeedbackCard({ token, existingRating, onDone }: { token: string; existingRating: number | null; onDone: (r: number) => void }) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [justSubmitted, setJustSubmitted] = useState<number | null>(null);
+
+  const done = existingRating != null || justSubmitted != null;
+  const finalRating = justSubmitted ?? existingRating ?? 0;
+
+  if (done) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
+        <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-3">How Did We Do?</h2>
+        <div className="flex items-center gap-1.5 mb-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Star key={i} size={26} className={i <= finalRating ? 'fill-[#C9A84C] text-[#C9A84C]' : 'text-gray-200'} />
+          ))}
+        </div>
+        {finalRating >= 4 ? (
+          <div>
+            <p className="text-[16px] text-gray-700 mb-3">Thank you — that genuinely means a lot to the crew.</p>
+            {GOOGLE_REVIEW_URL ? (
+              <a href={GOOGLE_REVIEW_URL} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 min-h-[52px] px-6 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold active:scale-[0.98] transition-transform">
+                <Star size={18} /> Share it in a Google review
+              </a>
+            ) : (
+              <p className="text-[15px] text-gray-500">If you know someone who needs dirt moved or utilities run — pass our name along.</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-[16px] text-gray-700">
+            Thank you for the honesty — this goes straight to the owner, and you may hear from us so we can make it right.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  const submit = async () => {
+    setError(null);
+    if (!rating) { setError('Tap a star rating first'); return; }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/invoice/' + token + '/feedback', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating, comment: comment.trim(), name: name.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) { setError(data.error || 'Could not send feedback'); setBusy(false); return; }
+      setJustSubmitted(rating);
+      onDone(rating);
+    } catch { setError('Connection problem — try again'); setBusy(false); }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
+      <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-1">How Did We Do?</h2>
+      <p className="text-[15px] text-gray-500 mb-4">The job's done and paid — tell us straight. It goes to the owner.</p>
+      <div className="flex items-center gap-2 mb-4">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <button key={i} onClick={() => setRating(i)} aria-label={i + ' star' + (i > 1 ? 's' : '')}
+            className="min-w-[48px] min-h-[48px] flex items-center justify-center active:scale-90 transition-transform">
+            <Star size={34} className={i <= rating ? 'fill-[#C9A84C] text-[#C9A84C]' : 'text-gray-300'} />
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        rows={3}
+        placeholder="Anything we should know — good or bad…"
+        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-[16px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#C9A84C] mb-2.5"
+      />
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Your name (optional)"
+        className="w-full min-h-[48px] px-4 rounded-xl border border-gray-200 bg-white text-[16px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#C9A84C] mb-3"
+      />
+      {error && <p className="text-[15px] text-[#b03434] mb-2">{error}</p>}
+      <button onClick={submit} disabled={busy}
+        className="inline-flex items-center gap-2 min-h-[52px] px-8 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold disabled:opacity-50 active:scale-[0.98] transition-transform">
+        {busy ? <Loader2 size={18} className="animate-spin" /> : <SendIcon size={17} />} Send Feedback
       </button>
     </div>
   );

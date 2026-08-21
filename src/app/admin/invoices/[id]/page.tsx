@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Receipt, DollarSign, Loader2, Trash2, Ban, X,
   CheckCircle2, AlertTriangle, Clock, Eye, Send, FileDown, Link2, Copy, Share2,
-  PenLine, MessageSquare,
+  PenLine, MessageSquare, Star,
 } from 'lucide-react';
 
 /** Invoice detail — status, lines, ledger, record payment. JR-sized. */
@@ -271,6 +271,26 @@ export default function InvoiceDetailPage() {
                 <p className="text-[14px] text-white/40">Signed {fmtDate(inv.signed_at)}</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Customer feedback */}
+        {inv.feedback && (
+          <div className="rounded-2xl border p-5 mb-4"
+            style={inv.feedback.rating <= 3
+              ? { background: 'rgba(248,113,113,0.06)', borderColor: 'rgba(248,113,113,0.3)' }
+              : { background: '#111', borderColor: 'rgba(255,255,255,0.08)' }}>
+            <h2 className="text-[15px] font-bold uppercase tracking-wide text-white/40 mb-2 flex items-center gap-2">
+              <Star size={15} /> Customer Feedback
+              {inv.feedback.rating <= 3 && <span className="text-[13px] font-bold text-[#f87171]">— worth a call</span>}
+            </h2>
+            <div className="flex items-center gap-1 mb-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Star key={i} size={20} className={i <= inv.feedback.rating ? 'fill-[#C9A84C] text-[#C9A84C]' : 'text-white/15'} />
+              ))}
+              {inv.feedback.name && <span className="text-[15px] text-white/50 ml-2">— {inv.feedback.name}</span>}
+            </div>
+            {inv.feedback.comment && <p className="text-[16px] text-white/80 leading-relaxed">&ldquo;{inv.feedback.comment}&rdquo;</p>}
           </div>
         )}
 

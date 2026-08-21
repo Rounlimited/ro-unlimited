@@ -26,17 +26,33 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
     }
     if (inv.status === 'draft') return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
 
-    // View tracking — hashed IP, never the raw address
+    // View tracking — hashed IP, never the raw address. The FIRST open of a
+    // link raises an admin notification ("they've seen it"); repeats stay quiet.
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const { count: priorViews } = await supabase
+      .from('invoice_views').select('*', { count: 'exact', head: true }).eq('invoice_id', inv.id);
     await supabase.from('invoice_views').insert({
       invoice_id: inv.id,
       user_agent: (req.headers.get('user-agent') || '').slice(0, 250),
       ip_hash: crypto.createHash('sha256').update(ip).digest('hex').slice(0, 24),
     });
+    if (!priorViews) {
+      const whoName = inv.customer
+        ? (inv.customer.company_name || [inv.customer.first_name, inv.customer.last_name].filter(Boolean).join(' '))
+        : (inv.bill_to?.company || inv.bill_to?.name || 'Customer');
+      await supabase.from('admin_notifications').insert({
+        type: 'invoice_viewed',
+        title: `Invoice opened: ${inv.invoice_number}`,
+        body: `${whoName} opened invoice ${inv.invoice_number} for the first time.`,
+        url: `/admin/invoices/${inv.id}`,
+        reference_id: inv.id,
+      }).then(() => {}, () => {});
+    }
 
-    const [{ data: payments }, { data: comments }] = await Promise.all([
+    const [{ data: payments }, { data: comments }, { data: feedback }] = await Promise.all([
       supabase.from('invoice_payments').select('amount, method, paid_date').eq('invoice_id', inv.id).order('paid_date'),
       supabase.from('invoice_comments').select('author, name, body, created_at').eq('invoice_id', inv.id).order('created_at'),
+      supabase.from('invoice_feedback').select('rating').eq('invoice_id', inv.id).maybeSingle(),
     ]);
 
     const who = inv.customer
@@ -66,6 +82,7 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
       signed_at: inv.signed_at,
       signed_name: inv.signed_name,
       signature_data: inv.signature_data,
+      feedback_rating: feedback?.rating ?? null,
     });
   } catch (err) {
     console.error('[public invoice] error:', err);

@@ -72,7 +72,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const bodyContent = `
           <p>We've received your payment of <strong>${fmt$(amount)}</strong> on invoice ${inv.invoice_number}${inv.project_name ? ` (${inv.project_name})` : ''} — thank you.</p>
           ${isPaid
-            ? '<p>That settles the invoice in full. A stamped receipt is attached for your records.</p>'
+            ? `<p>That settles the invoice in full. A stamped receipt is attached for your records.</p>${viewLink ? `<p style="color:#999;font-size:13px;">Got 30 seconds? <a href="${viewLink}" style="color:#C9A84C;font-weight:700;">Tell us how we did</a> — it means a lot to a working crew.</p>` : ''}`
             : `<p>Remaining balance: <strong>${fmt$(balance)}</strong>${invoice.due_date ? ` due ${new Date(invoice.due_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` : ''}.</p>`}
           ${viewLink ? `
           <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0 8px;">
