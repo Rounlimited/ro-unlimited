@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Receipt, DollarSign, Loader2, Trash2, Ban, X,
-  CheckCircle2, AlertTriangle, Clock, Eye, Send, FileDown, Link2, Copy,
+  CheckCircle2, AlertTriangle, Clock, Eye, Send, FileDown, Link2, Copy, Share2,
 } from 'lucide-react';
 
 /** Invoice detail — status, lines, ledger, record payment. JR-sized. */
@@ -18,7 +18,11 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; ic
   cancelled: { label: 'Cancelled', color: '#6b7280', bg: 'rgba(107,114,128,0.12)', icon: Ban },
 };
 
-const fmt$ = (n: number) => '$' + (Number(n) || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+const fmt$ = (n: number) => {
+  const v = Number(n) || 0;
+  const hasCents = Math.abs(v - Math.round(v)) >= 0.005;
+  return '$' + v.toLocaleString(undefined, { minimumFractionDigits: hasCents ? 2 : 0, maximumFractionDigits: 2 });
+};
 const fmtDate = (d: string | null) => (d ? new Date(d.includes('T') ? d : d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
 
 export default function InvoiceDetailPage() {
@@ -41,6 +45,16 @@ export default function InvoiceDetailPage() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Activate the share link (no email) and return it — copy-and-text path.
+  const getLiveLink = async (): Promise<string | null> => {
+    try {
+      const res = await fetch('/api/admin/invoices/' + id + '/activate-link', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || data.error) { alert(data.error || 'Could not activate link'); return null; }
+      return data.view_link as string;
+    } catch { alert('Network error'); return null; }
+  };
 
   const act = async (label: string, fn: () => Promise<Response>) => {
     setBusy(label);
@@ -124,15 +138,38 @@ export default function InvoiceDetailPage() {
             style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.1)' }}>
             <FileDown size={17} /> PDF
           </a>
-          {inv.share_token && inv.status !== 'draft' && (
+          {inv.status !== 'cancelled' && (
             <button
               onClick={async () => {
-                await navigator.clipboard.writeText(window.location.origin + '/i/' + inv.share_token).catch(() => {});
+                const link = await getLiveLink();
+                if (!link) return;
+                await navigator.clipboard.writeText(link).catch(() => {});
                 setCopied(true); setTimeout(() => setCopied(false), 1800);
+                if (inv.status === 'draft') load(); // reflect draft -> sent
               }}
               className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
               style={{ background: 'rgba(255,255,255,0.06)', color: copied ? '#35d07f' : 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.1)' }}>
               {copied ? <CheckCircle2 size={17} /> : <Copy size={17} />} {copied ? 'Copied!' : 'Copy Link'}
+            </button>
+          )}
+          {inv.status !== 'cancelled' && typeof navigator !== 'undefined' && !!(navigator as any).share && (
+            <button
+              onClick={async () => {
+                const link = await getLiveLink();
+                if (!link) return;
+                const balance = Number(inv.total) - Number(inv.amount_paid);
+                try {
+                  await (navigator as any).share({
+                    title: 'Invoice ' + inv.invoice_number,
+                    text: 'Invoice ' + inv.invoice_number + ' from RO Unlimited — $' + Math.round(balance).toLocaleString() + ' — view and download here:',
+                    url: link,
+                  });
+                } catch { /* user closed the share sheet */ }
+                if (inv.status === 'draft') load();
+              }}
+              className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+              style={{ background: 'rgba(59,141,212,0.12)', color: '#5ba3dc', border: '1px solid rgba(59,141,212,0.3)' }}>
+              <Share2 size={17} /> Text It
             </button>
           )}
           {inv.share_token && inv.status !== 'draft' && (
@@ -147,9 +184,9 @@ export default function InvoiceDetailPage() {
             </button>
           )}
           {inv.status === 'draft' && (
-            <div className="col-span-2 min-h-[52px] rounded-xl flex items-center justify-center gap-2 text-[14px] font-semibold px-3 text-center"
+            <div className="col-span-2 sm:col-span-4 min-h-[44px] rounded-xl flex items-center justify-center gap-2 text-[14px] font-semibold px-3 text-center"
               style={{ background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.4)', border: '1px dashed rgba(255,255,255,0.15)' }}>
-              <Link2 size={15} /> Customer link activates when you send
+              <Link2 size={15} /> Draft — Send, Copy Link, or Text It all mark it sent and activate the customer link
             </div>
           )}
         </div>
@@ -293,7 +330,7 @@ function QuickPay({ id, balance, hasEmail, onDone, onClose }: { id: string; bala
         <h2 className="text-[20px] font-bold">Record Payment</h2>
         <button onClick={onClose} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5"><X size={20} className="text-white/60" /></button>
       </div>
-      <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="decimal" className={inputCls + ' mb-3 text-[22px] font-bold'} />
+      <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="decimal" step="0.01" className={inputCls + ' mb-3 text-[22px] font-bold'} />
       <div className="grid grid-cols-3 gap-2 mb-3">
         {['check', 'ach', 'cash', 'zelle', 'card', 'other'].map((m) => (
           <button key={m} onClick={() => setMethod(m)}

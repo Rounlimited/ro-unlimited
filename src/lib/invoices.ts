@@ -212,3 +212,39 @@ export async function createInvoice(body: any) {
   }
   return { invoice: data };
 }
+
+/**
+ * Activate an invoice's share link WITHOUT email — the copy-and-text path.
+ * Ensures token + switch on + expiry 180d out, and flips draft → sent
+ * (handing out the link IS sending it). Idempotent.
+ */
+export async function activateInvoiceLink(invoiceId: string): Promise<{ view_link: string; status: string } | { error: string }> {
+  const supabase = createAdminClient();
+  const { data: inv } = await supabase
+    .from('invoices')
+    .select('id, status, share_token, share_token_expires_at, sent_at')
+    .eq('id', invoiceId)
+    .single();
+  if (!inv) return { error: 'Invoice not found' };
+  if (inv.status === 'cancelled') return { error: 'Invoice is cancelled' };
+
+  const token = inv.share_token || newShareToken();
+  const minExpiry = new Date();
+  minExpiry.setDate(minExpiry.getDate() + 180);
+  const expiresAt = inv.share_token_expires_at && new Date(inv.share_token_expires_at) > minExpiry
+    ? inv.share_token_expires_at
+    : minExpiry.toISOString();
+
+  const now = new Date().toISOString();
+  const patch: Record<string, any> = {
+    share_token: token,
+    share_token_expires_at: expiresAt,
+    link_enabled: true,
+    updated_at: now,
+  };
+  if (inv.status === 'draft') { patch.status = 'sent'; patch.sent_at = inv.sent_at || now; }
+  await supabase.from('invoices').update(patch).eq('id', invoiceId);
+
+  const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+  return { view_link: `${site}/i/${token}`, status: patch.status || inv.status };
+}

@@ -68,7 +68,12 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; ic
   cancelled: { label: 'Cancelled',color: '#6b7280', bg: 'rgba(107,114,128,0.12)', icon: X },
 };
 
-const fmt$ = (n: number) => '$' + Math.round(Number(n) || 0).toLocaleString();
+const fmt$ = (n: number) => {
+  const v = Number(n) || 0;
+  const hasCents = Math.abs(v - Math.round(v)) >= 0.005;
+  return '$' + v.toLocaleString(undefined, { minimumFractionDigits: hasCents ? 2 : 0, maximumFractionDigits: 2 });
+};
+const fmtRound$ = (n: number) => '$' + Math.round(Number(n) || 0).toLocaleString();
 
 function customerName(inv: InvoiceRow): string {
   if (inv.customer) {
@@ -93,7 +98,7 @@ function CountUp$({ value, className, style }: { value: number; className?: stri
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [value]);
-  return <span className={className} style={style}>{fmt$(display)}</span>;
+  return <span className={className} style={style}>{fmtRound$(display)}</span>;
 }
 
 export default function InvoicesPage() {
@@ -203,10 +208,10 @@ export default function InvoicesPage() {
               })}
             </div>
             <div className="flex justify-between mt-1.5 text-[12px] text-white/35">
-              <span>Current {fmt$(summary.aging.current)}</span>
-              <span>1–30 {fmt$(summary.aging.d1_30)}</span>
-              <span>31–60 {fmt$(summary.aging.d31_60)}</span>
-              <span className={summary.aging.d61_plus > 0 ? 'text-[#f87171]' : ''}>60+ {fmt$(summary.aging.d61_plus)}</span>
+              <span>Current {fmtRound$(summary.aging.current)}</span>
+              <span>1–30 {fmtRound$(summary.aging.d1_30)}</span>
+              <span>31–60 {fmtRound$(summary.aging.d31_60)}</span>
+              <span className={summary.aging.d61_plus > 0 ? 'text-[#f87171]' : ''}>60+ {fmtRound$(summary.aging.d61_plus)}</span>
             </div>
           </div>
         )}
@@ -563,7 +568,7 @@ function CreateSheet({ onClose, onCreated }: { onClose: () => void; onCreated: (
                 <input
                   value={l.unit_price}
                   onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, unit_price: e.target.value } : x))}
-                  placeholder="$" type="number" inputMode="decimal"
+                  placeholder="$" type="number" inputMode="decimal" step="0.01"
                   className={inputNarrowCls + ' w-24 shrink-0 text-right'}
                 />
                 {lines.length > 1 && (
@@ -651,7 +656,7 @@ function PaymentSheet({ invoice, onClose, onDone }: { invoice: InvoiceRow; onClo
         {customerName(invoice)} · balance <span className="font-bold text-white">{fmt$(balance)}</span>
       </p>
       <label className={labelCls}>Amount</label>
-      <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="decimal" className={inputCls + ' mb-4 text-[22px] font-bold'} />
+      <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" inputMode="decimal" step="0.01" className={inputCls + ' mb-4 text-[22px] font-bold'} />
       <label className={labelCls}>Method</label>
       <div className="grid grid-cols-3 gap-2 mb-4">
         {['check', 'ach', 'cash', 'zelle', 'card', 'other'].map((m) => (
