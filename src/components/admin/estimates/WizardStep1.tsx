@@ -341,6 +341,7 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
               <option value="grading">Land Grading & Site Prep</option>
               <option value="utilities">Underground Utilities</option>
               <option value="septic">Septic</option>
+              <option value="grease_traps">Grease Traps</option>
               <option value="concrete">Concrete</option>
               <option value="foundation">Foundation</option>
               <option value="framing">Framing</option>

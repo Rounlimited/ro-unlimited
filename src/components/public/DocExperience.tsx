@@ -1,0 +1,346 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import NumberFlow from '@number-flow/react';
+import { CheckCircle2, Check, Loader2, PenLine } from 'lucide-react';
+
+/**
+ * DocExperience — the animated layer of the customer document links.
+ * Built to the researched 2026 spec (memory: ro-interactive-docs):
+ *  - GSAP intro: trust signals visible frame 1; content rises 16–24px with
+ *    0.06–0.08s staggers, power3.out, everything settled < 1s.
+ *  - Scroll reveals: ScrollTrigger.batch, once:true, top 85%.
+ *  - Options: photo radio-cards with price DELTAS, check-badge pop, whole
+ *    card = target, 17px+ deltas (JR-grade accessibility).
+ *  - Sticky bottom bar: NumberFlow odometer total + Review & Sign CTA.
+ *  - Reduced motion: fades only, transforms zeroed, numbers set instantly.
+ *  - Native scroll. No Lenis, no scrubbing, no confetti.
+ */
+
+/* ── Entrance + scroll choreography ─────────────────────────── */
+export function useDocIntro(ready: boolean) {
+  useEffect(() => {
+    if (!ready) return;
+    let ctx: any;
+    let cancelled = false;
+    (async () => {
+      const { gsap, ScrollTrigger } = await import('@/components/animations/GSAPProvider');
+      if (cancelled) return;
+      const main = document.getElementById('doc-main');
+      if (!main) return;
+      const sections = Array.from(main.children) as HTMLElement[];
+      const aboveFold = sections.slice(0, 4);
+      const below = sections.slice(4);
+
+      ctx = gsap.context(() => {
+        const mm = gsap.matchMedia();
+
+        mm.add('(prefers-reduced-motion: no-preference)', () => {
+          // Above the fold: quick rise, settled in <1s. The brand header
+          // (first child) never animates — trust signals appear frame 1.
+          gsap.fromTo(aboveFold.slice(1),
+            { y: 20, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.6, stagger: 0.08, ease: 'power3.out', clearProps: 'transform' }
+          );
+          // Gold rule inside the header card "draws" grade level
+          const rule = main.querySelector('.doc-rule');
+          if (rule) gsap.fromTo(rule, { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: 0.6, delay: 0.15, ease: 'power2.inOut' });
+
+          // Below the fold: batched one-time reveals
+          if (below.length) {
+            gsap.set(below, { y: 24, opacity: 0 });
+            ScrollTrigger.batch(below, {
+              start: 'top 88%',
+              once: true,
+              onEnter: (els: Element[]) => gsap.to(els, { y: 0, opacity: 1, duration: 0.55, stagger: 0.07, ease: 'power3.out', clearProps: 'transform' }),
+            });
+            // Safety net: anything still hidden after load settles becomes visible
+            setTimeout(() => ScrollTrigger.refresh(), 600);
+          }
+        });
+
+        mm.add('(prefers-reduced-motion: reduce)', () => {
+          gsap.fromTo(sections, { opacity: 0 }, { opacity: 1, duration: 0.2, stagger: 0.03 });
+        });
+      }, main);
+    })();
+    return () => { cancelled = true; ctx?.revert?.(); };
+  }, [ready]);
+}
+
+/* ── Reading progress bar — CSS scroll-driven, zero JS ──────── */
+export function ReadingProgress() {
+  return (
+    <>
+      <style>{`
+        @supports (animation-timeline: scroll()) {
+          .doc-progress { transform-origin: left; transform: scaleX(0); animation: doc-progress-grow linear; animation-timeline: scroll(); }
+          @keyframes doc-progress-grow { to { transform: scaleX(1); } }
+        }
+        @supports not (animation-timeline: scroll()) { .doc-progress { display: none; } }
+      `}</style>
+      <div className="doc-progress fixed top-0 left-0 right-0 h-[3px] z-50" style={{ background: 'linear-gradient(90deg, #C9A84C, #D4772C)' }} />
+    </>
+  );
+}
+
+/* ── Options configurator ───────────────────────────────────── */
+export interface PublicOptionChoice {
+  id: string; label: string; description: string | null; image_url: string | null;
+  price_delta: number; is_default: boolean; selected: boolean;
+}
+export interface PublicOptionGroup {
+  id: string; label: string; description: string | null;
+  selection_type: 'single' | 'multi' | 'addon'; required: boolean;
+  choices: PublicOptionChoice[];
+}
+
+const fmtDelta = (n: number) =>
+  n === 0 ? 'Included' : (n > 0 ? '+' : '−') + '$' + Math.abs(n).toLocaleString();
+
+const thumb = (url: string) => url.includes('cdn.sanity.io') ? url + '?w=640&auto=format' : url;
+
+export function OptionsSection({
+  groups, selections, onToggle, onConfirm, confirmedAt, locked, busy, dirty,
+}: {
+  groups: PublicOptionGroup[];
+  selections: Set<string>;
+  onToggle: (group: PublicOptionGroup, choiceId: string) => void;
+  onConfirm: () => void;
+  confirmedAt: string | null;
+  locked: boolean;
+  busy: boolean;
+  dirty: boolean;
+}) {
+  if (!groups.length) return null;
+
+  if (locked) {
+    const picks = groups.flatMap((g) => g.choices.filter((c) => c.selected).map((c) => ({ g, c })));
+    if (!picks.length) return null;
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
+        <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-3">Your Selections</h2>
+        <div className="space-y-2">
+          {picks.map(({ g, c }) => (
+            <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+              <div className="flex items-center gap-3 min-w-0">
+                {c.image_url && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={thumb(c.image_url)} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-[13px] text-gray-400">{g.label}</p>
+                  <p className="text-[16px] font-semibold text-gray-800 truncate">{c.label}</p>
+                </div>
+              </div>
+              <span className="text-[15px] font-semibold shrink-0" style={{ color: c.price_delta > 0 ? '#8a6d20' : '#9ca3af' }}>
+                {fmtDelta(Number(c.price_delta))}
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[14px] text-gray-400 mt-3">Locked in with your signature.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6" id="doc-options">
+      <style>{`
+        @keyframes badge-pop { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .badge-pop { animation: badge-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+        @media (prefers-reduced-motion: reduce) { .badge-pop { animation: none; } }
+      `}</style>
+      <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-1">Build It Your Way</h2>
+      <p className="text-[15px] text-gray-500 mb-5">Tap to choose — the total updates as you go.</p>
+
+      <div className="space-y-7">
+        {groups.map((g) => (
+          <div key={g.id} role={g.selection_type === 'single' ? 'radiogroup' : 'group'} aria-label={g.label}>
+            <div className="flex items-baseline justify-between mb-1">
+              <h3 className="text-[18px] font-bold text-gray-900">{g.label}</h3>
+              <span className="text-[13px] text-gray-400">
+                {g.selection_type === 'single' ? 'Pick one' : g.selection_type === 'addon' ? 'Optional' : 'Pick any'}
+              </span>
+            </div>
+            {g.description && <p className="text-[14px] text-gray-500 mb-3">{g.description}</p>}
+            <div className={'grid gap-3 ' + (g.choices.length === 1 ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-3')}>
+              {g.choices.map((c) => {
+                const isSel = selections.has(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    role={g.selection_type === 'single' ? 'radio' : 'checkbox'}
+                    aria-checked={isSel}
+                    onClick={() => onToggle(g, c.id)}
+                    className="relative text-left rounded-xl overflow-hidden transition-all duration-150 active:scale-[0.97]"
+                    style={{
+                      border: isSel ? '2px solid #C9A84C' : '2px solid #e5e7eb',
+                      boxShadow: isSel ? '0 4px 16px rgba(201,168,76,0.25)' : 'none',
+                    }}
+                  >
+                    {c.image_url ? (
+                      <div className="aspect-[4/3] bg-gray-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={thumb(c.image_url)} alt={c.label} loading="lazy" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center">
+                        <span className="text-[26px] font-bold" style={{ color: isSel ? '#C9A84C' : '#d1d5db' }}>
+                          {c.label.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                    {isSel && (
+                      <span className="badge-pop absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
+                        style={{ background: '#C9A84C', boxShadow: '0 2px 8px rgba(201,168,76,0.5)' }}>
+                        <Check size={16} className="text-black" strokeWidth={3} />
+                      </span>
+                    )}
+                    <div className="p-2.5">
+                      <p className="text-[15px] font-semibold text-gray-900 leading-tight">{c.label}</p>
+                      {c.description && <p className="text-[13px] text-gray-500 mt-0.5 line-clamp-2">{c.description}</p>}
+                      <p className="text-[17px] font-bold mt-1" style={{ color: Number(c.price_delta) > 0 ? '#8a6d20' : '#6b7280' }}>
+                        {fmtDelta(Number(c.price_delta))}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6">
+        {confirmedAt && !dirty ? (
+          <div className="flex items-center gap-2.5 rounded-xl p-4" style={{ background: '#e8f8f0', border: '1px solid #b5e6cd' }}>
+            <CheckCircle2 size={20} style={{ color: '#187a4b' }} />
+            <p className="text-[15px] font-semibold" style={{ color: '#187a4b' }}>
+              Selections confirmed — we&apos;ve been notified. Change your mind any time before signing.
+            </p>
+          </div>
+        ) : (
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="w-full sm:w-auto min-h-[54px] px-8 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold disabled:opacity-50 active:scale-[0.98] transition-transform inline-flex items-center justify-center gap-2"
+          >
+            {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} strokeWidth={3} />}
+            Confirm My Selections
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Sticky total bar — Tesla-style, NumberFlow odometer ────── */
+export function StickyTotalBar({
+  baseTotal, delta, selectionCount, signed, hasOptions,
+}: {
+  baseTotal: number; delta: number; selectionCount: number; signed: boolean; hasOptions: boolean;
+}) {
+  const [shown, setShown] = useState(false);
+  const [pulse, setPulse] = useState(0);
+  const total = baseTotal + delta;
+
+  useEffect(() => { const t = setTimeout(() => setShown(true), 900); return () => clearTimeout(t); }, []);
+  // brief tint pulse when the total changes
+  useEffect(() => { if (shown) { setPulse((p) => p + 1); } }, [total]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const scrollToSign = () => document.getElementById('accept-sign')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  return (
+    <div
+      className="fixed bottom-0 inset-x-0 z-40"
+      style={{
+        transform: shown ? 'translateY(0)' : 'translateY(110%)',
+        transition: 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
+      <style>{`
+        @keyframes bar-tint { 0% { background: rgba(201,168,76,0.16); } 100% { background: rgba(255,255,255,0.97); } }
+        @media (prefers-reduced-motion: reduce) { .bar-tint-anim { animation: none !important; } }
+      `}</style>
+      <div
+        key={pulse}
+        className="bar-tint-anim max-w-4xl mx-auto border-t sm:border sm:rounded-t-2xl border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] px-4 sm:px-6 py-3 flex items-center justify-between gap-4 backdrop-blur"
+        style={{ background: 'rgba(255,255,255,0.97)', animation: pulse > 1 ? 'bar-tint 0.4s ease-out' : undefined }}
+      >
+        <div className="min-w-0">
+          <p className="text-[12px] uppercase tracking-wider text-gray-400 leading-none mb-1">
+            {signed ? 'Signed total' : hasOptions ? 'Your total' : 'Total'}
+          </p>
+          <div className="text-[24px] font-bold text-gray-900 leading-none tabular-nums">
+            <NumberFlow
+              value={total}
+              format={{ style: 'currency', currency: 'USD', maximumFractionDigits: 0 }}
+              transformTiming={{ duration: 500, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }}
+            />
+          </div>
+          {hasOptions && !signed && (
+            <p className="text-[12px] text-gray-400 mt-0.5">{selectionCount} selection{selectionCount === 1 ? '' : 's'}</p>
+          )}
+        </div>
+        {signed ? (
+          <span className="inline-flex items-center gap-2 min-h-[48px] px-5 rounded-xl text-[15px] font-bold shrink-0" style={{ background: '#e8f8f0', color: '#187a4b' }}>
+            <CheckCircle2 size={17} /> Signed
+          </span>
+        ) : (
+          <button
+            onClick={scrollToSign}
+            className="inline-flex items-center gap-2 min-h-[52px] px-6 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold shrink-0 active:scale-[0.97] transition-transform"
+          >
+            <PenLine size={17} /> Review &amp; Sign
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── The signing ceremony finish — SVG checkmark that draws itself ── */
+export function CeremonyDone({ name, docWord }: { name: string; docWord: string }) {
+  return (
+    <div className="text-center py-4">
+      <style>{`
+        .cd-circle { stroke-dasharray: 166; stroke-dashoffset: 166; animation: cd-draw 0.45s cubic-bezier(0.65, 0, 0.45, 1) forwards; }
+        .cd-check { stroke-dasharray: 48; stroke-dashoffset: 48; animation: cd-draw 0.25s 0.45s cubic-bezier(0.65, 0, 0.45, 1) forwards; }
+        .cd-settle { animation: cd-settle 0.3s 0.65s ease-out both; }
+        @keyframes cd-draw { to { stroke-dashoffset: 0; } }
+        @keyframes cd-settle { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .cd-step { opacity: 0; animation: cd-rise 0.45s cubic-bezier(0.23, 1, 0.32, 1) both; }
+        @keyframes cd-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+        @media (prefers-reduced-motion: reduce) {
+          .cd-circle, .cd-check { animation: none; stroke-dashoffset: 0; }
+          .cd-settle, .cd-step { animation: none; opacity: 1; transform: none; }
+        }
+      `}</style>
+      <svg className="cd-settle mx-auto mb-4" width="88" height="88" viewBox="0 0 56 56">
+        <circle className="cd-circle" cx="28" cy="28" r="26" fill="none" stroke="#187a4b" strokeWidth="2.5" />
+        <path className="cd-check" fill="none" stroke="#187a4b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" d="M16 29 l8 8 l16 -17" />
+      </svg>
+      <h2 className="cd-step text-[24px] font-bold text-gray-900 mb-1" style={{ animationDelay: '0.55s' }}>
+        You&apos;re all set{name ? ', ' + name.split(' ')[0] : ''}.
+      </h2>
+      <p className="cd-step text-[16px] text-gray-500 mb-5" style={{ animationDelay: '0.62s' }}>
+        The {docWord} is signed and on record.
+      </p>
+      <div className="text-left max-w-sm mx-auto space-y-2.5">
+        {[
+          'We got the signed copy instantly — no need to send anything.',
+          'RO will reach out about scheduling and next steps.',
+          'Questions any time: (864) 304-0139.',
+        ].map((t, i) => (
+          <div key={i} className="cd-step flex items-start gap-2.5" style={{ animationDelay: 0.7 + i * 0.06 + 's' }}>
+            <CheckCircle2 size={18} className="shrink-0 mt-0.5" style={{ color: '#187a4b' }} />
+            <p className="text-[15px] text-gray-600">{t}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

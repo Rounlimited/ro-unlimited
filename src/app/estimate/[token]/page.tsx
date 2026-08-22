@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import SignaturePad from '@/components/public/SignaturePad';
+import {
+  useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone,
+  type PublicOptionGroup,
+} from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 
 /* ─── Types ──────────────────────────────────────────────── */
@@ -57,6 +61,11 @@ interface EstimateData {
   signed_at?: string | null;
   signed_name?: string | null;
   document_mode?: string | null;
+  options?: PublicOptionGroup[];
+  selections_total?: number;
+  final_total?: number;
+  options_materialized_at?: string | null;
+  selections_confirmed_at?: string | null;
   project_description: string | null;
   subtotal: number;
   overhead_percent: number;
@@ -115,6 +124,7 @@ const DIVISION_LABELS: Record<string, string> = {
   grading: 'Grading',
   utilities: 'Underground Utilities',
   septic: 'Septic',
+  grease_traps: 'Grease Traps',
 };
 /** Internal values like "other:Utility" render as "Utility". */
 function divisionLabel(v: string): string {
@@ -130,6 +140,9 @@ export default function PublicEstimatePage() {
   const token = params.token as string;
 
   const [estimate, setEstimate] = useState<EstimateData | null>(null);
+  const [selections, setSelections] = useState<Set<string>>(new Set());
+  const [serverSelections, setServerSelections] = useState<Set<string>>(new Set());
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<{ message: string; expired?: boolean } | null>(null);
 
@@ -158,6 +171,11 @@ export default function PublicEstimatePage() {
         }
         const data = await res.json();
         setEstimate(data);
+        if (Array.isArray(data.options)) {
+          const sel = new Set<string>(data.options.flatMap((g: any) => g.choices.filter((c: any) => c.selected).map((c: any) => c.id)));
+          setSelections(sel);
+          setServerSelections(new Set(sel));
+        }
       } catch {
         setError({ message: 'Something went wrong. Please try again later.' });
       } finally {
@@ -208,6 +226,8 @@ export default function PublicEstimatePage() {
       setMsgSending(false);
     }
   };
+
+  useDocIntro(!loading && !!estimate && !error);
 
   /* ─── Loading State ──────────────────────────────────────── */
 
@@ -273,9 +293,59 @@ export default function PublicEstimatePage() {
     return acc;
   }, {});
 
+  const optionGroups: PublicOptionGroup[] = estimate?.options || [];
+  const optionsLocked = !!(estimate?.signed_at || estimate?.options_materialized_at);
+  const localDelta = optionGroups.reduce(
+    (sum, g) => sum + g.choices.filter((c) => selections.has(c.id)).reduce((s2, c) => s2 + Number(c.price_delta), 0),
+    0
+  );
+  const selectionsDirty = (() => {
+    if (selections.size !== serverSelections.size) return true;
+    return Array.from(selections).some((id) => !serverSelections.has(id));
+  })();
+  const missingRequired = optionGroups
+    .filter((g) => g.selection_type === 'single' && g.required && !g.choices.some((c) => selections.has(c.id)))
+    .map((g) => g.label);
+
+  const toggleChoice = (group: PublicOptionGroup, choiceId: string) => {
+    if (optionsLocked) return;
+    setSelections((prev) => {
+      const next = new Set(prev);
+      if (group.selection_type === 'single') {
+        for (const c of group.choices) next.delete(c.id);
+        next.add(choiceId);
+      } else if (next.has(choiceId)) next.delete(choiceId);
+      else {
+        if (group.selection_type === 'addon') for (const c of group.choices) next.delete(c.id);
+        next.add(choiceId);
+      }
+      return next;
+    });
+  };
+
+  const confirmSelections = async () => {
+    if (!estimate) return;
+    setConfirmBusy(true);
+    try {
+      const res = await fetch('/api/estimate/' + token + '/selections', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ choice_ids: Array.from(selections) }),
+      });
+      const data = await res.json();
+      if (res.ok && data.confirmed) {
+        setServerSelections(new Set(selections));
+        setEstimate({ ...estimate, selections_total: data.selections_total, selections_confirmed_at: new Date().toISOString() } as any);
+      } else {
+        alert(data.error || 'Could not save selections — try again');
+      }
+    } catch { alert('Connection problem — try again'); }
+    setConfirmBusy(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#f8f8f6]">
-      <main className="max-w-4xl mx-auto px-4 py-6 sm:py-10 space-y-4">
+      <ReadingProgress />
+      <main id="doc-main" className="max-w-4xl mx-auto px-4 py-6 sm:py-10 space-y-4 pb-32">
 
         {/* ─── Brand header — same language as the invoice page ── */}
         <div className="flex items-center justify-between">
@@ -308,7 +378,7 @@ export default function PublicEstimatePage() {
 
         {/* ─── Header Card ───────────────────────────────────── */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="h-1" style={{ background: 'linear-gradient(90deg, #C9A84C, #D4772C)' }} />
+          <div className="doc-rule h-1" style={{ background: 'linear-gradient(90deg, #C9A84C, #D4772C)' }} />
           <div className="p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
@@ -450,6 +520,20 @@ export default function PublicEstimatePage() {
             {estimate.signed_at ? 'Signed' : (estimate.document_mode === 'contract' ? 'Accept & Sign Contract' : 'Accept & Sign')}
           </button>
         </div>
+
+        {/* ─── Interactive options ────────────────────────────── */}
+        {optionGroups.length > 0 && (
+          <OptionsSection
+            groups={optionGroups}
+            selections={selections}
+            onToggle={toggleChoice}
+            onConfirm={confirmSelections}
+            confirmedAt={estimate.selections_confirmed_at || null}
+            locked={optionsLocked}
+            busy={confirmBusy}
+            dirty={selectionsDirty}
+          />
+        )}
 
         {/* ─── Financial Summary ──────────────────────────────── */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
@@ -617,12 +701,23 @@ export default function PublicEstimatePage() {
         </div>
       </main>
 
+      <StickyTotalBar
+        baseTotal={Number(estimate.total) || 0}
+        delta={optionsLocked ? 0 : localDelta}
+        selectionCount={selections.size}
+        signed={!!estimate.signed_at}
+        hasOptions={optionGroups.length > 0}
+      />
+
       {/* ─── Accept & Sign ──────────────────────────────────── */}
       <div id="accept-sign" className="max-w-2xl mx-auto px-4 pb-4">
         <EstimateSignCard
           token={String(token)}
           estimate={estimate}
-          onSigned={(name, at) => setEstimate({ ...estimate, signed_at: at, signed_name: name, status: 'accepted' } as any)}
+          missingRequired={missingRequired}
+          selectionsDirty={selectionsDirty && optionGroups.length > 0}
+          finalTotal={(Number(estimate.total) || 0) + (optionsLocked ? 0 : localDelta)}
+          onSigned={(name, at) => setEstimate({ ...estimate, signed_at: at, signed_name: name, status: 'accepted', options_materialized_at: at } as any)}
         />
       </div>
 
@@ -652,23 +747,30 @@ export default function PublicEstimatePage() {
 }
 
 
-function EstimateSignCard({ token, estimate, onSigned }: { token: string; estimate: any; onSigned: (name: string, at: string) => void }) {
+function EstimateSignCard({ token, estimate, missingRequired = [], selectionsDirty = false, finalTotal, onSigned }: { token: string; estimate: any; missingRequired?: string[]; selectionsDirty?: boolean; finalTotal?: number; onSigned: (name: string, at: string) => void }) {
   const [name, setName] = useState('');
   const [sig, setSig] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justSigned, setJustSigned] = useState(false);
   const isContract = estimate.document_mode === 'contract';
 
   if (estimate.signed_at) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
-        <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-3">Acceptance</h2>
-        <div className="flex items-center gap-3 rounded-xl p-4" style={{ background: '#e8f8f0', border: '1px solid #b5e6cd' }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#187a4b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
-          <p className="text-[16px] font-semibold" style={{ color: '#187a4b' }}>
-            Accepted &amp; signed by {estimate.signed_name} on {new Date(estimate.signed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          </p>
-        </div>
+        {justSigned ? (
+          <CeremonyDone name={estimate.signed_name || ''} docWord={isContract ? 'contract' : 'estimate'} />
+        ) : (
+          <>
+            <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-3">Acceptance</h2>
+            <div className="flex items-center gap-3 rounded-xl p-4" style={{ background: '#e8f8f0', border: '1px solid #b5e6cd' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#187a4b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+              <p className="text-[16px] font-semibold" style={{ color: '#187a4b' }}>
+                Accepted &amp; signed by {estimate.signed_name} on {new Date(estimate.signed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </p>
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -686,6 +788,7 @@ function EstimateSignCard({ token, estimate, onSigned }: { token: string; estima
       });
       const data = await res.json();
       if (!res.ok || data.error) { setError(data.error || 'Could not save signature'); setBusy(false); return; }
+      setJustSigned(true);
       onSigned(data.signed_name, data.signed_at);
     } catch { setError('Connection problem — try again'); setBusy(false); }
   };
@@ -700,6 +803,27 @@ function EstimateSignCard({ token, estimate, onSigned }: { token: string; estima
           ? 'Signing below enters a binding construction contract with RO Unlimited for the work described above, subject to the stated terms.'
           : 'Signing below accepts this estimate and authorizes RO Unlimited to begin work as described above, subject to the stated terms.'}
       </p>
+      {finalTotal != null && (
+        <div className="flex items-center justify-between rounded-xl px-4 py-3 mb-4" style={{ background: '#fdf6e7', border: '1px solid #ead9ac' }}>
+          <span className="text-[15px] font-semibold" style={{ color: '#8a6d20' }}>You&apos;re signing for</span>
+          <span className="text-[20px] font-bold" style={{ color: '#8a6d20' }}>
+            {'$' + Number(finalTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        </div>
+      )}
+      {missingRequired.length > 0 && (
+        <button
+          onClick={() => document.getElementById('doc-options')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          className="w-full text-left rounded-xl px-4 py-3.5 mb-4 text-[15px] font-semibold"
+          style={{ background: '#fdeeee', border: '1px solid #f5c6c6', color: '#b03434' }}>
+          Choose your {missingRequired.join(' and ')} first — tap to jump up.
+        </button>
+      )}
+      {selectionsDirty && missingRequired.length === 0 && (
+        <p className="text-[14px] mb-4" style={{ color: '#8a6d20' }}>
+          Heads up: you changed selections without confirming — signing uses what&apos;s selected right now.
+        </p>
+      )}
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -710,10 +834,10 @@ function EstimateSignCard({ token, estimate, onSigned }: { token: string; estima
       {error && <p className="text-[15px] text-[#b03434] mt-2">{error}</p>}
       <button
         onClick={submit}
-        disabled={busy}
+        disabled={busy || missingRequired.length > 0}
         className="mt-3 w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[52px] px-8 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold disabled:opacity-50 active:scale-[0.98] transition-transform"
       >
-        {busy ? 'Saving…' : (isContract ? 'Sign Contract' : 'Accept & Sign')}
+        {busy ? 'Saving…' : missingRequired.length > 0 ? 'Choose options to continue' : (isContract ? 'Sign Contract' : 'Accept & Sign')}
       </button>
       <p className="text-[13px] text-gray-400 mt-3">Your signature is recorded with a timestamp and appears on the final document.</p>
     </div>

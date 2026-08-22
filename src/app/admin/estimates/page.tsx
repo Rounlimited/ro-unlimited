@@ -45,6 +45,7 @@ const DIVISION_OPTIONS = [
   { value: 'grading', label: 'Grading' },
   { value: 'utilities', label: 'Utilities' },
   { value: 'septic', label: 'Septic' },
+  { value: 'grease_traps', label: 'Grease Traps' },
 ];
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; label: string }> = {

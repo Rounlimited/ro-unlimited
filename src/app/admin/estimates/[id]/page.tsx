@@ -146,6 +146,7 @@ const DIVISION_CONFIG: Record<string, { label: string; icon: any; text: string }
   grading:     { label: 'Grading',     icon: Mountain,  text: 'text-green-400' },
   utilities:   { label: 'Underground Utilities', icon: Mountain, text: 'text-[#F84B0C]' },
   septic:      { label: 'Septic',      icon: Mountain,  text: 'text-green-400' },
+  grease_traps: { label: 'Grease Traps', icon: Mountain,  text: 'text-[#D4772C]' },
 };
 
 const TABS = [
