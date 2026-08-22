@@ -7,7 +7,7 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Plus, Search, FileText, X, ChevronRight, DollarSign,
   Clock, AlertTriangle, Send, Eye, CheckCircle2, XCircle,
-  Home, Building2, Mountain, Filter, Trash2, Loader2, ArrowUpDown,
+  Home, Building2, Mountain, Filter, Trash2, Loader2, ArrowUpDown, Link2, Check,
 } from 'lucide-react';
 import { useDeviceContext } from '@/components/animations/useMediaQuery';
 
@@ -96,6 +96,22 @@ export default function EstimatesPage() {
   const [search, setSearch] = useState('');
   const [divisionFilter, setDivisionFilter] = useState('all');
   const [deleteTarget, setDeleteTarget] = useState<Estimate | null>(null);
+
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const quickCopyLink = async (e: React.MouseEvent, estimateId: string) => {
+    e.preventDefault(); e.stopPropagation();
+    try {
+      const res = await fetch(`/api/admin/estimates/${estimateId}/share-link`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      const tok = data.share_token || data.token || (data.share_url || '').split('/').pop();
+      if (!tok) { alert(data.error || 'Could not create link'); return; }
+      await navigator.clipboard.writeText(`${window.location.origin}/estimate/${tok}`).catch(() => {});
+      setCopiedId(estimateId);
+      setTimeout(() => setCopiedId((c) => (c === estimateId ? null : c)), 1800);
+    } catch { alert('Could not create link'); }
+  };
   const [deleting, setDeleting] = useState(false);
   const [sortBy, setSortBy] = useState<'created_at' | 'total' | 'estimate_number' | 'project_name'>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -393,7 +409,7 @@ export default function EstimatesPage() {
                   const divCfg = DIVISION_CONFIG[estimate.division] || DIVISION_CONFIG.residential;
                   const DivIcon = divCfg.icon;
                   const customerName = estimate.customer ? `${estimate.customer.first_name} ${estimate.customer.last_name}` : 'No Customer';
-                  const href = estimate.status === 'draft' ? `/admin/estimates/new?edit=${estimate.id}` : `/admin/estimates/${estimate.id}`;
+                  const href = `/admin/estimates/${estimate.id}`;
                   return (
                     <tr key={estimate.id} onClick={() => router.push(href)}
                       className="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer transition-colors group">
@@ -413,10 +429,19 @@ export default function EstimatesPage() {
                       <td className="px-4 py-3.5 text-[15px] font-bold text-white tabular-nums">{formatCurrency(estimate.total || 0)}</td>
                       <td className="px-4 py-3.5 text-[12px] text-white/25">{formatDate(estimate.created_at)}</td>
                       <td className="px-4 py-3.5">
-                        <button onClick={e => { e.stopPropagation(); setDeleteTarget(estimate); }}
-                          className="p-2 rounded-lg text-white/10 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100">
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button onClick={(e) => quickCopyLink(e, estimate.id)}
+                            title="Copy customer link"
+                            className={copiedId === estimate.id
+                              ? 'p-2 rounded-lg text-[#35d07f] bg-[#35d07f]/10 transition-colors'
+                              : 'p-2 rounded-lg text-white/20 hover:text-[#C9A84C] hover:bg-[#C9A84C]/10 transition-colors'}>
+                            {copiedId === estimate.id ? <Check size={14} /> : <Link2 size={14} />}
+                          </button>
+                          <button onClick={e => { e.stopPropagation(); setDeleteTarget(estimate); }}
+                            className="p-2 rounded-lg text-white/10 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -440,7 +465,7 @@ export default function EstimatesPage() {
               return (
                 <div key={estimate.id} className="relative group">
                 <Link
-                  href={estimate.status === 'draft' ? `/admin/estimates/new?edit=${estimate.id}` : `/admin/estimates/${estimate.id}`}
+                  href={`/admin/estimates/${estimate.id}`}
                   className="block bg-[#111] border border-white/5 rounded-xl p-4 hover:border-white/10 hover:bg-[#141414] transition-all"
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -465,9 +490,19 @@ export default function EstimatesPage() {
                     )}
                   </div>
                 </Link>
-                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(estimate); }}
-                  className="absolute top-3 right-3 p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 active:bg-red-500/30 transition-colors z-10"
-                  title="Delete estimate"><Trash2 size={16} /></button>
+                <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+                  <button onClick={(e) => quickCopyLink(e, estimate.id)}
+                    title="Copy customer link"
+                    className={(copiedId === estimate.id
+                      ? 'bg-[#35d07f]/15 border-[#35d07f]/40 text-[#35d07f] '
+                      : 'bg-[#C9A84C]/10 border-[#C9A84C]/25 text-[#C9A84C] hover:bg-[#C9A84C]/20 ')
+                      + 'min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border active:scale-95 transition-all'}>
+                    {copiedId === estimate.id ? <Check size={17} /> : <Link2 size={17} />}
+                  </button>
+                  <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(estimate); }}
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 active:bg-red-500/30 transition-colors"
+                    title="Delete estimate"><Trash2 size={16} /></button>
+                </div>
                 </div>
               );
             })}
