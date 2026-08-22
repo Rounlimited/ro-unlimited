@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import SignaturePad from '@/components/public/SignaturePad';
 import {
-  useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone,
+  useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp,
   type PublicOptionGroup,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
@@ -538,7 +538,7 @@ export default function PublicEstimatePage() {
         {/* ─── Financial Summary ──────────────────────────────── */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
           <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-4">Financial Summary</h2>
-          <div className="space-y-2 text-[14px]">
+          <div className="doc-rows space-y-2 text-[14px]">
             <div className="flex justify-between py-2 border-b border-gray-100">
               <span className="text-gray-500">Subtotal</span>
               <span className="text-gray-900 font-medium">{fmt(estimate.subtotal)}</span>
@@ -769,6 +769,13 @@ function EstimateSignCard({ token, estimate, missingRequired = [], selectionsDir
                 Accepted &amp; signed by {estimate.signed_name} on {new Date(estimate.signed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </p>
             </div>
+            {estimate.client_signature && (
+              <SignatureStamp
+                src={estimate.client_signature}
+                name={estimate.signed_name || ''}
+                date={new Date(estimate.signed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              />
+            )}
           </>
         )}
       </div>

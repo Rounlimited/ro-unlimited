@@ -1,20 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import NumberFlow from '@number-flow/react';
 import { CheckCircle2, Check, Loader2, PenLine } from 'lucide-react';
 
 /**
- * DocExperience — the animated layer of the customer document links.
- * Built to the researched 2026 spec (memory: ro-interactive-docs):
- *  - GSAP intro: trust signals visible frame 1; content rises 16–24px with
- *    0.06–0.08s staggers, power3.out, everything settled < 1s.
- *  - Scroll reveals: ScrollTrigger.batch, once:true, top 85%.
- *  - Options: photo radio-cards with price DELTAS, check-badge pop, whole
- *    card = target, 17px+ deltas (JR-grade accessibility).
- *  - Sticky bottom bar: NumberFlow odometer total + Review & Sign CTA.
- *  - Reduced motion: fades only, transforms zeroed, numbers set instantly.
- *  - Native scroll. No Lenis, no scrubbing, no confetti.
+ * DocExperience v2 — the animated layer of the customer document links.
+ * Spec: memory ro-interactive-docs. Everything transform/opacity, once:true,
+ * reduced-motion gated, native scroll, no confetti.
+ *
+ * v2 adds: per-card cascade inside the options section, slow cinematic zoom
+ * on selected photos, a transient delta chip that floats off the sticky bar
+ * when a pick changes the price, a first-reveal odometer roll of the total,
+ * row-by-row financial stagger (.doc-rows), and a stamp-in for signatures.
  */
 
 /* ── Entrance + scroll choreography ─────────────────────────── */
@@ -36,31 +34,55 @@ export function useDocIntro(ready: boolean) {
         const mm = gsap.matchMedia();
 
         mm.add('(prefers-reduced-motion: no-preference)', () => {
-          // Above the fold: quick rise, settled in <1s. The brand header
-          // (first child) never animates — trust signals appear frame 1.
+          // Above the fold: rise + settle, <1s total. Brand header (first
+          // child) is a trust signal — visible frame 1, never animated.
           gsap.fromTo(aboveFold.slice(1),
-            { y: 20, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.6, stagger: 0.08, ease: 'power3.out', clearProps: 'transform' }
+            { y: 22, opacity: 0, scale: 0.988 },
+            { y: 0, opacity: 1, scale: 1, duration: 0.65, stagger: 0.08, ease: 'power3.out', clearProps: 'transform' }
           );
-          // Gold rule inside the header card "draws" grade level
           const rule = main.querySelector('.doc-rule');
-          if (rule) gsap.fromTo(rule, { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: 0.6, delay: 0.15, ease: 'power2.inOut' });
+          if (rule) gsap.fromTo(rule, { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: 0.7, delay: 0.15, ease: 'power2.inOut' });
 
-          // Below the fold: batched one-time reveals
+          // Below the fold: batched one-time section reveals
           if (below.length) {
-            gsap.set(below, { y: 24, opacity: 0 });
+            gsap.set(below, { y: 26, opacity: 0 });
             ScrollTrigger.batch(below, {
               start: 'top 88%',
               once: true,
               onEnter: (els: Element[]) => gsap.to(els, { y: 0, opacity: 1, duration: 0.55, stagger: 0.07, ease: 'power3.out', clearProps: 'transform' }),
             });
-            // Safety net: anything still hidden after load settles becomes visible
-            setTimeout(() => ScrollTrigger.refresh(), 600);
           }
+
+          // Inner cascades — option cards ripple in after their section lands
+          const optCards = gsap.utils.toArray('#doc-options .opt-card') as Element[];
+          if (optCards.length) {
+            gsap.set(optCards, { y: 18, opacity: 0, scale: 0.96 });
+            ScrollTrigger.batch(optCards, {
+              start: 'top 92%',
+              once: true,
+              onEnter: (els: Element[]) => gsap.to(els, { y: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.06, ease: 'power3.out', clearProps: 'transform' }),
+            });
+          }
+
+          // Financial/payment rows stack in one by one
+          (gsap.utils.toArray('.doc-rows') as Element[]).forEach((container) => {
+            const rows = Array.from(container.children);
+            if (!rows.length) return;
+            gsap.set(rows, { x: -14, opacity: 0 });
+            ScrollTrigger.create({
+              trigger: container,
+              start: 'top 88%',
+              once: true,
+              onEnter: () => gsap.to(rows, { x: 0, opacity: 1, duration: 0.4, stagger: 0.05, ease: 'power2.out', clearProps: 'transform' }),
+            });
+          });
+
+          setTimeout(() => ScrollTrigger.refresh(), 600);
         });
 
         mm.add('(prefers-reduced-motion: reduce)', () => {
           gsap.fromTo(sections, { opacity: 0 }, { opacity: 1, duration: 0.2, stagger: 0.03 });
+          gsap.set(['#doc-options .opt-card', '.doc-rows > *'], { opacity: 1 });
         });
       }, main);
     })();
@@ -112,6 +134,9 @@ export function OptionsSection({
   busy: boolean;
   dirty: boolean;
 }) {
+  // remount key for the tapped card's delta so the pulse replays
+  const [pulseId, setPulseId] = useState<string | null>(null);
+
   if (!groups.length) return null;
 
   if (locked) {
@@ -120,7 +145,7 @@ export function OptionsSection({
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
         <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-3">Your Selections</h2>
-        <div className="space-y-2">
+        <div className="space-y-2 doc-rows">
           {picks.map(({ g, c }) => (
             <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
               <div className="flex items-center gap-3 min-w-0">
@@ -149,7 +174,15 @@ export function OptionsSection({
       <style>{`
         @keyframes badge-pop { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .badge-pop { animation: badge-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-        @media (prefers-reduced-motion: reduce) { .badge-pop { animation: none; } }
+        .opt-img { transition: transform 5s cubic-bezier(0.22, 1, 0.36, 1); transform: scale(1); }
+        .opt-card[data-selected="true"] .opt-img { transform: scale(1.09); }
+        @keyframes delta-flash { 0% { transform: scale(1); } 35% { transform: scale(1.12); } 100% { transform: scale(1); } }
+        .delta-flash { animation: delta-flash 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes title-underline { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+        @media (prefers-reduced-motion: reduce) {
+          .badge-pop, .delta-flash { animation: none; }
+          .opt-img, .opt-card[data-selected="true"] .opt-img { transition: none; transform: none; }
+        }
       `}</style>
       <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-1">Build It Your Way</h2>
       <p className="text-[15px] text-gray-500 mb-5">Tap to choose — the total updates as you go.</p>
@@ -173,17 +206,18 @@ export function OptionsSection({
                     type="button"
                     role={g.selection_type === 'single' ? 'radio' : 'checkbox'}
                     aria-checked={isSel}
-                    onClick={() => onToggle(g, c.id)}
-                    className="relative text-left rounded-xl overflow-hidden transition-all duration-150 active:scale-[0.97]"
+                    data-selected={isSel}
+                    onClick={() => { onToggle(g, c.id); setPulseId(c.id + ':' + Date.now()); }}
+                    className="opt-card relative text-left rounded-xl overflow-hidden transition-all duration-150 active:scale-[0.97]"
                     style={{
                       border: isSel ? '2px solid #C9A84C' : '2px solid #e5e7eb',
-                      boxShadow: isSel ? '0 4px 16px rgba(201,168,76,0.25)' : 'none',
+                      boxShadow: isSel ? '0 6px 20px rgba(201,168,76,0.28)' : 'none',
                     }}
                   >
                     {c.image_url ? (
-                      <div className="aspect-[4/3] bg-gray-100">
+                      <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={thumb(c.image_url)} alt={c.label} loading="lazy" className="w-full h-full object-cover" />
+                        <img src={thumb(c.image_url)} alt={c.label} loading="lazy" className="opt-img w-full h-full object-cover" />
                       </div>
                     ) : (
                       <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center">
@@ -201,7 +235,11 @@ export function OptionsSection({
                     <div className="p-2.5">
                       <p className="text-[15px] font-semibold text-gray-900 leading-tight">{c.label}</p>
                       {c.description && <p className="text-[13px] text-gray-500 mt-0.5 line-clamp-2">{c.description}</p>}
-                      <p className="text-[17px] font-bold mt-1" style={{ color: Number(c.price_delta) > 0 ? '#8a6d20' : '#6b7280' }}>
+                      <p
+                        key={pulseId?.startsWith(c.id + ':') ? pulseId : c.id}
+                        className={'text-[17px] font-bold mt-1 inline-block' + (isSel && pulseId?.startsWith(c.id + ':') ? ' delta-flash' : '')}
+                        style={{ color: Number(c.price_delta) > 0 ? '#8a6d20' : '#6b7280' }}
+                      >
                         {fmtDelta(Number(c.price_delta))}
                       </p>
                     </div>
@@ -236,19 +274,39 @@ export function OptionsSection({
   );
 }
 
-/* ── Sticky total bar — Tesla-style, NumberFlow odometer ────── */
+/* ── Sticky total bar — odometer roll-in + floating delta chips ── */
 export function StickyTotalBar({
   baseTotal, delta, selectionCount, signed, hasOptions,
 }: {
   baseTotal: number; delta: number; selectionCount: number; signed: boolean; hasOptions: boolean;
 }) {
   const [shown, setShown] = useState(false);
-  const [pulse, setPulse] = useState(0);
+  const [displayTotal, setDisplayTotal] = useState(0);
+  const [chips, setChips] = useState<{ id: number; text: string; up: boolean }[]>([]);
+  const prevTotal = useRef<number | null>(null);
   const total = baseTotal + delta;
 
-  useEffect(() => { const t = setTimeout(() => setShown(true), 900); return () => clearTimeout(t); }, []);
-  // brief tint pulse when the total changes
-  useEffect(() => { if (shown) { setPulse((p) => p + 1); } }, [total]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Slide up after the intro settles, then odometer-roll the total in from 0
+  // (count-up on FIRST reveal only — after that, digits roll by difference).
+  useEffect(() => {
+    const t1 = setTimeout(() => setShown(true), 900);
+    const t2 = setTimeout(() => { setDisplayTotal(total); prevTotal.current = total; }, 1250);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Subsequent changes: roll the digits + float a delta chip off the total
+  useEffect(() => {
+    if (prevTotal.current === null) return;
+    if (total === prevTotal.current) return;
+    const diff = total - prevTotal.current;
+    prevTotal.current = total;
+    setDisplayTotal(total);
+    const id = Date.now();
+    setChips((c) => [...c.slice(-2), { id, text: (diff > 0 ? '+' : '−') + '$' + Math.abs(diff).toLocaleString(), up: diff > 0 }]);
+    const t = setTimeout(() => setChips((c) => c.filter((x) => x.id !== id)), 1100);
+    return () => clearTimeout(t);
+  }, [total]);
 
   const scrollToSign = () => document.getElementById('accept-sign')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -257,33 +315,43 @@ export function StickyTotalBar({
       className="fixed bottom-0 inset-x-0 z-40"
       style={{
         transform: shown ? 'translateY(0)' : 'translateY(110%)',
-        transition: 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+        transition: 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
       <style>{`
-        @keyframes bar-tint { 0% { background: rgba(201,168,76,0.16); } 100% { background: rgba(255,255,255,0.97); } }
-        @media (prefers-reduced-motion: reduce) { .bar-tint-anim { animation: none !important; } }
+        @keyframes chip-float { 0% { opacity: 0; transform: translateY(6px) scale(0.9); } 20% { opacity: 1; transform: translateY(0) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-22px) scale(0.95); } }
+        .chip-float { animation: chip-float 1.05s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        @media (prefers-reduced-motion: reduce) { .chip-float { animation: none; opacity: 0; } }
       `}</style>
       <div
-        key={pulse}
-        className="bar-tint-anim max-w-4xl mx-auto border-t sm:border sm:rounded-t-2xl border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] px-4 sm:px-6 py-3 flex items-center justify-between gap-4 backdrop-blur"
-        style={{ background: 'rgba(255,255,255,0.97)', animation: pulse > 1 ? 'bar-tint 0.4s ease-out' : undefined }}
+        className="max-w-4xl mx-auto border-t sm:border sm:rounded-t-2xl border-gray-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] px-4 sm:px-6 py-3 flex items-center justify-between gap-4 backdrop-blur relative"
+        style={{ background: 'rgba(255,255,255,0.97)' }}
       >
-        <div className="min-w-0">
+        <div className="min-w-0 relative">
           <p className="text-[12px] uppercase tracking-wider text-gray-400 leading-none mb-1">
             {signed ? 'Signed total' : hasOptions ? 'Your total' : 'Total'}
           </p>
           <div className="text-[24px] font-bold text-gray-900 leading-none tabular-nums">
             <NumberFlow
-              value={total}
+              value={displayTotal}
               format={{ style: 'currency', currency: 'USD', maximumFractionDigits: 0 }}
-              transformTiming={{ duration: 500, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }}
+              transformTiming={{ duration: 600, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }}
+              spinTiming={{ duration: 600, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }}
             />
           </div>
           {hasOptions && !signed && (
             <p className="text-[12px] text-gray-400 mt-0.5">{selectionCount} selection{selectionCount === 1 ? '' : 's'}</p>
           )}
+          {/* floating delta chips */}
+          <div className="absolute -top-5 left-0 pointer-events-none">
+            {chips.map((ch) => (
+              <span key={ch.id} className="chip-float absolute left-0 text-[15px] font-bold whitespace-nowrap px-2 py-0.5 rounded-full"
+                style={{ background: ch.up ? 'rgba(201,168,76,0.15)' : 'rgba(24,122,75,0.12)', color: ch.up ? '#8a6d20' : '#187a4b' }}>
+                {ch.text}
+              </span>
+            ))}
+          </div>
         </div>
         {signed ? (
           <span className="inline-flex items-center gap-2 min-h-[48px] px-5 rounded-xl text-[15px] font-bold shrink-0" style={{ background: '#e8f8f0', color: '#187a4b' }}>
@@ -302,11 +370,34 @@ export function StickyTotalBar({
   );
 }
 
-/* ── The signing ceremony finish — SVG checkmark that draws itself ── */
+/* ── Signature stamp-in (accepted state) ────────────────────── */
+export function SignatureStamp({ src, name, date }: { src: string; name: string; date: string }) {
+  return (
+    <div className="flex items-center gap-4 mt-3">
+      <style>{`
+        @keyframes stamp-in { 0% { transform: scale(1.25) rotate(-3deg); opacity: 0; } 60% { transform: scale(0.97) rotate(0.5deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+        .stamp-in { animation: stamp-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both; }
+        @media (prefers-reduced-motion: reduce) { .stamp-in { animation: none; opacity: 1; } }
+      `}</style>
+      <div className="stamp-in bg-white rounded-lg border border-gray-200 px-3 py-2 shadow-sm">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt="Signature" className="h-12 w-auto" />
+      </div>
+      <div>
+        <p className="text-[15px] font-semibold text-gray-800">{name}</p>
+        <p className="text-[13px] text-gray-400">{date}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ── The signing ceremony finish — checkmark draws, gold wash ── */
 export function CeremonyDone({ name, docWord }: { name: string; docWord: string }) {
   return (
-    <div className="text-center py-4">
+    <div className="relative text-center py-4 overflow-hidden rounded-xl">
       <style>{`
+        .cd-wash { position: absolute; inset: 0; background: radial-gradient(ellipse 70% 60% at 50% 30%, rgba(201,168,76,0.14), transparent 70%); opacity: 0; animation: cd-wash-in 0.9s ease-out 0.5s both; }
+        @keyframes cd-wash-in { to { opacity: 1; } }
         .cd-circle { stroke-dasharray: 166; stroke-dashoffset: 166; animation: cd-draw 0.45s cubic-bezier(0.65, 0, 0.45, 1) forwards; }
         .cd-check { stroke-dasharray: 48; stroke-dashoffset: 48; animation: cd-draw 0.25s 0.45s cubic-bezier(0.65, 0, 0.45, 1) forwards; }
         .cd-settle { animation: cd-settle 0.3s 0.65s ease-out both; }
@@ -316,20 +407,21 @@ export function CeremonyDone({ name, docWord }: { name: string; docWord: string 
         @keyframes cd-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
         @media (prefers-reduced-motion: reduce) {
           .cd-circle, .cd-check { animation: none; stroke-dashoffset: 0; }
-          .cd-settle, .cd-step { animation: none; opacity: 1; transform: none; }
+          .cd-settle, .cd-step, .cd-wash { animation: none; opacity: 1; transform: none; }
         }
       `}</style>
-      <svg className="cd-settle mx-auto mb-4" width="88" height="88" viewBox="0 0 56 56">
+      <div className="cd-wash" aria-hidden="true" />
+      <svg className="cd-settle relative mx-auto mb-4" width="88" height="88" viewBox="0 0 56 56">
         <circle className="cd-circle" cx="28" cy="28" r="26" fill="none" stroke="#187a4b" strokeWidth="2.5" />
         <path className="cd-check" fill="none" stroke="#187a4b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" d="M16 29 l8 8 l16 -17" />
       </svg>
-      <h2 className="cd-step text-[24px] font-bold text-gray-900 mb-1" style={{ animationDelay: '0.55s' }}>
+      <h2 className="cd-step relative text-[24px] font-bold text-gray-900 mb-1" style={{ animationDelay: '0.55s' }}>
         You&apos;re all set{name ? ', ' + name.split(' ')[0] : ''}.
       </h2>
-      <p className="cd-step text-[16px] text-gray-500 mb-5" style={{ animationDelay: '0.62s' }}>
+      <p className="cd-step relative text-[16px] text-gray-500 mb-5" style={{ animationDelay: '0.62s' }}>
         The {docWord} is signed and on record.
       </p>
-      <div className="text-left max-w-sm mx-auto space-y-2.5">
+      <div className="relative text-left max-w-sm mx-auto space-y-2.5">
         {[
           'We got the signed copy instantly — no need to send anything.',
           'RO will reach out about scheduling and next steps.',
