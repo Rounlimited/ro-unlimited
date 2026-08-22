@@ -15,6 +15,24 @@ import { CheckCircle2, Check, Loader2, PenLine } from 'lucide-react';
  * row-by-row financial stagger (.doc-rows), and a stamp-in for signatures.
  */
 
+/* ── Shine sweep — the admin invoice-button shimmer, document edition ── */
+export function ShineStyles() {
+  return (
+    <style>{`
+      .doc-shine-loop { position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+        background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.45) 50%, transparent 60%);
+        background-size: 250% 100%; animation: doc-shine-loop 3.2s ease-in-out infinite; }
+      @keyframes doc-shine-loop { 0%, 100% { background-position: 200% 0; } 50% { background-position: -50% 0; } }
+      .doc-shine-once { position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+        background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.5) 50%, transparent 58%);
+        background-size: 260% 100%; background-position: 200% 0;
+        animation: doc-shine-once 0.85s cubic-bezier(0.22, 1, 0.36, 1) both; }
+      @keyframes doc-shine-once { from { background-position: 200% 0; } to { background-position: -60% 0; } }
+      @media (prefers-reduced-motion: reduce) { .doc-shine-loop, .doc-shine-once { animation: none; opacity: 0; } }
+    `}</style>
+  );
+}
+
 /* ── Entrance + scroll choreography ─────────────────────────── */
 export function useDocIntro(ready: boolean) {
   useEffect(() => {
@@ -171,6 +189,7 @@ export function OptionsSection({
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6" id="doc-options">
+      <ShineStyles />
       <style>{`
         @keyframes badge-pop { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .badge-pop { animation: badge-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
@@ -226,8 +245,11 @@ export function OptionsSection({
                         </span>
                       </div>
                     )}
+                    {isSel && pulseId?.startsWith(c.id + ':') && (
+                      <span key={pulseId} className="doc-shine-once z-10" aria-hidden="true" />
+                    )}
                     {isSel && (
-                      <span className="badge-pop absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
+                      <span className="badge-pop absolute top-2 right-2 z-20 w-7 h-7 rounded-full flex items-center justify-center"
                         style={{ background: '#C9A84C', boxShadow: '0 2px 8px rgba(201,168,76,0.5)' }}>
                         <Check size={16} className="text-black" strokeWidth={3} />
                       </span>
@@ -263,8 +285,9 @@ export function OptionsSection({
           <button
             onClick={onConfirm}
             disabled={busy}
-            className="w-full sm:w-auto min-h-[54px] px-8 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold disabled:opacity-50 active:scale-[0.98] transition-transform inline-flex items-center justify-center gap-2"
+            className="relative overflow-hidden w-full sm:w-auto min-h-[54px] px-8 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold disabled:opacity-50 active:scale-[0.98] transition-transform inline-flex items-center justify-center gap-2"
           >
+            <span className="doc-shine-loop" aria-hidden="true" />
             {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} strokeWidth={3} />}
             Confirm My Selections
           </button>
@@ -319,6 +342,7 @@ export function StickyTotalBar({
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
+      <ShineStyles />
       <style>{`
         @keyframes chip-float { 0% { opacity: 0; transform: translateY(6px) scale(0.9); } 20% { opacity: 1; transform: translateY(0) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-22px) scale(0.95); } }
         .chip-float { animation: chip-float 1.05s cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -360,8 +384,9 @@ export function StickyTotalBar({
         ) : (
           <button
             onClick={scrollToSign}
-            className="inline-flex items-center gap-2 min-h-[52px] px-6 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold shrink-0 active:scale-[0.97] transition-transform"
+            className="relative overflow-hidden inline-flex items-center gap-2 min-h-[52px] px-6 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold shrink-0 active:scale-[0.97] transition-transform"
           >
+            <span className="doc-shine-loop" aria-hidden="true" />
             <PenLine size={17} /> Review &amp; Sign
           </button>
         )}

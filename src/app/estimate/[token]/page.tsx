@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import SignaturePad from '@/components/public/SignaturePad';
 import {
-  useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp,
+  useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp, ShineStyles,
   type PublicOptionGroup,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
@@ -345,6 +345,7 @@ export default function PublicEstimatePage() {
   return (
     <div className="min-h-screen bg-[#f8f8f6]">
       <ReadingProgress />
+      <ShineStyles />
       <main id="doc-main" className="max-w-4xl mx-auto px-4 py-6 sm:py-10 space-y-4 pb-32">
 
         {/* ─── Brand header — same language as the invoice page ── */}
@@ -377,8 +378,9 @@ export default function PublicEstimatePage() {
         })()}
 
         {/* ─── Header Card ───────────────────────────────────── */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="relative bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="doc-rule h-1" style={{ background: 'linear-gradient(90deg, #C9A84C, #D4772C)' }} />
+          <span className="doc-shine-once" style={{ animationDelay: '1.05s', zIndex: 1 }} aria-hidden="true" />
           <div className="p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
@@ -842,8 +844,9 @@ function EstimateSignCard({ token, estimate, missingRequired = [], selectionsDir
       <button
         onClick={submit}
         disabled={busy || missingRequired.length > 0}
-        className="mt-3 w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[52px] px-8 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold disabled:opacity-50 active:scale-[0.98] transition-transform"
+        className="relative overflow-hidden mt-3 w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[52px] px-8 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold disabled:opacity-50 active:scale-[0.98] transition-transform"
       >
+        {missingRequired.length === 0 && !busy && <span className="doc-shine-loop" aria-hidden="true" />}
         {busy ? 'Saving…' : missingRequired.length > 0 ? 'Choose options to continue' : (isContract ? 'Sign Contract' : 'Accept & Sign')}
       </button>
       <p className="text-[13px] text-gray-400 mt-3">Your signature is recorded with a timestamp and appears on the final document.</p>
