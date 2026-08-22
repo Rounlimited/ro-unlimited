@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { generateEstimatePDF } from '@/lib/estimate-pdf';
+import { getOptionsWithChoices } from '@/lib/estimate-options';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +51,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     }
 
     // Generate PDF
-    const pdfBuffer = await generateEstimatePDF(estimate, lineItems || [], paymentSchedule || [], selectedDisclaimers);
+    const options = await getOptionsWithChoices(supabase, estimate.id);
+    const pdfBuffer = await generateEstimatePDF(estimate, lineItems || [], paymentSchedule || [], selectedDisclaimers, options);
 
     // Return as PDF binary — no caching so edits always reflect
     return new NextResponse(pdfBuffer, {

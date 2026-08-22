@@ -339,6 +339,16 @@ export default function EstimateDetailPage() {
     setCopyingLink(false);
   };
 
+  const handlePreviewLink = async () => {
+    const w = window.open('', '_blank');
+    try {
+      const res = await fetch(`/api/admin/estimates/${id}/share-link`, { method: 'POST' });
+      const data = await res.json();
+      if (data?.link) { if (w) w.location.href = data.link; else window.open(data.link, '_blank'); }
+      else { w?.close(); alert(data?.error || 'Could not create link'); }
+    } catch { w?.close(); alert('Could not create link'); }
+  };
+
   const handleDelete = async () => {
     setDeleting(true);
     try {
@@ -649,7 +659,14 @@ export default function EstimateDetailPage() {
               disabled={pdfLoading}
               className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-white/60 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
             >
-              {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />} Preview
+              {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />} PDF Preview
+            </button>
+            <button
+              onClick={handlePreviewLink}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-[#C9A84C] bg-[#C9A84C]/10 border border-[#C9A84C]/25 rounded-lg hover:bg-[#C9A84C]/20 transition-all"
+              title="Open the interactive customer link in a new tab"
+            >
+              <ExternalLink size={14} /> Preview Link
             </button>
             <button
               onClick={handleCopyLink}
@@ -933,10 +950,19 @@ export default function EstimateDetailPage() {
         {/* FINANCIALS TAB */}
         {activeTab === 'options' && (
           <div className="space-y-4">
-            <p className="text-[15px] text-white/40 leading-relaxed">
-              Customer-selectable options for this document — photos, price differences, live total
-              on their link. Their picks lock in when they sign.
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-[15px] text-white/40 leading-relaxed">
+                Customer-selectable options for this document — photos, price differences, live total
+                on their link. Their picks lock in when they sign.
+              </p>
+              <button
+                onClick={handlePreviewLink}
+                className="shrink-0 min-h-[48px] px-4 rounded-xl text-[15px] font-bold flex items-center gap-2 active:scale-95 transition-transform"
+                style={{ background: 'rgba(201,168,76,0.12)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.35)' }}
+              >
+                <ExternalLink size={16} /> Preview Link
+              </button>
+            </div>
             <OptionsBuilder estimateId={String(estimate.id)} />
           </div>
         )}

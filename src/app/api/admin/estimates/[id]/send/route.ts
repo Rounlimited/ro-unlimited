@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail } from '@/lib/email';
 import { Resend } from 'resend';
 import { generateEstimatePDF } from '@/lib/estimate-pdf';
+import { getOptionsWithChoices } from '@/lib/estimate-options';
 import crypto from 'crypto';
 
 type RouteContext = { params: { id: string } };
@@ -46,7 +47,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     }
 
     // Generate PDF
-    const pdfBuffer = await generateEstimatePDF(estimate, lineItems || [], paymentScheduleData || [], selectedDisclaimers);
+    const options = await getOptionsWithChoices(supabase, estimate.id);
+    const pdfBuffer = await generateEstimatePDF(estimate, lineItems || [], paymentScheduleData || [], selectedDisclaimers, options);
 
     // Generate share token (32 char hex)
     const shareToken = crypto.randomBytes(16).toString('hex');

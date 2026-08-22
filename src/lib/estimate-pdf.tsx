@@ -194,7 +194,7 @@ function phaseSort(a: string, b: string): number {
 
 /* ─── PDF Document ──────────────────────────────────────────── */
 
-interface PDFProps { estimate: any; lineItems: any[]; paymentSchedule: any[]; disclaimers: any[]; }
+interface PDFProps { estimate: any; lineItems: any[]; paymentSchedule: any[]; disclaimers: any[]; options?: any[]; }
 
 /* ─── Table Header Row (reusable for continuation pages) ──── */
 function TableColumnHeaders() {
@@ -225,7 +225,7 @@ function LineItemRow({ item, counter }: { item: any; counter: number }) {
   );
 }
 
-function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers }: PDFProps) {
+function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers, options = [] }: PDFProps) {
   const customer = estimate.customer;
   const scopeText = estimate.scope_of_work || estimate.project_description || '';
   const projectAddr = [estimate.project_address, estimate.project_city, estimate.project_state, estimate.project_zip].filter(Boolean).join(', ');
@@ -259,7 +259,14 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
   const taxable = subtotal + overheadAmt + markupAmt;
   const taxAmt = (taxable * (estimate.tax_percent || 0)) / 100;
   const contingencyAmt = (subtotal * (estimate.contingency_percent || 0)) / 100;
-  const grandTotal = subtotal + overheadAmt + markupAmt + taxAmt + (estimate.permit_fees || 0) + contingencyAmt;
+  const selectedPicks = (options || []).flatMap((g: any) =>
+    (g.choices || []).filter((ch: any) => ch.selected).map((ch: any) => ({ group: g, choice: ch }))
+  );
+  const optionsMaterialized = !!estimate.options_materialized_at;
+  const selectionsDelta = optionsMaterialized
+    ? 0
+    : selectedPicks.reduce((sum: number, { choice }: any) => sum + (Number(choice.price_delta) || 0), 0);
+  const grandTotal = subtotal + overheadAmt + markupAmt + taxAmt + (estimate.permit_fees || 0) + contingencyAmt + selectionsDelta;
 
   const exclusionsList = (estimate.exclusions || '').split('\n').map((x: string) => x.trim()).filter(Boolean);
   const recommendationsList = (estimate.recommendations || '').split('\n').map((x: string) => x.trim()).filter(Boolean);
@@ -427,6 +434,46 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           </View>
         )}
 
+        {/* ═══ 3A-3. SELECTED OPTIONS — the customer's configured picks ═══ */}
+        {selectedPicks.length > 0 && (
+          <View style={{ marginBottom: sectionGap }} wrap={false}>
+            <Text style={s.sectionLabel}>{optionsMaterialized ? 'Selected Options — Locked In' : 'Selected Options'}</Text>
+            <View style={{ borderWidth: 1, borderColor: c.borderLight, borderRadius: 3 }}>
+              {selectedPicks.map(({ group, choice }: any, i: number) => {
+                const d = Number(choice.price_delta) || 0;
+                const img = choice.image_url
+                  ? (String(choice.image_url).includes('cdn.sanity.io')
+                      ? `${choice.image_url}${String(choice.image_url).includes('?') ? '&' : '?'}w=240&h=180&fit=crop&fm=jpg`
+                      : choice.image_url)
+                  : null;
+                return (
+                  <View key={choice.id || i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, paddingHorizontal: 10, borderBottomWidth: i < selectedPicks.length - 1 ? 1 : 0, borderBottomColor: c.borderLight }}>
+                    {img ? (
+                      /* eslint-disable-next-line jsx-a11y/alt-text */
+                      <Image src={img} style={{ width: 44, height: 33, objectFit: 'cover', borderRadius: 2 }} />
+                    ) : (
+                      <View style={{ width: 44, height: 33, backgroundColor: c.bgSubtle, borderRadius: 2 }} />
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 8, color: c.label, textTransform: 'uppercase', letterSpacing: 1 }}>{group.label}</Text>
+                      <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: c.text }}>{choice.label}</Text>
+                      {choice.description ? <Text style={{ fontSize: 8.5, color: c.textLight }}>{choice.description}</Text> : null}
+                    </View>
+                    <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: d > 0 ? c.orange : d < 0 ? '#1e9e5c' : c.label }}>
+                      {d === 0 ? 'Included' : (d > 0 ? '+' : '−') + fmt(Math.abs(d))}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+            <Text style={{ fontSize: 8, color: c.label, marginTop: 4 }}>
+              {optionsMaterialized
+                ? 'These selections were confirmed with the customer\'s signature and are reflected in the line items above.'
+                : 'Selections made on the customer link. Priced options are added to the total below; they lock in at signing.'}
+            </Text>
+          </View>
+        )}
+
         {/* ═══ 3B. INCLUSIONS — if present ═══ */}
         {inclusionsList.length > 0 && (
           <View style={{ marginBottom: sectionGap }} wrap={false}>
@@ -544,6 +591,12 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
                 <View style={s.summaryRow}>
                   <Text style={s.summaryLabel}>Contingency ({estimate.contingency_percent}%)</Text>
                   <Text style={s.summaryValue}>{fmt(contingencyAmt)}</Text>
+                </View>
+              )}
+              {selectionsDelta !== 0 && (
+                <View style={s.summaryRow}>
+                  <Text style={s.summaryLabel}>Selected Options</Text>
+                  <Text style={s.summaryValue}>{(selectionsDelta > 0 ? '+' : '−') + fmt(Math.abs(selectionsDelta))}</Text>
                 </View>
               )}
               {/* Dramatic total (Ref #4) */}
@@ -781,6 +834,7 @@ export async function generateEstimatePDF(
   lineItems: any[],
   paymentSchedule: any[],
   disclaimers: any[],
+  options: any[] = [],
 ): Promise<Buffer> {
   const buffer = await renderToBuffer(
     <EstimatePDFDocument
@@ -788,6 +842,7 @@ export async function generateEstimatePDF(
       lineItems={lineItems}
       paymentSchedule={paymentSchedule}
       disclaimers={disclaimers}
+      options={options}
     />
   );
   return Buffer.from(buffer);
