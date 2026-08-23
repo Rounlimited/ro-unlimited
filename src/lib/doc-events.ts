@@ -65,20 +65,25 @@ export function parseUserAgent(ua: string): { device_type: string; os: string; b
 export function describeVisitor(req: Request, existingVisitorId?: string | null): Visitor {
   const h = req.headers;
   const ua = (h.get('user-agent') || '').slice(0, 300);
-  const ip = (h.get('x-real-ip') || h.get('x-forwarded-for') || '').split(',')[0].trim();
+  // The site sits behind Cloudflare, so the connecting IP Vercel sees is a
+  // Cloudflare edge. cf-connecting-ip is the real visitor.
+  const ip = (h.get('cf-connecting-ip') || h.get('x-real-ip') || h.get('x-forwarded-for') || '').split(',')[0].trim();
   const salt = process.env.ANALYTICS_IP_SALT || process.env.SUPABASE_SERVICE_ROLE_KEY || 'ro';
   const dec = (v: string | null) => { if (!v) return null; try { return decodeURIComponent(v); } catch { return v; } };
   const num = (v: string | null) => { const n = v ? Number(v) : NaN; return Number.isFinite(n) ? n : null; };
   const referrer = h.get('referer') || h.get('referrer');
+  // Location: Cloudflare's visitor-location headers first (enabled on the
+  // zone — true client geo, down to postal code and lat/long), then Vercel's
+  // own geo as a fallback for anything that bypasses the proxy.
+  const cfCity = dec(h.get('cf-ipcity'));
   return {
     visitor_id: existingVisitorId || null,
     ...parseUserAgent(ua),
-    // Vercel stamps IP geolocation on every request — city-level, free.
-    city: dec(h.get('x-vercel-ip-city')),
-    region: dec(h.get('x-vercel-ip-country-region')),
-    country: dec(h.get('x-vercel-ip-country')),
-    latitude: num(h.get('x-vercel-ip-latitude')),
-    longitude: num(h.get('x-vercel-ip-longitude')),
+    city: cfCity || dec(h.get('x-vercel-ip-city')),
+    region: (cfCity ? dec(h.get('cf-region-code')) : null) || dec(h.get('x-vercel-ip-country-region')),
+    country: (cfCity ? dec(h.get('cf-ipcountry')) : null) || dec(h.get('x-vercel-ip-country')),
+    latitude: num(h.get('cf-iplatitude')) ?? num(h.get('x-vercel-ip-latitude')),
+    longitude: num(h.get('cf-iplongitude')) ?? num(h.get('x-vercel-ip-longitude')),
     ip_hash: ip ? crypto.createHash('sha256').update(ip + salt).digest('hex').slice(0, 32) : null,
     referrer: referrer ? referrer.slice(0, 300) : null,
     user_agent: ua,
@@ -142,6 +147,11 @@ export async function recordDocumentEvent(args: RecordArgs): Promise<RecordResul
       internal = !!user;
     }
 
+    const h = req.headers;
+    const geoExtra: Record<string, string> = {};
+    for (const [k, name] of [['cf-postal-code', 'postal_code'], ['cf-metro-code', 'metro_code'], ['cf-timezone', 'timezone'], ['cf-region', 'region_name']] as const) {
+      const v = h.get(k); if (v) geoExtra[name] = v;
+    }
     await supabase.from('document_events').insert({
       doc_type: docType, doc_id: doc.id, event, internal,
       visitor_id: visitor.visitor_id,
@@ -149,7 +159,7 @@ export async function recordDocumentEvent(args: RecordArgs): Promise<RecordResul
       city: visitor.city, region: visitor.region, country: visitor.country,
       latitude: visitor.latitude, longitude: visitor.longitude,
       ip_hash: visitor.ip_hash, referrer: visitor.referrer, user_agent: visitor.user_agent,
-      meta: args.meta || {},
+      meta: { ...(args.meta || {}), ...(Object.keys(geoExtra).length ? { geo: geoExtra } : {}) },
     });
 
     if (internal) return { internal, visitor, isFirstView: false };
