@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import IndustryPulse from '@/components/admin/IndustryPulse';
 import { gsap } from 'gsap';
 import {
   Video, FileText, ArrowUpRight, CheckCircle2,
@@ -324,6 +325,9 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Industry ticker + "Good to know today" — curated news, prices, weather */}
+        <IndustryPulse />
 
         {/* Daily Briefing */}
         {/* Row 2: Checklist CTA */}
