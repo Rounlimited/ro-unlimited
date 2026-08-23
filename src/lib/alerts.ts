@@ -41,13 +41,16 @@ export async function getAlertRouting(): Promise<AlertRouting> {
   }
 }
 
-/** Resolve recipient emails for an alert. [] = broadcast to everyone. */
+/** Resolve recipient emails for an alert.
+ *  Precedence (matches the Settings screen): alert-type override → division
+ *  override → default list. [] at the end = broadcast to everyone with push. */
 export function resolveRecipients(routing: AlertRouting, alert: Pick<TeamAlert, 'type' | 'division'>): string[] {
-  const set = new Set<string>();
-  (routing.by_event[alert.type] || []).forEach((e) => set.add(e.toLowerCase()));
-  if (alert.division) (routing.by_division[alert.division] || []).forEach((e) => set.add(e.toLowerCase()));
-  if (set.size === 0) routing.default.forEach((e) => set.add(e.toLowerCase()));
-  return Array.from(set);
+  const norm = (l?: string[]) => (l || []).map((e) => e.toLowerCase());
+  const byEvent = norm(routing.by_event[alert.type]);
+  if (byEvent.length) return Array.from(new Set(byEvent));
+  const byDiv = alert.division ? norm(routing.by_division[alert.division]) : [];
+  if (byDiv.length) return Array.from(new Set(byDiv));
+  return Array.from(new Set(norm(routing.default)));
 }
 
 export async function notifyTeam(alert: TeamAlert): Promise<void> {
@@ -70,3 +73,18 @@ export async function notifyTeam(alert: TeamAlert): Promise<void> {
     });
   } catch (err) { console.error('[alerts] push failed', err); }
 }
+
+/** The alert types the app raises, with the labels the Settings page shows. */
+export const ALERT_TYPES: { id: string; label: string; about: string }[] = [
+  { id: 'estimate_viewed', label: 'Estimate opened', about: 'First time a customer opens the link' },
+  { id: 'estimate_pdf_downloaded', label: 'Estimate PDF downloaded', about: 'Every download' },
+  { id: 'estimate_selections', label: 'Options confirmed', about: 'Customer locked in their picks' },
+  { id: 'estimate_message', label: 'Customer message', about: 'Sent from the estimate link' },
+  { id: 'estimate_signed', label: 'Estimate signed', about: 'Accepted and signed' },
+  { id: 'invoice_viewed', label: 'Invoice opened', about: 'First open of an invoice link' },
+  { id: 'invoice_pdf_downloaded', label: 'Invoice PDF downloaded', about: 'Every download' },
+];
+export const DIVISIONS: { id: string; label: string }[] = [
+  { id: 'residential', label: 'Residential' }, { id: 'commercial', label: 'Commercial' }, { id: 'utilities', label: 'Utilities' },
+  { id: 'grading', label: 'Grading' }, { id: 'concrete', label: 'Concrete' }, { id: 'other', label: 'Other' },
+];

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { TICKER_SPEEDS, DEFAULT_TICKER_SPEED } from '@/components/admin/IndustryTicker';
+import AlertRoutingCard from '@/components/admin/AlertRoutingCard';
 import { createClient } from '@/lib/supabase/client';
 import { UserPlus, Trash2, Copy, Check, Shield, User, Loader2, X, Clock, ShieldCheck, Link2, Share2, Zap, Mail, Plus, Edit3, Sun, Moon, Monitor, Power, Globe, AlertTriangle } from 'lucide-react';
 import { usePreferences } from '@/components/admin/UserPreferencesProvider';
@@ -471,6 +472,9 @@ export default function SettingsPage() {
             ))}
           </div>
         </section>
+
+        {/* ── Alert routing — who gets customer-activity pushes ─────────── */}
+        <AlertRoutingCard currentEmail={currentUser?.email || null} />
 
         {/* ── Email Accounts ──────────────────────────────────────────── */}
         <section className="bg-[#111] border border-white/5 rounded-xl overflow-hidden mb-6">
