@@ -450,7 +450,7 @@ export default function EstimatesPage() {
                             {copiedId === estimate.id ? <Check size={14} /> : <Link2 size={14} />}
                           </button>
                           <button onClick={e => { e.stopPropagation(); setDeleteTarget(estimate); }}
-                            className="p-2 rounded-lg text-white/10 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100">
+                            className="p-2 rounded-lg text-white/10 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
                             <Trash2 size={14} />
                           </button>
                         </div>

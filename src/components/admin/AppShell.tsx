@@ -1039,7 +1039,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="overflow-y-auto px-4 pb-8 relative" style={{ maxHeight: 'calc(85vh - 100px)', zIndex: 2 }}>
           <p className="text-[10px] text-white/30 uppercase tracking-wider mb-3 px-1">Available</p>
           <div className="relative">
-          <div className="grid grid-cols-4 gap-y-5 gap-x-2 mb-6 relative">
+          <div className="grid grid-cols-4 md:grid-cols-6 gap-y-5 gap-x-2 mb-6 relative">
             {filtered.filter(a => a.active).map(app => {
               const Icon = app.icon;
               return (
@@ -1069,7 +1069,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <p className="text-[12px] text-white/25 uppercase tracking-wider mb-3 px-1">Coming Soon</p>
-          <div className="grid grid-cols-4 gap-y-5 gap-x-2 relative" style={{ zIndex: 1 }}>
+          <div className="grid grid-cols-4 md:grid-cols-6 gap-y-5 gap-x-2 relative" style={{ zIndex: 1 }}>
             {filtered.filter(a => !a.active).map(app => {
               const Icon = app.icon;
               return (

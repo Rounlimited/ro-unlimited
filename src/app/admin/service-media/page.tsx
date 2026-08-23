@@ -264,7 +264,7 @@ export default function ServiceMediaPage() {
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200" />
                       <button
                         onClick={() => deleteImage(img.id)}
-                        className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-red-600/80 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer hover:bg-red-500"
+                        className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-red-600/80 text-white opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity duration-200 cursor-pointer hover:bg-red-500"
                       >
                         {deleting === img.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                       </button>
