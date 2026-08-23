@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { fetchAllSources } from '@/lib/news-feeds';
 import { buildPulse } from '@/lib/industry-pulse';
-import { buildPrompt, parsePicks, passesHardFilters, dedupeTitles, sourceWeights, type Candidate, type CompanyContext, type FeedbackSignal } from '@/lib/news-curator';
+import { buildPrompt, parseCurated, passesHardFilters, dedupeTitles, sourceWeights, type Candidate, type CompanyContext, type FeedbackSignal } from '@/lib/news-curator';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -43,7 +43,7 @@ export async function run() {
   await supabase.from('app_settings').upsert({ key: 'news_pulse', value: pulse }, { onConflict: 'key' });
 
   // 3) Curate — hard filters → AI ranking against RO's live profile → threshold.
-  let featured = 0; let considered = 0;
+  let featured = 0; let considered = 0; let tickerCount = 0;
   try {
     const since4d = new Date(Date.now() - 4 * 86400000).toISOString();
     const since60d = new Date(Date.now() - 60 * 86400000).toISOString();
@@ -63,16 +63,20 @@ export async function run() {
       const recent_projects = Array.from(new Set((recentEst || []).map((e: any) => [e.project_name, e.estimate_type ? `(${String(e.estimate_type).replace(/_/g, ' ')})` : ''].filter(Boolean).join(' ')).filter(Boolean))).slice(0, 8);
       const ctx: CompanyContext = { divisions, recent_projects, region: 'Greenville, South Carolina (Upstate; serves SC, GA, NC)' };
       const text = await askModel(buildPrompt(cands, pulse, ctx, signals));
-      const picks = parsePicks(text, cands, sourceWeights(signals));
+      const { picks, headlines } = parseCurated(text, cands, sourceWeights(signals));
       await supabase.from('news_items').update({ featured: false }).eq('featured', true);
+      await supabase.from('news_items').update({ ticker: false }).eq('ticker', true);
       for (const p of picks) {
-        await supabase.from('news_items').update({ featured: true, featured_at: new Date().toISOString(), ai_take: p.take, ai_tag: p.tag, score: p.score }).eq('id', p.id);
+        await supabase.from('news_items').update({ featured: true, ticker: true, featured_at: new Date().toISOString(), ai_take: p.take, ai_tag: p.tag, score: p.score }).eq('id', p.id);
       }
-      featured = picks.length;
+      for (const h of headlines) {
+        await supabase.from('news_items').update({ ticker: true, ai_tag: h.tag, score: h.score }).eq('id', h.id);
+      }
+      featured = picks.length; tickerCount = picks.length + headlines.length;
     }
   } catch (e) { console.error('[news-refresh] curation failed', e); }
 
-  return NextResponse.json({ ok: true, sources: { fetched: items.length, inserted, failed }, considered, featured, materials: pulse.materials.length, weather: pulse.weather.length, ms: Date.now() - started });
+  return NextResponse.json({ ok: true, sources: { fetched: items.length, inserted, failed }, considered, featured, ticker: tickerCount, materials: pulse.materials.length, weather: pulse.weather.length, ms: Date.now() - started });
 }
 
 async function askModel(prompt: string): Promise<string> {

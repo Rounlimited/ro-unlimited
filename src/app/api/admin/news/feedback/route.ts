@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const supabase = createAdminClient();
     await supabase.from('news_feedback').insert({ item_id, verdict, user_email: user?.email || null });
     // "Not useful" also pulls it off the ticker immediately.
-    if (verdict === 'down') await supabase.from('news_items').update({ featured: false, hidden: true }).eq('id', item_id);
+    if (verdict === 'down') await supabase.from('news_items').update({ featured: false, ticker: false, hidden: true }).eq('id', item_id);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

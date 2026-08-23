@@ -15,6 +15,8 @@ import type { Pulse } from '@/lib/industry-pulse';
 export const MIN_SCORE = 65;
 export const MAX_FEATURED = 10;
 export const MAX_TRICKS = 3;
+export const MAX_HEADLINES = 8;   // ticker-only second tier
+export const MIN_HEADLINE_SCORE = 50;
 
 export interface Candidate { id: string; source_key: string; source_name: string; category: string; is_local: boolean; title: string; summary: string | null; published_at: string | null }
 export interface Pick { id: string; take: string; tag: string; score: number }
@@ -82,12 +84,35 @@ ${liked ? `\nThe team marked these as useful before — weight similar stories u
 
 Items marked "· tricks" are how-tos and trade videos (YouTube channels the trades watch). Treat them as a separate lane: pick up to ${MAX_TRICKS} of those ONLY if a crew would actually learn a technique, a tool trick, a code gotcha, or a faster way to do the work — tag those "tools". Entertainment, vlogs, product unboxings and DIY-homeowner content score low.
 
-Pick at most ${MAX_FEATURED} in total; fewer is fine — never pad. Prefer 1–2 local items only if they are genuinely useful. For each: the id, a tag from {prices, codes, safety, local, market, tools, labor, tech, business}, the score, and ONE plain sentence (max 26 words) on why it matters to him — concrete, no hype, no "stay informed", no restating the headline.
+Pick at most ${MAX_FEATURED} in total; fewer is fine — never pad.
 
-Return ONLY JSON: {"picks":[{"id":"…","tag":"…","score":0,"take":"…"}]}
+SECOND LIST — "headlines": up to ${MAX_HEADLINES} MORE items (not already in picks) that belong on a scrolling ticker as need-to-know / should-know: proposed or adopted code, permit, licensing and OSHA changes FIRST, then big material/fuel/interest-rate moves, Southeast market trends, major industry news a contractor would be expected to have heard about. Score them too; 50+ makes the ticker. No sentence needed. Prefer 1–2 local items only if they are genuinely useful. For each: the id, a tag from {prices, codes, safety, local, market, tools, labor, tech, business}, the score, and ONE plain sentence (max 26 words) on why it matters to him — concrete, no hype, no "stay informed", no restating the headline.
+
+Return ONLY JSON: {"picks":[{"id":"…","tag":"…","score":0,"take":"…"}],"headlines":[{"id":"…","tag":"…","score":0}]}
 
 Items:
 ${list}`;
+}
+
+export interface Curated { picks: Pick[]; headlines: Pick[] }
+
+export function parseCurated(text: string, cands: Candidate[], weights: Record<string, number>): Curated {
+  const picks = parsePicks(text, cands, weights);
+  const m = text.match(/\{[\s\S]*\}/); if (!m) return { picks, headlines: [] };
+  let parsed: any; try { parsed = JSON.parse(m[0]); } catch { return { picks, headlines: [] }; }
+  const byId = new Map(cands.map((c) => [c.id, c]));
+  const taken = new Set(picks.map((p) => p.id));
+  const headlines: Pick[] = (parsed.headlines || [])
+    .filter((h: any) => byId.has(h.id) && !taken.has(h.id))
+    .map((h: any) => {
+      const c = byId.get(h.id)!;
+      const base = Math.max(0, Math.min(100, Number(h.score) || 0));
+      return { id: h.id, take: '', tag: String(h.tag || 'market').toLowerCase().slice(0, 20), score: Math.max(0, Math.min(100, Math.round(base + 12 * (weights[c.source_key] || 0)))) };
+    })
+    .filter((h: Pick) => h.score >= MIN_HEADLINE_SCORE)
+    .sort((a: Pick, b: Pick) => b.score - a.score)
+    .slice(0, MAX_HEADLINES);
+  return { picks, headlines };
 }
 
 export function parsePicks(text: string, cands: Candidate[], weights: Record<string, number>): Pick[] {

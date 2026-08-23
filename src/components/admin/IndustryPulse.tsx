@@ -11,6 +11,7 @@ export interface PulseData { generated_at: string; materials: { key: string; lab
 export function useNews(limit = 60, category = 'all') {
   const [featured, setFeatured] = useState<NewsItem[]>([]);
   const [tricks, setTricks] = useState<NewsItem[]>([]);
+  const [ticker, setTicker] = useState<NewsItem[]>([]);
   const [items, setItems] = useState<NewsItem[]>([]);
   const [pulse, setPulse] = useState<PulseData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +21,7 @@ export function useNews(limit = 60, category = 'all') {
       const r = await fetch(`/api/admin/news?limit=${limit}&category=${category}`, { cache: 'no-store' });
       if (!r.ok) return;
       const d = await r.json();
-      setFeatured(d.featured || []); setTricks(d.tricks || []); setItems(d.items || []); setPulse(d.pulse || null);
+      setFeatured(d.featured || []); setTricks(d.tricks || []); setTicker(d.ticker || []); setItems(d.items || []); setPulse(d.pulse || null);
       // Self-refresh: the daily cron is the floor; if what we have is older than
       // 6 hours (or there's nothing yet), pull fresh feeds in the background.
       const age = d.pulse?.generated_at ? Date.now() - new Date(d.pulse.generated_at).getTime() : Infinity;
@@ -29,13 +30,13 @@ export function useNews(limit = 60, category = 'all') {
         fetch('/api/admin/news', { method: 'POST' }).then(async (res) => {
           if (!res.ok) return;
           const r2 = await fetch(`/api/admin/news?limit=${limit}&category=${category}`, { cache: 'no-store' });
-          if (r2.ok) { const d2 = await r2.json(); setFeatured(d2.featured || []); setTricks(d2.tricks || []); setItems(d2.items || []); setPulse(d2.pulse || null); }
+          if (r2.ok) { const d2 = await r2.json(); setFeatured(d2.featured || []); setTricks(d2.tricks || []); setTicker(d2.ticker || []); setItems(d2.items || []); setPulse(d2.pulse || null); }
         }).catch(() => {}).finally(() => { refreshingRef.current = false; });
       }
     } finally { setLoading(false); }
   };
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [limit, category]);
-  return { featured, tricks, items, pulse, loading, reload: load, setFeatured, setTricks, setItems };
+  return { featured, tricks, ticker, items, pulse, loading, reload: load, setFeatured, setTricks, setTicker, setItems };
 }
 
 export function sendFeedback(item_id: string, verdict: 'up' | 'down' | 'opened') {
@@ -173,15 +174,18 @@ export function NewsSheet({ item, onClose, onHide }: { item: NewsItem | null; on
 /** Dashboard: ticker + a collapsible "Good to know today" card.
     Always starts collapsed — it only opens when tapped, every visit. */
 export default function IndustryPulse() {
-  const { featured, tricks, pulse, loading, setFeatured, setTricks } = useNews(10);
+  const { featured, tricks, ticker, pulse, loading, setFeatured, setTricks, setTicker } = useNews(10);
   const [open, setOpen] = useState<NewsItem | null>(null);
   const [expanded, setExpanded] = useState(false);
   const toggle = () => setExpanded((v) => !v);
-  const hide = (id: string) => { setFeatured((f) => f.filter((x) => x.id !== id)); setTricks((f) => f.filter((x) => x.id !== id)); };
+  const hide = (id: string) => { setFeatured((f) => f.filter((x) => x.id !== id)); setTricks((f) => f.filter((x) => x.id !== id)); setTicker((f) => f.filter((x) => x.id !== id)); };
   if (loading) return null;
   const top = featured.slice(0, 4);
   const topTricks = tricks.slice(0, 3);
   const all = [...featured, ...tricks];
+  // Ticker = featured + tricks + the second-tier headlines, de-duplicated, best first.
+  const seen = new Set<string>();
+  const strip = [...all, ...ticker].filter((x) => (seen.has(x.id) ? false : (seen.add(x.id), true)));
   const moves = (pulse?.materials || []).filter((m) => Math.abs(m.mom_pct) >= 1);
   const summaryBits = [
     top.length ? `${top.length} worth a look` : null,
@@ -192,7 +196,7 @@ export default function IndustryPulse() {
   const hasContent = top.length > 0 || topTricks.length > 0 || !!pulse?.weather?.length || !!pulse?.materials?.length;
   return (
     <>
-      <IndustryTicker items={all} pulse={pulse as TickerPulse | null} onSelect={(it) => setOpen(all.find((f) => f.id === it.id) || (it as NewsItem))} />
+      <IndustryTicker items={strip} pulse={pulse as TickerPulse | null} onSelect={(it) => setOpen(strip.find((f) => f.id === it.id) || (it as NewsItem))} />
       <NewsSheet item={open} onClose={() => setOpen(null)} onHide={hide} />
       {hasContent && (
         <div className="relative z-10 bg-[#111] border border-white/5 rounded-xl">

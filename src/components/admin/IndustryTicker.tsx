@@ -30,18 +30,30 @@ export function tickerPps(id: unknown): number { return (TICKER_SPEEDS.find((t) 
 export default function IndustryTicker({ items, pulse, onSelect }: { items: TickerItem[]; pulse: TickerPulse | null; onSelect?: (item: TickerItem) => void }) {
   const { preferences } = usePreferences();
   const speed = tickerPps((preferences?.custom_settings as any)?.ticker_speed);
+  const laneRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const copyRef = useRef<HTMLSpanElement>(null);
   const [duration, setDuration] = useState(40);
+  const [shift, setShift] = useState(0);      // px — exactly one copy's width
+  const [copies, setCopies] = useState(2);    // enough copies to cover the lane + one more
   const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => { try { setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { /* ignore */ } }, []);
+  // The loop is seamless only if (a) one copy is at least as wide as the lane
+  // so the wrap point is never on screen, and (b) we translate by exactly one
+  // copy's pixel width — not a percentage of a track whose width changes.
   useEffect(() => {
-    const el = trackRef.current; if (!el) return;
-    const measure = () => setDuration(Math.max(3, Math.round(((el.scrollWidth / 2) / speed) * 10) / 10));
+    const lane = laneRef.current, copy = copyRef.current; if (!lane || !copy) return;
+    const measure = () => {
+      const w = copy.getBoundingClientRect().width; if (!w) return;
+      setShift(w);
+      setCopies(Math.max(2, Math.ceil(lane.clientWidth / w) + 1));
+      setDuration(Math.max(3, Math.round((w / speed) * 10) / 10));
+    };
     measure();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
-    ro?.observe(el);
+    ro?.observe(lane); ro?.observe(copy);
     return () => ro?.disconnect();
   }, [items, pulse, speed]);
 
@@ -89,6 +101,7 @@ export default function IndustryTicker({ items, pulse, onSelect }: { items: Tick
         <ChevronRight size={13} className="opacity-50" />
       </Link>
       <div
+        ref={laneRef}
         className="ro-lane"
         onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
         onTouchStart={() => setPaused(true)} onTouchEnd={() => setTimeout(() => setPaused(false), 2000)}
@@ -96,9 +109,9 @@ export default function IndustryTicker({ items, pulse, onSelect }: { items: Tick
         {reduced ? (
           <div className="ro-track ro-track--static">{run}</div>
         ) : (
-          <div ref={trackRef} className="ro-track" style={{ animationDuration: `${duration}s`, animationPlayState: paused ? 'paused' : 'running' }}>
-            <span className="ro-half">{run}</span>
-            <span className="ro-half" aria-hidden="true">{run}</span>
+          <div ref={trackRef} className="ro-track" style={{ ['--shift' as any]: `${shift}px`, animationDuration: `${duration}s`, animationPlayState: paused ? 'paused' : 'running', visibility: shift ? 'visible' : 'hidden' }}>
+            <span ref={copyRef} className="ro-half">{run}</span>
+            {Array.from({ length: copies - 1 }, (_, i) => <span key={i} className="ro-half" aria-hidden="true">{run}</span>)}
           </div>
         )}
         {!reduced && <span className="ro-sweep" aria-hidden="true" />}
@@ -166,7 +179,7 @@ export default function IndustryTicker({ items, pulse, onSelect }: { items: Tick
           background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.06) 50%, transparent 70%);
           transform: translateX(-100%); animation: ro-sweep 14s ease-in-out infinite;
         }
-        @keyframes ro-scroll { from { transform: translate3d(0,0,0); } to { transform: translate3d(-50%,0,0); } }
+        @keyframes ro-scroll { from { transform: translate3d(0,0,0); } to { transform: translate3d(calc(-1 * var(--shift, 50%)),0,0); } }
         @keyframes ro-sweep { 0%, 70% { transform: translateX(-100%); } 85%, 100% { transform: translateX(100%); } }
         @keyframes ro-pulse { 0% { box-shadow: 0 0 0 0 rgba(248,113,113,.6); } 70% { box-shadow: 0 0 0 7px rgba(248,113,113,0); } 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); } }
         @keyframes ro-alert { 0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); } 50% { box-shadow: 0 0 14px -2px rgba(248,113,113,.55); } }
