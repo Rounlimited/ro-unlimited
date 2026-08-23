@@ -41,7 +41,6 @@ export default function AdminDashboard() {
 
   // Dashboard refs
   const row1Ref        = useRef<HTMLDivElement>(null);
-  const row2Ref        = useRef<HTMLAnchorElement>(null);
   const row3Ref        = useRef<HTMLDivElement>(null);
   const activityRef    = useRef<HTMLDivElement>(null);
   const card1Ref       = useRef<HTMLDivElement>(null);
@@ -108,7 +107,7 @@ export default function AdminDashboard() {
       if (alreadyPlayed) {
         if (splashRef.current) splashRef.current.style.display = 'none';
         if (headerEl) gsap.set(headerEl, { opacity: 1, y: 0 });
-        gsap.set([row1Ref.current, row2Ref.current, row3Ref.current], { opacity: 1, y: 0 });
+        gsap.set([row1Ref.current, row3Ref.current], { opacity: 1, y: 0 });
         gsap.set(activityRef.current, { opacity: 1, y: 0 });
         gsap.set([card1Ref.current, card2Ref.current, card3Ref.current], { opacity: 1, x: 0 });
         return;
@@ -116,7 +115,7 @@ export default function AdminDashboard() {
       sessionStorage.setItem('ro_splash_played', '1');
 
       // ── Initial hide state ──
-      gsap.set([row1Ref.current, row2Ref.current, row3Ref.current], { opacity: 0, y: 20 });
+      gsap.set([row1Ref.current, row3Ref.current], { opacity: 0, y: 20 });
       gsap.set(activityRef.current, { opacity: 0, y: 20 });
       gsap.set([card1Ref.current, card2Ref.current, card3Ref.current], { opacity: 0, x: 50 });
       gsap.set(splashRef.current, { opacity: 1 });
@@ -165,7 +164,6 @@ export default function AdminDashboard() {
       }, 0.65)
       .to(headerEl,            { opacity: 1, y: 0, duration: 0.25, ease: 'power3.out' }, 0.72)
       .to(row1Ref.current,     { opacity: 1, y: 0, duration: 0.22, ease: 'power3.out' }, 0.76)
-      .to(row2Ref.current,     { opacity: 1, y: 0, duration: 0.22, ease: 'power3.out' }, 0.8)
       .to(row3Ref.current,     { opacity: 1, y: 0, duration: 0.22, ease: 'power3.out' }, 0.84)
       .to(activityRef.current, { opacity: 1, y: 0, duration: 0.22, ease: 'power3.out' }, 0.88)
       .to(card1Ref.current,    { opacity: 1, x: 0, duration: 0.22, ease: 'power3.out' }, 0.88)
@@ -330,20 +328,6 @@ export default function AdminDashboard() {
         <IndustryPulse />
 
         {/* Daily Briefing */}
-        {/* Row 2: Checklist CTA */}
-        <Link ref={row2Ref} href="/admin/checklist" data-tour="checklist-cta" data-tour-checklist
-          className="block bg-gradient-to-r from-[#C9A84C]/10 to-transparent border border-[#C9A84C]/20 rounded-xl px-3 py-2.5 group relative z-10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertCircle size={18} className="text-[#C9A84C] flex-shrink-0" />
-              <div>
-                <h3 className="text-base font-bold text-white leading-tight">Launch Checklist</h3>
-                <p className="text-[12px] text-white/25">Items needed to go live</p>
-              </div>
-            </div>
-            <ArrowUpRight size={16} className="text-[#C9A84C] flex-shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </div>
-        </Link>
 
         {/* Tasks Widget */}
         <Link href="/admin/tasks" className="block relative z-10 rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"

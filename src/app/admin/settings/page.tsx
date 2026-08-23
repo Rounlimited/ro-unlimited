@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
+import { TICKER_SPEEDS, DEFAULT_TICKER_SPEED } from '@/components/admin/IndustryTicker';
 import { createClient } from '@/lib/supabase/client';
 import { UserPlus, Trash2, Copy, Check, Shield, User, Loader2, X, Clock, ShieldCheck, Link2, Share2, Zap, Mail, Plus, Edit3, Sun, Moon, Monitor, Power, Globe, AlertTriangle } from 'lucide-react';
 import { usePreferences } from '@/components/admin/UserPreferencesProvider';
@@ -654,6 +655,28 @@ export default function SettingsPage() {
                       {opt.label}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Ticker speed */}
+              <div className="py-3 border-t border-white/5">
+                <span className="text-[14px] text-white/70 block mb-1">Ticker Speed</span>
+                <p className="text-[12px] text-white/30 mb-3">How fast the industry strip on the dashboard scrolls. It always pauses while you touch it.</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {TICKER_SPEEDS.map(opt => {
+                    const current = (preferences.custom_settings as any)?.ticker_speed || DEFAULT_TICKER_SPEED;
+                    return (
+                      <button key={opt.id}
+                        onClick={() => updatePreference({ custom_settings: { ticker_speed: opt.id } } as any)}
+                        className={`py-2.5 rounded-xl text-[13px] font-medium border transition-all ${
+                          current === opt.id
+                            ? 'bg-[#C9A84C]/10 border-[#C9A84C]/30 text-[#C9A84C]'
+                            : 'bg-white/[0.03] border-white/10 text-white/40 hover:border-white/20'
+                        }`}>
+                        {opt.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { TrendingUp, TrendingDown, CloudLightning, ChevronRight, PlayCircle, MapPin } from 'lucide-react';
+import { usePreferences } from '@/components/admin/UserPreferencesProvider';
 
 /**
  * Industry ticker — the live strip across the top of the dashboard.
@@ -19,9 +20,16 @@ const TAG: Record<string, { label: string; color: string }> = {
   local: { label: 'Local', color: '#34d399' }, market: { label: 'Market', color: '#C9A84C' }, tools: { label: 'Trick', color: '#38bdf8' },
   labor: { label: 'Labor', color: '#fbbf24' }, tech: { label: 'Tech', color: '#38bdf8' }, business: { label: 'Business', color: '#C9A84C' },
 };
-const SPEED = 220; // px per second — brisk; pauses on touch so nothing gets missed
+/** Ticker speed presets (px per second). Chosen per login in Settings → Ticker Speed. */
+export const TICKER_SPEEDS: { id: string; label: string; pps: number }[] = [
+  { id: 'slow', label: 'Slow', pps: 120 }, { id: 'normal', label: 'Normal', pps: 220 }, { id: 'fast', label: 'Fast', pps: 340 }, { id: 'blazing', label: 'Blazing', pps: 500 },
+];
+export const DEFAULT_TICKER_SPEED = 'fast';
+export function tickerPps(id: unknown): number { return (TICKER_SPEEDS.find((t) => t.id === id) || TICKER_SPEEDS.find((t) => t.id === DEFAULT_TICKER_SPEED)!).pps; }
 
 export default function IndustryTicker({ items, pulse, onSelect }: { items: TickerItem[]; pulse: TickerPulse | null; onSelect?: (item: TickerItem) => void }) {
+  const { preferences } = usePreferences();
+  const speed = tickerPps((preferences?.custom_settings as any)?.ticker_speed);
   const trackRef = useRef<HTMLDivElement>(null);
   const [duration, setDuration] = useState(40);
   const [paused, setPaused] = useState(false);
@@ -30,12 +38,12 @@ export default function IndustryTicker({ items, pulse, onSelect }: { items: Tick
   useEffect(() => { try { setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { /* ignore */ } }, []);
   useEffect(() => {
     const el = trackRef.current; if (!el) return;
-    const measure = () => setDuration(Math.max(10, Math.round((el.scrollWidth / 2) / SPEED)));
+    const measure = () => setDuration(Math.max(6, Math.round((el.scrollWidth / 2) / speed)));
     measure();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
     ro?.observe(el);
     return () => ro?.disconnect();
-  }, [items, pulse]);
+  }, [items, pulse, speed]);
 
   const moves = (pulse?.materials || []).filter((m) => Math.abs(m.mom_pct) >= 1).slice(0, 4);
   const weather = pulse?.weather || [];

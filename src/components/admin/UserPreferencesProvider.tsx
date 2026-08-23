@@ -130,6 +130,9 @@ export default function UserPreferencesProvider({ children }: { children: ReactN
     setPreferences(prev => {
       if (!prev) return prev;
       const updated = { ...prev, ...fields };
+      // JSONB bags merge (the API does the same server-side)
+      if (fields.custom_settings) updated.custom_settings = { ...(prev.custom_settings || {}), ...fields.custom_settings };
+      if ((fields as any).feature_flags) (updated as any).feature_flags = { ...((prev as any).feature_flags || {}), ...(fields as any).feature_flags };
       // Apply theme/font immediately
       if (fields.theme) applyTheme(fields.theme);
       if (fields.font_size) applyFontSize(fields.font_size);

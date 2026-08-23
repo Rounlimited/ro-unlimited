@@ -51,14 +51,6 @@ export const TOUR_DEFINITIONS: Record<string, TourDefinition> = {
         disableBeacon: true,
       },
       {
-        target: '[data-tour="checklist-cta"]',
-        title: 'Launch Checklist',
-        content:
-          'Your roadmap to going live. This tracks everything from content to configuration. Tap it to see what still needs to be done.',
-        placement: 'bottom',
-        disableBeacon: true,
-      },
-      {
         target: '[data-tour="hero-buttons"]',
         title: 'Email & Team',
         content:
