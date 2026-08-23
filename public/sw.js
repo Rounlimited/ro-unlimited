@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v35'; // safe-area top padding on full-screen overlays (back button clears status bar)
+const CACHE_NAME = 'ro-admin-v36'; // 2026-08-23: analytics, industry pulse, alerts, text size — force fresh chunks on installed PWAs
 const PRECACHE_URLS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
