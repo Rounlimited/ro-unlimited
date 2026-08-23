@@ -13,7 +13,7 @@ import {
   Users, FileText, Clock, Wrench, Package, TrendingUp,
   Settings, LifeBuoy, Lock, Search, X, ChevronDown, ChevronLeft,
   Briefcase, Shield, UserPlus, Truck, FileCheck, Target,
-  Megaphone, CreditCard, PieChart, Building2, Bell, Sparkles, Zap, LogOut, HardDrive, CheckSquare
+  Megaphone, CreditCard, PieChart, Building2, Bell, Sparkles, Zap, LogOut, HardDrive, CheckSquare, Newspaper
 } from 'lucide-react';
 
 interface AppIcon {
@@ -231,6 +231,8 @@ const APP_ICONS: AppIcon[] = [
   { id: 'team', label: 'Team', icon: Users, href: '/admin/employees', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'schedule', label: 'Schedule', icon: CalendarDays, href: '/admin/tasks', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'drive', label: 'RO Drive', icon: HardDrive, href: '/admin/drive', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', badge: 'NEW' },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/admin/analytics', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', badge: 'NEW' },
+  { id: 'news', label: 'Industry News', icon: Newspaper, href: '/admin/news', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'checklist', label: 'Checklist', icon: ClipboardList, href: '/admin/checklist', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'editor', label: 'Site Editor', icon: Pencil, href: '/admin/site-editor', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'portfolio', label: 'Portfolio', icon: Camera, href: '/admin/projects', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },

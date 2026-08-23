@@ -7,7 +7,7 @@ import { gsap } from 'gsap';
 import {
   Video, FileText, ArrowUpRight, CheckCircle2,
   AlertCircle, Camera, Clock, MessageCircle, Mail, Users, Calculator, HardDrive, CheckSquare, Receipt
-} from 'lucide-react';
+, BarChart3 } from 'lucide-react';
 
 interface SiteSettings { heroVideoUrl?: string; }
 
@@ -519,6 +519,17 @@ export default function AdminDashboard() {
               <HardDrive size={20} className="text-white" />
             </div>
             <p className="text-[11px] font-bold text-[#5ba3dc] text-center leading-tight">RO Drive</p>
+            <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #3b8dd4, transparent)' }} />
+          </Link>
+          {/* Analytics — blue */}
+          <Link href="/admin/analytics"
+            className="relative overflow-hidden border border-[#3b8dd4]/20 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"
+            style={{ background: 'linear-gradient(145deg, #0d1620, #0a1018)' }}>
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(145deg, #3b8dd4, #2d6ea8)', boxShadow: '0 4px 15px rgba(59,141,212,0.3), inset 0 1px 0 rgba(255,255,255,0.2)' }}>
+              <BarChart3 size={20} className="text-white" />
+            </div>
+            <p className="text-[11px] font-bold text-[#5ba3dc] text-center leading-tight">Analytics</p>
             <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #3b8dd4, transparent)' }} />
           </Link>
           {/* Settings — silver */}
