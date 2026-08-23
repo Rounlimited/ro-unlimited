@@ -36,12 +36,6 @@ const FEATURE_INFO: Record<string, { title: string; headline: string; descriptio
     description: 'Your complete business task manager — built right into the app. Schedule follow-ups, set reminders for permits, track vendor calls, and get a daily AI briefing every morning at 8am. Just ask RO Assistant to add anything.',
     bullets: ['AI-powered: just say "remind me to..."', 'Push notifications when tasks are due', 'Daily 8am briefing with overdue + upcoming', 'Covers vendors, permits, employees, job sites'],
   },
-  schedule: {
-    title: 'Schedule',
-    headline: 'Your Calendar & Reminders',
-    description: 'Tasks, deadlines, and reminders all in one place. Powered by the same task system — due dates, recurring tasks, and AI scheduling built in.',
-    bullets: ['Due today, this week, overdue views', 'Recurring tasks (daily, weekly, monthly)', 'AI assistant: "remind me Friday at 9am"', 'Push notifications for every reminder'],
-  },
   checklist: {
     title: 'Launch Checklist',
     headline: 'Your Roadmap to Going Live',
