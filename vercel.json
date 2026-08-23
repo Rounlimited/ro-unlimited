@@ -52,7 +52,7 @@
     },
     {
       "path": "/api/cron/news-refresh",
-      "schedule": "0 */6 * * *"
+      "schedule": "30 10 * * *"
     }
   ]
 }

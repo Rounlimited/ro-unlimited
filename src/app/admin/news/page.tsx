@@ -32,7 +32,7 @@ export default function NewsPage() {
             <div className="w-10 h-10 rounded-xl bg-[#C9A84C]/10 flex items-center justify-center"><Newspaper size={18} className="text-[#C9A84C]" /></div>
             <div>
               <h2 className="text-[18px] font-bold">Industry News</h2>
-              <p className="text-[12px] text-white/30">Refreshes every 6 hours · 18 sources · picked for a Greenville GC</p>
+              <p className="text-[12px] text-white/30">Refreshes daily and whenever it is 6+ hours old · 18 sources · picked for a Greenville GC</p>
             </div>
           </div>
           <button onClick={refresh} disabled={refreshing} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/10 text-[12px] text-white/50 hover:text-white/80 disabled:opacity-50">

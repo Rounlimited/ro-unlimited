@@ -7,8 +7,9 @@ import { buildPrompt, parsePicks, passesHardFilters, dedupeTitles, sourceWeights
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-// Vercel cron, every 6 hours — vercel.json: { "path": "/api/cron/news-refresh", "schedule": "0 */6 * * *" }
-// Also callable by a signed-in admin (POST) from the news page "Refresh".
+// Vercel cron, daily 10:30 UTC (6:30am ET) — Hobby plan allows once a day.
+// The app also refreshes itself from the client whenever the data is >6h old
+// (see useNews), and a signed-in admin can POST /api/admin/news any time.
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET || process.env.PUSH_SECRET;

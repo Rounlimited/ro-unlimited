@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ThumbsUp, EyeOff, ExternalLink, TrendingUp, TrendingDown, Minus, CloudLightning, Newspaper, ChevronRight, MapPin, X } from 'lucide-react';
 import IndustryTicker, { type TickerItem, type TickerPulse } from '@/components/admin/IndustryTicker';
@@ -13,12 +13,24 @@ export function useNews(limit = 60, category = 'all') {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [pulse, setPulse] = useState<PulseData | null>(null);
   const [loading, setLoading] = useState(true);
+  const refreshingRef = useRef(false);
   const load = async () => {
     try {
       const r = await fetch(`/api/admin/news?limit=${limit}&category=${category}`, { cache: 'no-store' });
       if (!r.ok) return;
       const d = await r.json();
       setFeatured(d.featured || []); setItems(d.items || []); setPulse(d.pulse || null);
+      // Self-refresh: the daily cron is the floor; if what we have is older than
+      // 6 hours (or there's nothing yet), pull fresh feeds in the background.
+      const age = d.pulse?.generated_at ? Date.now() - new Date(d.pulse.generated_at).getTime() : Infinity;
+      if (age > 6 * 3600000 && !refreshingRef.current) {
+        refreshingRef.current = true;
+        fetch('/api/admin/news', { method: 'POST' }).then(async (res) => {
+          if (!res.ok) return;
+          const r2 = await fetch(`/api/admin/news?limit=${limit}&category=${category}`, { cache: 'no-store' });
+          if (r2.ok) { const d2 = await r2.json(); setFeatured(d2.featured || []); setItems(d2.items || []); setPulse(d2.pulse || null); }
+        }).catch(() => {}).finally(() => { refreshingRef.current = false; });
+      }
     } finally { setLoading(false); }
   };
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [limit, category]);
