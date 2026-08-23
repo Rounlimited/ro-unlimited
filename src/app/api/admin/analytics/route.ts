@@ -13,9 +13,16 @@ export async function GET(req: NextRequest) {
   try {
     const days = Math.min(365, Math.max(7, Number(req.nextUrl.searchParams.get('days')) || 30));
     const since = new Date(Date.now() - days * 86400000).toISOString();
+
+    // PostHog runs many warehouse queries (seconds); serve it as its own
+    // section so the rest of the page paints immediately.
+    if (req.nextUrl.searchParams.get('section') === 'posthog') {
+      return NextResponse.json({ days, posthog: await getPosthog(days) });
+    }
+
     const supabase = createAdminClient();
 
-    const [{ data: estimates }, { data: events }, trafficRes, posthog] = await Promise.all([
+    const [{ data: estimates }, { data: events }, trafficRes] = await Promise.all([
       supabase.from('estimates')
         .select('id, estimate_number, project_name, division, status, total, created_at, sent_at, first_viewed_at, last_viewed_at, view_count, pdf_count, signed_at, accepted_at, declined_at, customer:customers(first_name, last_name, company_name)')
         .not('status', 'eq', 'draft')
@@ -27,7 +34,6 @@ export async function GET(req: NextRequest) {
         .order('created_at', { ascending: false })
         .limit(5000),
       getTraffic(days),
-      getPosthog(days),
     ]);
 
     const all = estimates || [];
@@ -107,7 +113,7 @@ export async function GET(req: NextRequest) {
       hours_utc: hours,
     };
 
-    return NextResponse.json({ days, since, funnel, stale, activity, traffic: trafficRes, posthog });
+    return NextResponse.json({ days, since, funnel, stale, activity, traffic: trafficRes });
   } catch (err) {
     console.error('[analytics] GET error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

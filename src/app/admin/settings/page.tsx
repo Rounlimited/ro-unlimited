@@ -473,8 +473,8 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* ── Alert routing — who gets customer-activity pushes ─────────── */}
-        <AlertRoutingCard currentEmail={currentUser?.email || null} />
+        {/* ── Alert routing — dev only ──────────────────────────────────── */}
+        {isNexa && <AlertRoutingCard currentEmail={currentUser?.email || null} />}
 
         {/* ── Email Accounts ──────────────────────────────────────────── */}
         <section className="bg-[#111] border border-white/5 rounded-xl overflow-hidden mb-6">

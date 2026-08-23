@@ -7,6 +7,7 @@ import {
   CheckCircle2, AlertTriangle, Clock, Eye, Send, FileDown, Link2, Copy, Share2,
   PenLine, MessageSquare, Star,
 } from 'lucide-react';
+import CustomerActivity from '@/components/admin/estimates/CustomerActivity';
 
 /** Invoice detail — status, lines, ledger, record payment. JR-sized. */
 
@@ -252,6 +253,9 @@ export default function InvoiceDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Customer activity — opens, PDF downloads, device, location */}
+        <div className="mb-4"><CustomerActivity estimateId={id} docType="invoice" /></div>
 
         {/* Customer signature */}
         {inv.signed_at && (

@@ -8,7 +8,7 @@ import { summarizeVisits, eventSentence, fmtSeconds, timeAgo, type DocEventRow, 
  * Customer Activity — what the customer actually did with the link.
  * `compact` = the summary strip on Overview; full = the visit timeline.
  */
-export default function CustomerActivity({ estimateId, compact = false }: { estimateId: string; compact?: boolean }) {
+export default function CustomerActivity({ estimateId, docType = 'estimate', compact = false }: { estimateId: string; docType?: 'estimate' | 'invoice'; compact?: boolean }) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [events, setEvents] = useState<DocEventRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,7 +16,7 @@ export default function CustomerActivity({ estimateId, compact = false }: { esti
 
   const load = async () => {
     try {
-      const res = await fetch(`/api/admin/estimates/${estimateId}/events`, { cache: 'no-store' });
+      const res = await fetch(`/api/admin/${docType}s/${estimateId}/events`, { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
       setEvents(data.events || []);
