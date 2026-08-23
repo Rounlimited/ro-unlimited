@@ -24,7 +24,7 @@ const TAG: Record<string, { label: string; color: string }> = {
 export const TICKER_SPEEDS: { id: string; label: string; pps: number }[] = [
   // True pixels/second now that the loop measures itself exactly — the earlier
   // "blazing feels slow" was the old track measurement, not the numbers.
-  { id: 'slow', label: 'Slow', pps: 110 }, { id: 'normal', label: 'Normal', pps: 180 }, { id: 'fast', label: 'Fast', pps: 280 }, { id: 'blazing', label: 'Blazing', pps: 420 },
+  { id: 'slow', label: 'Slow', pps: 45 }, { id: 'normal', label: 'Normal', pps: 75 }, { id: 'fast', label: 'Fast', pps: 120 }, { id: 'blazing', label: 'Blazing', pps: 180 },
 ];
 export const DEFAULT_TICKER_SPEED = 'normal';
 export function tickerPps(id: unknown): number { return (TICKER_SPEEDS.find((t) => t.id === id) || TICKER_SPEEDS.find((t) => t.id === DEFAULT_TICKER_SPEED)!).pps; }
