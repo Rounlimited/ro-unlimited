@@ -23,6 +23,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'leads', label: 'Inbox', icon: Mail, href: '/admin/inbox', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', group: 'main' },
   { id: 'estimates', label: 'Estimates', icon: FileText, href: '/admin/estimates', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'main' },
   { id: 'portfolio', label: 'Projects', icon: Camera, href: '/admin/projects', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'main' },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/admin/analytics', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', group: 'main' },
 
   // Files & Data
   { id: 'drive', label: 'RO Drive', icon: HardDrive, href: '/admin/drive', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', group: 'files' },

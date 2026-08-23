@@ -103,6 +103,29 @@ export async function GET(req: NextRequest) {
     newLeads.forEach((l: any) => lines.push(`- ${l.name} (${l.service_type})`));
   }
 
+  // Customer activity — yesterday, plus the 7-day picture on Mondays.
+  try {
+    const dayAgo = new Date(now.getTime() - 86400000).toISOString();
+    const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+    const { data: ev } = await supabase.from('document_events')
+      .select('doc_id, doc_type, event, device_type, city, region, created_at')
+      .eq('internal', false).gte('created_at', weekAgo);
+    const rows = ev || [];
+    const count = (list: any[], e: string) => list.filter((x) => x.event === e).length;
+    const y = rows.filter((x) => x.created_at >= dayAgo);
+    if (y.length) {
+      const opened = new Set(y.filter((x) => x.event === 'link_view').map((x) => x.doc_id)).size;
+      lines.push(`CUSTOMER ACTIVITY (last 24h): ${count(y, 'link_view')} link opens on ${opened} document${opened === 1 ? '' : 's'}, ${count(y, 'pdf_download') + count(y, 'pdf_view')} PDF views, ${count(y, 'signed')} signed, ${count(y, 'message_sent')} messages`);
+    }
+    if (now.getUTCDay() === 1 && rows.length) {
+      const docs = new Set(rows.filter((x) => x.event === 'link_view').map((x) => x.doc_id)).size;
+      const phones = rows.filter((x) => x.event === 'link_view' && x.device_type === 'Phone').length;
+      const views = count(rows, 'link_view');
+      lines.push(`WEEKLY DIGEST: ${views} opens across ${docs} documents, ${count(rows, 'pdf_download')} PDF downloads, ${count(rows, 'signed')} signed. ${views ? Math.round((phones / views) * 100) : 0}% opened on a phone. Full picture: /admin/analytics`);
+    }
+    lines.push('');
+  } catch { /* analytics are optional in the briefing */ }
+
   const context = lines.join('\n');
 
   // Generate AI briefing
@@ -153,15 +176,17 @@ ${context}`;
   const taskCount = (todayTasks?.length || 0) + (overdueTasks?.length || 0);
 
   // Save briefing to notifications table
-  await supabase.from('admin_notifications').insert({
-    type: 'daily_briefing',
-    title: `Morning Briefing — ${dayOfWeek}`,
-    message: briefingText.slice(0, 500),
-    entity_type: 'briefing',
-    entity_id: null,
-    action_url: '/admin',
-    read: false,
-  }).catch(() => {});
+  // (Previously: wrong column names + .catch() on a query builder, which has
+  // no .catch — the cron threw here every morning and nothing was saved/pushed.)
+  try {
+    await supabase.from('admin_notifications').insert({
+      type: 'daily_briefing',
+      title: `Morning Briefing — ${dayOfWeek}`,
+      body: briefingText.slice(0, 500),
+      url: '/admin',
+      read: false,
+    });
+  } catch (e) { console.error('[briefing] save failed', e); }
 
   // Send push notification (short summary)
   const pushSummary = `${todayTasks?.length || 0} today, ${overdueTasks?.length || 0} overdue${staleEstimates?.length ? `, ${staleEstimates.length} estimates need follow-up` : ''}`;
