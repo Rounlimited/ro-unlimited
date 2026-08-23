@@ -1,5 +1,7 @@
 'use client';
 
+import { estimateDisplayDate } from '@/lib/estimates';
+
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -21,6 +23,7 @@ interface Estimate {
   total: number;
   valid_until: string | null;
   created_at: string;
+  estimate_date?: string | null;
   customer: {
     first_name: string;
     last_name: string;
@@ -427,7 +430,7 @@ export default function EstimatesPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3.5 text-[15px] font-bold text-white tabular-nums">{formatCurrency(estimate.total || 0)}</td>
-                      <td className="px-4 py-3.5 text-[12px] text-white/25">{formatDate(estimate.created_at)}</td>
+                      <td className="px-4 py-3.5 text-[12px] text-white/25">{formatDate(estimateDisplayDate(estimate) || estimate.created_at)}</td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-1">
                           <button onClick={(e) => quickCopyLink(e, estimate.id)}
@@ -482,7 +485,7 @@ export default function EstimatesPage() {
                   <p className="text-[15px] font-medium text-white/80 mb-1 truncate">{estimate.project_name}</p>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                     <span className="text-[13px] text-white/30">{customerName}{companyName && <span className="text-white/15"> &mdash; {companyName}</span>}</span>
-                    <span className="flex items-center gap-1 text-[12px] text-white/20"><Clock size={11} />{formatDate(estimate.created_at)}</span>
+                    <span className="flex items-center gap-1 text-[12px] text-white/20"><Clock size={11} />{formatDate(estimateDisplayDate(estimate) || estimate.created_at)}</span>
                     {estimate.valid_until && (
                       <span className={`flex items-center gap-1 text-[12px] ${expired ? 'text-red-400' : 'text-white/20'}`}>
                         {expired ? <AlertTriangle size={11} /> : <Clock size={11} />}{expired ? 'Expired ' : 'Valid until '}{formatDate(estimate.valid_until)}

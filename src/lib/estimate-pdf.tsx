@@ -1,5 +1,6 @@
 import { Document, Page, Text, View, Image, StyleSheet, Font, renderToBuffer, Svg, Circle, Line, Rect } from '@react-pdf/renderer';
 import React from 'react';
+import { estimateDisplayDate } from './estimates';
 
 /* react-pdf hyphenates by default (Knuth-Liang, English). In a construction
    document that produces "con-struc-tion"-style breaks mid-word that read as
@@ -371,6 +372,7 @@ function LineItemRow({ item, counter }: { item: any; counter: number }) {
 
 function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers, options = [] }: PDFProps) {
   const customer = estimate.customer;
+  const displayDate = estimateDisplayDate(estimate);
   const scopeText = estimate.scope_of_work || estimate.project_description || '';
   const projectAddr = [estimate.project_address, estimate.project_city, estimate.project_state, estimate.project_zip].filter(Boolean).join(', ');
 
@@ -421,7 +423,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
   const recommendationsHtml = isHtml(estimate.recommendations) && stripHtml(estimate.recommendations) ? estimate.recommendations : '';
   const recommendationsList = recommendationsHtml ? [] : (estimate.recommendations || '').split('\n').map((x: string) => x.trim()).filter(Boolean);
   const validDays = estimate.valid_until
-    ? Math.max(0, Math.ceil((new Date(estimate.valid_until).getTime() - new Date(estimate.created_at).getTime()) / 86400000))
+    ? Math.max(0, Math.ceil((new Date(estimate.valid_until).getTime() - new Date(estimateDisplayDate(estimate) || estimate.created_at).getTime()) / 86400000))
     : 30;
 
   // Sort phases in construction-logical order
@@ -460,7 +462,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           <Image src={LOGO_URL} style={{ width: 140, height: 'auto' }} />
           <View>
             <Text style={s.pageHeaderRight}>{estimate.estimate_number}</Text>
-            <Text style={s.pageHeaderRight}>{fmtDate(estimate.created_at)}</Text>
+            <Text style={s.pageHeaderRight}>{fmtDate(displayDate || undefined)}</Text>
           </View>
         </View>
 
@@ -488,7 +490,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
               ) : null}
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 9, color: c.label }}>Date: <Text style={{ color: c.textMed, fontFamily: 'Helvetica-Bold' }}>{fmtDate(estimate.sent_at || estimate.created_at)}</Text></Text>
+              <Text style={{ fontSize: 9, color: c.label }}>Date: <Text style={{ color: c.textMed, fontFamily: 'Helvetica-Bold' }}>{fmtDate(displayDate || undefined)}</Text></Text>
               {estimate.valid_until ? <Text style={{ fontSize: 9, color: c.label, marginTop: 3 }}>Valid Until: <Text style={{ color: c.textMed, fontFamily: 'Helvetica-Bold' }}>{fmtDate(estimate.valid_until)}</Text></Text> : null}
             </View>
           </View>

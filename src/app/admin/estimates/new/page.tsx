@@ -1,5 +1,7 @@
 'use client';
 
+import { toDateInputValue } from '@/lib/estimates';
+
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -28,6 +30,7 @@ interface Step1Data {
   estimate_type: string;
   contract_type: string;
   project_name: string;
+  estimate_date?: string;
   project_address: string;
   project_city: string;
   project_state: string;
@@ -95,6 +98,7 @@ export default function NewEstimateWizard() {
     estimate_type: '',
     contract_type: 'fixed_price',
     project_name: '',
+    estimate_date: '',
     project_address: '',
     project_city: '',
     project_state: 'SC',
@@ -169,6 +173,7 @@ export default function NewEstimateWizard() {
           estimate_type: data.estimate_type || '',
           contract_type: data.contract_type || 'fixed_price',
           project_name: data.project_name || '',
+          estimate_date: toDateInputValue(data.estimate_date),
           project_address: data.project_address || '',
           project_city: data.project_city || '',
           project_state: data.project_state || 'SC',
@@ -295,6 +300,7 @@ export default function NewEstimateWizard() {
           customer_id: step1.customer_id,
           document_mode: step1.document_mode || 'estimate',
           project_name: step1.project_name,
+          estimate_date: step1.estimate_date || null,
           project_address: step1.project_address || null,
           project_city: step1.project_city || null,
           project_state: step1.project_state || 'SC',
@@ -478,6 +484,7 @@ export default function NewEstimateWizard() {
             await patchEstimate({
               customer_id: step1.customer_id,
               project_name: step1.project_name,
+              estimate_date: step1.estimate_date || null,
               project_address: step1.project_address || null,
               project_city: step1.project_city || null,
               project_state: step1.project_state || 'SC',
@@ -554,6 +561,7 @@ export default function NewEstimateWizard() {
           await patchEstimate({
             customer_id: step1.customer_id,
             project_name: step1.project_name,
+            estimate_date: step1.estimate_date || null,
             project_address: step1.project_address || null,
             project_city: step1.project_city || null,
             project_state: step1.project_state || 'SC',
@@ -637,6 +645,7 @@ export default function NewEstimateWizard() {
           status: 'draft',
           customer_id: step1.customer_id,
           project_name: step1.project_name,
+          estimate_date: step1.estimate_date || null,
           project_address: step1.project_address || null,
           project_city: step1.project_city || null,
           project_state: step1.project_state || 'SC',

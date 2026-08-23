@@ -112,6 +112,7 @@ export async function POST(req: NextRequest) {
         status: body.status || 'draft',
         version: body.version || 1,
         project_name: body.project_name || null,
+        estimate_date: body.estimate_date || null,
         project_address: body.project_address || null,
         project_city: body.project_city || null,
         project_state: body.project_state || 'SC',

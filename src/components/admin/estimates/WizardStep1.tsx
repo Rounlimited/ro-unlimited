@@ -24,6 +24,7 @@ interface Step1Data {
   estimate_type: string;
   contract_type: string;
   project_name: string;
+  estimate_date?: string;
   project_address: string;
   project_city: string;
   project_state: string;
@@ -416,6 +417,20 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
           placeholder="e.g. Kitchen Renovation, New Deck Build..."
           className={inputClass}
         />
+      </div>
+
+      {/* Estimate Date — the day it was prepared with the customer, when
+          that differs from the day it's entered here. Blank = today. */}
+      <div data-field="estimate_date">
+        <label className={labelClass}>Estimate Date</label>
+        <input
+          type="date"
+          value={data.estimate_date || ''}
+          onChange={e => onChange({ estimate_date: e.target.value })}
+          className={inputClass}
+          style={{ colorScheme: 'dark' }}
+        />
+        <p className="text-[12px] text-white/30 mt-1">Leave blank to use today. This is the date shown on the estimate.</p>
       </div>
 
       {/* Address */}

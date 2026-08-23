@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
+import { estimateDisplayDate, toDateInputValue } from '@/lib/estimates';
 import {
   ArrowLeft, Edit3, Copy, FileText, Send, Trash2, X,
   User, Building2, Mail, Phone, MapPin, Calendar,
@@ -121,6 +122,7 @@ interface Estimate {
   notes: string | null;
   internal_notes: string | null;
   template_id: string | null;
+  estimate_date?: string | null;
   created_at: string;
   updated_at: string;
   line_items: LineItem[];
@@ -344,7 +346,10 @@ export default function EstimateDetailPage() {
     try {
       const res = await fetch(`/api/admin/estimates/${id}/share-link`, { method: 'POST' });
       const data = await res.json();
-      if (data?.link) { if (w) w.location.href = data.link; else window.open(data.link, '_blank'); }
+      // ?from=admin makes the live page show a Back control — inside the
+      // standalone iOS PWA this link opens in the same window with no chrome.
+      const viewLink = data?.link ? `${data.link}${data.link.includes('?') ? '&' : '?'}from=admin` : null;
+      if (viewLink) { if (w) w.location.href = viewLink; else window.open(viewLink, '_blank'); }
       else { w?.close(); alert(data?.error || 'Could not create link'); }
     } catch { w?.close(); alert('Could not create link'); }
   };
@@ -786,7 +791,22 @@ export default function EstimateDetailPage() {
                 {estimate.contract_type && (
                   <InfoRow label="Contract Type" value={estimate.contract_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} />
                 )}
-                <InfoRow label="Created" value={fmtDate(estimate.created_at)} />
+                <EstimateDateField
+                  value={estimate.estimate_date || null}
+                  createdAt={estimate.created_at}
+                  onChange={async (next) => {
+                    setEstimate({ ...estimate, estimate_date: next });
+                    try {
+                      await fetch(`/api/admin/estimates/${estimate.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ estimate_date: next }),
+                      });
+                    } catch (e) {
+                      console.error('Failed to save estimate date', e);
+                    }
+                  }}
+                />
               </div>
             </div>
 
@@ -1446,6 +1466,42 @@ function ModalBackdrop({ children, onClose }: { children: React.ReactNode; onClo
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       {children}
+    </div>
+  );
+}
+
+/* Estimate Date — editable in place. The estimate is often worked up with the
+   customer days before it's typed in, so the customer-facing date (PDF, live
+   link) is this field when set, otherwise the created date. */
+function EstimateDateField({ value, createdAt, onChange }: { value: string | null; createdAt: string; onChange: (next: string | null) => void }) {
+  const inputValue = toDateInputValue(value);
+  const shown = estimateDisplayDate({ estimate_date: value, created_at: createdAt });
+  return (
+    <div>
+      <p className="text-[12px] text-white/30 mb-0.5">Estimate Date</p>
+      <div className="flex items-center gap-2">
+        <input
+          type="date"
+          value={inputValue}
+          onChange={(e) => onChange(e.target.value || null)}
+          className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-[14px] text-white/80 focus:outline-none focus:border-[#C9A84C]/50"
+          style={{ colorScheme: 'dark' }}
+          aria-label="Estimate date"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-[12px] text-white/30 hover:text-white/60"
+            title="Use the created date"
+          >
+            Reset
+          </button>
+        )}
+      </div>
+      <p className="text-[11px] text-white/25 mt-1">
+        Shown on the PDF and live link as {fmtDate(shown)}{value ? ` · entered ${fmtDate(createdAt)}` : ''}
+      </p>
     </div>
   );
 }

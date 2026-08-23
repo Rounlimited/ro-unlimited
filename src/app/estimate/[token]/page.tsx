@@ -8,6 +8,8 @@ import {
   type PublicOptionGroup,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
+import { downloadPdfBlob } from '@/lib/pdf-preview';
+import { estimateDisplayDate } from '@/lib/estimates';
 
 /* ─── Types ──────────────────────────────────────────────── */
 
@@ -151,6 +153,32 @@ export default function PublicEstimatePage() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [showPdfModal, setShowPdfModal] = useState(false);
 
+  // Where did this window come from? The admin PWA (iOS "Add to Home Screen",
+  // display: standalone, scope "/") opens the live link INSIDE its own window —
+  // no browser chrome, no back button, so an admin who tapped "Preview link"
+  // was stranded until they force-quit the app. The admin opener appends
+  // ?from=admin; standalone mode is the belt-and-braces detection.
+  const [showBackBar, setShowBackBar] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  useEffect(() => {
+    try {
+      const standalone = (typeof navigator !== 'undefined' && (navigator as any).standalone === true)
+        || (typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches);
+      const fromAdmin = new URLSearchParams(window.location.search).get('from') === 'admin'
+        || (document.referrer && new URL(document.referrer).origin === window.location.origin && document.referrer.includes('/admin'));
+      setIsStandalone(!!standalone);
+      setShowBackBar(!!standalone || !!fromAdmin);
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleBackToAdmin = () => {
+    // Real popup/tab (desktop): just close it, the admin is still behind it.
+    if (window.opener && !window.opener.closed) { window.close(); return; }
+    // Same-window navigation (standalone PWA): step back in history.
+    if (window.history.length > 1) { window.history.back(); return; }
+    window.location.href = estimate?.id ? `/admin/estimates/${estimate.id}` : '/admin/estimates';
+  };
+
   // Message form
   const [msgName, setMsgName] = useState('');
   const [msgText, setMsgText] = useState('');
@@ -202,9 +230,24 @@ export default function PublicEstimatePage() {
     }
   };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (!estimate) return;
-    window.open(`/api/admin/estimates/${estimate.id}/pdf`, '_blank');
+    const apiUrl = `/api/admin/estimates/${estimate.id}/pdf`;
+    // In the standalone PWA, window.open(pdf) replaces this screen with a
+    // PDF that has no way back. Go through the share sheet / anchor download
+    // instead; fall back to the modal preview if that fails.
+    if (isStandalone) {
+      try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) throw new Error('PDF generation failed');
+        const blob = await res.blob();
+        const ok = await downloadPdfBlob(blob, `${String(estimate.estimate_number || 'estimate').replace(/\s/g, '_')}.pdf`);
+        if (ok) return;
+      } catch { /* fall through */ }
+      handlePreviewPdf();
+      return;
+    }
+    window.open(apiUrl, '_blank');
   };
 
   const handleSendMessage = async () => {
@@ -348,6 +391,21 @@ export default function PublicEstimatePage() {
       <ShineStyles />
       <main id="doc-main" className="max-w-4xl mx-auto px-4 py-6 sm:py-10 space-y-4 pb-32">
 
+        {/* ─── Back bar — only when opened from the admin app / standalone PWA ── */}
+        {showBackBar && (
+          <div className="-mt-2 sm:-mt-6 mb-2">
+            <button
+              type="button"
+              onClick={handleBackToAdmin}
+              className="inline-flex items-center gap-1.5 min-h-[44px] pr-3 text-[15px] font-semibold text-gray-700 active:opacity-60"
+              aria-label="Back"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+              Back
+            </button>
+          </div>
+        )}
+
         {/* ─── Brand header — same language as the invoice page ── */}
         <div className="flex items-center justify-between">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -398,7 +456,7 @@ export default function PublicEstimatePage() {
                 )}
               </div>
               <div className="text-right text-[13px] text-gray-500 space-y-1 shrink-0">
-                <div>Date: <span className="text-gray-700 font-medium">{fmtDate(estimate.sent_at || estimate.created_at)}</span></div>
+                <div>Date: <span className="text-gray-700 font-medium">{fmtDate(estimateDisplayDate(estimate) || estimate.created_at)}</span></div>
                 {estimate.valid_until && (
                   <div>
                     Valid Until: <span className="text-gray-700 font-medium">{fmtDate(estimate.valid_until)}</span>
