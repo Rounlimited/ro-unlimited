@@ -19,7 +19,7 @@ const TAG: Record<string, { label: string; color: string }> = {
   local: { label: 'Local', color: '#34d399' }, market: { label: 'Market', color: '#C9A84C' }, tools: { label: 'Trick', color: '#38bdf8' },
   labor: { label: 'Labor', color: '#fbbf24' }, tech: { label: 'Tech', color: '#38bdf8' }, business: { label: 'Business', color: '#C9A84C' },
 };
-const SPEED = 125; // px per second
+const SPEED = 220; // px per second — brisk; pauses on touch so nothing gets missed
 
 export default function IndustryTicker({ items, pulse, onSelect }: { items: TickerItem[]; pulse: TickerPulse | null; onSelect?: (item: TickerItem) => void }) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -30,7 +30,7 @@ export default function IndustryTicker({ items, pulse, onSelect }: { items: Tick
   useEffect(() => { try { setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { /* ignore */ } }, []);
   useEffect(() => {
     const el = trackRef.current; if (!el) return;
-    const measure = () => setDuration(Math.max(18, Math.round((el.scrollWidth / 2) / SPEED)));
+    const measure = () => setDuration(Math.max(10, Math.round((el.scrollWidth / 2) / SPEED)));
     measure();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
     ro?.observe(el);
