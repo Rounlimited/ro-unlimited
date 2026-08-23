@@ -29,7 +29,7 @@ export default function IndustryTicker({ items, pulse, onSelect }: { items: Tick
   // Constant speed regardless of how much text there is (~90px/s).
   useEffect(() => {
     const el = trackRef.current; if (!el) return;
-    const w = el.scrollWidth / 2; setDuration(Math.max(30, Math.round(w / 90)));
+    const w = el.scrollWidth / 2; setDuration(Math.max(30, Math.round(w / 80)));
   }, [items, pulse]);
 
   const materialMoves = (pulse?.materials || []).filter((m) => Math.abs(m.mom_pct) >= 1).slice(0, 4);
@@ -53,13 +53,13 @@ export default function IndustryTicker({ items, pulse, onSelect }: { items: Tick
       <button key={it.id} type="button" onClick={() => onSelect(it)} className="inline-flex items-center gap-2 text-white/80 hover:text-white active:text-[#C9A84C]">
         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: TAG_COLORS[it.ai_tag || ''] || (it.is_local ? TAG_COLORS.local : '#C9A84C') }} />
         <span>{it.title}</span>
-        <span className="text-white/30 text-[11px]">{it.source_name}</span>
+        <span className="text-white/35 text-[12px]">{it.source_name}</span>
       </button>
     ) : (
       <a key={it.id} href={it.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-white/80 hover:text-white">
         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: TAG_COLORS[it.ai_tag || ''] || (it.is_local ? TAG_COLORS.local : '#C9A84C') }} />
         <span>{it.title}</span>
-        <span className="text-white/30 text-[11px]">{it.source_name}</span>
+        <span className="text-white/35 text-[12px]">{it.source_name}</span>
       </a>
     )
   ));
@@ -69,7 +69,7 @@ export default function IndustryTicker({ items, pulse, onSelect }: { items: Tick
 
   return (
     <div className="relative z-10 flex items-stretch rounded-xl border border-white/5 bg-[#0f0f0f] overflow-hidden" data-tour="industry-ticker">
-      <Link href="/admin/news" className="flex items-center gap-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-[#C9A84C] bg-[#141414] border-r border-white/5 shrink-0 hover:bg-[#1a1a1a]">
+      <Link href="/admin/news" className="flex items-center gap-1.5 px-3 text-[12px] font-semibold uppercase tracking-wider text-[#C9A84C] bg-[#141414] border-r border-white/5 shrink-0 hover:bg-[#1a1a1a]">
         <Newspaper size={13} /> <span className="hidden sm:inline">Industry</span> <ChevronRight size={12} className="opacity-50" />
       </Link>
       <div
@@ -78,11 +78,11 @@ export default function IndustryTicker({ items, pulse, onSelect }: { items: Tick
         onTouchStart={() => setPaused(true)} onTouchEnd={() => setTimeout(() => setPaused(false), 1500)}
       >
         {reduced ? (
-          <div className="flex items-center gap-0 whitespace-nowrap overflow-x-auto px-3 py-2.5 text-[13px]">{run}</div>
+          <div className="flex items-center gap-0 whitespace-nowrap overflow-x-auto px-3 py-3 text-[15px]">{run}</div>
         ) : (
           <div
             ref={trackRef}
-            className="flex items-center whitespace-nowrap py-2.5 text-[13px] will-change-transform"
+            className="flex items-center whitespace-nowrap py-3 text-[15px] will-change-transform"
             style={{ animation: `ro-ticker ${duration}s linear infinite`, animationPlayState: paused ? 'paused' : 'running' }}
           >
             <span className="inline-flex items-center pl-3">{run}</span>

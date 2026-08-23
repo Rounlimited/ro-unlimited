@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ThumbsUp, EyeOff, ExternalLink, TrendingUp, TrendingDown, Minus, CloudLightning, Newspaper, ChevronRight, MapPin, X } from 'lucide-react';
+import { ThumbsUp, EyeOff, ExternalLink, TrendingUp, TrendingDown, Minus, CloudLightning, Newspaper, ChevronRight, ChevronDown, MapPin, X, PlayCircle, Wrench } from 'lucide-react';
 import IndustryTicker, { type TickerItem, type TickerPulse } from '@/components/admin/IndustryTicker';
 
 export interface NewsItem extends TickerItem { summary?: string | null; image_url?: string | null; published_at?: string | null; ai_take?: string | null; category?: string; score?: number; featured?: boolean }
@@ -10,6 +10,7 @@ export interface PulseData { generated_at: string; materials: { key: string; lab
 
 export function useNews(limit = 60, category = 'all') {
   const [featured, setFeatured] = useState<NewsItem[]>([]);
+  const [tricks, setTricks] = useState<NewsItem[]>([]);
   const [items, setItems] = useState<NewsItem[]>([]);
   const [pulse, setPulse] = useState<PulseData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,7 +20,7 @@ export function useNews(limit = 60, category = 'all') {
       const r = await fetch(`/api/admin/news?limit=${limit}&category=${category}`, { cache: 'no-store' });
       if (!r.ok) return;
       const d = await r.json();
-      setFeatured(d.featured || []); setItems(d.items || []); setPulse(d.pulse || null);
+      setFeatured(d.featured || []); setTricks(d.tricks || []); setItems(d.items || []); setPulse(d.pulse || null);
       // Self-refresh: the daily cron is the floor; if what we have is older than
       // 6 hours (or there's nothing yet), pull fresh feeds in the background.
       const age = d.pulse?.generated_at ? Date.now() - new Date(d.pulse.generated_at).getTime() : Infinity;
@@ -28,13 +29,13 @@ export function useNews(limit = 60, category = 'all') {
         fetch('/api/admin/news', { method: 'POST' }).then(async (res) => {
           if (!res.ok) return;
           const r2 = await fetch(`/api/admin/news?limit=${limit}&category=${category}`, { cache: 'no-store' });
-          if (r2.ok) { const d2 = await r2.json(); setFeatured(d2.featured || []); setItems(d2.items || []); setPulse(d2.pulse || null); }
+          if (r2.ok) { const d2 = await r2.json(); setFeatured(d2.featured || []); setTricks(d2.tricks || []); setItems(d2.items || []); setPulse(d2.pulse || null); }
         }).catch(() => {}).finally(() => { refreshingRef.current = false; });
       }
     } finally { setLoading(false); }
   };
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [limit, category]);
-  return { featured, items, pulse, loading, reload: load, setFeatured, setItems };
+  return { featured, tricks, items, pulse, loading, reload: load, setFeatured, setTricks, setItems };
 }
 
 export function sendFeedback(item_id: string, verdict: 'up' | 'down' | 'opened') {
@@ -45,7 +46,8 @@ export function sendFeedback(item_id: string, verdict: 'up' | 'down' | 'opened')
   } catch { /* ignore */ }
 }
 
-export const TAG_LABEL: Record<string, string> = { prices: 'Prices', codes: 'Codes', safety: 'Safety', local: 'Local', market: 'Market', tools: 'Tools', labor: 'Labor', tech: 'Tech', business: 'Business' };
+export const TAG_LABEL: Record<string, string> = { prices: 'Prices', codes: 'Codes', safety: 'Safety', local: 'Local', market: 'Market', tools: 'Trick of the trade', labor: 'Labor', tech: 'Tech', business: 'Business' };
+export const isVideo = (url: string) => /youtube\.com|youtu\.be/i.test(url);
 export const TAG_COLOR: Record<string, string> = { prices: '#D4772C', codes: '#a78bfa', safety: '#f87171', local: '#34d399', market: '#C9A84C', tools: '#38bdf8', labor: '#fbbf24', tech: '#38bdf8', business: '#C9A84C' };
 
 /** One curated story with the vote buttons. */
@@ -54,25 +56,28 @@ export function NewsRow({ item, onHide, compact, onOpen }: { item: NewsItem; onH
   const tag = item.ai_tag || (item.is_local ? 'local' : '');
   return (
     <div className="group flex gap-3 py-3">
-      {item.image_url && !compact && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={item.image_url} alt="" loading="lazy" className="w-16 h-16 rounded-lg object-cover shrink-0 bg-white/5" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+      {item.image_url && (!compact || isVideo(item.url)) && (
+        <div className="relative shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.image_url} alt="" loading="lazy" className={`${isVideo(item.url) ? 'w-28 h-[4.2rem]' : 'w-[4.5rem] h-[4.5rem]'} rounded-lg object-cover bg-white/5`} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+          {isVideo(item.url) && <PlayCircle size={22} className="absolute inset-0 m-auto text-white drop-shadow" />}
+        </div>
       )}
       <div className="min-w-0 flex-1">
         <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={(e) => { if (onOpen) { e.preventDefault(); onOpen(item); } else sendFeedback(item.id, 'opened'); }} className="block">
           <div className="flex items-center gap-2 mb-0.5">
-            {tag && <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: TAG_COLOR[tag] || '#C9A84C' }}>{TAG_LABEL[tag] || tag}</span>}
-            <span className="text-[11px] text-white/30 flex items-center gap-1">{item.is_local && <MapPin size={10} />}{item.source_name}{item.published_at ? ` · ${ago(item.published_at)}` : ''}</span>
+            {tag && <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: TAG_COLOR[tag] || '#C9A84C' }}>{TAG_LABEL[tag] || tag}</span>}
+            <span className="text-[12px] text-white/35 flex items-center gap-1">{item.is_local && <MapPin size={11} />}{isVideo(item.url) && <PlayCircle size={11} />}{item.source_name}{item.published_at ? ` · ${ago(item.published_at)}` : ''}</span>
           </div>
-          <p className="text-[14px] font-medium text-white/90 leading-snug group-hover:text-white">{item.title} <ExternalLink size={11} className="inline text-white/20 ml-0.5" /></p>
-          {item.ai_take && <p className="text-[13px] text-white/50 leading-snug mt-1">{item.ai_take}</p>}
+          <p className="text-[16px] font-medium text-white/90 leading-snug group-hover:text-white">{item.title} <ExternalLink size={12} className="inline text-white/20 ml-0.5" /></p>
+          {item.ai_take && <p className="text-[15px] text-white/55 leading-snug mt-1">{item.ai_take}</p>}
         </a>
         <div className="flex items-center gap-1 mt-1.5 -ml-1">
-          <button type="button" onClick={() => { setVoted('up'); sendFeedback(item.id, 'up'); }} className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] ${voted === 'up' ? 'text-[#C9A84C] bg-[#C9A84C]/10' : 'text-white/30 hover:text-white/70 hover:bg-white/5'}`} title="Useful — show me more like this">
-            <ThumbsUp size={12} /> {voted === 'up' ? 'Noted' : 'Useful'}
+          <button type="button" onClick={() => { setVoted('up'); sendFeedback(item.id, 'up'); }} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[13px] min-h-[36px] ${voted === 'up' ? 'text-[#C9A84C] bg-[#C9A84C]/10' : 'text-white/40 hover:text-white/80 hover:bg-white/5'}`} title="Useful — show me more like this">
+            <ThumbsUp size={14} /> {voted === 'up' ? 'Noted' : 'Useful'}
           </button>
-          <button type="button" onClick={() => { sendFeedback(item.id, 'down'); onHide?.(item.id); }} className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-white/30 hover:text-white/70 hover:bg-white/5" title="Not useful — hide and show fewer like this">
-            <EyeOff size={12} /> Not useful
+          <button type="button" onClick={() => { sendFeedback(item.id, 'down'); onHide?.(item.id); }} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[13px] min-h-[36px] text-white/40 hover:text-white/80 hover:bg-white/5" title="Not useful — hide and show fewer like this">
+            <EyeOff size={14} /> Not useful
           </button>
         </div>
       </div>
@@ -90,8 +95,8 @@ export function MaterialsRow({ materials }: { materials: PulseData['materials'] 
         const color = up ? '#fbbf24' : down ? '#34d399' : 'rgba(255,255,255,0.4)';
         return (
           <div key={m.key} className="rounded-lg bg-white/[0.03] border border-white/5 px-2.5 py-2" title={`Producer Price Index · ${m.period} · ${m.value} (was ${m.prev})`}>
-            <div className="text-[10px] uppercase tracking-wide text-white/30 truncate">{m.label}</div>
-            <div className="flex items-center gap-1 text-[14px] font-semibold tabular-nums" style={{ color }}><Icon size={13} />{up ? '+' : ''}{m.mom_pct}%</div>
+            <div className="text-[11px] uppercase tracking-wide text-white/35 truncate">{m.label}</div>
+            <div className="flex items-center gap-1 text-[16px] font-semibold tabular-nums" style={{ color }}><Icon size={14} />{up ? '+' : ''}{m.mom_pct}%</div>
           </div>
         );
       })}
@@ -104,7 +109,7 @@ export function WeatherBanner({ weather }: { weather: PulseData['weather'] }) {
   return (
     <div className="space-y-1.5">
       {weather.map((w) => (
-        <a key={w.id} href={w.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[13px]">
+        <a key={w.id} href={w.url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[15px]">
           <CloudLightning size={14} className="text-red-300 mt-0.5 shrink-0" />
           <div><span className="font-semibold text-red-200">{w.event}</span> <span className="text-red-200/70">— {w.areas}</span>{w.ends && <span className="text-red-200/50"> · until {new Date(w.ends).toLocaleString('en-US', { weekday: 'short', hour: 'numeric' })}</span>}</div>
         </a>
@@ -136,26 +141,26 @@ export function NewsSheet({ item, onClose, onHide }: { item: NewsItem | null; on
           <img src={item.image_url} alt="" className="w-full max-h-56 object-cover sm:rounded-t-2xl" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
         )}
         <div className="p-5 space-y-3">
-          <div className="flex items-center gap-2 text-[11px]">
+          <div className="flex items-center gap-2 text-[12px]">
             {tag && <span className="font-semibold uppercase tracking-wider" style={{ color: TAG_COLOR[tag] || '#C9A84C' }}>{TAG_LABEL[tag] || tag}</span>}
             <span className="text-white/35 flex items-center gap-1">{item.is_local && <MapPin size={10} />}{item.source_name}{item.published_at ? ` · ${ago(item.published_at)}` : ''}</span>
           </div>
-          <h3 className="text-[19px] font-bold text-white leading-snug">{item.title}</h3>
+          <h3 className="text-[21px] font-bold text-white leading-snug">{item.title}</h3>
           {item.ai_take && (
             <div className="rounded-lg border border-[#C9A84C]/25 bg-[#C9A84C]/5 px-3 py-2.5">
-              <div className="text-[10px] uppercase tracking-wider text-[#C9A84C] font-semibold mb-0.5">Why it matters to RO</div>
-              <p className="text-[14px] text-white/85 leading-snug">{item.ai_take}</p>
+              <div className="text-[11px] uppercase tracking-wider text-[#C9A84C] font-semibold mb-0.5">Why it matters to RO</div>
+              <p className="text-[16px] text-white/85 leading-snug">{item.ai_take}</p>
             </div>
           )}
-          {item.summary && <p className="text-[14px] text-white/60 leading-relaxed">{item.summary}</p>}
+          {item.summary && <p className="text-[16px] text-white/60 leading-relaxed">{item.summary}</p>}
           <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={() => sendFeedback(item.id, 'opened')} className="flex items-center justify-center gap-2 w-full min-h-[48px] rounded-xl bg-[#C9A84C] text-black font-bold text-[15px] active:scale-[0.98]">
-            Read the full article <ExternalLink size={15} />
+            {isVideo(item.url) ? 'Watch the video' : 'Read the full article'} <ExternalLink size={15} />
           </a>
           <div className="flex items-center justify-center gap-2 pt-1">
-            <button type="button" onClick={() => { setVoted('up'); sendFeedback(item.id, 'up'); }} className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] ${voted === 'up' ? 'text-[#C9A84C] bg-[#C9A84C]/10' : 'text-white/50 hover:text-white/80 bg-white/5'}`}>
+            <button type="button" onClick={() => { setVoted('up'); sendFeedback(item.id, 'up'); }} className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[14px] ${voted === 'up' ? 'text-[#C9A84C] bg-[#C9A84C]/10' : 'text-white/50 hover:text-white/80 bg-white/5'}`}>
               <ThumbsUp size={14} /> {voted === 'up' ? 'Noted — more like this' : 'Useful'}
             </button>
-            <button type="button" onClick={() => { sendFeedback(item.id, 'down'); onHide?.(item.id); onClose(); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] text-white/50 hover:text-white/80 bg-white/5">
+            <button type="button" onClick={() => { sendFeedback(item.id, 'down'); onHide?.(item.id); onClose(); }} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[14px] text-white/50 hover:text-white/80 bg-white/5">
               <EyeOff size={14} /> Not useful
             </button>
           </div>
@@ -165,32 +170,63 @@ export function NewsSheet({ item, onClose, onHide }: { item: NewsItem | null; on
   );
 }
 
-/** Dashboard: ticker + "Good to know today" card. */
+/** Dashboard: ticker + a collapsible "Good to know today" card. */
+const COLLAPSE_KEY = 'ro_pulse_open';
 export default function IndustryPulse() {
-  const { featured, pulse, loading, setFeatured } = useNews(10);
+  const { featured, tricks, pulse, loading, setFeatured, setTricks } = useNews(10);
   const [open, setOpen] = useState<NewsItem | null>(null);
-  const hide = (id: string) => setFeatured((f) => f.filter((x) => x.id !== id));
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => { try { setExpanded(localStorage.getItem(COLLAPSE_KEY) === '1'); } catch { /* ignore */ } }, []);
+  const toggle = () => { setExpanded((v) => { try { localStorage.setItem(COLLAPSE_KEY, v ? '0' : '1'); } catch { /* ignore */ } return !v; }); };
+  const hide = (id: string) => { setFeatured((f) => f.filter((x) => x.id !== id)); setTricks((f) => f.filter((x) => x.id !== id)); };
   if (loading) return null;
   const top = featured.slice(0, 4);
+  const topTricks = tricks.slice(0, 3);
+  const all = [...featured, ...tricks];
+  const moves = (pulse?.materials || []).filter((m) => Math.abs(m.mom_pct) >= 1);
+  const summaryBits = [
+    top.length ? `${top.length} worth a look` : null,
+    topTricks.length ? `${topTricks.length} trick${topTricks.length > 1 ? 's' : ''} of the trade` : null,
+    moves.length ? moves.slice(0, 2).map((m) => `${m.label.split(' ')[0]} ${m.mom_pct > 0 ? '+' : ''}${m.mom_pct}%`).join(', ') : null,
+    pulse?.weather?.length ? `${pulse.weather.length} weather alert${pulse.weather.length > 1 ? 's' : ''}` : null,
+  ].filter(Boolean).join(' · ');
+  const hasContent = top.length > 0 || topTricks.length > 0 || !!pulse?.weather?.length || !!pulse?.materials?.length;
   return (
     <>
-      <IndustryTicker items={featured} pulse={pulse as TickerPulse | null} onSelect={(it) => setOpen(featured.find((f) => f.id === it.id) || (it as NewsItem))} />
+      <IndustryTicker items={all} pulse={pulse as TickerPulse | null} onSelect={(it) => setOpen(all.find((f) => f.id === it.id) || (it as NewsItem))} />
       <NewsSheet item={open} onClose={() => setOpen(null)} onHide={hide} />
-      {(top.length > 0 || pulse?.weather?.length || pulse?.materials?.length) ? (
-        <div className="relative z-10 bg-[#111] border border-white/5 rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[13px] font-semibold text-white flex items-center gap-2"><Newspaper size={14} className="text-[#C9A84C]" /> Good to know today</h3>
-            <Link href="/admin/news" className="text-[12px] text-white/40 hover:text-white/70 flex items-center gap-0.5">All news <ChevronRight size={12} /></Link>
-          </div>
-          <WeatherBanner weather={pulse?.weather || []} />
-          <MaterialsRow materials={pulse?.materials || []} />
-          {top.length > 0 && (
-            <div className="divide-y divide-white/5 -mb-2">
-              {top.map((it) => <NewsRow key={it.id} item={it} onHide={hide} compact onOpen={setOpen} />)}
+      {hasContent && (
+        <div className="relative z-10 bg-[#111] border border-white/5 rounded-xl">
+          {/* Header row — always visible; tap to expand/collapse */}
+          <button type="button" onClick={toggle} aria-expanded={expanded} className="w-full flex items-center justify-between gap-3 p-4 text-left">
+            <div className="min-w-0">
+              <h3 className="text-[15px] font-semibold text-white flex items-center gap-2"><Newspaper size={15} className="text-[#C9A84C]" /> Good to know today</h3>
+              {!expanded && summaryBits && <p className="text-[13px] text-white/40 mt-0.5 truncate">{summaryBits}</p>}
+            </div>
+            <ChevronDown size={18} className={`text-white/40 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+          </button>
+          {expanded && (
+            <div className="px-4 pb-4 space-y-3">
+              {pulse?.weather?.length ? <WeatherBanner weather={pulse.weather} /> : null}
+              <MaterialsRow materials={pulse?.materials || []} />
+              {top.length > 0 && (
+                <div className="divide-y divide-white/5">
+                  {top.map((it) => <NewsRow key={it.id} item={it} onHide={hide} compact onOpen={setOpen} />)}
+                </div>
+              )}
+              {topTricks.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 text-[12px] uppercase tracking-wider text-[#38bdf8] font-semibold pt-1"><Wrench size={12} /> Tricks of the trade</div>
+                  <div className="divide-y divide-white/5">
+                    {topTricks.map((it) => <NewsRow key={it.id} item={it} onHide={hide} compact onOpen={setOpen} />)}
+                  </div>
+                </div>
+              )}
+              <Link href="/admin/news" className="flex items-center justify-center gap-1 text-[14px] text-white/50 hover:text-white/80 pt-1">All news & tricks <ChevronRight size={14} /></Link>
             </div>
           )}
         </div>
-      ) : null}
+      )}
     </>
   );
 }

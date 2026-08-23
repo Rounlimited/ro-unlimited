@@ -47,12 +47,15 @@ export async function run() {
   try {
     const since4d = new Date(Date.now() - 4 * 86400000).toISOString();
     const since60d = new Date(Date.now() - 60 * 86400000).toISOString();
-    const [{ data: rows }, { data: fb }, { data: recentEst }] = await Promise.all([
-      supabase.from('news_items').select('id, source_key, source_name, category, is_local, title, summary, published_at, hidden').gte('published_at', since4d).eq('hidden', false).order('published_at', { ascending: false }).limit(120),
+    const since10d = new Date(Date.now() - 10 * 86400000).toISOString();
+    const [{ data: newsRows }, { data: trickRows }, { data: fb }, { data: recentEst }] = await Promise.all([
+      supabase.from('news_items').select('id, source_key, source_name, category, is_local, title, summary, published_at, hidden').neq('category', 'tricks').gte('published_at', since4d).eq('hidden', false).order('published_at', { ascending: false }).limit(110),
+      supabase.from('news_items').select('id, source_key, source_name, category, is_local, title, summary, published_at, hidden').eq('category', 'tricks').gte('published_at', since10d).eq('hidden', false).order('published_at', { ascending: false }).limit(60),
       supabase.from('news_feedback').select('item_id, verdict, item:news_items(title, source_key)').gte('created_at', since60d).order('created_at', { ascending: false }).limit(300),
       supabase.from('estimates').select('project_name, division, estimate_type, created_at').order('created_at', { ascending: false }).limit(12),
     ]);
     const signals: FeedbackSignal[] = (fb || []).map((f: any) => ({ item_id: f.item_id, verdict: f.verdict, title: f.item?.title, source_key: f.item?.source_key }));
+    const rows = [...(newsRows || []), ...(trickRows || [])];
     const cands: Candidate[] = dedupeTitles((rows || []).filter(passesHardFilters));
     considered = cands.length;
     if (cands.length) {

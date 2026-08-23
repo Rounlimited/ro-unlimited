@@ -4,7 +4,7 @@
  * 2026-08-23: every source below returned items; dead ones were dropped.
  */
 export interface NewsSource { key: string; name: string; url: string; category: NewsCategory; local?: boolean }
-export type NewsCategory = 'industry' | 'local' | 'codes' | 'safety' | 'trade' | 'tech' | 'equipment' | 'business';
+export type NewsCategory = 'industry' | 'local' | 'codes' | 'safety' | 'trade' | 'tech' | 'equipment' | 'business' | 'tricks';
 
 export const NEWS_SOURCES: NewsSource[] = [
   // National industry
@@ -25,6 +25,31 @@ export const NEWS_SOURCES: NewsSource[] = [
   // Codes & safety
   { key: 'icc', name: 'ICC (building codes)', url: 'https://www.iccsafe.org/feed/', category: 'codes' },
   { key: 'osha', name: 'OSHA', url: 'https://www.osha.gov/news/newsreleases.xml', category: 'safety' },
+  // Tricks of the trade — how-tos and jobsite know-how a small crew can use
+  { key: 'protoolreviews', name: 'Pro Tool Reviews', url: 'https://www.protoolreviews.com/feed/', category: 'tricks' },
+  { key: 'constructionprotips', name: 'Construction Pro Tips', url: 'https://www.constructionprotips.com/feed', category: 'tricks' },
+  { key: 'thisiscarpentry', name: 'This Is Carpentry', url: 'https://www.thisiscarpentry.com/feed/', category: 'tricks' },
+  { key: 'greenbuildingadvisor', name: 'Green Building Advisor', url: 'https://www.greenbuildingadvisor.com/feed', category: 'tricks' },
+  { key: 'familyhandyman', name: 'Family Handyman', url: 'https://www.familyhandyman.com/feed/', category: 'tricks' },
+  // …and the channels the trades actually watch (YouTube publishes Atom feeds per channel)
+  ...([
+    ['yt-essentialcraftsman', 'Essential Craftsman', 'UCzr30osBdTmuFUS8IfXtXmg'],
+    ['yt-buildshow', 'The Build Show (Matt Risinger)', 'UCFCTrfb1JUJjs3Im8OZDtBw'],
+    ['yt-perkins', 'Perkins Builder Brothers', 'UCKwM-7sO1_Tw9EmYhKfpBBw'],
+    ['yt-rogerwakefield', 'Roger Wakefield Plumbing', 'UCGIMKh92vaL0_Yc0u4GYhHA'],
+    ['yt-electricianu', 'Electrician U', 'UCB3jUEyCLRbCw7QED0vnXYg'],
+    ['yt-mikeholt', 'Mike Holt (NEC)', 'UC8oJL9T1z3Gqn6drDphZY6g'],
+    ['yt-letsdig18', 'letsdig18 (excavation)', 'UC-NlyhOdTK4C30NhptvD7UA'],
+    ['yt-dirtmonkey', 'Dirt Monkey (excavation)', 'UCtNIoi7VuApbYOPx-NjcVAA'],
+    ['yt-rrbuildings', 'RR Buildings', 'UCWXEQsK3UiHszjwgGN5HUeQ'],
+    ['yt-awesomeframers', 'AwesomeFramers', 'UCiDg_Mo6aJAOEnlGI4iilQw'],
+    ['yt-honestcarpenter', 'The Honest Carpenter', 'UCDLxnaDQzo8YolFqsBAHVLQ'],
+    ['yt-thisoldhouse', 'This Old House', 'UCUtWNBWbFL9We-cdXkiAuJA'],
+    ['yt-homerenovision', 'Home RenoVision DIY', 'UCnorhjQR4zJkT7AVNhu395Q'],
+    ['yt-protoolreviews', 'Pro Tool Reviews (video)', 'UCnhVT54G9kNquwT1_d2ZGQw'],
+    ['yt-constructionlife', 'The Construction Life', 'UCQ6UHZqOAjGIN4_Frm5i3yw'],
+    ['yt-andrewcamarata', 'Andrew Camarata', 'UCUujfNBK9uv3cIW-P5PX7vA'],
+  ] as [string, string, string][]).map(([key, name, id]) => ({ key, name, url: `https://www.youtube.com/feeds/videos.xml?channel_id=${id}`, category: 'tricks' as NewsCategory })),
   // Upstate South Carolina
   { key: 'gsabusiness', name: 'GSA Business Report', url: 'https://gsabusiness.com/feed/', category: 'local', local: true },
   { key: 'upstatebiz', name: 'Upstate Business Journal', url: 'https://upstatebusinessjournal.com/feed/', category: 'local', local: true },
@@ -68,7 +93,7 @@ export function parseFeed(xml: string, src: NewsSource): FeedItem[] {
     let url = isAtom ? (attr(b, 'link', 'href') || '') : decode(tag(b, 'link') || '').trim();
     if (!url) url = decode(tag(b, 'guid') || '').trim();
     if (!title || !/^https?:\/\//i.test(url)) continue;
-    const rawSummary = tag(b, 'description') || tag(b, 'summary') || tag(b, 'content:encoded') || tag(b, 'content') || '';
+    const rawSummary = tag(b, 'description') || tag(b, 'summary') || tag(b, 'media:description') || tag(b, 'content:encoded') || tag(b, 'content') || '';
     const summary = stripTags(rawSummary).slice(0, 400) || null;
     const published_at = toIso(tag(b, 'pubDate') || tag(b, 'published') || tag(b, 'updated') || tag(b, 'dc:date'));
     out.push({
@@ -97,3 +122,5 @@ export async function fetchAllSources(): Promise<{ items: FeedItem[]; failed: st
   for (const r of results) for (const it of r.items) { if (!seen.has(it.url)) { seen.add(it.url); items.push(it); } }
   return { items, failed };
 }
+
+export const isVideo = (url: string) => /youtube\.com|youtu\.be/i.test(url);

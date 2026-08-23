@@ -13,7 +13,8 @@
 import type { Pulse } from '@/lib/industry-pulse';
 
 export const MIN_SCORE = 65;
-export const MAX_FEATURED = 8;
+export const MAX_FEATURED = 10;
+export const MAX_TRICKS = 3;
 
 export interface Candidate { id: string; source_key: string; source_name: string; category: string; is_local: boolean; title: string; summary: string | null; published_at: string | null }
 export interface Pick { id: string; take: string; tag: string; score: number }
@@ -79,7 +80,9 @@ Worth featuring (score 70+): material/fuel price moves he should price into bids
 Not worth it (score under 40): executive appointments, awards, events, vendor puff pieces, national megaprojects with no lesson, stock-market stories, anything he can't act on or retell on a jobsite.
 ${liked ? `\nThe team marked these as useful before — weight similar stories up:\n${liked}` : ''}${opened ? `\nThey opened these:\n${opened}` : ''}${hidden ? `\nThey hid these — avoid this kind of thing:\n${hidden}` : ''}
 
-Pick at most ${MAX_FEATURED}; fewer is fine — never pad. Prefer 1–2 local items only if they are genuinely useful. For each: the id, a tag from {prices, codes, safety, local, market, tools, labor, tech, business}, the score, and ONE plain sentence (max 26 words) on why it matters to him — concrete, no hype, no "stay informed", no restating the headline.
+Items marked "· tricks" are how-tos and trade videos (YouTube channels the trades watch). Treat them as a separate lane: pick up to ${MAX_TRICKS} of those ONLY if a crew would actually learn a technique, a tool trick, a code gotcha, or a faster way to do the work — tag those "tools". Entertainment, vlogs, product unboxings and DIY-homeowner content score low.
+
+Pick at most ${MAX_FEATURED} in total; fewer is fine — never pad. Prefer 1–2 local items only if they are genuinely useful. For each: the id, a tag from {prices, codes, safety, local, market, tools, labor, tech, business}, the score, and ONE plain sentence (max 26 words) on why it matters to him — concrete, no hype, no "stay informed", no restating the headline.
 
 Return ONLY JSON: {"picks":[{"id":"…","tag":"…","score":0,"take":"…"}]}
 
