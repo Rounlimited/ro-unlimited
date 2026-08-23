@@ -14,6 +14,8 @@
 | Master Google account | `rounlimitedco@gmail.com` (logs into GitHub/Vercel/Sanity/Supabase/GoDaddy/Oracle) | password manager |
 | Admin users (Supabase) | `rounlimitedco@gmail.com` (admin), `admin@nexavisiongroup.com` (super_admin) | NotebookLM Ch 8.2 |
 | GitHub | account `Rounlimited`, repo `Rounlimited/ro-unlimited`, a Personal Access Token | NotebookLM Ch 8.3 |
+| PostHog (site analytics, added 2026-08-23) | org id, project id `572870`, project key `phc_…` (browser) and personal key `phx_…` (server); env `NEXT_PUBLIC_POSTHOG_KEY`, `POSTHOG_PERSONAL_API_KEY`, … | `ROU_CREDENTIALS.md` §14 / `.env.local` |
+| Cloudflare analytics token (read-only, added 2026-08-23) | `CF_ANALYTICS_TOKEN` + `CF_ACCOUNT_ID` + `CF_ZONE_ID` for `/admin/analytics` traffic; zone has "visitor location headers" enabled | `ROU_CREDENTIALS.md` §14 / `.env.local` |
 | Vercel (RO-own) | team `rounlimiteds-projects`/`team_r4Z6lWU4vIqkjE1TtMKg4pjc`, project `ro-unlimited`/`prj_IAbUrfvGyPPd0Qw8qpL0ffeuZTIH`, API token | NotebookLM Ch 8.4 |
 | Sanity | project `3at2yyx0`, dataset `production`, API token (read+write; maybe read-only) | NotebookLM Ch 8.5 / `.env.local` |
 | Supabase (RO-own LIVE) | ref `ocizuduhqsmewcmtilae`, anon + service-role keys, mgmt PAT (DDL) | NotebookLM Ch 8.6 / `.env.local` |
