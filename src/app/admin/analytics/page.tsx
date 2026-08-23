@@ -18,7 +18,7 @@ interface Data { days: number; funnel: { all: Funnel; by_division: Record<string
 interface FeedEvent { id: string; doc_type: string; doc_id: string; event: string; device_type: string | null; os: string | null; browser: string | null; city: string | null; region: string | null; country: string | null; meta: any; created_at: string; doc: { number: string; project_name?: string; division?: string; customer?: any } | null }
 
 const GOLD = '#C9A84C';
-const DIVISION_LABEL: Record<string, string> = { residential: 'Residential', commercial: 'Commercial', utilities: 'Utilities', grading: 'Grading', other: 'Other' };
+const DIVISION_LABEL: Record<string, string> = { residential: 'Residential', commercial: 'Commercial', utilities: 'Utilities', grading: 'Grading', concrete: 'Concrete', other: 'Other' };
 const fmtMoney = (n: number) => '$' + Math.round(n || 0).toLocaleString();
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
 const fmtHours = (h: number | null) => h == null ? '—' : h < 1 ? `${Math.round(h * 60)} min` : h < 48 ? `${Math.round(h)} hr` : `${Math.round(h / 24)} days`;

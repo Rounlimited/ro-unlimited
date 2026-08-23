@@ -48,10 +48,12 @@ export async function GET(req: NextRequest) {
         median_hours_to_sign: med(list.map((e) => hours(e.first_viewed_at || e.sent_at, e.signed_at || e.accepted_at))),
       };
     };
-    const divisions = Array.from(new Set(sentIn.map((e) => e.division || 'other')));
+    // Divisions arrive a little dirty ("other:", mixed case) — normalise for grouping.
+    const divOf = (e: any) => (String(e.division || 'other').toLowerCase().replace(/[^a-z_]/g, '') || 'other');
+    const divisions = Array.from(new Set(sentIn.map(divOf)));
     const funnel = {
       all: funnelOf(sentIn),
-      by_division: Object.fromEntries(divisions.map((d) => [d, funnelOf(sentIn.filter((e) => (e.division || 'other') === d))])),
+      by_division: Object.fromEntries(divisions.map((d) => [d, funnelOf(sentIn.filter((e) => divOf(e) === d))])),
     };
 
     /* ── Needs attention ───────────────────────────────────────────── */
