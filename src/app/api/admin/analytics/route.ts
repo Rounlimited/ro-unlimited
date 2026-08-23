@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getTraffic } from '@/lib/cloudflare-analytics';
+import { getPosthog } from '@/lib/posthog-analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     const since = new Date(Date.now() - days * 86400000).toISOString();
     const supabase = createAdminClient();
 
-    const [{ data: estimates }, { data: events }, trafficRes] = await Promise.all([
+    const [{ data: estimates }, { data: events }, trafficRes, posthog] = await Promise.all([
       supabase.from('estimates')
         .select('id, estimate_number, project_name, division, status, total, created_at, sent_at, first_viewed_at, last_viewed_at, view_count, pdf_count, signed_at, accepted_at, declined_at, customer:customers(first_name, last_name, company_name)')
         .not('status', 'eq', 'draft')
@@ -26,6 +27,7 @@ export async function GET(req: NextRequest) {
         .order('created_at', { ascending: false })
         .limit(5000),
       getTraffic(days),
+      getPosthog(days),
     ]);
 
     const all = estimates || [];
@@ -105,7 +107,7 @@ export async function GET(req: NextRequest) {
       hours_utc: hours,
     };
 
-    return NextResponse.json({ days, since, funnel, stale, activity, traffic: trafficRes });
+    return NextResponse.json({ days, since, funnel, stale, activity, traffic: trafficRes, posthog });
   } catch (err) {
     console.error('[analytics] GET error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

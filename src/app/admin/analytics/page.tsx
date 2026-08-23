@@ -5,7 +5,7 @@ import Link from 'next/link';
 import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Eye, Download, FileSignature, Clock, Smartphone, Monitor, Tablet, MapPin, Globe, RefreshCw,
-  AlertTriangle, ArrowRight, MessageSquare, Users, BarChart3, Mail,
+  AlertTriangle, ArrowRight, MessageSquare, Users, BarChart3, Mail, Phone, PlayCircle, ExternalLink, MousePointerClick,
 } from 'lucide-react';
 import { eventSentence, deviceLabel, locationLabel, timeAgo, fmtSeconds } from '@/lib/doc-events-summary';
 
@@ -14,7 +14,8 @@ interface Funnel { sent: number; opened: number; pdf: number; signed: number; de
 interface Stale { id: string; estimate_number: string; project_name: string | null; division: string | null; total: number; customer: any; sent_at: string; last_viewed_at: string | null; view_count: number; days_since_sent: number; days_since_view: number | null }
 interface Activity { views: number; pdf_views: number; pdf_downloads: number; signed: number; messages: number; unique_visitors: number; avg_seconds: number | null; reached_total_rate: number | null; by_day: { date: string; views: number; pdfs: number }[]; devices: { device: string; views: number }[]; cities: { city: string; views: number }[]; hours_utc: number[] }
 interface Traffic { available: boolean; error?: string; days: { date: string; page_views: number; visits: number }[]; top_pages: { path: string; page_views: number; visits: number }[]; referrers: { host: string; visits: number }[]; countries: { country: string; visits: number }[]; devices: { device: string; visits: number }[]; browsers: { browser: string; visits: number }[]; totals: { page_views: number; visits: number; requests: number; uniques: number } }
-interface Data { days: number; funnel: { all: Funnel; by_division: Record<string, Funnel> }; stale: Stale[]; activity: Activity; traffic: Traffic }
+interface Posthog { available: boolean; error?: string; project_url: string; totals: { visitors: number; page_views: number; sessions: number; avg_scroll_pct: number | null; avg_seconds_on_page: number | null }; days: { date: string; visitors: number; page_views: number }[]; conversions: { event: string; label: string; count: number; people: number }[]; funnel: { visitors: number; service_page: number; contact_page: number; converted: number }; top_pages: { path: string; page_views: number; visitors: number }[]; entry_pages: { path: string; sessions: number }[]; referrers: { host: string; visitors: number }[]; utm_sources: { source: string; visitors: number }[]; devices: { device: string; visitors: number }[]; browsers: { browser: string; visitors: number }[]; recordings: { id: string; start: string; seconds: number; start_url: string | null; clicks: number; url: string }[] }
+interface Data { days: number; funnel: { all: Funnel; by_division: Record<string, Funnel> }; stale: Stale[]; activity: Activity; traffic: Traffic; posthog: Posthog }
 interface FeedEvent { id: string; doc_type: string; doc_id: string; event: string; device_type: string | null; os: string | null; browser: string | null; city: string | null; region: string | null; country: string | null; meta: any; created_at: string; doc: { number: string; project_name?: string; division?: string; customer?: any } | null }
 
 const GOLD = '#C9A84C';
@@ -184,6 +185,101 @@ export default function AnalyticsPage() {
                     );
                   })}
                 </ul>
+              )}
+            </Card>
+
+            {/* ── Visitor behaviour (PostHog) ──────────────────────── */}
+            <Card title="What visitors do on the site" sub={data.posthog.available ? `PostHog · last ${data.days} days · who calls, who fills the form, what they read` : 'PostHog'} icon={<MousePointerClick size={14} className="text-[#D4772C]" />}>
+              {!data.posthog.available ? (
+                <p className="text-[13px] text-white/30">{data.posthog.error || 'Not connected yet.'}</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    <Mini label="Visitors" value={data.posthog.totals.visitors.toLocaleString()} sub={`${data.posthog.totals.sessions.toLocaleString()} sessions`} />
+                    <Mini label="Page views" value={data.posthog.totals.page_views.toLocaleString()} />
+                    <Mini label="Called / texted / emailed" value={String(data.posthog.conversions.filter((c) => c.event !== 'contact_form_submitted').reduce((s, c) => s + c.people, 0))} sub="people who tapped" />
+                    <Mini label="Contact forms" value={String(data.posthog.conversions.find((c) => c.event === 'contact_form_submitted')?.count || 0)} />
+                  </div>
+
+                  {/* Visitor funnel: one hue, darkening by stage */}
+                  <div className="space-y-2 mb-4">
+                    {[
+                      { label: 'Visited', n: data.posthog.funnel.visitors },
+                      { label: 'Read a service page', n: data.posthog.funnel.service_page },
+                      { label: 'Reached contact', n: data.posthog.funnel.contact_page },
+                      { label: 'Called / wrote', n: data.posthog.funnel.converted },
+                    ].map((st, i, arr) => (
+                      <div key={st.label} className="grid grid-cols-[150px_1fr_auto] items-center gap-3 text-[13px]">
+                        <span className="text-white/60">{st.label}</span>
+                        <div className="h-5 rounded bg-white/[0.04] overflow-hidden"><div className="h-full rounded" style={{ width: `${Math.max(st.n ? 2 : 0, (st.n / Math.max(1, arr[0].n)) * 100)}%`, background: '#D4772C', opacity: 0.45 + i * 0.18 }} /></div>
+                        <span className="tabular-nums text-white/80 font-medium w-[90px] text-right">{st.n} <span className="text-white/35 text-[12px]">{i ? `${pct(st.n, arr[0].n)}%` : ''}</span></span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <DayBars rows={data.posthog.days.map((d) => ({ date: d.date, value: d.visitors, extra: d.page_views }))} label="visitors" extraLabel="page views" color="#D4772C" />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-5">
+                    <div className="space-y-5">
+                      <div>
+                        <h4 className="text-[11px] uppercase tracking-wide text-white/30 mb-2">Conversions</h4>
+                        {data.posthog.conversions.length === 0 ? <p className="text-[13px] text-white/30">No calls, texts, emails or forms recorded yet.</p> : (
+                          <div className="space-y-1.5">
+                            {data.posthog.conversions.map((c) => (
+                              <div key={c.event} className="flex items-center justify-between text-[12.5px]">
+                                <span className="flex items-center gap-1.5 text-white/70">{c.event === 'contact_form_submitted' ? <Mail size={11} className="text-white/30" /> : <Phone size={11} className="text-white/30" />}{c.label}</span>
+                                <span className="tabular-nums text-white/40">{c.count} <span className="text-white/25">· {c.people} {c.people === 1 ? 'person' : 'people'}</span></span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="text-[11px] uppercase tracking-wide text-white/30 mb-2">Most read</h4>
+                        <Share rows={data.posthog.top_pages.slice(0, 8).map((p) => ({ label: p.path, value: p.visitors }))} empty="No page views yet" color="#D4772C" mono />
+                      </div>
+                      {(data.posthog.totals.avg_scroll_pct != null || data.posthog.totals.avg_seconds_on_page != null) && (
+                        <div className="text-[12px] text-white/40">
+                          Average visitor reads {data.posthog.totals.avg_scroll_pct != null ? `${data.posthog.totals.avg_scroll_pct}% of a page` : ''}{data.posthog.totals.avg_scroll_pct != null && data.posthog.totals.avg_seconds_on_page != null ? ' and spends ' : ''}{data.posthog.totals.avg_seconds_on_page != null ? `${fmtSeconds(data.posthog.totals.avg_seconds_on_page)} on it` : ''}.
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-5">
+                      <div>
+                        <h4 className="text-[11px] uppercase tracking-wide text-white/30 mb-2">Came from</h4>
+                        <Share rows={[...data.posthog.referrers.map((r) => ({ label: r.host, value: r.visitors })), ...data.posthog.utm_sources.map((u) => ({ label: `utm: ${u.source}`, value: u.visitors }))]} empty="Direct / unknown only" color="#D4772C" />
+                      </div>
+                      <div>
+                        <h4 className="text-[11px] uppercase tracking-wide text-white/30 mb-2">Landed on</h4>
+                        <Share rows={data.posthog.entry_pages.slice(0, 5).map((p) => ({ label: p.path, value: p.sessions }))} empty="—" color="#D4772C" mono />
+                      </div>
+                      <div>
+                        <h4 className="text-[11px] uppercase tracking-wide text-white/30 mb-2">Devices</h4>
+                        <Share rows={data.posthog.devices.map((d) => ({ label: d.device, value: d.visitors }))} empty="—" color="#D4772C" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Session replays */}
+                  <div className="mt-5">
+                    <h4 className="text-[11px] uppercase tracking-wide text-white/30 mb-2">Watch real visits</h4>
+                    {data.posthog.recordings.length === 0 ? <p className="text-[13px] text-white/30">Recordings appear here once visitors spend time on the site. They open in PostHog.</p> : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {data.posthog.recordings.map((r) => (
+                          <a key={r.id} href={r.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 hover:border-white/15">
+                            <PlayCircle size={16} className="text-[#D4772C] shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[12.5px] text-white/80 truncate font-mono">{r.start_url ? r.start_url.replace(/^https?:\/\/[^/]+/, '') || '/' : 'Visit'}</div>
+                              <div className="text-[11px] text-white/30">{timeAgo(r.start)} · {fmtSeconds(r.seconds)} · {r.clicks} clicks</div>
+                            </div>
+                            <ExternalLink size={12} className="text-white/20 shrink-0" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    <a href={data.posthog.project_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] text-white/30 hover:text-white/60 mt-3">Open PostHog <ExternalLink size={11} /></a>
+                  </div>
+                </>
               )}
             </Card>
 
