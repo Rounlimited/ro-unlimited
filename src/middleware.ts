@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * Maintenance-mode gate.
@@ -43,8 +45,68 @@ async function isMaintenanceOn(): Promise<boolean> {
   }
 }
 
+/* ─── Admin API gate ──────────────────────────────────────────
+   Every /api/admin/* route runs with the service-role key, so the session
+   check has to happen before the handler. Anything below is reachable only
+   with a signed-in Supabase session (cookie from the dashboard / PWA /
+   native webview, or `Authorization: Bearer <access_token>`).
+
+   Exceptions — routes that are public BY DESIGN and gate themselves with a
+   one-time token or a shared secret:                                       */
+const ADMIN_API_PUBLIC: Array<{ path: RegExp; methods: string[] }> = [
+  // Join flow: new account reads (GET) and redeems (PUT) an invite token.
+  { path: /^\/api\/admin\/invite-token$/, methods: ['GET', 'PUT'] },
+  // Magic access-link redemption — token in the query string.
+  { path: /^\/api\/admin\/access-link$/, methods: ['GET'] },
+  // Server-to-server push fan-out from cron/email/intake — x-push-secret.
+  { path: /^\/api\/admin\/push-send$/, methods: ['POST'] },
+];
+
+function isPublicAdminApi(pathname: string, method: string): boolean {
+  return ADMIN_API_PUBLIC.some((r) => r.path.test(pathname) && r.methods.includes(method.toUpperCase()));
+}
+
+async function hasAdminSession(req: NextRequest): Promise<boolean> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anon) return false; // fail CLOSED — this is auth
+
+  // 1) Cookie session
+  try {
+    const supabase = createServerClient(url, anon, {
+      cookies: {
+        getAll: () => req.cookies.getAll(),
+        setAll: () => { /* read-only here; the route handlers refresh cookies */ },
+      },
+    });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) return true;
+  } catch { /* fall through */ }
+
+  // 2) Bearer token
+  const authz = req.headers.get('authorization') || '';
+  const token = authz.toLowerCase().startsWith('bearer ') ? authz.slice(7).trim() : '';
+  if (token) {
+    try {
+      const { data: { user } } = await createClient(url, anon).auth.getUser(token);
+      if (user) return true;
+    } catch { /* invalid token */ }
+  }
+  return false;
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Admin API: require a signed-in session (see ADMIN_API_PUBLIC for the
+  // handful of token-gated exceptions).
+  if (pathname.startsWith('/api/admin')) {
+    if (req.method === 'OPTIONS' || isPublicAdminApi(pathname, req.method)) return NextResponse.next();
+    if (!(await hasAdminSession(req))) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
+    }
+    return NextResponse.next();
+  }
 
   // Never gate the admin portal, API, the maintenance page, or Next internals.
   if (

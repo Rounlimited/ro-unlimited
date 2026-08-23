@@ -77,32 +77,58 @@
   html:not(.light-theme) body.admin-mode .placeholder-white\/20::placeholder { color: rgba(255,255,255,0.35) !important; }
   html:not(.light-theme) body.admin-mode .placeholder-white\/30::placeholder { color: rgba(255,255,255,0.45) !important; }
 
-  html.font-small { --font-scale: 0.88; }
+  /* ── Text size preference (Settings → Font Size) ──────────────────────
+     Per-user. Scales every admin text size — Tailwind text-[Npx] and named
+     sizes, the body default, form controls and the rich-text editors — so a
+     user who needs bigger type (JR) gets it on the estimate screens, not
+     just in the few places that happened to be listed here before.
+     Public site and customer links are untouched (body.admin-mode only).  */
+  html { --font-scale: 1; } /* default until the preference class lands — no flash of unscaled/unset sizes */
+  html.font-small  { --font-scale: 0.88; }
   html.font-normal { --font-scale: 1; }
-  html.font-large { --font-scale: 1.15; }
+  html.font-large  { --font-scale: 1.15; }
+  html.font-xlarge { --font-scale: 1.3; }
+  html.font-huge   { --font-scale: 1.5; }
 
-  /* Scale all Tailwind text-[Xpx] classes when font pref is not normal.
-     Only targets admin mode to avoid affecting the public site. */
+  /* Base: anything without an explicit size class inherits this. */
+  html:not(.font-normal) body.admin-mode { font-size: calc(16px * var(--font-scale)); }
+  html:not(.font-normal) body.admin-mode :is(input, textarea, select, button) { font-size: inherit; }
+  html:not(.font-normal) body.admin-mode :is(.prose, .prose-sm, .ProseMirror) { font-size: calc(14px * var(--font-scale)) !important; line-height: 1.6; }
+
+  html:not(.font-normal) body.admin-mode .text-\[8px\] { font-size: calc(8px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[9px\] { font-size: calc(9px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[10px\] { font-size: calc(10px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[11px\] { font-size: calc(11px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[12px\] { font-size: calc(12px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[12\.5px\] { font-size: calc(12.5px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[13px\] { font-size: calc(13px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[13\.5px\] { font-size: calc(13.5px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[14px\] { font-size: calc(14px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[15px\] { font-size: calc(15px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[16px\] { font-size: calc(16px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[17px\] { font-size: calc(17px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[18px\] { font-size: calc(18px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[19px\] { font-size: calc(19px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[20px\] { font-size: calc(20px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[22px\] { font-size: calc(22px * var(--font-scale)) !important; }
   html:not(.font-normal) body.admin-mode .text-\[24px\] { font-size: calc(24px * var(--font-scale)) !important; }
-  /* Tailwind named sizes */
-  html:not(.font-normal) body.admin-mode .text-xs { font-size: calc(12px * var(--font-scale)) !important; }
-  html:not(.font-normal) body.admin-mode .text-sm { font-size: calc(14px * var(--font-scale)) !important; }
-  html:not(.font-normal) body.admin-mode .text-base { font-size: calc(16px * var(--font-scale)) !important; }
-  html:not(.font-normal) body.admin-mode .text-lg { font-size: calc(18px * var(--font-scale)) !important; }
-  html:not(.font-normal) body.admin-mode .text-xl { font-size: calc(20px * var(--font-scale)) !important; }
-  html:not(.font-normal) body.admin-mode .text-2xl { font-size: calc(24px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[26px\] { font-size: calc(26px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[28px\] { font-size: calc(28px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[30px\] { font-size: calc(30px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[32px\] { font-size: calc(32px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[36px\] { font-size: calc(36px * var(--font-scale)) !important; }
+  html:not(.font-normal) body.admin-mode .text-\[40px\] { font-size: calc(40px * var(--font-scale)) !important; }
+  /* Tailwind named sizes carry a px line-height; re-base it so lines don't collide when scaled. */
+  html:not(.font-normal) body.admin-mode .text-xs { font-size: calc(12px * var(--font-scale)) !important; line-height: 1.45 !important; }
+  html:not(.font-normal) body.admin-mode .text-sm { font-size: calc(14px * var(--font-scale)) !important; line-height: 1.45 !important; }
+  html:not(.font-normal) body.admin-mode .text-base { font-size: calc(16px * var(--font-scale)) !important; line-height: 1.45 !important; }
+  html:not(.font-normal) body.admin-mode .text-lg { font-size: calc(18px * var(--font-scale)) !important; line-height: 1.45 !important; }
+  html:not(.font-normal) body.admin-mode .text-xl { font-size: calc(20px * var(--font-scale)) !important; line-height: 1.45 !important; }
+  html:not(.font-normal) body.admin-mode .text-2xl { font-size: calc(24px * var(--font-scale)) !important; line-height: 1.45 !important; }
+  html:not(.font-normal) body.admin-mode .text-3xl { font-size: calc(30px * var(--font-scale)) !important; line-height: 1.45 !important; }
+  html:not(.font-normal) body.admin-mode .text-4xl { font-size: calc(36px * var(--font-scale)) !important; line-height: 1.45 !important; }
+  /* Icons drawn next to text (lucide) grow with it on the bigger settings. */
+  html:is(.font-xlarge, .font-huge) body.admin-mode button > svg, html:is(.font-xlarge, .font-huge) body.admin-mode a > svg, html:is(.font-xlarge, .font-huge) body.admin-mode label svg { width: calc(1em * 1.1); height: calc(1em * 1.1); }
   body {
     @apply bg-ro-black text-ro-white font-body;
     -webkit-font-smoothing: antialiased;

@@ -7,7 +7,7 @@ export interface UserPreferences {
   id?: string;
   user_id: string;
   theme: string;
-  font_size: 'small' | 'normal' | 'large';
+  font_size: 'small' | 'normal' | 'large' | 'xlarge' | 'huge';
   animations_enabled: boolean;
   compact_mode: boolean;
   push_notifications: boolean;
@@ -59,7 +59,7 @@ function applyTheme(theme: string) {
 
 function applyFontSize(size: string) {
   const root = document.documentElement;
-  root.classList.remove('font-small', 'font-normal', 'font-large');
+  root.classList.remove('font-small', 'font-normal', 'font-large', 'font-xlarge', 'font-huge');
   root.classList.add(`font-${size}`);
 }
 

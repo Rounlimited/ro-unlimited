@@ -633,16 +633,20 @@ export default function SettingsPage() {
 
               {/* Font Size */}
               <div className="py-3 border-t border-white/5">
-                <span className="text-[14px] text-white/70 block mb-3">Font Size</span>
-                <div className="flex gap-2">
+                <span className="text-[14px] text-white/70 block mb-1">Text Size</span>
+                <p className="text-[12px] text-white/30 mb-3">Just for your login — makes everything in the admin app bigger, including the estimate screens. Customer links and PDFs are not affected.</p>
+                <div className="grid grid-cols-5 gap-2">
                   {([
-                    { value: 'small' as const, label: 'Small' },
-                    { value: 'normal' as const, label: 'Normal' },
-                    { value: 'large' as const, label: 'Large' },
+                    { value: 'small' as const, label: 'Small', px: 12 },
+                    { value: 'normal' as const, label: 'Normal', px: 13 },
+                    { value: 'large' as const, label: 'Large', px: 15 },
+                    { value: 'xlarge' as const, label: 'X-Large', px: 17 },
+                    { value: 'huge' as const, label: 'Huge', px: 19 },
                   ]).map(opt => (
                     <button key={opt.value}
                       onClick={() => updatePreference({ font_size: opt.value })}
-                      className={`flex-1 py-2.5 rounded-xl text-[13px] font-medium border transition-all ${
+                      style={{ fontSize: opt.px }}
+                      className={`py-2.5 rounded-xl font-medium border transition-all leading-tight ${
                         preferences.font_size === opt.value
                           ? 'bg-[#C9A84C]/10 border-[#C9A84C]/30 text-[#C9A84C]'
                           : 'bg-white/[0.03] border-white/10 text-white/40 hover:border-white/20'

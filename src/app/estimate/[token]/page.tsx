@@ -218,7 +218,7 @@ export default function PublicEstimatePage() {
     setPdfLoading(true);
     setShowPdfModal(true);
     try {
-      const res = await fetch(`/api/admin/estimates/${estimate.id}/pdf`);
+      const res = await fetch(`/api/estimate/${token}/pdf`);
       if (!res.ok) throw new Error('PDF generation failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -232,7 +232,7 @@ export default function PublicEstimatePage() {
 
   const handleDownloadPdf = async () => {
     if (!estimate) return;
-    const apiUrl = `/api/admin/estimates/${estimate.id}/pdf`;
+    const apiUrl = `/api/estimate/${token}/pdf`;
     // In the standalone PWA, window.open(pdf) replaces this screen with a
     // PDF that has no way back. Go through the share sheet / anchor download
     // instead; fall back to the modal preview if that fails.
@@ -799,7 +799,7 @@ export default function PublicEstimatePage() {
           pdfUrl={pdfPreviewUrl}
           loading={pdfLoading}
           onClose={() => { setShowPdfModal(false); setPdfPreviewUrl(null); }}
-          estimateId={estimate.id}
+          filename={`${String(estimate.estimate_number || 'estimate').replace(/\s/g, '_')}.pdf`}
         />
       )}
     </div>
