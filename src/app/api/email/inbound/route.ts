@@ -63,6 +63,31 @@ export async function POST(req: NextRequest) {
     let event;
     try { event = JSON.parse(rawBody); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
+    // Delivery/engagement events for documents we emailed (tagged in the send
+    // routes). These land on the estimate/invoice timeline next to link views.
+    if (typeof event.type === 'string' && event.type.startsWith('email.') && event.type !== 'email.received') {
+      const map: Record<string, string> = {
+        'email.delivered': 'email_delivered', 'email.opened': 'email_opened',
+        'email.clicked': 'email_clicked', 'email.bounced': 'email_bounced', 'email.complained': 'email_bounced',
+      };
+      const mapped = map[event.type];
+      const tags = (event.data?.tags || {}) as Record<string, string>;
+      const docType = tags.doc_type; const docId = tags.doc_id;
+      if (mapped && (docType === 'estimate' || docType === 'invoice') && docId) {
+        try {
+          const { createAdminClient } = await import('@/lib/supabase/server');
+          const sb = createAdminClient();
+          const click = event.data?.click || {};
+          await sb.from('document_events').insert({
+            doc_type: docType, doc_id: docId, event: mapped, internal: false,
+            user_agent: click.userAgent ? String(click.userAgent).slice(0, 300) : null,
+            meta: { resend_id: event.data?.email_id || null, to: event.data?.to || null, link: click.link || null, at: event.created_at || null },
+          });
+        } catch (e) { console.error('[resend webhook] document event failed', e); }
+      }
+      return NextResponse.json({ success: true, tracked: !!mapped });
+    }
+
     if (event.type !== 'email.received') {
       return NextResponse.json({ success: true, skipped: true });
     }

@@ -106,11 +106,14 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const html = buildEmailHtml(recipientName, bodyContent, subject, senderEmail);
 
     // Send via Resend
-    const { error: sendErr } = await resend.emails.send({
+    const { data: sendData, error: sendErr } = await resend.emails.send({
       from: fromHeader,
       to: to_email,
       subject,
       html,
+      // Tags come back on Resend's delivered/opened/clicked webhooks, which is
+      // how those events find their way onto this estimate's timeline.
+      tags: [{ name: 'doc_type', value: 'estimate' }, { name: 'doc_id', value: id }],
       attachments: [
         {
           filename: `${estimate.estimate_number.replace(/\s/g, '_')}.pdf`,
@@ -123,6 +126,14 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       console.error('[estimates/send] Resend error:', sendErr);
       return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
     }
+
+    // Timeline: "Sent by email to …" (internal — staff action, not a customer view)
+    try {
+      await supabase.from('document_events').insert({
+        doc_type: 'estimate', doc_id: id, event: 'email_sent', internal: true,
+        meta: { to: to_email, resend_id: sendData?.id || null, by: senderEmail },
+      });
+    } catch { /* non-critical */ }
 
     // Log to email_messages so it appears in the sent box
     await logEmail({

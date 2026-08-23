@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getServerUser } from '@/lib/supabase/server';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +11,8 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   try {
     const subscription = await req.json();
+    // Tag the device with the signed-in user so alerts can be routed per person.
+    const user = await getServerUser(req).catch(() => null);
 
     // Upsert by endpoint (unique per device/browser)
     const { error } = await supabase
@@ -20,6 +23,8 @@ export async function POST(req: NextRequest) {
           keys_p256dh: subscription.keys?.p256dh || '',
           keys_auth: subscription.keys?.auth || '',
           subscription_json: JSON.stringify(subscription),
+          user_id: user?.id || null,
+          user_email: user?.email ? String(user.email).toLowerCase() : null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'endpoint' }

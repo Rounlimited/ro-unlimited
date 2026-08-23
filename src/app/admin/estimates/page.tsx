@@ -1,6 +1,7 @@
 'use client';
 
 import { estimateDisplayDate } from '@/lib/estimates';
+import { timeAgo } from '@/lib/doc-events-summary';
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -9,7 +10,7 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Plus, Search, FileText, X, ChevronRight, DollarSign,
   Clock, AlertTriangle, Send, Eye, CheckCircle2, XCircle,
-  Home, Building2, Mountain, Filter, Trash2, Loader2, ArrowUpDown, Link2, Check,
+  Home, Building2, Mountain, Filter, Trash2, Loader2, ArrowUpDown, Link2, Check, Download,
 } from 'lucide-react';
 import { useDeviceContext } from '@/components/animations/useMediaQuery';
 
@@ -24,6 +25,11 @@ interface Estimate {
   valid_until: string | null;
   created_at: string;
   estimate_date?: string | null;
+  view_count?: number;
+  pdf_count?: number;
+  last_viewed_at?: string | null;
+  last_viewed_device?: string | null;
+  last_viewed_location?: string | null;
   customer: {
     first_name: string;
     last_name: string;
@@ -425,9 +431,12 @@ export default function EstimatesPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
-                          {statusCfg.label}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
+                            {statusCfg.label}
+                          </span>
+                          <EngagementPills estimate={estimate} />
+                        </div>
                       </td>
                       <td className="px-4 py-3.5 text-[15px] font-bold text-white tabular-nums">{formatCurrency(estimate.total || 0)}</td>
                       <td className="px-4 py-3.5 text-[12px] text-white/25">{formatDate(estimateDisplayDate(estimate) || estimate.created_at)}</td>
@@ -486,6 +495,7 @@ export default function EstimatesPage() {
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                     <span className="text-[13px] text-white/30">{customerName}{companyName && <span className="text-white/15"> &mdash; {companyName}</span>}</span>
                     <span className="flex items-center gap-1 text-[12px] text-white/20"><Clock size={11} />{formatDate(estimateDisplayDate(estimate) || estimate.created_at)}</span>
+                    <EngagementPills estimate={estimate} />
                     {estimate.valid_until && (
                       <span className={`flex items-center gap-1 text-[12px] ${expired ? 'text-red-400' : 'text-white/20'}`}>
                         {expired ? <AlertTriangle size={11} /> : <Clock size={11} />}{expired ? 'Expired ' : 'Valid until '}{formatDate(estimate.valid_until)}
@@ -553,5 +563,33 @@ export default function EstimatesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+/* Customer engagement at a glance — driven by real counters, not the status.
+   Nothing shows until the customer has actually opened the link. */
+function EngagementPills({ estimate }: { estimate: Estimate }) {
+  const views = estimate.view_count || 0;
+  const pdfs = estimate.pdf_count || 0;
+  if (!views && !pdfs) return null;
+  const device = (estimate.last_viewed_device || '').split(' · ')[0];
+  const deviceShort = device === 'Phone' ? 'phone' : device === 'Tablet' ? 'tablet' : device === 'Desktop' ? 'desktop' : '';
+  const lastSeen = estimate.last_viewed_at ? timeAgo(estimate.last_viewed_at) : '';
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1" title={[estimate.last_viewed_device, estimate.last_viewed_location].filter(Boolean).join(' — ')}>
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#C9A84C]/10 text-[#C9A84C] border border-[#C9A84C]/20">
+        <Eye size={10} />{views} {views === 1 ? 'view' : 'views'}
+      </span>
+      {pdfs > 0 && (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-400/10 text-sky-300 border border-sky-400/20">
+          <Download size={10} />{pdfs} PDF
+        </span>
+      )}
+      {lastSeen && (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] text-white/35 border border-white/10">
+          {lastSeen}{deviceShort ? ` · ${deviceShort}` : ''}
+        </span>
+      )}
+    </span>
   );
 }

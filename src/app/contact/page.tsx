@@ -1,4 +1,5 @@
 'use client';
+import { trackEvent } from '@/components/analytics/SiteAnalytics';
 import { useState } from 'react';
 import { COMPANY } from '@/lib/constants';
 import { Phone, Mail, MapPin, Send, Facebook, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
@@ -32,6 +33,7 @@ export default function ContactPage() {
       }
 
       setStatus('success');
+      trackEvent('contact_form_submitted');
       setFormData({ name: '', email: '', phone: '', projectType: '', message: '' });
     } catch {
       setErrorMsg('Network error. Please call us directly at (864) 304-0139.');

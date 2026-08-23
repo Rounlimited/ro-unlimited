@@ -77,6 +77,7 @@ interface EmailAccount {
 
 import EstimatePhotos, { EstimatePhoto } from '@/components/admin/estimates/EstimatePhotos';
 import OptionsBuilder from '@/components/admin/estimates/OptionsBuilder';
+import CustomerActivity from '@/components/admin/estimates/CustomerActivity';
 
 interface Estimate {
   id: string;
@@ -723,6 +724,11 @@ export default function EstimateDetailPage() {
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-4">
+            {/* Customer Activity — opens, PDF, time reading, last device */}
+            {['sent', 'viewed', 'accepted', 'declined', 'expired'].includes(estimate.status) && (
+              <CustomerActivity estimateId={id} compact />
+            )}
+
             {/* Customer Info */}
             <div className="bg-[#111] border border-white/5 rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
@@ -1167,6 +1173,7 @@ export default function EstimateDetailPage() {
         {/* HISTORY TAB */}
         {activeTab === 'history' && (
           <div className="space-y-4">
+            <CustomerActivity estimateId={id} />
             {estimate.status_history.length === 0 ? (
               <EmptyState
                 icon={<History size={40} className="text-white/10" />}

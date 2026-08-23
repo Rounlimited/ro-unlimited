@@ -3,6 +3,8 @@ import { Oswald, Barlow, JetBrains_Mono } from 'next/font/google';
 import { COMPANY } from '@/lib/constants';
 import GSAPProvider from '@/components/animations/GSAPProvider';
 import ROLoader from '@/components/animations/ROLoader';
+import SiteAnalytics from '@/components/analytics/SiteAnalytics';
+import { Suspense } from 'react';
 import '@/styles/globals.css';
 
 const SITE_URL = 'https://rounlimited.com';
@@ -150,6 +152,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </ROLoader>
         </GSAPProvider>
+        <Suspense fallback={null}><SiteAnalytics /></Suspense>
       </body>
     </html>
   );

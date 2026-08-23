@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { applySelections } from '@/lib/estimate-options';
+import { recordDocumentEvent } from '@/lib/doc-events';
+import { notifyTeam } from '@/lib/alerts';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +20,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
     const { data: est } = await supabase
       .from('estimates')
-      .select('id, estimate_number, status, document_mode, project_name, total, signed_at, share_token_expires_at, customer:customers(first_name, last_name, company_name)')
+      .select('id, estimate_number, status, document_mode, project_name, division, total, signed_at, share_token_expires_at, customer:customers(first_name, last_name, company_name)')
       .eq('share_token', params.token)
       .single();
     if (!est) return NextResponse.json({ error: 'Document not found' }, { status: 404 });
@@ -45,13 +47,16 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       ? (cust.company_name || [cust.first_name, cust.last_name].filter(Boolean).join(' '))
       : 'Customer');
     const finalTotal = Number(est.total) + result.selections_total;
-    await supabase.from('admin_notifications').insert({
+    await recordDocumentEvent({ req, docType: 'estimate', doc: est as any, event: 'options_confirmed', meta: { summary: result.summary, selections_total: result.selections_total, final_total: finalTotal } });
+    await notifyTeam({
       type: 'estimate_selections',
       title: `Options chosen: ${est.estimate_number} → $${Math.round(finalTotal).toLocaleString()}`,
       body: `${who} picked: ${result.summary.join(' · ') || 'no priced options'}.`,
       url: `/admin/estimates/${est.id}`,
       reference_id: est.id,
-    }).then(() => {}, () => {});
+      division: (est as any).division || null,
+      tag: `estimate-options-${est.id}`,
+    });
 
     return NextResponse.json({
       confirmed: true,

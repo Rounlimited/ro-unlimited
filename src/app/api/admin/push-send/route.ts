@@ -23,12 +23,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { title, body, url, tag } = await req.json();
+    const { title, body, url, tag, recipients } = await req.json();
 
-    // Get all push subscriptions
-    const { data: subs, error } = await supabase
-      .from('push_subscriptions')
-      .select('endpoint, subscription_json');
+    // All subscriptions, or only the named people's devices. Devices that
+    // registered before we tagged subscriptions with a user (user_email null)
+    // are included either way until they re-register — see push-subscribe.
+    let query = supabase.from('push_subscriptions').select('endpoint, subscription_json, user_email');
+    const wanted: string[] = Array.isArray(recipients) ? recipients.map((r: string) => String(r).toLowerCase()) : [];
+    if (wanted.length) query = query.or(`user_email.is.null,user_email.in.(${wanted.map((e) => `"${e}"`).join(',')})`);
+    const { data: subs, error } = await query;
 
     if (error || !subs?.length) {
       return NextResponse.json({ sent: 0, error: error?.message });
@@ -65,7 +68,7 @@ export async function POST(req: NextRequest) {
         user_email: 'system',
         action: 'push_sent',
         page: null,
-        details: { title, body, url, tag, sent, expired, failed, total: subs.length },
+        details: { title, body, url, tag, recipients: wanted, sent, expired, failed, total: subs.length },
       });
     } catch { /* non-critical */ }
 

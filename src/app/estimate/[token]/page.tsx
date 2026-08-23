@@ -171,6 +171,50 @@ export default function PublicEstimatePage() {
     } catch { /* ignore */ }
   }, []);
 
+  // ── Engagement beacon: did they reach the total / the sign block, and how
+  // long were they on the page. Sent once per visit with sendBeacon on hide.
+  useEffect(() => {
+    if (!estimate || typeof window === 'undefined') return;
+    const started = Date.now();
+    let maxScroll = 0;
+    const seen = new Set<string>();
+    const post = (payload: Record<string, unknown>) => {
+      try {
+        const body = JSON.stringify(payload);
+        if (navigator.sendBeacon) navigator.sendBeacon(`/api/estimate/${token}/event`, body);
+        else fetch(`/api/estimate/${token}/event`, { method: 'POST', body, keepalive: true }).catch(() => {});
+      } catch { /* ignore */ }
+    };
+    const onScroll = () => {
+      const h = document.documentElement;
+      const pct = Math.round(((window.scrollY + window.innerHeight) / Math.max(1, h.scrollHeight)) * 100);
+      if (pct > maxScroll) maxScroll = Math.min(100, pct);
+    };
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        const name = (e.target as HTMLElement).dataset.track;
+        if (e.isIntersecting && name && !seen.has(name)) { seen.add(name); post({ event: 'section_seen', section: name }); }
+      });
+    }, { threshold: 0.4 });
+    document.querySelectorAll<HTMLElement>('[data-track]').forEach((el) => io.observe(el));
+    let sent = false;
+    const flush = () => {
+      if (sent) return; sent = true;
+      post({ event: 'time_on_page', seconds: Math.round((Date.now() - started) / 1000), max_scroll: maxScroll });
+    };
+    const onVis = () => { if (document.visibilityState === 'hidden') flush(); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pagehide', flush);
+      io.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimate?.id, token]);
+
   const handleBackToAdmin = () => {
     // Real popup/tab (desktop): just close it, the admin is still behind it.
     if (window.opener && !window.opener.closed) { window.close(); return; }
@@ -232,7 +276,7 @@ export default function PublicEstimatePage() {
 
   const handleDownloadPdf = async () => {
     if (!estimate) return;
-    const apiUrl = `/api/estimate/${token}/pdf`;
+    const apiUrl = `/api/estimate/${token}/pdf?mode=download`;
     // In the standalone PWA, window.open(pdf) replaces this screen with a
     // PDF that has no way back. Go through the share sheet / anchor download
     // instead; fall back to the modal preview if that fails.
@@ -510,7 +554,7 @@ export default function PublicEstimatePage() {
         {/* ─── Scope of Work ──────────────────────────────────── */}
         {scopeHtml && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
-            <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-4">Scope of Work</h2>
+            <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-4" data-track="scope">Scope of Work</h2>
             <div
               className="text-[14px] text-gray-700 leading-relaxed prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{ __html: scopeHtml }}
@@ -633,7 +677,7 @@ export default function PublicEstimatePage() {
                 <span className="text-gray-900">{fmt(estimate.permit_fees)}</span>
               </div>
             )}
-            <div className="flex justify-between py-3 mt-2">
+            <div className="flex justify-between py-3 mt-2" data-track="total">
               <span className="text-[18px] font-bold text-gray-900">Total</span>
               <span className="text-[22px] font-bold" style={{ color: '#C9A84C' }}>{fmt(estimate.total)}</span>
             </div>
@@ -770,7 +814,7 @@ export default function PublicEstimatePage() {
       />
 
       {/* ─── Accept & Sign ──────────────────────────────────── */}
-      <div id="accept-sign" className="max-w-2xl mx-auto px-4 pb-4">
+      <div id="accept-sign" data-track="sign" className="max-w-2xl mx-auto px-4 pb-4">
         <EstimateSignCard
           token={String(token)}
           estimate={estimate}

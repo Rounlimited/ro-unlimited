@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
+import { recordDocumentEvent } from '@/lib/doc-events';
+import { notifyTeam } from '@/lib/alerts';
 
 type RouteContext = { params: { token: string } };
 
@@ -20,7 +22,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     // Verify token is valid
     const { data: estimate, error } = await supabase
       .from('estimates')
-      .select('id, estimate_number, project_name, customer_id')
+      .select('id, estimate_number, project_name, division, customer_id')
       .eq('share_token', token)
       .single();
 
@@ -28,13 +30,17 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Invalid or expired link' }, { status: 404 });
     }
 
-    // Insert admin notification
-    await supabase.from('admin_notifications').insert({
+    await recordDocumentEvent({ req, docType: 'estimate', doc: estimate as any, event: 'message_sent', meta: { name, length: String(message).length } });
+    // In-app notification + push (the old insert used a `link` column that
+    // doesn't exist, so nobody was being told).
+    await notifyTeam({
       type: 'estimate_message',
       title: `Message on ${estimate.estimate_number}`,
-      body: `${name || 'Customer'}: ${message}`,
-      link: `/admin/estimates/${estimate.id}`,
-      read: false,
+      body: `${name || 'Customer'}: ${String(message).slice(0, 180)}`,
+      url: `/admin/estimates/${estimate.id}`,
+      reference_id: estimate.id,
+      division: (estimate as any).division || null,
+      tag: `estimate-message-${estimate.id}`,
     });
 
     // Send email notification to build@rounlimited.com

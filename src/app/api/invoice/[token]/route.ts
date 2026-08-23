@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/server';
 import { effectiveStatus } from '@/lib/invoices';
+import { recordDocumentEvent, visitorFromCookies, visitorCookie } from '@/lib/doc-events';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,26 +27,16 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
     }
     if (inv.status === 'draft') return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
 
-    // View tracking — hashed IP, never the raw address. The FIRST open of a
-    // link raises an admin notification ("they've seen it"); repeats stay quiet.
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const { count: priorViews } = await supabase
-      .from('invoice_views').select('*', { count: 'exact', head: true }).eq('invoice_id', inv.id);
-    await supabase.from('invoice_views').insert({
-      invoice_id: inv.id,
-      user_agent: (req.headers.get('user-agent') || '').slice(0, 250),
-      ip_hash: crypto.createHash('sha256').update(ip).digest('hex').slice(0, 24),
-    });
-    if (!priorViews) {
-      const whoName = inv.customer
-        ? (inv.customer.company_name || [inv.customer.first_name, inv.customer.last_name].filter(Boolean).join(' '))
-        : (inv.bill_to?.company || inv.bill_to?.name || 'Customer');
-      await supabase.from('admin_notifications').insert({
-        type: 'invoice_viewed',
-        title: `Invoice opened: ${inv.invoice_number}`,
-        body: `${whoName} opened invoice ${inv.invoice_number} for the first time.`,
-        url: `/admin/invoices/${inv.id}`,
-        reference_id: inv.id,
+    // View tracking — document_events carries device/location/repeat visits and
+    // raises the first-open alert; invoice_views is kept for the legacy counter.
+    const visitor = visitorFromCookies();
+    const { internal } = await recordDocumentEvent({ req, docType: 'invoice', doc: inv, event: 'link_view', visitorId: visitor.id });
+    if (!internal) {
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+      await supabase.from('invoice_views').insert({
+        invoice_id: inv.id,
+        user_agent: (req.headers.get('user-agent') || '').slice(0, 250),
+        ip_hash: crypto.createHash('sha256').update(ip).digest('hex').slice(0, 24),
       }).then(() => {}, () => {});
     }
 

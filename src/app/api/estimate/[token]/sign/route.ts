@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/server';
+import { recordDocumentEvent } from '@/lib/doc-events';
+import { notifyTeam } from '@/lib/alerts';
 import { materializeSelections } from '@/lib/estimate-options';
 
 export const dynamic = 'force-dynamic';
@@ -27,7 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
     const { data: est } = await supabase
       .from('estimates')
-      .select('id, estimate_number, status, document_mode, project_name, total, signed_at, share_token_expires_at, customer:customers(first_name, last_name, company_name)')
+      .select('id, estimate_number, status, document_mode, project_name, division, total, signed_at, share_token_expires_at, customer:customers(first_name, last_name, company_name)')
       .eq('share_token', params.token)
       .single();
     if (!est) return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
@@ -70,13 +72,16 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
     const docWord = est.document_mode === 'contract' ? 'Contract' : 'Estimate';
     const money = '$' + Math.round(Number(est.total) || 0).toLocaleString();
-    await supabase.from('admin_notifications').insert({
+    await recordDocumentEvent({ req, docType: 'estimate', doc: est as any, event: 'signed', meta: { signed_name: name, total: est.total } });
+    await notifyTeam({
       type: 'estimate_signed',
       title: `🎉 ${docWord} signed: ${est.estimate_number} (${money})`,
       body: `${name} accepted and signed ${est.estimate_number}${est.project_name ? ` — ${est.project_name}` : ''}.`,
       url: `/admin/estimates/${est.id}`,
       reference_id: est.id,
-    }).then(() => {}, () => {});
+      division: (est as any).division || null,
+      tag: `estimate-signed-${est.id}`,
+    });
 
     return NextResponse.json({ signed: true, signed_at, signed_name: name, status: patch.status || est.status });
   } catch (err) {

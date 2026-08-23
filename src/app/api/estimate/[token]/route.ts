@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getOptionsWithChoices, selectionsDelta } from '@/lib/estimate-options';
+import { recordDocumentEvent, visitorFromCookies, visitorCookie } from '@/lib/doc-events';
 
 type RouteContext = { params: { token: string } };
 
@@ -36,8 +37,13 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
         : Promise.resolve({ data: [] as any[] }),
     ]);
 
+    // Log the open (device, location, repeat visits). Staff opening their own
+    // link are recorded as internal and don't count or flip the status.
+    const visitor = visitorFromCookies();
+    const { internal } = await recordDocumentEvent({ req, docType: 'estimate', doc: estimate, event: 'link_view', visitorId: visitor.id });
+
     // Mark as viewed if currently sent
-    if (estimate.status === 'sent') {
+    if (estimate.status === 'sent' && !internal) {
       const now = new Date().toISOString();
       await supabase.from('estimates').update({ status: 'viewed', viewed_at: now }).eq('id', estimate.id);
       await supabase.from('estimate_status_history').insert({
@@ -60,7 +66,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const options = await getOptionsWithChoices(supabase, estimate.id);
     const selections_total = estimate.options_materialized_at ? 0 : selectionsDelta(options);
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       ...safeEstimate,
       line_items: lineItems || [],
       payment_schedule: paymentSchedule || [],
@@ -69,6 +75,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       selections_total,
       final_total: Number(estimate.total) + selections_total,
     });
+    if (visitor.isNew) res.headers.append('Set-Cookie', visitorCookie(visitor.id));
+    return res;
   } catch (err) {
     console.error('[estimate/token] GET error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
