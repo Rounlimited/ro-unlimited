@@ -117,6 +117,34 @@ export default function PWAInstall() {
     localStorage.setItem('pwa-install-dismissed', Date.now().toString());
   };
 
+  // Keep the push registration fresh: when permission is already granted,
+  // re-subscribe silently on every app open. Idempotent (server upserts by
+  // endpoint) and it tags the device with the signed-in user — without this a
+  // phone only ever registered once, anonymously, and alert routing had
+  // nothing to route to. Runs once per session.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) return;
+    if (Notification.permission !== 'granted') return;
+    if (sessionStorage.getItem('push-resynced')) return;
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''),
+          });
+        }
+        await fetch('/api/admin/push-subscribe', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub),
+        });
+        sessionStorage.setItem('push-resynced', '1');
+        console.log('[PWA] Push subscription re-synced');
+      } catch (err) { console.warn('[PWA] Push re-sync failed:', err); }
+    })();
+  }, []);
+
   const handleEnableNotifications = useCallback(async () => {
     try {
       const permission = await Notification.requestPermission();
