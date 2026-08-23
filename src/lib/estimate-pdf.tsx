@@ -1,12 +1,156 @@
-import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer, Svg, Circle, Line, Rect } from '@react-pdf/renderer';
+import { Document, Page, Text, View, Image, StyleSheet, Font, renderToBuffer, Svg, Circle, Line, Rect } from '@react-pdf/renderer';
 import React from 'react';
+
+/* react-pdf hyphenates by default (Knuth-Liang, English). In a construction
+   document that produces "con-struc-tion"-style breaks mid-word that read as
+   garbled. Never break inside a word; let lines wrap at spaces only. */
+Font.registerHyphenationCallback((word) => [word]);
 
 const LOGO_URL = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/ro-unlimited-logo.png`;
 
 /* ─── Helpers ────────────────────────────────────────────────── */
 
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)));
+}
+
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+  return decodeEntities(html.replace(/<[^>]*>/g, '')).trim();
+}
+
+/* ─── Rich text (editor HTML → PDF blocks) ───────────────────
+   The scope editor (TipTap) stores HTML: <p>, <ul>/<ol><li>, <strong>, <em>,
+   <h2>… The customer link renders that HTML directly; the PDF used to strip
+   every tag and print one run-on paragraph ("PROPOSALScope of WorkProvide…").
+   This parser keeps paragraphs, headings, bullets and inline bold/italic. */
+
+type Run = { text: string; bold: boolean; italic: boolean };
+type Block = { type: 'h' | 'p' | 'li'; runs: Run[]; depth?: number; ordered?: boolean; index?: number };
+
+function htmlToBlocks(html: string): Block[] {
+  const blocks: Block[] = [];
+  let cur = null as Block | null; // assigned through closures below — keep the union
+  let bold = 0;
+  let italic = 0;
+  const lists: { ordered: boolean; count: number }[] = [];
+
+  const flush = () => {
+    if (cur) {
+      // trim edges, drop empties
+      const runs = cur.runs.filter((r) => r.text.length > 0);
+      if (runs.length) {
+        runs[0].text = runs[0].text.replace(/^\s+/, '');
+        runs[runs.length - 1].text = runs[runs.length - 1].text.replace(/\s+$/, '');
+      }
+      if (runs.some((r) => r.text.trim())) blocks.push({ ...cur, runs });
+    }
+    cur = null;
+  };
+  const open = (b: Block) => { flush(); cur = b; };
+  const addText = (t: string) => {
+    if (!t) return;
+    if (!cur) {
+      if (!t.trim()) return;
+      cur = { type: 'p', runs: [] };
+    }
+    const last = cur.runs[cur.runs.length - 1];
+    const isBold = bold > 0; const isItalic = italic > 0;
+    if (last && last.bold === isBold && last.italic === isItalic) last.text += t;
+    else cur.runs.push({ text: t, bold: isBold, italic: isItalic });
+  };
+
+  const re = /<\/?([a-zA-Z][a-zA-Z0-9]*)[^>]*>|[^<]+/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    const tok = m[0];
+    if (tok[0] !== '<') { addText(decodeEntities(tok).replace(/\s+/g, ' ')); continue; }
+    const closing = tok[1] === '/';
+    const tag = m[1].toLowerCase();
+    switch (tag) {
+      case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6':
+        if (closing) flush(); else open({ type: 'h', runs: [] });
+        break;
+      case 'ul': case 'ol':
+        flush();
+        if (closing) lists.pop(); else lists.push({ ordered: tag === 'ol', count: 0 });
+        break;
+      case 'li': {
+        if (closing) { flush(); break; }
+        const list = lists[lists.length - 1] || { ordered: false, count: 0 };
+        list.count += 1;
+        open({ type: 'li', runs: [], depth: Math.max(0, lists.length - 1), ordered: list.ordered, index: list.count });
+        break;
+      }
+      case 'p': case 'div': case 'blockquote':
+        // A <p> inside an <li> belongs to that bullet — keep the bullet open.
+        if (cur && cur.type === 'li') { if (closing) addText(' '); break; }
+        if (closing) flush(); else open({ type: 'p', runs: [] });
+        break;
+      case 'br':
+        addText('\n');
+        break;
+      case 'strong': case 'b':
+        bold += closing ? -1 : 1; if (bold < 0) bold = 0;
+        break;
+      case 'em': case 'i':
+        italic += closing ? -1 : 1; if (italic < 0) italic = 0;
+        break;
+      default:
+        break; // span, a, u, etc. — inline, ignored
+    }
+  }
+  flush();
+  return blocks;
+}
+
+function runFont(r: Run): string {
+  if (r.bold && r.italic) return 'Helvetica-BoldOblique';
+  if (r.bold) return 'Helvetica-Bold';
+  if (r.italic) return 'Helvetica-Oblique';
+  return 'Helvetica';
+}
+
+/** Renders editor HTML (or plain text with newlines) as structured PDF blocks. */
+function RichText({ html, fontSize = 10, color = '#333333', lineHeight = 1.6 }: { html: string; fontSize?: number; color?: string; lineHeight?: number }) {
+  const source = /<[a-z][^>]*>/i.test(html)
+    ? html
+    : html.split('\n').map((l) => `<p>${l.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p>`).join('');
+  const blocks = htmlToBlocks(source);
+  return (
+    <View>
+      {blocks.map((b, i) => {
+        const runs = b.runs.map((r, j) => <Text key={j} style={{ fontFamily: runFont(r) }}>{r.text}</Text>);
+        // An all-bold short paragraph is how the editor expresses a sub-heading.
+        const isHeading = b.type === 'h' || (b.type === 'p' && b.runs.every((r) => r.bold) && b.runs.reduce((n, r) => n + r.text.length, 0) <= 90);
+        if (isHeading) {
+          return (
+            <Text key={i} minPresenceAhead={36} style={{ fontSize: fontSize + 0.5, fontFamily: 'Helvetica-Bold', color: '#1B2A4A', marginTop: i === 0 ? 0 : 9, marginBottom: 4, lineHeight: 1.4 }}>
+              {b.runs.map((r, j) => <Text key={j}>{r.text}</Text>)}
+            </Text>
+          );
+        }
+        if (b.type === 'li') {
+          return (
+            <View key={i} style={{ flexDirection: 'row', paddingLeft: 4 + (b.depth || 0) * 12, marginBottom: 2.5 }}>
+              <Text style={{ width: 14, fontSize, color: '#D4772C', lineHeight }}>{b.ordered ? `${b.index}.` : '\u2022'}</Text>
+              <Text style={{ flex: 1, fontSize, color, lineHeight }}>{runs}</Text>
+            </View>
+          );
+        }
+        return (
+          <Text key={i} style={{ fontSize, color, lineHeight, marginBottom: 5 }}>{runs}</Text>
+        );
+      })}
+    </View>
+  );
 }
 
 function fmt(n: number): string {
@@ -218,7 +362,7 @@ function LineItemRow({ item, counter }: { item: any; counter: number }) {
       <Text style={[s.tableCell, { width: colW.num, color: c.labelLight }]}>{counter}</Text>
       <Text style={[s.tableCellBold, { flex: 1 }]}>{item.description || '--'}</Text>
       <Text style={[s.tableCell, { width: colW.qty, textAlign: 'right' }]}>{item.quantity}</Text>
-      <Text style={[s.tableCell, { width: colW.unit }]}>{item.unit}</Text>
+      <Text style={[s.tableCell, { width: colW.unit }]}>{item.unit ? humanize(String(item.unit)) : ''}</Text>
       <Text style={[s.tableCell, { width: colW.price, textAlign: 'right' }]}>{fmt(item.unit_cost * (1 + (item.markup_percent || 0) / 100))}</Text>
       <Text style={[s.tableCellBold, { width: colW.total, textAlign: 'right' }]}>{fmt(lineTotal)}</Text>
     </View>
@@ -268,8 +412,14 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
     : selectedPicks.reduce((sum: number, { choice }: any) => sum + (Number(choice.price_delta) || 0), 0);
   const grandTotal = subtotal + overheadAmt + markupAmt + taxAmt + (estimate.permit_fees || 0) + contingencyAmt + selectionsDelta;
 
-  const exclusionsList = (estimate.exclusions || '').split('\n').map((x: string) => x.trim()).filter(Boolean);
-  const recommendationsList = (estimate.recommendations || '').split('\n').map((x: string) => x.trim()).filter(Boolean);
+  // Exclusions / recommendations may be editor HTML (the customer link renders
+  // them as HTML) or plain newline-separated text. Bullet the plain form;
+  // hand the HTML form to RichText so its own structure survives.
+  const isHtml = (v: any) => typeof v === 'string' && /<[a-z][^>]*>/i.test(v);
+  const exclusionsHtml = isHtml(estimate.exclusions) && stripHtml(estimate.exclusions) ? estimate.exclusions : '';
+  const exclusionsList = exclusionsHtml ? [] : (estimate.exclusions || '').split('\n').map((x: string) => x.trim()).filter(Boolean);
+  const recommendationsHtml = isHtml(estimate.recommendations) && stripHtml(estimate.recommendations) ? estimate.recommendations : '';
+  const recommendationsList = recommendationsHtml ? [] : (estimate.recommendations || '').split('\n').map((x: string) => x.trim()).filter(Boolean);
   const validDays = estimate.valid_until
     ? Math.max(0, Math.ceil((new Date(estimate.valid_until).getTime() - new Date(estimate.created_at).getTime()) / 86400000))
     : 30;
@@ -324,51 +474,45 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           <Text style={s.pageFooterRight} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
 
-        {/* ═══ Rule 8: Prepared For + Project Details + Scope stay on page 1 ═══ */}
+        {/* ═══ Page-1 block — mirrors the customer link: header card, then Project Details ═══ */}
         <View wrap={false}>
-          {/* ── 1. MAIN HEADER ── */}
+          {/* ── 1. MAIN HEADER (number, status-free, project name, dates) ── */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: isLight ? 10 : 6, paddingBottom: isLight ? 14 : 10, borderBottomWidth: 2, borderBottomColor: c.navy }}>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, paddingRight: 16 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: 2.5, color: c.orange, fontFamily: 'Helvetica-Bold' }}>{docTitle}</Text>
                 <Text style={{ fontSize: 16, fontFamily: 'Helvetica-Bold', color: c.navy }}>{estimate.estimate_number}</Text>
               </View>
-              <View style={{ marginTop: 6, fontSize: 9, color: c.label, lineHeight: 1.5 }}>
-                <Text style={{ fontSize: 9, color: c.label }}>Date: {fmtDate(estimate.created_at)}</Text>
-                {estimate.valid_until && <Text style={{ fontSize: 9, color: c.label }}>Valid Until: {fmtDate(estimate.valid_until)}</Text>}
-              </View>
+              {estimate.project_name ? (
+                <Text style={{ fontSize: 11.5, color: c.textMed, marginTop: 4 }}>{String(estimate.project_name).trim()}</Text>
+              ) : null}
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={{ fontSize: 9, color: c.label }}>Date: <Text style={{ color: c.textMed, fontFamily: 'Helvetica-Bold' }}>{fmtDate(estimate.sent_at || estimate.created_at)}</Text></Text>
+              {estimate.valid_until ? <Text style={{ fontSize: 9, color: c.label, marginTop: 3 }}>Valid Until: <Text style={{ color: c.textMed, fontFamily: 'Helvetica-Bold' }}>{fmtDate(estimate.valid_until)}</Text></Text> : null}
             </View>
           </View>
 
           {/* Orange accent bar */}
           <View style={{ height: 3, backgroundColor: c.orange, marginBottom: isLight ? 22 : 14, borderRadius: 1 }} />
 
-          {/* ── 2. CLIENT ── */}
-          {customer && (
-            <View style={{ marginBottom: isLight ? 24 : 16 }}>
-              <Text style={s.sectionLabel}>Prepared For</Text>
-              <View style={s.clientBox}>
-                <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: c.text }}>{customer.first_name} {customer.last_name}</Text>
-                {customer.company_name && <Text style={{ fontSize: 10, color: c.textLight, marginTop: 2 }}>{customer.company_name}</Text>}
-                <View style={{ fontSize: 9, color: c.label, lineHeight: 1.6, marginTop: 6 }}>
-                  {(customer.address || customer.city) && (
-                    <Text>{[customer.address, customer.city, customer.state, customer.zip].filter(Boolean).join(', ')}</Text>
-                  )}
-                  {customer.phone && <Text>{customer.phone}</Text>}
-                  {customer.email && <Text>{customer.email}</Text>}
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* ── 3. PROJECT DETAILS ── */}
+          {/* ── 2. PROJECT DETAILS (same rows as the customer link) ── */}
           <View style={{ marginBottom: isLight ? 24 : 16 }}>
             <Text style={s.sectionLabel}>Project Details</Text>
             <View style={s.detailTable}>
-              {estimate.project_name && (
+              {customer && (
                 <View style={s.detailRow}>
-                  <Text style={s.detailLabel}>Project</Text>
-                  <Text style={s.detailValue}>{estimate.project_name}</Text>
+                  <Text style={s.detailLabel}>Prepared For</Text>
+                  <View style={{ flex: 1, padding: '7 14' }}>
+                    <Text style={{ fontSize: 10.5, color: c.text, fontFamily: 'Helvetica-Bold' }}>{[customer.first_name, customer.last_name].filter(Boolean).join(' ')}</Text>
+                    {customer.company_name ? <Text style={{ fontSize: 9, color: c.textLight, marginTop: 1 }}>{customer.company_name}</Text> : null}
+                    {(customer.address || customer.city) && (
+                      <Text style={{ fontSize: 8.5, color: c.label, marginTop: 2 }}>{[customer.address, customer.city, customer.state, customer.zip].filter(Boolean).join(', ')}</Text>
+                    )}
+                    {(customer.phone || customer.email) && (
+                      <Text style={{ fontSize: 8.5, color: c.label, marginTop: 1 }}>{[customer.phone, customer.email].filter(Boolean).join('  |  ')}</Text>
+                    )}
+                  </View>
                 </View>
               )}
               {projectAddr && (
@@ -384,8 +528,8 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
                 </View>
               )}
               {estimate.estimate_type && (
-                <View style={s.detailRow}>
-                  <Text style={s.detailLabel}>Estimate Type</Text>
+                <View style={estimate.contract_type ? s.detailRow : s.detailRowLast}>
+                  <Text style={s.detailLabel}>Type</Text>
                   <Text style={s.detailValueNormal}>{humanize(estimate.estimate_type)}</Text>
                 </View>
               )}
@@ -396,16 +540,16 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
                 </View>
               )}
             </View>
-
-            {scopeText && scopeText !== '<p></p>' && (
-              <View style={{ marginTop: 14 }}>
-                <Text style={s.sectionLabel}>Scope of Work</Text>
-                <Text style={{ fontSize: 10, color: c.textMed, lineHeight: 1.7 }}>{stripHtml(scopeText)}</Text>
-              </View>
-            )}
           </View>
         </View>
-        {/* ═══ END Rule 8 page-1 block ═══ */}
+
+        {/* ── 3. SCOPE OF WORK — rich text, flows across pages like any document ── */}
+        {scopeText && stripHtml(scopeText) && (
+          <View style={{ marginBottom: sectionGap }}>
+            <Text style={s.sectionLabel} minPresenceAhead={60}>Scope of Work</Text>
+            <RichText html={scopeText} fontSize={10} color={c.textMed} lineHeight={1.6} />
+          </View>
+        )}
 
         {/* ═══ 3A-2. JOB-SITE PHOTOS — if present ═══
             Sanity CDN urls get fm=jpg forced: @react-pdf can't decode webp,
@@ -414,14 +558,16 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
         {Array.isArray(estimate.photos) && estimate.photos.length > 0 && (
           <View style={{ marginBottom: sectionGap }}>
             <Text style={s.sectionLabel}>Job-Site Photos</Text>
+            {/* Three-up 4:3 grid, same as the customer link. Fixed box height +
+                objectFit cover keeps portrait shots from blowing up a whole page. */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {estimate.photos.map((photo: any, i: number) => (
-                <View key={i} wrap={false} style={{ width: '48%', marginBottom: 6 }}>
+                <View key={i} wrap={false} style={{ width: '31.8%', marginBottom: 4 }}>
                   <Image
                     src={photo.url.includes('cdn.sanity.io')
                       ? `${photo.url}${photo.url.includes('?') ? '&' : '?'}w=800&fm=jpg`
                       : photo.url}
-                    style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 3 }}
+                    style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 3 }}
                   />
                   {photo.caption ? (
                     <Text style={{ fontSize: 8.5, color: c.textMed, marginTop: 3, lineHeight: 1.4 }}>
@@ -695,12 +841,13 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
 
         {/* ═══ 8. EXCLUSIONS — Rule 7: One unbreakable block ═══ */}
         {/* Fix 2: minPresenceAhead pulls acceptance block onto same page if room */}
-        {exclusionsList.length > 0 && (
+        {(exclusionsList.length > 0 || exclusionsHtml) && (
           <View style={{ marginBottom: sectionGap }} wrap={false} minPresenceAhead={200}>
             <Text style={s.sectionLabel}>Exclusions</Text>
             <Text style={{ fontSize: 8.5, color: c.label, fontStyle: 'italic', marginBottom: 6 }}>
               The following items are NOT included in this estimate:
             </Text>
+            {exclusionsHtml ? <RichText html={exclusionsHtml} fontSize={9} color={c.textLight} lineHeight={1.5} /> : null}
             {exclusionsList.map((item: string, i: number) => (
               <View key={i} style={s.exclusionItem}>
                 <Text style={s.exclusionBullet}>{'\u2022'}</Text>
@@ -711,12 +858,13 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
         )}
 
         {/* ═══ 8B. RECOMMENDATIONS — optional ═══ */}
-        {recommendationsList.length > 0 && (
+        {(recommendationsList.length > 0 || recommendationsHtml) && (
           <View style={{ marginBottom: sectionGap }} wrap={false}>
             <Text style={s.sectionLabel}>Recommendations</Text>
             <Text style={{ fontSize: 8.5, color: c.label, fontStyle: 'italic', marginBottom: 6 }}>
               Our suggestions for your consideration:
             </Text>
+            {recommendationsHtml ? <RichText html={recommendationsHtml} fontSize={9.5} color={c.textMed} lineHeight={1.6} /> : null}
             {recommendationsList.map((item: string, i: number) => (
               <View key={i} style={{ flexDirection: 'row', marginBottom: 4, paddingLeft: 4 }}>
                 <Text style={{ fontSize: 9, color: c.navy, width: 14, fontFamily: 'Helvetica-Bold' }}>{'\u2713'}</Text>
