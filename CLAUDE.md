@@ -35,7 +35,7 @@ If you are a brand‑new agent: use **Claude Code** (this tool). Recommended sub
 ## Known issues / pending work
 - RO Drive files **>20 MB can't be downloaded** — Oracle `telegram-bot-api` runs without `--local` (see `handover/06`).
 - Sanity write token may be **read‑only** — create an Editor token if writes 403 (`handover/07`).
-- Most `/api/admin/*` routes are **not yet server‑auth‑gated** — add `getServerUser()` (`handover/04`).
+- `/api/admin/*` is session‑gated in `src/middleware.ts` since 2026‑08‑23 (exceptions listed there). Vercel **Hobby** plan: crons must be once‑daily or the deploy is silently rejected — faster schedules run from the Oracle box (`handover/04`, `~/ro-cron`).
 
 ## Bootstrap JSON (paste into a fresh Claude session to orient instantly)
 ```json
@@ -48,7 +48,7 @@ If you are a brand‑new agent: use **Claude Code** (this tool). Recommended sub
   "stack": "Next.js 14, React 18, TS, Tailwind, GSAP; Supabase ocizuduhqsmewcmtilae; Sanity 3at2yyx0; Cloudflare->Vercel; GoDaddy domain",
   "subsystems": ["public site src/app", "services src/lib/*-data.ts + ServicePageTemplate/SubServicePage", "admin src/app/admin", "built-in AI src/app/api/admin/ai-chat", "RO Drive Telegram+Oracle src/app/api/admin/drive", "native app native-app/"],
   "credentials": "handover/08-credentials-vault.md + .env.local (never commit .env.local)",
-  "known_issues": ["RO Drive >20MB download (Oracle missing --local)", "Sanity write token maybe read-only", "/api/admin/* not all auth-gated"],
+  "known_issues": ["RO Drive >20MB download (Oracle missing --local)", "Sanity write token maybe read-only", "Vercel Hobby: crons once-daily only; faster ones run on the Oracle box"],
   "docs": "Full detail in handover/01..10 and NotebookLM notebook 8dbd855d-59d5-49f8-8bd5-480a4fbe07fa",
   "tooling": "Use Claude Code; Claude Pro min, Max recommended for this size"
 }
