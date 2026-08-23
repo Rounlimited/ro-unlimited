@@ -16,7 +16,7 @@ export const MIN_SCORE = 65;
 export const MAX_FEATURED = 10;
 export const MAX_TRICKS = 3;
 export const MAX_HEADLINES = 8;   // ticker-only second tier
-export const MIN_HEADLINE_SCORE = 50;
+export const MIN_HEADLINE_SCORE = 45;
 
 export interface Candidate { id: string; source_key: string; source_name: string; category: string; is_local: boolean; title: string; summary: string | null; published_at: string | null }
 export interface Pick { id: string; take: string; tag: string; score: number }
@@ -86,7 +86,7 @@ Items marked "· tricks" are how-tos and trade videos (YouTube channels the trad
 
 Pick at most ${MAX_FEATURED} in total; fewer is fine — never pad.
 
-SECOND LIST — "headlines": up to ${MAX_HEADLINES} MORE items (not already in picks) that belong on a scrolling ticker as need-to-know / should-know: proposed or adopted code, permit, licensing and OSHA changes FIRST, then big material/fuel/interest-rate moves, Southeast market trends, major industry news a contractor would be expected to have heard about. Score them too; 50+ makes the ticker. No sentence needed. Prefer 1–2 local items only if they are genuinely useful. For each: the id, a tag from {prices, codes, safety, local, market, tools, labor, tech, business}, the score, and ONE plain sentence (max 26 words) on why it matters to him — concrete, no hype, no "stay informed", no restating the headline.
+SECOND LIST — "headlines": aim for 6 to ${MAX_HEADLINES} MORE items (not already in picks; the ticker needs about ten things scrolling, so fill this list whenever the stories exist) that belong on a scrolling ticker as need-to-know / should-know: proposed or adopted code, permit, licensing and OSHA changes FIRST, then big material/fuel/interest-rate moves, Southeast market trends, major industry news a contractor would be expected to have heard about. Score them too; 45+ makes the ticker. No sentence needed. Prefer 1–2 local items only if they are genuinely useful. For each: the id, a tag from {prices, codes, safety, local, market, tools, labor, tech, business}, the score, and ONE plain sentence (max 26 words) on why it matters to him — concrete, no hype, no "stay informed", no restating the headline.
 
 Return ONLY JSON: {"picks":[{"id":"…","tag":"…","score":0,"take":"…"}],"headlines":[{"id":"…","tag":"…","score":0}]}
 

@@ -45,11 +45,11 @@ export async function run() {
   // 3) Curate — hard filters → AI ranking against RO's live profile → threshold.
   let featured = 0; let considered = 0; let tickerCount = 0;
   try {
-    const since4d = new Date(Date.now() - 4 * 86400000).toISOString();
+    const since4d = new Date(Date.now() - 7 * 86400000).toISOString(); // a week: weekends and slow news days still fill the strip
     const since60d = new Date(Date.now() - 60 * 86400000).toISOString();
     const since10d = new Date(Date.now() - 10 * 86400000).toISOString();
     const [{ data: newsRows }, { data: trickRows }, { data: fb }, { data: recentEst }] = await Promise.all([
-      supabase.from('news_items').select('id, source_key, source_name, category, is_local, title, summary, published_at, hidden').neq('category', 'tricks').gte('published_at', since4d).eq('hidden', false).order('published_at', { ascending: false }).limit(110),
+      supabase.from('news_items').select('id, source_key, source_name, category, is_local, title, summary, published_at, hidden').neq('category', 'tricks').gte('published_at', since4d).eq('hidden', false).order('published_at', { ascending: false }).limit(140),
       supabase.from('news_items').select('id, source_key, source_name, category, is_local, title, summary, published_at, hidden').eq('category', 'tricks').gte('published_at', since10d).eq('hidden', false).order('published_at', { ascending: false }).limit(60),
       supabase.from('news_feedback').select('item_id, verdict, item:news_items(title, source_key)').gte('created_at', since60d).order('created_at', { ascending: false }).limit(300),
       supabase.from('estimates').select('project_name, division, estimate_type, created_at').order('created_at', { ascending: false }).limit(12),
