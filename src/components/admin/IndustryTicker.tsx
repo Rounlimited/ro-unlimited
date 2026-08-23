@@ -22,9 +22,9 @@ const TAG: Record<string, { label: string; color: string }> = {
 };
 /** Ticker speed presets (px per second). Chosen per login in Settings → Ticker Speed. */
 export const TICKER_SPEEDS: { id: string; label: string; pps: number }[] = [
-  { id: 'slow', label: 'Slow', pps: 120 }, { id: 'normal', label: 'Normal', pps: 220 }, { id: 'fast', label: 'Fast', pps: 340 }, { id: 'blazing', label: 'Blazing', pps: 500 },
+  { id: 'slow', label: 'Slow', pps: 340 }, { id: 'normal', label: 'Normal', pps: 500 }, { id: 'fast', label: 'Fast', pps: 750 }, { id: 'blazing', label: 'Blazing', pps: 1100 },
 ];
-export const DEFAULT_TICKER_SPEED = 'fast';
+export const DEFAULT_TICKER_SPEED = 'normal';
 export function tickerPps(id: unknown): number { return (TICKER_SPEEDS.find((t) => t.id === id) || TICKER_SPEEDS.find((t) => t.id === DEFAULT_TICKER_SPEED)!).pps; }
 
 export default function IndustryTicker({ items, pulse, onSelect }: { items: TickerItem[]; pulse: TickerPulse | null; onSelect?: (item: TickerItem) => void }) {
@@ -38,7 +38,7 @@ export default function IndustryTicker({ items, pulse, onSelect }: { items: Tick
   useEffect(() => { try { setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { /* ignore */ } }, []);
   useEffect(() => {
     const el = trackRef.current; if (!el) return;
-    const measure = () => setDuration(Math.max(6, Math.round((el.scrollWidth / 2) / speed)));
+    const measure = () => setDuration(Math.max(3, Math.round(((el.scrollWidth / 2) / speed) * 10) / 10));
     measure();
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
     ro?.observe(el);
