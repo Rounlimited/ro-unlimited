@@ -32,3 +32,11 @@
 
 ### 4.6 Conventions
 Server uses the Supabase service-role admin client; the browser uses the anon client. Most reads/writes go through `/api/admin/*`. UI = Tailwind + lucide-react + GSAP. Heavy file routes have extended Vercel timeouts (Chapter 2).
+
+### 4.x — Added 2026-08-23
+- **Admin API auth**: `src/middleware.ts` requires a Supabase session for `/api/admin/*` (exceptions: invite-token GET/PUT, access-link GET, push-send POST). Customer PDF: `/api/estimate/[token]/pdf`.
+- **Customer activity tracking**: `document_events` table, `src/lib/doc-events.ts`; alerts `src/lib/alerts.ts` (routing in `app_settings.alert_routing`). Pills on the estimates list, Customer Activity panel on the estimate detail.
+- **Analytics page** `/admin/analytics`: estimate funnel by division, activity, follow-ups, Cloudflare traffic, PostHog behaviour. Keys in the credentials vault §14.
+- **Industry Pulse**: dashboard ticker + "Good to know today" card, `/admin/news`; sources in `src/lib/news-feeds.ts`, curation in `src/lib/news-curator.ts`, refresh cron `/api/cron/news-refresh` (runs every 6h from the Oracle box; Vercel Hobby crons are daily-only).
+- **Settings**: Text Size (Small…Huge, scales all admin text) and Ticker Speed, both per login.
+- **Estimates**: `estimate_date` (date shown on documents), editable on the detail page and in wizard Step 1.
