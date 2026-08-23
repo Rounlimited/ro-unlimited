@@ -31,6 +31,8 @@ If you are a brand‑new agent: use **Claude Code** (this tool). Recommended sub
 - Native Android app: `native-app/` (`com.rounlimited.admin`; keystore `twa/ro-admin.keystore`)
 - Data layer: `src/lib/supabase/{client,server}.ts` ; `src/lib/sanity/*`
 - Maintenance mode: `src/middleware.ts` + admin `/settings` Site Status (Supabase `app_settings`)
+- Analytics & tracking: `src/app/admin/analytics` + `src/lib/{doc-events,alerts,analytics-insights,cloudflare-analytics,posthog-analytics}.ts`
+- Industry Pulse news: `src/app/admin/news` + `src/lib/{news-feeds,news-curator,industry-pulse}.ts` + cron `/api/cron/news-refresh` (6-hourly runs from the Oracle box `~/ro-cron/`)
 
 ## Known issues / pending work
 - RO Drive files **>20 MB can't be downloaded** — Oracle `telegram-bot-api` runs without `--local` (see `handover/06`).
