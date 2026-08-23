@@ -170,14 +170,13 @@ export function NewsSheet({ item, onClose, onHide }: { item: NewsItem | null; on
   );
 }
 
-/** Dashboard: ticker + a collapsible "Good to know today" card. */
-const COLLAPSE_KEY = 'ro_pulse_open';
+/** Dashboard: ticker + a collapsible "Good to know today" card.
+    Always starts collapsed — it only opens when tapped, every visit. */
 export default function IndustryPulse() {
   const { featured, tricks, pulse, loading, setFeatured, setTricks } = useNews(10);
   const [open, setOpen] = useState<NewsItem | null>(null);
   const [expanded, setExpanded] = useState(false);
-  useEffect(() => { try { setExpanded(localStorage.getItem(COLLAPSE_KEY) === '1'); } catch { /* ignore */ } }, []);
-  const toggle = () => { setExpanded((v) => { try { localStorage.setItem(COLLAPSE_KEY, v ? '0' : '1'); } catch { /* ignore */ } return !v; }); };
+  const toggle = () => setExpanded((v) => !v);
   const hide = (id: string) => { setFeatured((f) => f.filter((x) => x.id !== id)); setTricks((f) => f.filter((x) => x.id !== id)); };
   if (loading) return null;
   const top = featured.slice(0, 4);
