@@ -339,6 +339,7 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
               <option value="">Select Division</option>
               <option value="residential">Residential</option>
               <option value="commercial">Commercial</option>
+            <option value="commercial_renovation">Commercial Renovation</option>
               <option value="grading">Land Grading & Site Prep</option>
               <option value="utilities">Underground Utilities</option>
               <option value="septic">Septic</option>

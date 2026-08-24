@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, getServerUser } from '@/lib/supabase/server';
 import { createInvoice, effectiveStatus, reconcilePayments } from '@/lib/invoices';
 import { sendInvoiceEmail } from '@/lib/invoice-send';
+import { getOptionsWithChoices, selectionsDelta } from '@/lib/estimate-options';
+import { OPTION_PRESETS, findOptionPreset, presetChoicesWithImages } from '@/lib/option-presets';
 import { recalcEstimateTotals } from '@/lib/estimates';
 
 export const dynamic = 'force-dynamic';
@@ -230,6 +232,25 @@ const INVOICE_READ_TOOLS = [
     input_schema: { type: 'object' as const, properties: {} } },
 ];
 
+const OPTIONS_TOOLS = [
+  { name: 'get_estimate_options', description: 'List the customer-selectable option groups on an estimate/contract with their choices, price deltas, which choice is selected, and the configured total.',
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' } } } },
+  { name: 'list_option_presets', description: 'Browse the built-in option-group presets (roof color, driveway finish, septic tank size, grease interceptor capacity, water line material...). Filter by division. Use a preset name with add_option_group via the preset field.',
+    input_schema: { type: 'object' as const, properties: { division: { type: 'string', description: 'utilities|septic|grease_traps|grading|concrete|roofing|electrical|plumbing|repairs|residential|commercial' }, query: { type: 'string' } } } },
+  { name: 'add_option_group', description: 'Add a customer-selectable option group to an estimate/contract. Either pass a preset name (from list_option_presets) or explicit choices. selection_type: single (pick one, e.g. roof color) | multi (pick any) | addon (optional yes/no extra). Price deltas are relative to the base estimate; 0 = included. Set one choice is_default for single groups.',
+    input_schema: { type: 'object' as const, properties: {
+      estimate_id: { type: 'string' }, estimate_number: { type: 'string' },
+      preset: { type: 'string', description: 'Preset name to copy, e.g. "Roof Color"' },
+      label: { type: 'string' }, description: { type: 'string' },
+      selection_type: { type: 'string' }, required: { type: 'boolean' },
+      choices: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, description: { type: 'string' }, price_delta: { type: 'number' }, is_default: { type: 'boolean' } } } },
+    } } },
+  { name: 'update_option_group', description: 'Rename/retype an option group or replace its choices. Identify the group by option_id or its current label.',
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, option_id: { type: 'string' }, option_label: { type: 'string' }, label: { type: 'string' }, description: { type: 'string' }, selection_type: { type: 'string' }, required: { type: 'boolean' }, choices: { type: 'array', items: { type: 'object' } } } } },
+  { name: 'delete_option_group', description: 'Remove an option group (and its choices) from an estimate. Identify by option_id or label.',
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, option_id: { type: 'string' }, option_label: { type: 'string' } } } },
+];
+
 const INVOICE_WRITE_TOOLS = [
   { name: 'create_invoice', description: 'Create a DRAFT invoice. Three modes: (a) from scratch with customer_id or customer_name or bill_to + line_items; (b) whole estimate via estimate_number; (c) milestone progress billing via estimate_number + milestone (matches the payment-schedule milestone name). Always returns the draft for review — it is NOT sent automatically.',
     input_schema: { type: 'object' as const, properties: {
@@ -305,7 +326,7 @@ const WRITE_TOOLS = [
         document_mode: { type: 'string', description: 'Type: estimate, contract, change_order, quick_quote (default estimate)' },
         project_name: { type: 'string', description: 'Project name/title' },
         division: { type: 'string', description: 'Division value (use exact lowercase): residential, commercial, grading, utilities, septic, grease_traps, concrete, foundation, framing, roofing, siding, electrical, plumbing, hvac, painting, flooring, demolition, drywall, landscaping, fencing, other' },
-        estimate_type: { type: 'string', description: 'Estimate type (use exact value): new_construction, renovation, repair, addition, remodel, commercial, quick_quote, preliminary, detailed, change_order, time_materials' },
+        estimate_type: { type: 'string', description: 'Estimate type (use exact value): new_construction, renovation, repair, addition, remodel, commercial, commercial_renovation, quick_quote, preliminary, detailed, change_order, time_materials' },
         contract_type: { type: 'string', description: 'Contract type (use exact value): fixed_price, cost_plus, time_materials, unit_price' },
         project_address: { type: 'string', description: 'Project street address' },
         project_city: { type: 'string', description: 'Project city' },
@@ -635,7 +656,7 @@ const WRITE_TOOLS = [
   },
 ];
 
-const ALL_TOOLS = [...READ_TOOLS, ...INVOICE_READ_TOOLS, ...WRITE_TOOLS];
+const ALL_TOOLS = [...READ_TOOLS, ...INVOICE_READ_TOOLS, ...OPTIONS_TOOLS, ...WRITE_TOOLS];
 
 // Trivial one-liner greetings on a fresh conversation don't need tools.
 // Everything else always gets the FULL tool set in deterministic order —
@@ -801,6 +822,113 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
     }
 
     // ── WRITE TOOLS ──
+    case 'get_estimate_options': {
+      let estId = input.estimate_id;
+      if (!estId && input.estimate_number) {
+        const { data: e } = await supabase.from('estimates').select('id').eq('estimate_number', String(input.estimate_number).trim()).single();
+        if (!e) return { result: 'Estimate not found.' };
+        estId = e.id;
+      }
+      if (!estId) return { result: 'Error: estimate_id or estimate_number required.' };
+      const { data: est } = await supabase.from('estimates').select('estimate_number, total, options_materialized_at, selections_confirmed_at, signed_at').eq('id', estId).single();
+      const groups = await getOptionsWithChoices(supabase, estId);
+      const delta = est?.options_materialized_at ? 0 : selectionsDelta(groups);
+      return { result: JSON.stringify({
+        estimate_number: est?.estimate_number,
+        base_total: Number(est?.total || 0),
+        selections_delta: delta,
+        configured_total: Number(est?.total || 0) + delta,
+        locked: !!est?.options_materialized_at,
+        selections_confirmed_at: est?.selections_confirmed_at,
+        groups: groups.map((g) => ({
+          id: g.id, label: g.label, type: g.selection_type, required: g.required,
+          choices: g.choices.map((ch) => ({ id: ch.id, label: ch.label, price_delta: Number(ch.price_delta), selected: ch.selected, is_default: ch.is_default })),
+        })),
+      }) };
+    }
+
+    case 'list_option_presets': {
+      let list = OPTION_PRESETS;
+      if (input.division) list = list.filter((pr) => pr.division === String(input.division).toLowerCase());
+      if (input.query) {
+        const q = String(input.query).toLowerCase();
+        list = list.filter((pr) => (pr.label + ' ' + pr.division + ' ' + pr.choices.map((c) => c.label).join(' ')).toLowerCase().includes(q));
+      }
+      return { result: JSON.stringify(list.slice(0, 40).map((pr) => ({
+        name: pr.label, division: pr.division, type: pr.selection_type,
+        choices: pr.choices.map((c) => c.label + (c.price_delta ? ` (${c.price_delta > 0 ? '+' : '−'}$${Math.abs(c.price_delta).toLocaleString()})` : ' (included)')),
+      }))) };
+    }
+
+    case 'add_option_group': {
+      let estId = input.estimate_id;
+      if (!estId && input.estimate_number) {
+        const { data: e } = await supabase.from('estimates').select('id').eq('estimate_number', String(input.estimate_number).trim()).single();
+        if (!e) return { result: 'Estimate not found.' };
+        estId = e.id;
+      }
+      if (!estId) return { result: 'Error: estimate_id or estimate_number required.' };
+      let body: any = {
+        label: input.label, description: input.description, selection_type: input.selection_type,
+        required: input.required, choices: input.choices,
+      };
+      if (input.preset) {
+        const pr = findOptionPreset(String(input.preset));
+        if (!pr) return { result: `No preset named "${input.preset}". Use list_option_presets to see names.` };
+        body = {
+          label: input.label || pr.label, description: input.description || pr.description,
+          selection_type: input.selection_type || pr.selection_type, required: input.required ?? pr.required,
+          choices: (input.choices && input.choices.length) ? input.choices : presetChoicesWithImages(pr),
+        };
+      }
+      if (!body.label || !Array.isArray(body.choices) || !body.choices.length) {
+        return { result: 'Error: need a label and at least one choice (or a preset name).' };
+      }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/api/admin/estimates/${estId}/options`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) return { result: `Error: ${data.error || 'could not add group'}` };
+      return {
+        result: JSON.stringify({ success: true, group: data.group?.label, choices: data.group?.choices?.length, total_groups: data.options?.length }),
+        action: { type: 'navigate', path: `/admin/estimates/${estId}`, description: 'Open estimate options' },
+      };
+    }
+
+    case 'update_option_group':
+    case 'delete_option_group': {
+      let estId = input.estimate_id;
+      if (!estId && input.estimate_number) {
+        const { data: e } = await supabase.from('estimates').select('id').eq('estimate_number', String(input.estimate_number).trim()).single();
+        if (!e) return { result: 'Estimate not found.' };
+        estId = e.id;
+      }
+      if (!estId) return { result: 'Error: estimate_id or estimate_number required.' };
+      let optId = input.option_id;
+      if (!optId && input.option_label) {
+        const groups = await getOptionsWithChoices(supabase, estId);
+        const hit = groups.find((g) => g.label.toLowerCase() === String(input.option_label).toLowerCase())
+          || groups.find((g) => g.label.toLowerCase().includes(String(input.option_label).toLowerCase()));
+        if (!hit) return { result: `No option group matching "${input.option_label}". Groups: ${groups.map((g) => g.label).join(', ') || 'none'}.` };
+        optId = hit.id;
+      }
+      if (!optId) return { result: 'Error: option_id or option_label required.' };
+      const base = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/api/admin/estimates/${estId}/options/${optId}`;
+      if (name === 'delete_option_group') {
+        const res = await fetch(base, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) return { result: `Error: ${data.error || 'delete failed'}` };
+        return { result: JSON.stringify({ success: true, remaining_groups: data.options?.length }) };
+      }
+      const fields: any = {};
+      for (const k of ['label', 'description', 'selection_type', 'required', 'choices']) if (input[k] !== undefined) fields[k] = input[k];
+      if (!Object.keys(fields).length) return { result: 'No fields to update.' };
+      const res = await fetch(base, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields) });
+      const data = await res.json();
+      if (!res.ok) return { result: `Error: ${data.error || 'update failed'}` };
+      return { result: JSON.stringify({ success: true, groups: data.options?.map((g: any) => g.label) }) };
+    }
+
     case 'search_invoices': {
       let q = supabase.from('invoices')
         .select('id, invoice_number, status, due_date, total, amount_paid, project_name, milestone_label, sent_at, customer:customers(first_name, last_name, company_name), bill_to')
@@ -2074,6 +2202,17 @@ Invoice rules (money — be careful):
 - Paid invoice links stay live as receipts. Draft links are dead until sent.
 </invoices>`;
 
+const PROMPT_OPTIONS = `<options>
+Customer-selectable options (the configurator on estimate/contract links):
+- Option groups give the customer choices on their link — roof color, driveway finish, septic tank size, add-ons — each choice with a price delta vs the base. single = pick one (set a default), multi = pick any, addon = optional yes/no.
+- Use list_option_presets first when the user names a common thing ("add roof colors", "let them pick the septic tank size") — presets carry sensible choices and Southeast pricing; override deltas if the user gives numbers.
+- Deltas are relative to the base line items, never absolute prices. 0 = included.
+- Picks lock when the customer signs; add_option_group/update/delete fail with "locked" after that — say so plainly.
+- After adding groups, offer the Preview Link / share link so the user can check it.
+</options>`;
+
+const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets','add_option_group','update_option_group','delete_option_group']);
+
 const INVOICE_TOOL_NAMES = new Set(['search_invoices','get_invoice_details','get_ar_summary','create_invoice','update_invoice','record_invoice_payment','send_invoice']);
 
 const ESTIMATE_TOOL_NAMES = new Set(['create_estimate','get_estimate_details','search_estimates','add_line_items','update_line_items','delete_line_items','update_estimate','update_estimate_status','set_payment_schedule','send_estimate','duplicate_estimate','check_estimate_pricing','search_cost_library','search_templates','search_disclaimers','generate_share_link']);
@@ -2088,6 +2227,7 @@ function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: stri
   const blocks = [PROMPT_CORE];
   if (hasEstimates) blocks.push(PROMPT_ESTIMATES);
   if (names.some(n => INVOICE_TOOL_NAMES.has(n))) blocks.push(PROMPT_INVOICES);
+  if (names.some(n => OPTIONS_TOOL_NAMES.has(n))) blocks.push(PROMPT_OPTIONS);
   if (hasTasks) blocks.push(PROMPT_TASKS);
   if (hasProperty) blocks.push(PROMPT_PROPERTY);
   if (dynamicContext) blocks.push(dynamicContext);
