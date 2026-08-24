@@ -5,6 +5,7 @@ import {
   Layers, Plus, X, Trash2, Pencil, Loader2, ImagePlus, Star, Lock, CheckCircle2,
 } from 'lucide-react';
 import { compressImage } from '@/components/admin/estimates/EstimatePhotos';
+import { OPTION_PRESETS, DIVISION_LABELS, presetChoicesWithImages, type OptionPreset, type PresetDivision } from '@/lib/option-presets';
 
 /**
  * OptionsBuilder — JR builds customer-selectable option groups on an
@@ -51,6 +52,8 @@ export default function OptionsBuilder({ estimateId }: { estimateId: string }) {
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Group | 'new' | null>(null);
+  const [showPresets, setShowPresets] = useState(false);
+  const [presetBusy, setPresetBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -69,6 +72,20 @@ export default function OptionsBuilder({ estimateId }: { estimateId: string }) {
     if (!confirm('Delete "' + g.label + '" and its choices?')) return;
     const res = await fetch('/api/admin/estimates/' + estimateId + '/options/' + g.id, { method: 'DELETE' });
     if (res.ok) load(); else alert((await res.json()).error || 'Failed');
+  };
+
+  const addPreset = async (pr: OptionPreset) => {
+    setPresetBusy(pr.label);
+    try {
+      const res = await fetch('/api/admin/estimates/' + estimateId + '/options', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: pr.label, description: pr.description || null, selection_type: pr.selection_type, required: pr.required !== false, choices: presetChoicesWithImages(pr) }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) alert(data.error || 'Could not add preset');
+      else await load();
+    } catch { alert('Network error'); }
+    setPresetBusy(null);
   };
 
   if (loading) return <div className="flex items-center gap-3 text-white/40 py-6"><Loader2 size={20} className="animate-spin" /> Loading options…</div>;
@@ -144,11 +161,27 @@ export default function OptionsBuilder({ estimateId }: { estimateId: string }) {
       ))}
 
       {!locked && (
-        <button onClick={() => setEditing('new')}
-          className="w-full min-h-[52px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
-          style={{ background: 'rgba(201,168,76,0.1)', color: '#D4B965', border: '1px dashed rgba(201,168,76,0.4)' }}>
-          <Plus size={18} /> Add Option Group
-        </button>
+        <div className="grid grid-cols-2 gap-2.5">
+          <button onClick={() => setShowPresets(true)}
+            className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+            style={{ background: 'rgba(201,168,76,0.15)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.45)' }}>
+            <Layers size={18} /> Add from Presets
+          </button>
+          <button onClick={() => setEditing('new')}
+            className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)', border: '1px dashed rgba(255,255,255,0.2)' }}>
+            <Plus size={18} /> Custom Group
+          </button>
+        </div>
+      )}
+
+      {showPresets && (
+        <PresetSheet
+          existing={groups.map((g) => g.label.toLowerCase())}
+          busy={presetBusy}
+          onAdd={addPreset}
+          onClose={() => setShowPresets(false)}
+        />
       )}
 
       {editing && (
@@ -335,6 +368,81 @@ function GroupSheet({ estimateId, group, onClose, onSaved }: {
         {group && (
           <p className="text-[13px] text-white/30 text-center mt-3">Saving replaces the choices — customer selections reset to defaults.</p>
         )}
+      </div>
+    </div>
+  );
+}
+
+
+/* ── Preset picker sheet: division tabs + search, one-tap add ── */
+function PresetSheet({ existing, busy, onAdd, onClose }: {
+  existing: string[]; busy: string | null; onAdd: (pr: OptionPreset) => void; onClose: () => void;
+}) {
+  const [division, setDivision] = useState<PresetDivision | 'all'>('all');
+  const [q, setQ] = useState('');
+  const divisions = Object.keys(DIVISION_LABELS) as PresetDivision[];
+  const list = OPTION_PRESETS.filter((pr) =>
+    (division === 'all' || pr.division === division) &&
+    (!q.trim() || (pr.label + ' ' + pr.choices.map((c) => c.label).join(' ')).toLowerCase().includes(q.toLowerCase()))
+  );
+  const fmtD = (n: number) => n === 0 ? 'incl.' : (n > 0 ? '+' : '−') + '$' + Math.abs(n).toLocaleString();
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center sm:justify-center">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-xl h-[88vh] sm:h-[80vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-[#121212] border-t sm:border border-white/10"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="p-5 pb-3">
+          <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4 sm:hidden" />
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[20px] font-bold">Option Presets</h2>
+            <button onClick={onClose} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5"><X size={20} className="text-white/60" /></button>
+          </div>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search presets…"
+            className="w-full min-h-[48px] px-4 rounded-xl bg-white/5 border border-white/10 text-[16px] placeholder:text-white/25 focus:outline-none focus:border-[#C9A84C]/50 mb-3" />
+          <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1">
+            {(['all', ...divisions] as const).map((d) => (
+              <button key={d} onClick={() => setDivision(d as any)}
+                className="shrink-0 min-h-[38px] px-3.5 rounded-full text-[13px] font-semibold whitespace-nowrap active:scale-95"
+                style={division === d
+                  ? { background: 'rgba(201,168,76,0.18)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }
+                  : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                {d === 'all' ? 'All' : DIVISION_LABELS[d as PresetDivision]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-2.5">
+          {list.length === 0 && <p className="text-[15px] text-white/35 py-6 text-center">No presets match.</p>}
+          {list.map((pr) => {
+            const already = existing.includes(pr.label.toLowerCase());
+            return (
+              <div key={pr.division + pr.label} className="rounded-xl border border-white/8 bg-white/3 p-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-[16px] font-bold">{pr.label}</p>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(201,168,76,0.12)', color: '#D4B965' }}>
+                        {TYPE_META[pr.selection_type]?.label}
+                      </span>
+                      <span className="text-[11px] text-white/30">{DIVISION_LABELS[pr.division]}</span>
+                    </div>
+                    <p className="text-[13px] text-white/45 mt-1 leading-snug">
+                      {pr.choices.map((c) => c.label + ' ' + fmtD(c.price_delta)).join(' · ')}
+                    </p>
+                  </div>
+                  <button onClick={() => onAdd(pr)} disabled={already || busy !== null}
+                    className="shrink-0 min-h-[44px] px-4 rounded-lg text-[14px] font-bold disabled:opacity-40 active:scale-95"
+                    style={already
+                      ? { background: 'rgba(53,208,127,0.12)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.3)' }
+                      : { background: 'rgba(201,168,76,0.15)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }}>
+                    {busy === pr.label ? <Loader2 size={16} className="animate-spin" /> : already ? 'Added' : 'Add'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
