@@ -4,6 +4,9 @@ import { createInvoice, effectiveStatus, reconcilePayments } from '@/lib/invoice
 import { sendInvoiceEmail } from '@/lib/invoice-send';
 import { getOptionsWithChoices, selectionsDelta } from '@/lib/estimate-options';
 import { OPTION_PRESETS, findOptionPreset, presetChoicesWithImages } from '@/lib/option-presets';
+import { summarizeVisits, eventSentence, fmtSeconds, timeAgo } from '@/lib/doc-events-summary';
+import { getTraffic } from '@/lib/cloudflare-analytics';
+import { computeInsights } from '@/lib/analytics-insights';
 import { recalcEstimateTotals } from '@/lib/estimates';
 
 export const dynamic = 'force-dynamic';
@@ -220,6 +223,20 @@ const READ_TOOLS = [
     input_schema: { type: 'object' as const, properties: { query: { type: 'string', description: 'Match against sender address, subject, or body text' }, unread_only: { type: 'boolean', description: 'Only return unread emails' }, limit: { type: 'number', description: 'Max results (default 5, cap 10)' } } } },
   { name: 'get_job_weather', description: 'Job-site forecast: daily highs/lows (F), rain chance/amount (in), max wind (mph), UV, plus working-hours (7am-6pm) avg humidity, avg dew point, and max wind gusts. Defaults to the Seneca/Upstate SC area when no address is given. Use for scheduling and trade go/no-go calls (pours, roofing, painting, crane work).',
     input_schema: { type: 'object' as const, properties: { address: { type: 'string', description: 'Job site street address' }, city: { type: 'string', description: 'City/state if no street address, e.g. "Greenville, SC"' }, days: { type: 'number', description: 'Forecast days (default 3, cap 7)' } } } },
+  { name: 'get_customer_activity', description: 'What the customer did with an estimate or invoice link: opens, PDF views/downloads, device, city, time reading, whether they scrolled to the price, signatures, messages, email opens. Staff previews excluded. Use for "did they open it", "has X looked at the estimate".',
+    input_schema: { type: 'object' as const, properties: { estimate_number: { type: 'string', description: 'e.g. RO-EST-2026-0245 (or an invoice number)' }, id: { type: 'string', description: 'estimate/invoice UUID (alternative)' } } } },
+  { name: 'get_analytics_overview', description: 'The analytics snapshot: estimate funnel (sent→opened→PDF→signed with $ values and medians, by division), follow-up list (never-opened / gone-quiet estimates), customer-activity totals, website traffic totals, and the same plain-English insights the Analytics page shows. Use for "how are we doing", "what needs follow-up", "any insights".',
+    input_schema: { type: 'object' as const, properties: { days: { type: 'number', description: 'Window in days (default 30)' } } } },
+  { name: 'get_website_traffic', description: 'Website traffic (Cloudflare, bots removed): visits/page views by day, most-read pages, referrers, countries, devices. Use for "how is the website doing", "where do visitors come from".',
+    input_schema: { type: 'object' as const, properties: { days: { type: 'number', description: 'Window in days (default 30)' } } } },
+  { name: 'get_industry_news', description: "Today's curated construction news: the featured picks with why-it-matters lines, ticker headlines, Tricks-of-the-Trade videos, material price moves (BLS m/m) and any Upstate weather alerts. Filter by category (local, codes, safety, trade, tech, equipment, business, tricks) or search by keyword. Use for \"what's in the news\", \"any code changes\", \"what's lumber doing\".",
+    input_schema: { type: 'object' as const, properties: { category: { type: 'string', description: 'local | codes | safety | trade | tech | equipment | business | tricks' }, query: { type: 'string', description: 'Keyword search in headlines' }, limit: { type: 'number', description: 'Max items (default 12)' } } } },
+  { name: 'get_material_prices', description: 'Current producer-price moves for lumber, steel, concrete, diesel, copper, gypsum (month over month, BLS). Use for pricing bids and "what are material prices doing".',
+    input_schema: { type: 'object' as const, properties: {} } },
+  { name: 'get_alert_routing', description: 'Who receives customer-activity alerts (opens, PDF downloads, signatures): the default recipients and any per-division / per-alert-type overrides, plus which people have a push-registered phone. Read-only — changes happen in Settings (dev login).',
+    input_schema: { type: 'object' as const, properties: {} } },
+  { name: 'refresh_news', description: 'Pull all news feeds and re-run the curator right now (~15-25s). Use only when the user explicitly asks to refresh the news.',
+    input_schema: { type: 'object' as const, properties: {} } },
 ];
 
 // ── WRITE TOOLS ──
@@ -349,6 +366,7 @@ const WRITE_TOOLS = [
       type: 'object' as const,
       properties: {
         id: { type: 'string', description: 'Estimate UUID (required)' },
+        estimate_date: { type: 'string', description: 'Date shown on the document (YYYY-MM-DD) when it differs from the day it was entered; null to clear' },
         project_name: { type: 'string', description: 'Project name' },
         division: { type: 'string', description: 'Division (exact value): residential, commercial, grading, utilities, septic, grease_traps, concrete, foundation, framing, roofing, siding, electrical, plumbing, hvac, painting, flooring, demolition, drywall, landscaping, fencing, other' },
         estimate_type: { type: 'string', description: 'Estimate type (exact value): quick_quote, preliminary, detailed, change_order, time_materials' },
@@ -573,7 +591,7 @@ const WRITE_TOOLS = [
     input_schema: {
       type: 'object' as const,
       properties: {
-        path: { type: 'string', description: 'The app path to navigate to, e.g. /admin/estimates, /admin/customers, /admin/estimates/[uuid], /admin/tasks' },
+        path: { type: 'string', description: 'The app path to navigate to, e.g. /admin/estimates, /admin/customers, /admin/estimates/[uuid], /admin/tasks, /admin/analytics (funnel/traffic/insights), /admin/news (industry news & tricks), /admin/invoices, /admin/settings' },
         description: { type: 'string', description: 'Brief description of what is at this destination, e.g. "Opening the new estimate wizard"' },
       },
       required: ['path'],
@@ -1947,6 +1965,154 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       };
     }
 
+    case 'get_customer_activity': {
+      let doc: any = null; let docType: 'estimate' | 'invoice' = 'estimate';
+      const num = (input.estimate_number || '').trim();
+      if (input.id) {
+        ({ data: doc } = await supabase.from('estimates').select('id, estimate_number, project_name, status, view_count, pdf_count, first_viewed_at, last_viewed_at, last_viewed_device, last_viewed_location').eq('id', input.id).maybeSingle());
+        if (!doc) { ({ data: doc } = await supabase.from('invoices').select('id, invoice_number, project_name, status, view_count, pdf_count, first_viewed_at, last_viewed_at, last_viewed_device, last_viewed_location').eq('id', input.id).maybeSingle()); if (doc) docType = 'invoice'; }
+      } else if (num) {
+        ({ data: doc } = await supabase.from('estimates').select('id, estimate_number, project_name, status, view_count, pdf_count, first_viewed_at, last_viewed_at, last_viewed_device, last_viewed_location').ilike('estimate_number', `%${num}%`).limit(1).maybeSingle());
+        if (!doc) { ({ data: doc } = await supabase.from('invoices').select('id, invoice_number, project_name, status, view_count, pdf_count, first_viewed_at, last_viewed_at, last_viewed_device, last_viewed_location').ilike('invoice_number', `%${num}%`).limit(1).maybeSingle()); if (doc) docType = 'invoice'; }
+      }
+      if (!doc) return { result: 'No estimate or invoice matched. Give me the number (e.g. RO-EST-2026-0245).' };
+      const { data: evs } = await supabase.from('document_events')
+        .select('id, event, internal, visitor_id, device_type, os, browser, city, region, country, referrer, meta, created_at')
+        .eq('doc_type', docType).eq('doc_id', doc.id).order('created_at', { ascending: false }).limit(300);
+      const summary = summarizeVisits((evs || []) as any);
+      const lines: string[] = [];
+      lines.push(`${doc.estimate_number || doc.invoice_number} (${doc.project_name || 'no project name'}) — status ${doc.status}`);
+      lines.push(`Customer opens: ${summary.views} (${summary.unique_visitors} device${summary.unique_visitors === 1 ? '' : 's'}) · PDF views ${summary.pdf_views}, downloads ${summary.pdf_downloads}`);
+      if (summary.total_seconds) lines.push(`Total reading time ${fmtSeconds(summary.total_seconds)} · reached the price: ${summary.reached_total ? 'yes' : 'no'} · reached the sign block: ${summary.reached_sign ? 'yes' : 'no'}`);
+      if (summary.last_view) lines.push(`Last seen ${timeAgo(summary.last_view)} on ${summary.last_device || 'unknown device'}${summary.last_location ? ' in ' + summary.last_location : ''}`);
+      const em = summary.email; if (em.sent) lines.push(`Email: sent${em.delivered ? ', delivered' : ''}${em.opened ? ', opened' : ''}${em.clicked ? ', link clicked' : ''}${em.bounced ? ', BOUNCED' : ''}`);
+      const visits = summary.visits.filter((v) => !v.internal).slice(0, 6);
+      if (visits.length) {
+        lines.push('Recent visits:');
+        for (const v of visits) lines.push(`- ${timeAgo(v.started_at)} · ${v.device || 'unknown'}${v.location ? ' · ' + v.location : ''}${v.seconds != null ? ' · ' + fmtSeconds(v.seconds) : ''}${v.pdf_downloads ? ' · downloaded PDF' : ''}${v.visit_number > 1 ? ` · visit #${v.visit_number}` : ''}`);
+      }
+      const staffViews = (evs || []).filter((e: any) => e.internal && e.event === 'link_view').length;
+      if (staffViews) lines.push(`(${staffViews} staff preview${staffViews === 1 ? '' : 's'} excluded from the counts.)`);
+      if (!summary.views && !em.sent) lines.push('No customer activity recorded yet.');
+      return { result: lines.join('\n') };
+    }
+
+    case 'get_analytics_overview': {
+      const days = Math.min(365, Math.max(7, Number(input.days) || 30));
+      const since = new Date(Date.now() - days * 86400000).toISOString();
+      const [{ data: ests }, { data: evs }, traffic] = await Promise.all([
+        supabase.from('estimates').select('id, estimate_number, project_name, division, status, total, created_at, sent_at, first_viewed_at, last_viewed_at, view_count, pdf_count, signed_at, accepted_at, declined_at, customer:customers(first_name, last_name, company_name)').not('status', 'eq', 'draft').gte('created_at', new Date(Date.now() - 365 * 86400000).toISOString()),
+        supabase.from('document_events').select('doc_id, event, visitor_id, device_type, city, region, meta, created_at').eq('internal', false).gte('created_at', since).limit(4000),
+        getTraffic(days).catch(() => null),
+      ]);
+      const all = ests || []; const sentIn = all.filter((e: any) => (e.sent_at || e.created_at) >= since);
+      const f = {
+        sent: sentIn.length,
+        opened: sentIn.filter((e: any) => e.first_viewed_at || ['viewed', 'accepted'].includes(e.status) || e.signed_at).length,
+        pdf: sentIn.filter((e: any) => (e.pdf_count || 0) > 0).length,
+        signed: sentIn.filter((e: any) => e.signed_at || e.status === 'accepted').length,
+        declined: sentIn.filter((e: any) => e.status === 'declined').length,
+        value_sent: sentIn.reduce((t: number, e: any) => t + (Number(e.total) || 0), 0),
+        value_signed: sentIn.filter((e: any) => e.signed_at || e.status === 'accepted').reduce((t: number, e: any) => t + (Number(e.total) || 0), 0),
+        median_hours_to_open: null as number | null, median_hours_to_sign: null as number | null,
+      };
+      const opens = sentIn.map((e: any) => e.sent_at && e.first_viewed_at ? (new Date(e.first_viewed_at).getTime() - new Date(e.sent_at).getTime()) / 3600000 : null).filter((x: any): x is number => x != null && x >= 0).sort((x: number, y: number) => x - y);
+      if (opens.length) f.median_hours_to_open = opens[Math.floor(opens.length / 2)];
+      const nowMs = Date.now();
+      const stale = all.filter((e: any) => ['sent', 'viewed', 'revised'].includes(e.status) && !e.signed_at)
+        .map((e: any) => ({ ...e, days_since_sent: Math.floor((nowMs - new Date(e.sent_at || e.created_at).getTime()) / 86400000), days_since_view: e.last_viewed_at ? Math.floor((nowMs - new Date(e.last_viewed_at).getTime()) / 86400000) : null }))
+        .filter((e: any) => e.days_since_sent >= 3).sort((a: any, b: any) => b.days_since_sent - a.days_since_sent).slice(0, 12);
+      const ev = evs || [];
+      const activity = {
+        views: ev.filter((e: any) => e.event === 'link_view').length,
+        pdf_views: ev.filter((e: any) => e.event === 'pdf_view').length,
+        pdf_downloads: ev.filter((e: any) => e.event === 'pdf_download').length,
+        signed: ev.filter((e: any) => e.event === 'signed').length,
+        messages: ev.filter((e: any) => e.event === 'message_sent').length,
+        unique_visitors: new Set(ev.filter((e: any) => e.event === 'link_view').map((e: any) => e.visitor_id || e.doc_id)).size,
+        avg_seconds: null as number | null, reached_total_rate: null as number | null,
+        devices: Object.entries(ev.filter((e: any) => e.event === 'link_view').reduce((m: any, e: any) => { const k = e.device_type || 'Unknown'; m[k] = (m[k] || 0) + 1; return m; }, {})).map(([device, views]) => ({ device, views })),
+        cities: [] as any[], by_day: [] as any[], hours_utc: [] as number[],
+      };
+      const timed = ev.filter((e: any) => e.event === 'time_on_page');
+      if (timed.length) activity.avg_seconds = Math.round(timed.reduce((t: number, e: any) => t + (Number(e.meta?.seconds) || 0), 0) / timed.length);
+      const data = { days, funnel: { all: f, by_division: {} }, stale, activity, traffic: traffic || { available: false, days: [], top_pages: [], referrers: [], totals: { visits: 0, page_views: 0 } } };
+      const insights = computeInsights(data, null).slice(0, 6);
+      const money = (n: number) => '$' + Math.round(n).toLocaleString();
+      const out: string[] = [];
+      out.push(`Last ${days} days:`);
+      out.push(`Funnel: ${f.sent} sent (${money(f.value_sent)}) → ${f.opened} opened → ${f.pdf} viewed PDF → ${f.signed} signed (${money(f.value_signed)})${f.declined ? ` · ${f.declined} declined` : ''}${f.median_hours_to_open != null ? ` · typical first open ${Math.round(f.median_hours_to_open)}h` : ''}`);
+      out.push(`Customer activity: ${activity.views} link opens by ${activity.unique_visitors} customers · ${activity.pdf_views + activity.pdf_downloads} PDF (${activity.pdf_downloads} downloads) · ${activity.messages} messages · ${activity.signed} signed${activity.avg_seconds != null ? ` · avg read ${fmtSeconds(activity.avg_seconds)}` : ''}`);
+      if (traffic?.available) out.push(`Website: ${traffic.totals.visits} visits, ${traffic.totals.page_views} page views · top pages ${traffic.top_pages.slice(0, 3).map((p: any) => p.path).join(', ') || 'n/a'}`);
+      if (stale.length) { out.push('Needs a follow-up:'); for (const sES of stale.slice(0, 8)) { const who = sES.customer ? (sES.customer.company_name || [sES.customer.first_name, sES.customer.last_name].filter(Boolean).join(' ')) : ''; out.push(`- ${sES.estimate_number} ${who ? '(' + who + ') ' : ''}${money(Number(sES.total) || 0)} · sent ${sES.days_since_sent}d ago · ${sES.view_count ? `opened ${sES.view_count}x` : 'NEVER OPENED'}`); } }
+      if (insights.length) { out.push('Insights:'); for (const i of insights) out.push(`- ${i.text}${i.detail ? ' ' + i.detail : ''}`); }
+      out.push('(Full picture with charts: /admin/analytics — visitor behaviour/PostHog detail lives there.)');
+      return { result: out.join('\n') };
+    }
+
+    case 'get_website_traffic': {
+      const days = Math.min(365, Math.max(7, Number(input.days) || 30));
+      const t = await getTraffic(days);
+      if (!t.available) return { result: `Traffic data unavailable: ${t.error || 'not configured'}` };
+      const lines = [`Website, last ${days} days (bots removed): ${t.totals.visits} visits, ${t.totals.page_views} page views.`];
+      lines.push('Most-read: ' + (t.top_pages.slice(0, 6).map((p) => `${p.path} (${p.visits})`).join(', ') || 'n/a'));
+      lines.push('Referrers: ' + (t.referrers.slice(0, 5).map((r) => `${r.host} (${r.visits})`).join(', ') || 'all direct'));
+      lines.push('Devices: ' + (t.devices.map((d) => `${d.device} ${d.visits}`).join(', ') || 'n/a'));
+      const half = Math.floor(t.days.length / 2);
+      const prev = t.days.slice(0, half).reduce((x, d) => x + d.visits, 0); const cur = t.days.slice(half).reduce((x, d) => x + d.visits, 0);
+      if (prev >= 5) lines.push(`Trend: ${cur >= prev ? '+' : ''}${Math.round(((cur - prev) / prev) * 100)}% recent half vs prior.`);
+      return { result: lines.join('\n') };
+    }
+
+    case 'get_industry_news': {
+      const limit = Math.min(30, Number(input.limit) || 12);
+      let q = supabase.from('news_items').select('source_name, category, is_local, title, url, summary, published_at, featured, ticker, ai_take, ai_tag, score').eq('hidden', false).order('published_at', { ascending: false }).limit(limit * 3);
+      if (input.category) q = input.category === 'local' ? q.eq('is_local', true) : q.eq('category', String(input.category));
+      if (input.query) q = q.ilike('title', `%${String(input.query).slice(0, 60)}%`);
+      const [{ data: items }, { data: pulseRow }] = await Promise.all([q, supabase.from('app_settings').select('value').eq('key', 'news_pulse').maybeSingle()]);
+      const pulse: any = pulseRow?.value || {};
+      const lines: string[] = [];
+      if (pulse.materials?.length) lines.push('Material prices (m/m, BLS): ' + pulse.materials.map((m: any) => `${m.label} ${m.mom_pct > 0 ? '+' : ''}${m.mom_pct}%`).join(' · '));
+      if (pulse.weather?.length) lines.push('WEATHER ALERTS (Upstate): ' + pulse.weather.map((w: any) => `${w.event} — ${w.areas}`).join(' | '));
+      const rows = (items || []);
+      const featured = rows.filter((r: any) => r.featured).slice(0, limit);
+      const rest = rows.filter((r: any) => !r.featured).slice(0, Math.max(0, limit - featured.length));
+      if (featured.length) { lines.push("Today's picks:"); for (const r of featured) lines.push(`- [${(r.ai_tag || r.category).toUpperCase()}] ${r.title} (${r.source_name}${r.is_local ? ', LOCAL' : ''}) — ${r.ai_take || ''} ${r.url}`); }
+      if (rest.length) { lines.push('More headlines:'); for (const r of rest) lines.push(`- ${r.title} (${r.source_name}) ${r.url}`); }
+      if (!rows.length) lines.push('No stories matched. Try without a filter, or refresh_news.');
+      return { result: lines.join('\n') };
+    }
+
+    case 'get_material_prices': {
+      const { data: pulseRow } = await supabase.from('app_settings').select('value').eq('key', 'news_pulse').maybeSingle();
+      const mats = (pulseRow?.value as any)?.materials || [];
+      if (!mats.length) return { result: 'No material price data cached yet — try refresh_news.' };
+      return { result: 'Producer prices, month over month (BLS):\n' + mats.map((m: any) => `- ${m.label}: ${m.mom_pct > 0 ? '+' : ''}${m.mom_pct}% (${m.period}, index ${m.value} from ${m.prev})`).join('\n') };
+    }
+
+    case 'get_alert_routing': {
+      const { data: routingRow } = await supabase.from('app_settings').select('value').eq('key', 'alert_routing').maybeSingle();
+      const r: any = routingRow?.value || {};
+      const { data: subs } = await supabase.from('push_subscriptions').select('user_email');
+      const counts: Record<string, number> = {}; let untagged = 0;
+      (subs || []).forEach((x: any) => { if (x.user_email) counts[x.user_email] = (counts[x.user_email] || 0) + 1; else untagged++; });
+      const lines = [`Default recipients: ${(r.default || []).join(', ') || 'everyone with the app'}`];
+      for (const [k, v] of Object.entries(r.by_division || {})) if ((v as string[]).length) lines.push(`Division ${k}: ${(v as string[]).join(', ')}`);
+      for (const [k, v] of Object.entries(r.by_event || {})) if ((v as string[]).length) lines.push(`Alert ${k}: ${(v as string[]).join(', ')}`);
+      lines.push('Registered phones: ' + (Object.entries(counts).map(([e, n]) => `${e} (${n})`).join(', ') || 'none tagged'));
+      if (untagged) lines.push(`${untagged} older device(s) not tied to a person — they get everything until that phone reopens the app.`);
+      lines.push('Precedence: alert type → division → default. Changes: Settings → Alerts (dev login).');
+      return { result: lines.join('\n') };
+    }
+
+    case 'refresh_news': {
+      try {
+        const { run } = await import('@/app/api/cron/news-refresh/route');
+        const res = await run(); const j = await res.json();
+        return { result: `News refreshed: ${j.sources?.fetched ?? 0} stories fetched, ${j.featured ?? 0} featured picks, ${j.ticker ?? 0} on the ticker, ${j.materials ?? 0} material prices, ${j.weather ?? 0} weather alerts.${j.sources?.failed?.length ? ' Feeds unreachable: ' + j.sources.failed.join(', ') : ''}` };
+      } catch (e: any) { return { result: 'Refresh failed: ' + (e?.message || 'unknown error') }; }
+    }
+
     case 'get_business_stats': {
       const period = input.period || 'month';
       const now = new Date();
@@ -2218,11 +2384,17 @@ const INVOICE_TOOL_NAMES = new Set(['search_invoices','get_invoice_details','get
 const ESTIMATE_TOOL_NAMES = new Set(['create_estimate','get_estimate_details','search_estimates','add_line_items','update_line_items','delete_line_items','update_estimate','update_estimate_status','set_payment_schedule','send_estimate','duplicate_estimate','check_estimate_pricing','search_cost_library','search_templates','search_disclaimers','generate_share_link']);
 const TASK_TOOL_NAMES = new Set(['create_task','list_tasks','complete_task','snooze_task','update_task','delete_task','get_daily_briefing']);
 
+const ANALYTICS_TOOL_NAMES = new Set(['get_customer_activity', 'get_analytics_overview', 'get_website_traffic', 'get_industry_news', 'get_material_prices', 'get_alert_routing', 'refresh_news']);
+const PROMPT_ANALYTICS = `<analytics_and_news>
+The app tracks what customers do with estimate/invoice links: opens, PDF views vs downloads, device, city, reading time, whether they scrolled to the price, signatures, messages, email opens (staff previews never count). Use get_customer_activity for one document, get_analytics_overview for the big picture + follow-up list + plain-English insights, get_website_traffic for the public site. The Analytics page (/admin/analytics) has the charts and PostHog visitor behaviour (session replays); the dashboard ticker + /admin/news carry curated industry news with a Tricks-of-the-Trade lane — get_industry_news reads it, get_material_prices gives BLS price moves for bids. Alerts (push + bell) go out on first open / PDF download / signature, routed per app_settings (get_alert_routing to see who). Estimates have an estimate_date (the date shown on the document when it differs from entry day) — set via update_estimate. Users can change Text Size and Ticker Speed per login in Settings.
+</analytics_and_news>`;
+
 function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: string): string {
   const names = selectedTools.map(t => t.name);
   const hasEstimates = names.some(n => ESTIMATE_TOOL_NAMES.has(n));
   const hasTasks = names.some(n => TASK_TOOL_NAMES.has(n));
   const hasProperty = names.includes('property_lookup');
+  const hasAnalytics = names.some(n => ANALYTICS_TOOL_NAMES.has(n));
 
   const blocks = [PROMPT_CORE];
   if (hasEstimates) blocks.push(PROMPT_ESTIMATES);
@@ -2230,6 +2402,7 @@ function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: stri
   if (names.some(n => OPTIONS_TOOL_NAMES.has(n))) blocks.push(PROMPT_OPTIONS);
   if (hasTasks) blocks.push(PROMPT_TASKS);
   if (hasProperty) blocks.push(PROMPT_PROPERTY);
+  if (hasAnalytics) blocks.push(PROMPT_ANALYTICS);
   if (dynamicContext) blocks.push(dynamicContext);
 
   console.log('[ai-chat] Prompt blocks:', ['core', hasEstimates && 'estimates', hasTasks && 'tasks', hasProperty && 'property'].filter(Boolean).join('+'));
@@ -2246,6 +2419,10 @@ const TOOL_STATUS_LABELS: Record<string, string> = {
   get_estimate_details: 'Pulling up the estimate…', search_employees: 'Searching employees…',
   search_vendors: 'Searching vendors…', get_activity_log: 'Checking recent activity…',
   search_cost_library: 'Checking cost library…', web_search: 'Searching the web…',
+  get_customer_activity: 'Checking what the customer did…', get_analytics_overview: 'Crunching the numbers…',
+  get_website_traffic: 'Checking website traffic…', get_industry_news: 'Reading the news…',
+  get_material_prices: 'Checking material prices…', get_alert_routing: 'Checking alert routing…',
+  refresh_news: 'Refreshing the news feeds…',
   property_lookup: 'Looking up the property…', save_memory: 'Saving that…',
   list_tasks: 'Checking your tasks…', get_daily_briefing: 'Building your briefing…',
   create_customer: 'Creating the customer…', update_customer: 'Updating the customer…',
