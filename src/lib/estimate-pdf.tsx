@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, Image, StyleSheet, Font, renderToBuffer, Svg, Circle, Line, Rect } from '@react-pdf/renderer';
+import { reportingClause } from '@/lib/reporting';
 import React from 'react';
 import { estimateDisplayDate } from './estimates';
 
@@ -371,6 +372,12 @@ function LineItemRow({ item, counter }: { item: any; counter: number }) {
 }
 
 function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers, options = [] }: PDFProps) {
+  // Reporting cadence chosen in the wizard prints as its own contract term,
+  // so JR never types it in (src/lib/reporting.ts).
+  const reportingText = reportingClause(estimate.reporting_cadence, estimate.reporting_day, estimate.reporting_includes);
+  const allDisclaimers = reportingText
+    ? [{ id: 'reporting', title: 'Progress Reporting', body: reportingText.replace(/^Progress Reporting: /, '') }, ...disclaimers]
+    : disclaimers;
   const customer = estimate.customer;
   const displayDate = estimateDisplayDate(estimate);
   const scopeText = estimate.scope_of_work || estimate.project_description || '';
@@ -813,23 +820,23 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
         )}
 
         {/* ═══ 7. TERMS & CONDITIONS — Fix 1: Header + first term kept together ═══ */}
-        {disclaimers.length > 0 && (
+        {allDisclaimers.length > 0 && (
           <View style={{ marginBottom: sectionGap }}>
             {/* Header + first term as one unbreakable block to prevent orphaned header */}
             <View wrap={false}>
               <Text style={s.sectionLabel}>Terms & Conditions</Text>
-              {disclaimers.length > 0 && (
+              {allDisclaimers.length > 0 && (
                 <View style={s.disclaimerBlock}>
                   <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
                     <Text style={s.disclaimerNumber}>1.</Text>
-                    <Text style={s.disclaimerTitle}>{disclaimers[0].title}</Text>
+                    <Text style={s.disclaimerTitle}>{allDisclaimers[0].title}</Text>
                   </View>
-                  <Text style={s.disclaimerBody}>{disclaimers[0].body}</Text>
+                  <Text style={s.disclaimerBody}>{allDisclaimers[0].body}</Text>
                 </View>
               )}
             </View>
             {/* Remaining terms — each is wrap={false} so breaks only between terms */}
-            {disclaimers.slice(1).map((d: any, i: number) => (
+            {allDisclaimers.slice(1).map((d: any, i: number) => (
               <View key={d.id || (i + 1)} style={s.disclaimerBlock} wrap={false}>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
                   <Text style={s.disclaimerNumber}>{i + 2}.</Text>

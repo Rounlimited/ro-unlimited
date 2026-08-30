@@ -77,6 +77,7 @@ interface EmailAccount {
 
 import EstimatePhotos, { EstimatePhoto } from '@/components/admin/estimates/EstimatePhotos';
 import OptionsBuilder from '@/components/admin/estimates/OptionsBuilder';
+import ProgressPanel from '@/components/admin/estimates/ProgressPanel';
 import CustomerActivity from '@/components/admin/estimates/CustomerActivity';
 
 interface Estimate {
@@ -156,6 +157,7 @@ const TABS = [
   { id: 'overview',   label: 'Overview' },
   { id: 'line-items', label: 'Line Items' },
   { id: 'options',    label: 'Options' },
+  { id: 'progress',   label: 'Progress' },
   { id: 'financials', label: 'Financials' },
   { id: 'schedule',   label: 'Schedule' },
   { id: 'terms',      label: 'Terms' },
@@ -991,6 +993,10 @@ export default function EstimateDetailPage() {
             </div>
             <OptionsBuilder estimateId={String(estimate.id)} />
           </div>
+        )}
+
+        {activeTab === 'progress' && (
+          <ProgressPanel estimateId={String(estimate.id)} />
         )}
 
         {activeTab === 'financials' && (

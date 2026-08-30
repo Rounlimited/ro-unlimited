@@ -14,6 +14,29 @@ import {
 } from 'lucide-react';
 import { useDeviceContext } from '@/components/animations/useMediaQuery';
 
+import { SCHEDULE_META, BUDGET_META, type ScheduleStatus, type BudgetStatus } from '@/lib/reporting';
+
+/** JR's job-status flags — internal only, never on the customer link. */
+function JobStatusPills({ estimate }: { estimate: { schedule_status?: string | null; budget_status?: string | null } }) {
+  const sched = estimate.schedule_status as ScheduleStatus | undefined;
+  const budget = estimate.budget_status as BudgetStatus | undefined;
+  if (!sched && !budget) return null;
+  const pill = (label: string, meta: { color: string; bg: string }) => (
+    <span key={label} className="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-bold"
+      style={{ background: meta.bg, color: meta.color, border: '1px solid ' + meta.color + '55' }}>
+      {label}
+    </span>
+  );
+  return (
+    <>
+      {sched && SCHEDULE_META[sched] && pill(
+        sched === 'on' ? 'On Schedule' : sched === 'ahead' ? 'Ahead' : 'Behind', SCHEDULE_META[sched])}
+      {budget && BUDGET_META[budget] && pill(
+        budget === 'on' ? 'On Budget' : budget === 'under' ? 'Under Budget' : 'Over Budget', BUDGET_META[budget])}
+    </>
+  );
+}
+
 interface Estimate {
   id: string;
   estimate_number: string;
@@ -30,6 +53,8 @@ interface Estimate {
   last_viewed_at?: string | null;
   last_viewed_device?: string | null;
   last_viewed_location?: string | null;
+  schedule_status?: string | null;
+  budget_status?: string | null;
   customer: {
     first_name: string;
     last_name: string;
@@ -436,6 +461,7 @@ export default function EstimatesPage() {
                             {statusCfg.label}
                           </span>
                           <EngagementPills estimate={estimate} />
+                          <div className="flex gap-1 flex-wrap"><JobStatusPills estimate={estimate} /></div>
                         </div>
                       </td>
                       <td className="px-4 py-3.5 text-[15px] font-bold text-white tabular-nums">{formatCurrency(estimate.total || 0)}</td>
@@ -485,6 +511,7 @@ export default function EstimatesPage() {
                       <span className="text-[16px] font-bold text-[#C9A84C]">{estimate.estimate_number}</span>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>{statusCfg.label}</span>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${divCfg.bg} ${divCfg.text}`}><DivIcon size={10} />{divCfg.label}</span>
+                      <JobStatusPills estimate={estimate} />
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-[18px] font-bold text-white">{formatCurrency(estimate.total || 0)}</span>

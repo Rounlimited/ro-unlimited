@@ -143,6 +143,9 @@ export default function NewEstimateWizard() {
   const [disclaimerIds, setDisclaimerIds] = useState<string[]>([]);
   const [exclusions, setExclusions] = useState('');
   const [inclusions, setInclusions] = useState('');
+  const [reporting, setReporting] = useState<{ cadence: string; day: string; includes: string[] }>(
+    { cadence: '', day: 'Friday', includes: [] },
+  );
   const [recommendations, setRecommendations] = useState('');
 
   /* ─── Load existing draft ──────────────────────────────────── */
@@ -240,6 +243,13 @@ export default function NewEstimateWizard() {
         // Step 7 — disclaimers, exclusions & inclusions
         if (data.disclaimer_ids?.length) setDisclaimerIds(data.disclaimer_ids);
         if (data.exclusions) setExclusions(data.exclusions);
+        if (data.reporting_cadence) {
+          setReporting({
+            cadence: data.reporting_cadence,
+            day: data.reporting_day || 'Friday',
+            includes: Array.isArray(data.reporting_includes) ? data.reporting_includes : [],
+          });
+        }
         if (data.inclusions) setInclusions(data.inclusions);
         if (data.recommendations) setRecommendations(data.recommendations);
 
@@ -596,7 +606,12 @@ export default function NewEstimateWizard() {
           });
           break;
         case 7:
-          await patchEstimate({ disclaimer_ids: disclaimerIds, exclusions, inclusions });
+          await patchEstimate({
+            disclaimer_ids: disclaimerIds, exclusions, inclusions,
+            reporting_cadence: reporting.cadence || null,
+            reporting_day: reporting.day || null,
+            reporting_includes: reporting.includes,
+          });
           break;
       }
     } catch (err) {
@@ -953,6 +968,10 @@ export default function NewEstimateWizard() {
               onChangeDisclaimers={setDisclaimerIds}
               onChangeExclusions={setExclusions}
               onChangeInclusions={setInclusions}
+              reportingCadence={reporting.cadence}
+              reportingDay={reporting.day}
+              reportingIncludes={reporting.includes}
+              onChangeReporting={setReporting}
             />
           )}
           {currentStep === 8 && estimateId && (

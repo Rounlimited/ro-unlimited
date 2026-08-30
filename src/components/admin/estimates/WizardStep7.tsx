@@ -17,6 +17,8 @@ interface DefaultInclusion {
   is_default: boolean;
 }
 
+import { CADENCES, WEEKDAYS, REPORT_INCLUDES, DEFAULT_INCLUDES, reportingClause, type Cadence } from '@/lib/reporting';
+
 interface Props {
   selectedDisclaimerIds: string[];
   exclusions: string;
@@ -24,6 +26,10 @@ interface Props {
   onChangeDisclaimers: (ids: string[]) => void;
   onChangeExclusions: (text: string) => void;
   onChangeInclusions: (text: string) => void;
+  reportingCadence?: string;
+  reportingDay?: string;
+  reportingIncludes?: string[];
+  onChangeReporting?: (v: { cadence: string; day: string; includes: string[] }) => void;
 }
 
 export default function WizardStep7({
@@ -33,7 +39,19 @@ export default function WizardStep7({
   onChangeDisclaimers,
   onChangeExclusions,
   onChangeInclusions,
+  reportingCadence = '',
+  reportingDay = 'Friday',
+  reportingIncludes,
+  onChangeReporting,
 }: Props) {
+  const includes = reportingIncludes && reportingIncludes.length ? reportingIncludes : DEFAULT_INCLUDES;
+  const setReporting = (v: Partial<{ cadence: string; day: string; includes: string[] }>) =>
+    onChangeReporting?.({
+      cadence: v.cadence ?? reportingCadence,
+      day: v.day ?? reportingDay,
+      includes: v.includes ?? includes,
+    });
+  const clausePreview = reportingClause(reportingCadence, reportingDay, includes);
   const [disclaimers, setDisclaimers] = useState<Disclaimer[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -106,6 +124,94 @@ export default function WizardStep7({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
+      {/* ── Progress reporting: pick a cadence, the clause writes itself ── */}
+      {onChangeReporting && (
+        <div className="rounded-2xl border border-white/8 bg-[#111] p-5 mb-5">
+          <h3 className="text-[17px] font-bold mb-1">Progress Reporting</h3>
+          <p className="text-[14px] text-white/40 mb-4">
+            How often the customer hears from us. Pick one and the clause is written into the
+            contract and PDF — nothing to type in.
+          </p>
+
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
+            {CADENCES.map((c) => {
+              const on = reportingCadence === c.id || (!reportingCadence && c.id === 'none');
+              return (
+                <button key={c.id} type="button" onClick={() => setReporting({ cadence: c.id })}
+                  className="min-h-[52px] px-2 rounded-xl text-[15px] font-bold active:scale-95 transition-all"
+                  style={on
+                    ? { background: 'rgba(201,168,76,0.18)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.45)' }
+                    : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {(reportingCadence === 'weekly' || reportingCadence === 'biweekly') && (
+            <div className="mb-4">
+              <p className="text-[14px] font-semibold text-white/50 uppercase tracking-wide mb-2">Day</p>
+              <div className="grid grid-cols-5 gap-2">
+                {WEEKDAYS.map((d) => (
+                  <button key={d} type="button" onClick={() => setReporting({ day: d })}
+                    className="min-h-[48px] rounded-lg text-[14px] font-bold active:scale-95"
+                    style={reportingDay === d
+                      ? { background: 'rgba(201,168,76,0.18)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.45)' }
+                      : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    {d.slice(0, 3)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {reportingCadence === 'monthly' && (
+            <div className="mb-4">
+              <p className="text-[14px] font-semibold text-white/50 uppercase tracking-wide mb-2">Day of month</p>
+              <div className="grid grid-cols-4 gap-2">
+                {['1st', '5th', '15th', 'Last'].map((d) => (
+                  <button key={d} type="button" onClick={() => setReporting({ day: d })}
+                    className="min-h-[48px] rounded-lg text-[15px] font-bold active:scale-95"
+                    style={reportingDay === d
+                      ? { background: 'rgba(201,168,76,0.18)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.45)' }
+                      : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {reportingCadence && reportingCadence !== 'none' && (
+            <>
+              <p className="text-[14px] font-semibold text-white/50 uppercase tracking-wide mb-2">Each report includes</p>
+              <div className="flex gap-1.5 flex-wrap mb-4">
+                {REPORT_INCLUDES.map((r) => {
+                  const on = includes.includes(r.id);
+                  return (
+                    <button key={r.id} type="button"
+                      onClick={() => setReporting({ includes: on ? includes.filter((x) => x !== r.id) : [...includes, r.id] })}
+                      className="min-h-[44px] px-3.5 rounded-full text-[14px] font-semibold active:scale-95"
+                      style={on
+                        ? { background: 'rgba(53,208,127,0.12)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.35)' }
+                        : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      {r.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {clausePreview && (
+                <div className="rounded-xl p-3.5 text-[14px] leading-relaxed"
+                  style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)', color: 'rgba(255,255,255,0.65)' }}>
+                  <span className="font-bold" style={{ color: '#D4B965' }}>Goes in the contract: </span>
+                  {clausePreview}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
         <Loader2 size={24} className="animate-spin text-[#C9A84C]" />
         <span className="ml-3 text-[15px] text-white/50">Loading...</span>
       </div>
