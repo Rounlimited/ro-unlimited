@@ -39,6 +39,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       prev_percent: report.prev_percent,
       phases: report.phases || [],
       completed: report.completed || [],
+      log_entries: report.log_entries || [],
       photos: report.photos || [],
       summary: report.summary,
       next_up: report.next_up,

@@ -38,6 +38,7 @@ export interface DraftedReport {
   phases: { phase: string; percent: number }[];
   completed: string[];
   photos: { url: string; caption?: string | null }[];
+  log_entries: LogEntry[];
   summary: string;
   next_up: string | null;
   schedule_status: string | null;
@@ -45,6 +46,44 @@ export interface DraftedReport {
   status_reason: string | null;
   billed_to_date: number | null;
   contract_total: number | null;
+}
+
+export const LOG_TYPES: { id: string; label: string; hint: string }[] = [
+  { id: 'work',       label: 'Work Done',   hint: 'Water line installed, footings poured' },
+  { id: 'rain',       label: 'Rain / No Work', hint: 'Rained out — counts as a lost day' },
+  { id: 'delay',      label: 'Problem',     hint: 'Something held the job up' },
+  { id: 'milestone',  label: 'Milestone',   hint: 'A phase finished, a big pour, a set' },
+  { id: 'inspection', label: 'Inspection',  hint: 'Passed, failed, or scheduled' },
+  { id: 'note',       label: 'Note',        hint: 'Anything else worth recording' },
+];
+
+export interface LogEntry {
+  id?: string;
+  entry_date: string;
+  type: string;
+  text: string | null;
+  reason?: string | null;
+  include_in_report?: boolean;
+}
+
+const dayLabel = (d: string) =>
+  new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+/** The day-by-day lines a customer actually wants to read. */
+export function formatLogLines(entries: LogEntry[]): string[] {
+  return entries
+    .filter((e) => e.include_in_report !== false)
+    .slice()
+    .sort((a, b) => a.entry_date.localeCompare(b.entry_date))
+    .map((e) => {
+      const when = dayLabel(e.entry_date);
+      if (e.type === 'rain' && !e.text) return `${when} — Rained out, no work.`;
+      const body = (e.text || '').trim().replace(/\s+/g, ' ');
+      const withStop = /[.!?]$/.test(body) ? body : body + '.';
+      if (e.type === 'rain') return `${when} — Rain: ${withStop}`;
+      if (e.type === 'delay') return `${when} — ${withStop}`;
+      return `${when} — ${withStop}`;
+    });
 }
 
 const list = (items: string[]) =>
@@ -55,6 +94,8 @@ const list = (items: string[]) =>
  * things the system actually knows — never invented detail.
  */
 export function draftSummary(d: {
+  logLines?: string[];
+  rainDays?: number;
   completed: string[];
   inProgress: { phase: string; percent: number } | null;
   nextUp: string | null;
@@ -66,6 +107,16 @@ export function draftSummary(d: {
   firstReport: boolean;
 }): string {
   const parts: string[] = [];
+
+  // What JR actually logged is the report; the rolled-up percentages follow
+  // as their own paragraph.
+  const blocks: string[] = [];
+  if (d.logLines && d.logLines.length) {
+    blocks.push(d.logLines.join('\n'));
+    if (d.rainDays) {
+      blocks.push(`${d.rainDays} ${d.rainDays === 1 ? 'day was' : 'days were'} lost to weather this period.`);
+    }
+  }
 
   if (d.completed.length) {
     parts.push(`${list(d.completed)} ${d.completed.length > 1 ? 'were' : 'was'} completed since the last update.`);
@@ -104,7 +155,8 @@ export function draftSummary(d: {
   if (d.statusNote && d.statusNote.trim()) parts.push(d.statusNote.trim());
 
   parts.push(`The project is ${d.percent}% complete overall.`);
-  return parts.join(' ');
+  blocks.push(parts.join(' '));
+  return blocks.join('\n\n');
 }
 
 /** Build (but do not save) the next report for a contract. */
@@ -130,6 +182,20 @@ export async function draftReport(
 
   if (estRes.error || !estRes.data) return { error: 'Estimate not found' };
   const est = estRes.data;
+  const lastForLog = (lastRes.data || [])[0];
+
+  // Everything logged since the last report went out (or everything, first time).
+  let logQuery = supabase
+    .from('job_log_entries')
+    .select('id, entry_date, type, text, reason, include_in_report')
+    .eq('estimate_id', estimateId)
+    .eq('include_in_report', true)
+    .order('entry_date', { ascending: true });
+  if (lastForLog?.period_end) logQuery = logQuery.gt('entry_date', lastForLog.period_end);
+  const { data: logRows } = await logQuery;
+  const logEntries: LogEntry[] = (logRows || []) as any;
+  const logLines = formatLogLines(logEntries);
+  const rainDays = logEntries.filter((e) => e.type === 'rain').length;
 
   const roll = rollUpProgress(itemsRes.data || [], progRes.data || []);
   const last = (lastRes.data || [])[0];
@@ -167,7 +233,10 @@ export async function draftReport(
     phases: roll.phases.map((p) => ({ phase: p.phase, percent: p.percent })),
     completed,
     photos,
+    log_entries: logEntries,
     summary: draftSummary({
+      logLines,
+      rainDays,
       completed,
       inProgress: inProgress ? { phase: inProgress.phase, percent: inProgress.percent } : null,
       nextUp,

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Loader2, FileText, Send, Copy, Check, ExternalLink, Trash2, Sparkles, Mail, Eye,
 } from 'lucide-react';
+import JobLogPanel from '@/components/admin/estimates/JobLogPanel';
 
 /**
  * Reports — the weekly/monthly update JR used to type up.
@@ -80,6 +81,9 @@ export default function ReportsPanel({ estimateId, cadenceLabel }: { estimateId:
 
   return (
     <div className="space-y-3">
+      {/* The log comes first: it is what the report is written from. */}
+      <JobLogPanel estimateId={estimateId} />
+
       <div className="rounded-2xl border border-white/8 bg-[#111] p-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>

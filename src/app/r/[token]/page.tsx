@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, CheckCircle2, Camera, ArrowRight } from 'lucide-react';
+import { Loader2, CheckCircle2, Camera, ArrowRight, CloudRain, Hammer, Flag, ClipboardCheck, AlertTriangle } from 'lucide-react';
 import { ProgressSection, useDocIntro } from '@/components/public/DocExperience';
 
 /**
@@ -14,6 +14,7 @@ interface Report {
   prev_percent: number;
   phases: { phase: string; percent: number }[];
   completed: string[];
+  log_entries: { entry_date: string; type: string; text: string | null }[];
   photos: { url: string; caption?: string | null }[];
   summary: string | null;
   next_up: string | null;
@@ -29,6 +30,15 @@ interface Report {
 const longDate = (s: string | null) =>
   s ? new Date(s.length === 10 ? s + 'T00:00:00' : s)
     .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+
+const LOG_ICON: Record<string, any> = {
+  rain: CloudRain, work: Hammer, milestone: Flag, inspection: ClipboardCheck, delay: AlertTriangle,
+};
+const LOG_COLOR: Record<string, string> = {
+  rain: '#5ba3dc', work: '#8a6d20', milestone: '#187a4b', inspection: '#7c5cd6', delay: '#c2410c',
+};
+const dayLabel = (d: string) =>
+  new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
 const photoSrc = (url: string) => (url.includes('cdn.sanity.io') ? url + '?w=900&auto=format' : url);
 
@@ -108,7 +118,31 @@ export default function ReportPage({ params }: { params: { token: string } }) {
             <p className="text-[13px] font-bold uppercase tracking-wide mb-2" style={{ color: '#8a6d20' }}>
               This Period
             </p>
-            <p className="text-[17px] leading-relaxed text-[#2a2a2a]">{report.summary}</p>
+            <p className="text-[17px] leading-relaxed text-[#2a2a2a] whitespace-pre-line">{report.summary}</p>
+          </section>
+        )}
+
+        {report.log_entries && report.log_entries.length > 0 && (
+          <section className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
+            <p className="text-[13px] font-bold uppercase tracking-wide mb-3" style={{ color: '#8a6d20' }}>
+              Day by Day
+            </p>
+            <div className="doc-rows space-y-3">
+              {report.log_entries.map((e, i) => {
+                const Icon = LOG_ICON[e.type] || Hammer;
+                return (
+                  <div key={i} className="flex items-start gap-3">
+                    <Icon size={17} style={{ color: LOG_COLOR[e.type] || '#8a6d20' }} className="shrink-0 mt-1" />
+                    <div className="min-w-0">
+                      <p className="text-[14px] text-[#9ca3af]">{dayLabel(e.entry_date)}</p>
+                      <p className="text-[17px] text-[#2a2a2a] leading-snug">
+                        {e.text || (e.type === 'rain' ? 'Rained out — no work.' : '')}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </section>
         )}
 
