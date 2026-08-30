@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, CalendarClock, Wallet, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Loader2, CalendarClock, Wallet, CheckCircle2, AlertTriangle, Plus, X, Trash2 } from 'lucide-react';
 import {
   SCHEDULE_META, BUDGET_META, STATUS_REASONS, cadenceLabel,
   type ScheduleStatus, type BudgetStatus,
@@ -13,7 +13,7 @@ import {
  * JR-sized: 17px body, 48px+ targets, labels never carried by color alone.
  */
 
-interface PhaseRow { phase: string; value: number; percent: number; earned: number; note: string | null }
+interface PhaseRow { phase: string; value: number; percent: number; earned: number; note: string | null; custom?: boolean; weight?: number | null }
 interface Data {
   percent: number; total_value: number; earned: number; phases: PhaseRow[];
   schedule_status: ScheduleStatus | null; budget_status: BudgetStatus | null;
@@ -29,6 +29,9 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [newPhase, setNewPhase] = useState('');
+  const [newWeight, setNewWeight] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -49,6 +52,30 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
       });
       const d = await res.json();
       if (!d.error) { setData(d); if (body.status_note === undefined) setNote(d.status_note || ''); }
+    } catch { /* leave as-is */ }
+    setSaving(null);
+  };
+
+  const addPhase = async () => {
+    const name = newPhase.trim();
+    if (!name) return;
+    await save({
+      phase: name,
+      percent_complete: 0,
+      custom: true,
+      weight: newWeight.trim() ? Number(newWeight) : null,
+      sort_order: (data?.phases.length || 0) + 1,
+    }, 'add');
+    setNewPhase(''); setNewWeight(''); setAdding(false);
+  };
+
+  const removePhase = async (phase: string) => {
+    if (!confirm('Remove "' + phase + '" from this job?')) return;
+    setSaving(phase);
+    try {
+      const res = await fetch('/api/admin/estimates/' + estimateId + '/progress?phase=' + encodeURIComponent(phase), { method: 'DELETE' });
+      const d = await res.json();
+      if (!d.error) setData(d);
     } catch { /* leave as-is */ }
     setSaving(null);
   };
@@ -82,7 +109,11 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
           <div className="h-full rounded-full transition-all duration-500"
             style={{ width: data.percent + '%', background: 'linear-gradient(90deg, #a8893d, #D4B965)' }} />
         </div>
-        <p className="text-[13px] text-white/35 mt-2">Weighted by the dollar value of each phase.</p>
+        <p className="text-[13px] text-white/35 mt-2">
+          {data.total_value > 0
+            ? 'Weighted by the dollar value of each phase.'
+            : 'Every phase counts equally — give a phase a share below to weight it.'}
+        </p>
         {cadence && (
           <p className="text-[14px] mt-3 flex items-center gap-2" style={{ color: '#D4B965' }}>
             <CalendarClock size={15} /> Reporting to customer: {cadence}
@@ -185,7 +216,10 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
         <p className="text-[14px] text-white/40 mb-4">Straight from the line items on this contract.</p>
 
         {data.phases.length === 0 && (
-          <p className="text-[15px] text-white/40">No line items yet — add them and the phases show up here.</p>
+          <p className="text-[15px] text-white/40 mb-3">
+            Nothing here yet. On a lump-sum job just add the phases you actually work —
+            Site Prep, Footings, Framing — and tap them along as you go.
+          </p>
         )}
 
         <div className="space-y-4">
@@ -196,9 +230,20 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
                   {p.percent === 100 && <CheckCircle2 size={16} className="text-[#35d07f] shrink-0" />}
                   {p.phase}
                 </p>
-                <p className="text-[15px] font-bold shrink-0" style={{ color: p.percent === 100 ? '#35d07f' : '#D4B965' }}>
-                  {p.percent}%{p.value > 0 && <span className="text-white/30 font-normal"> · {fmt$(p.value)}</span>}
-                </p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <p className="text-[15px] font-bold" style={{ color: p.percent === 100 ? '#35d07f' : '#D4B965' }}>
+                    {p.percent}%
+                    {p.value > 0 && (
+                      <span className="text-white/30 font-normal"> · {p.custom && !p.weight ? '' : fmt$(p.value)}</span>
+                    )}
+                  </p>
+                  {p.custom && (
+                    <button onClick={() => removePhase(p.phase)} disabled={saving !== null}
+                      className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center active:scale-95 disabled:opacity-40">
+                      <Trash2 size={14} className="text-white/35" />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="h-2 rounded-full bg-white/8 overflow-hidden mb-2">
                 <div className="h-full rounded-full transition-all duration-500"
@@ -222,6 +267,41 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
             </div>
           ))}
         </div>
+
+        {adding ? (
+          <div className="mt-4 rounded-xl border border-white/10 bg-white/3 p-3.5">
+            <div className="flex items-center justify-between mb-2.5">
+              <p className="text-[15px] font-bold">Add a phase</p>
+              <button onClick={() => setAdding(false)} className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
+                <X size={16} className="text-white/50" />
+              </button>
+            </div>
+            <input value={newPhase} onChange={(e) => setNewPhase(e.target.value)}
+              placeholder="Footings & Foundation" autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && addPhase()}
+              className="w-full min-h-[52px] px-4 rounded-xl bg-white/5 border border-white/10 text-[17px] placeholder:text-white/25 focus:outline-none focus:border-[#C9A84C]/50 mb-2.5" />
+            <div className="flex gap-2 items-center mb-3">
+              <input value={newWeight} onChange={(e) => setNewWeight(e.target.value)}
+                placeholder="Share" type="number" inputMode="decimal"
+                className="w-28 min-h-[52px] px-3 rounded-xl bg-white/5 border border-white/10 text-[17px] placeholder:text-white/25 focus:outline-none focus:border-[#C9A84C]/50" />
+              <p className="text-[13px] text-white/35 leading-snug">
+                How big a piece of the job this is (any scale — 10, or 15000).
+                Leave blank and every phase counts the same.
+              </p>
+            </div>
+            <button onClick={addPhase} disabled={!newPhase.trim() || saving !== null}
+              className="w-full min-h-[52px] rounded-xl text-[16px] font-bold text-black disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.99]"
+              style={{ background: 'linear-gradient(145deg, #C9A84C, #a8893d)' }}>
+              {saving === 'add' ? <Loader2 size={18} className="animate-spin" /> : <Plus size={17} />} Add Phase
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setAdding(true)}
+            className="w-full min-h-[52px] mt-4 rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99]"
+            style={{ background: 'rgba(201,168,76,0.1)', color: '#D4B965', border: '1px dashed rgba(201,168,76,0.4)' }}>
+            <Plus size={18} /> Add a Phase
+          </button>
+        )}
       </div>
     </div>
   );

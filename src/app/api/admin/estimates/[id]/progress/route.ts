@@ -21,7 +21,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
         .eq('id', id)
         .single(),
       supabase.from('estimate_line_items').select('phase, total, sort_order').eq('estimate_id', id),
-      supabase.from('estimate_phase_progress').select('phase, percent_complete, note, updated_at').eq('estimate_id', id),
+      supabase.from('estimate_phase_progress').select('phase, percent_complete, note, weight, sort_order, custom, updated_at').eq('estimate_id', id),
     ]);
 
     if (estRes.error || !estRes.data) {
@@ -30,6 +30,8 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 
     const roll = rollUpProgress(itemsRes.data || [], progRes.data || []);
     const notes = new Map((progRes.data || []).map((p) => [p.phase, p.note]));
+    const custom = new Map((progRes.data || []).map((p) => [p.phase, !!p.custom]));
+    const weights = new Map((progRes.data || []).map((p) => [p.phase, p.weight]));
 
     return NextResponse.json({
       estimate_id: id,
@@ -37,7 +39,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       percent: roll.percent,
       total_value: roll.totalValue,
       earned: roll.earned,
-      phases: roll.phases.map((p) => ({ ...p, note: notes.get(p.phase) || null })),
+      phases: roll.phases.map((p) => ({ ...p, note: notes.get(p.phase) || null, custom: custom.get(p.phase) || false, weight: weights.get(p.phase) ?? null })),
       schedule_status: estRes.data.schedule_status,
       budget_status: estRes.data.budget_status,
       status_reason: estRes.data.status_reason,
@@ -65,11 +67,22 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
     const body = await req.json();
 
     if (body.phase) {
+      // Only write what the caller actually sent. Setting a weight must not
+      // silently reset the phase back to 0%.
       const percent = Math.max(0, Math.min(100, Math.round(Number(body.percent_complete) || 0)));
       const { error } = await supabase
         .from('estimate_phase_progress')
         .upsert(
-          { estimate_id: id, phase: String(body.phase), percent_complete: percent, note: body.note ?? null, updated_at: new Date().toISOString() },
+          {
+            estimate_id: id,
+            phase: String(body.phase),
+            ...(body.percent_complete !== undefined ? { percent_complete: percent } : {}),
+            ...(body.note !== undefined ? { note: body.note } : {}),
+            ...(body.weight !== undefined ? { weight: body.weight === null ? null : Number(body.weight) } : {}),
+            ...(body.custom !== undefined ? { custom: !!body.custom } : {}),
+            ...(body.sort_order !== undefined ? { sort_order: Number(body.sort_order) || 0 } : {}),
+            updated_at: new Date().toISOString(),
+          },
           { onConflict: 'estimate_id,phase' },
         );
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -92,6 +105,24 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
     return GET(req, { params });
   } catch (err) {
     console.error('[estimates/[id]/progress] PUT error:', err);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+/** DELETE ?phase=Name — remove a phase JR added by hand. */
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
+  try {
+    const supabase = createAdminClient();
+    const phase = new URL(req.url).searchParams.get('phase');
+    if (!phase) return NextResponse.json({ error: 'phase required' }, { status: 400 });
+    const { error } = await supabase
+      .from('estimate_phase_progress')
+      .delete()
+      .eq('estimate_id', params.id)
+      .eq('phase', phase);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return GET(req, { params });
+  } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

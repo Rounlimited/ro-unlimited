@@ -119,7 +119,7 @@ export async function draftReport(
       .eq('id', estimateId)
       .single(),
     supabase.from('estimate_line_items').select('phase, total, sort_order').eq('estimate_id', estimateId),
-    supabase.from('estimate_phase_progress').select('phase, percent_complete').eq('estimate_id', estimateId),
+    supabase.from('estimate_phase_progress').select('phase, percent_complete, weight, sort_order, custom').eq('estimate_id', estimateId),
     supabase
       .from('progress_reports')
       .select('percent, phases, period_end, created_at')
@@ -191,6 +191,11 @@ export async function draftReport(
 export function nextDueDate(cadence: string | null, day: string | null, from = new Date()): string | null {
   if (!cadence || cadence === 'none' || cadence === 'phase') return null;
   const d = new Date(from);
+  if (cadence === 'daily') {
+    const next = new Date(d);
+    next.setDate(next.getDate() + 1);
+    return next.toISOString().slice(0, 10);
+  }
   if (cadence === 'monthly') {
     const target = day === 'Last' ? 0 : parseInt(day || '1', 10) || 1;
     const next = new Date(d.getFullYear(), d.getMonth() + 1, target === 0 ? 0 : target);

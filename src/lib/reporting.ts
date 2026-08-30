@@ -9,12 +9,13 @@
  *     reviews, never on the customer's live contract page.
  */
 
-export type Cadence = 'weekly' | 'biweekly' | 'monthly' | 'phase' | 'none';
+export type Cadence = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'phase' | 'none';
 export type ScheduleStatus = 'ahead' | 'on' | 'behind';
 export type BudgetStatus = 'under' | 'on' | 'over';
 export type StatusReason = 'weather' | 'permits' | 'materials' | 'owner' | 'change_order' | 'subcontractor';
 
 export const CADENCES: { id: Cadence; label: string; hint: string }[] = [
+  { id: 'daily',    label: 'Daily',       hint: 'An update every working day' },
   { id: 'weekly',   label: 'Weekly',      hint: 'A written update every week' },
   { id: 'biweekly', label: 'Every 2 Wks', hint: 'An update every other week' },
   { id: 'monthly',  label: 'Monthly',     hint: 'One update per month' },
@@ -66,7 +67,8 @@ export function reportingClause(cadence?: string | null, day?: string | null, in
     ? items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1]
     : items[0] || 'a summary of work completed';
 
-  const when = cadence === 'weekly'   ? `each ${day || 'Friday'}`
+  const when = cadence === 'daily'    ? 'each working day'
+    : cadence === 'weekly'   ? `each ${day || 'Friday'}`
     : cadence === 'biweekly' ? `every other ${day || 'Friday'}`
     : cadence === 'monthly'  ? `on the ${day || '1st'} of each month`
     : 'as each phase of the work is completed';
@@ -77,6 +79,7 @@ export function reportingClause(cadence?: string | null, day?: string | null, in
 /** Short human label for chips and report headers. */
 export function cadenceLabel(cadence?: string | null, day?: string | null): string | null {
   if (!cadence || cadence === 'none') return null;
+  if (cadence === 'daily') return 'Daily';
   if (cadence === 'weekly') return `Weekly · ${day || 'Friday'}`;
   if (cadence === 'biweekly') return `Every 2 Weeks · ${day || 'Friday'}`;
   if (cadence === 'monthly') return `Monthly · ${day || '1st'}`;
@@ -97,7 +100,7 @@ export interface PhaseRoll {
  */
 export function rollUpProgress(
   lineItems: { phase?: string | null; total?: number | null; sort_order?: number | null }[],
-  progress: { phase: string; percent_complete: number }[],
+  progress: { phase: string; percent_complete: number; weight?: number | null; sort_order?: number | null; custom?: boolean | null }[],
 ): { phases: PhaseRoll[]; totalValue: number; earned: number; percent: number } {
   const byPhase = new Map<string, number>();
   // Phases come back in WORK order — the sort order of their line items — not
@@ -110,6 +113,19 @@ export function rollUpProgress(
     if (!order.has(phase) || at < (order.get(phase) as number)) order.set(phase, at);
   }
   const pct = new Map(progress.map((p) => [p.phase, Math.max(0, Math.min(100, Number(p.percent_complete) || 0))]));
+
+  // Lump-sum contracts price the job as one number, so there may be no priced
+  // phases at all. JR's hand-added phases carry an optional relative weight
+  // ("how big a piece of the job is this"); phases with no weight and no line
+  // items simply count equally.
+  for (const p of progress) {
+    if (byPhase.has(p.phase)) {
+      if (!byPhase.get(p.phase) && p.weight) byPhase.set(p.phase, Number(p.weight));
+      continue;
+    }
+    byPhase.set(p.phase, Number(p.weight || 0));
+    order.set(p.phase, 1000 + Number(p.sort_order ?? 0));
+  }
 
   const phases: PhaseRoll[] = Array.from(byPhase.entries())
     .sort((a, b) => (order.get(a[0]) ?? 0) - (order.get(b[0]) ?? 0))

@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import {
-  Plus, Search, FileText, X, ChevronRight, DollarSign,
+  Plus, Search, FileText, X, ChevronRight, DollarSign, HardHat,
   Clock, AlertTriangle, Send, Eye, CheckCircle2, XCircle,
   Home, Building2, Mountain, Filter, Trash2, Loader2, ArrowUpDown, Link2, Check, Download,
 } from 'lucide-react';
@@ -132,6 +132,7 @@ export default function EstimatesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Estimate | null>(null);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [trackingJob, setTrackingJob] = useState(false);
   const quickCopyLink = async (e: React.MouseEvent, estimateId: string) => {
     e.preventDefault(); e.stopPropagation();
     try {
@@ -265,16 +266,26 @@ export default function EstimatesPage() {
               <p className="text-[13px] text-white/30">Create and manage estimates</p>
             </div>
           </div>
-          <Link
-            href="/admin/estimates/new"
-            className="flex items-center gap-2 px-4 py-2.5 text-black text-[13px] font-semibold rounded-xl hover:opacity-90 transition-all active:scale-95"
-            style={{
-              background: 'linear-gradient(135deg, #C9A84C, #D4772C)',
-              boxShadow: '0 0 16px rgba(201,168,76,0.3)',
-            }}
-          >
-            <Plus size={14} /> New Estimate
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setTrackingJob(true)}
+              className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold rounded-xl transition-all active:scale-95"
+              style={{ background: 'rgba(201,168,76,0.12)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.35)' }}
+              title="Track a job that never went through the estimator"
+            >
+              <HardHat size={14} /> Track a Job
+            </button>
+            <Link
+              href="/admin/estimates/new"
+              className="flex items-center gap-2 px-4 py-2.5 text-black text-[13px] font-semibold rounded-xl hover:opacity-90 transition-all active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #C9A84C, #D4772C)',
+                boxShadow: '0 0 16px rgba(201,168,76,0.3)',
+              }}
+            >
+              <Plus size={14} /> New Estimate
+            </Link>
+          </div>
         </div>
 
         {/* Stats row */}
@@ -549,7 +560,9 @@ export default function EstimatesPage() {
           </div>
         )}
 
-        {/* Delete confirmation modal */}
+        {trackingJob && <TrackJobSheet onClose={() => setTrackingJob(false)} onCreated={(id) => router.push('/admin/estimates/' + id)} />}
+
+      {/* Delete confirmation modal */}
         {deleteTarget && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4" onClick={() => !deleting && setDeleteTarget(null)}>
             <div className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
@@ -618,5 +631,98 @@ function EngagementPills({ estimate }: { estimate: Estimate }) {
         </span>
       )}
     </span>
+  );
+}
+
+
+/* --- Track a job that never went through the estimator ---------------
+   JR bid it on paper, or it is an old contract, and he still wants
+   percent complete and customer reports on it. Creates a minimal signed
+   job record so the Progress tab and reports work on it unchanged. */
+function TrackJobSheet({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
+  const [name, setName] = useState('');
+  const [customer, setCustomer] = useState('');
+  const [total, setTotal] = useState('');
+  const [cadence, setCadence] = useState('weekly');
+  const [phases, setPhases] = useState('Site Prep, Footings, Framing, Finish');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (!name.trim()) { setError('Give the job a name'); return; }
+    if (!customer.trim()) { setError('Who is it for?'); return; }
+    setSaving(true); setError(null);
+    try {
+      const res = await fetch('/api/admin/jobs', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project_name: name.trim(),
+          customer_name: customer.trim(),
+          total: total ? Number(total) : 0,
+          reporting_cadence: cadence,
+          phases: phases.split(',').map((x) => x.trim()).filter(Boolean),
+        }),
+      });
+      const d = await res.json();
+      if (d.error || !d.job) { setError(d.error || 'Could not create the job'); setSaving(false); return; }
+      onCreated(d.job.id);
+    } catch { setError('Network error'); setSaving(false); }
+  };
+
+  const inputCls = 'w-full min-h-[52px] px-4 rounded-xl bg-white/5 border border-white/10 text-[17px] placeholder:text-white/25 focus:outline-none focus:border-[#C9A84C]/50';
+  const labelCls = 'block text-[14px] font-semibold text-white/50 uppercase tracking-wide mb-1.5';
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center sm:justify-center">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-[#121212] border-t sm:border border-white/10 p-5"
+        style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
+        <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4 sm:hidden" />
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-[20px] font-bold">Track a Job</h2>
+          <button onClick={onClose} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5">
+            <X size={20} className="text-white/60" />
+          </button>
+        </div>
+        <p className="text-[14px] text-white/40 mb-5">
+          For work you did not estimate in here. Same progress tracking and customer
+          reports &mdash; no contract required.
+        </p>
+
+        <label className={labelCls}>Job name</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Miller barn pad & drive" className={inputCls + ' mb-3'} />
+
+        <label className={labelCls}>Customer</label>
+        <input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="Dale Miller" className={inputCls + ' mb-3'} />
+
+        <label className={labelCls}>Contract amount (optional)</label>
+        <input value={total} onChange={(e) => setTotal(e.target.value)} placeholder="Lump sum $" type="number" inputMode="decimal" className={inputCls + ' mb-1'} />
+        <p className="text-[13px] text-white/30 mb-3">Lump sum is fine &mdash; percent complete comes from the phases below.</p>
+
+        <label className={labelCls}>Phases (comma separated)</label>
+        <input value={phases} onChange={(e) => setPhases(e.target.value)} className={inputCls + ' mb-1'} />
+        <p className="text-[13px] text-white/30 mb-3">Add, rename or weight these any time.</p>
+
+        <label className={labelCls}>Reports to the customer</label>
+        <div className="grid grid-cols-4 gap-2 mb-5">
+          {[['daily', 'Daily'], ['weekly', 'Weekly'], ['monthly', 'Monthly'], ['none', 'None']].map(([id, lbl]) => (
+            <button key={id} onClick={() => setCadence(id)}
+              className="min-h-[48px] rounded-xl text-[14px] font-bold active:scale-95"
+              style={cadence === id
+                ? { background: 'rgba(201,168,76,0.18)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.45)' }
+                : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+
+        {error && <p className="text-[15px] text-[#f87171] mb-3">{error}</p>}
+        <button onClick={submit} disabled={saving}
+          className="w-full min-h-[56px] rounded-xl text-[17px] font-bold text-black disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.99]"
+          style={{ background: 'linear-gradient(145deg, #C9A84C, #a8893d)', boxShadow: '0 4px 18px rgba(201,168,76,0.35)' }}>
+          {saving ? <Loader2 size={20} className="animate-spin" /> : <HardHat size={18} />} Start Tracking
+        </button>
+      </div>
+    </div>
   );
 }
