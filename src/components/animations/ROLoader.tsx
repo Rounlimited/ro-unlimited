@@ -22,7 +22,7 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
   const isAdmin = pathname?.startsWith('/admin');
   // Customer document links (/i/ invoices, /estimate/ estimates) render as
   // standalone pages — no navbar, footer, splash, or sticky call bar.
-  const isBare = isAdmin || pathname?.startsWith('/maintenance') || pathname?.startsWith('/i/') || pathname?.startsWith('/estimate/');
+  const isBare = isAdmin || pathname?.startsWith('/maintenance') || pathname?.startsWith('/i/') || pathname?.startsWith('/estimate/') || pathname?.startsWith('/r/');
 
   const splashRef = useRef<HTMLDivElement>(null);
   const roRef = useRef<HTMLImageElement>(null);

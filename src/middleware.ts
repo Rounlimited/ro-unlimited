@@ -117,6 +117,7 @@ export async function middleware(req: NextRequest) {
     // shouldn't bounce because the marketing site is being worked on.
     pathname.startsWith('/i/') ||
     pathname.startsWith('/estimate/') ||
+    pathname.startsWith('/r/') ||
     pathname.startsWith('/_next')
   ) {
     return NextResponse.next();

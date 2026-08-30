@@ -78,6 +78,8 @@ interface EmailAccount {
 import EstimatePhotos, { EstimatePhoto } from '@/components/admin/estimates/EstimatePhotos';
 import OptionsBuilder from '@/components/admin/estimates/OptionsBuilder';
 import ProgressPanel from '@/components/admin/estimates/ProgressPanel';
+import ReportsPanel from '@/components/admin/estimates/ReportsPanel';
+import { cadenceLabel } from '@/lib/reporting';
 import CustomerActivity from '@/components/admin/estimates/CustomerActivity';
 
 interface Estimate {
@@ -158,6 +160,7 @@ const TABS = [
   { id: 'line-items', label: 'Line Items' },
   { id: 'options',    label: 'Options' },
   { id: 'progress',   label: 'Progress' },
+  { id: 'reports',    label: 'Reports' },
   { id: 'financials', label: 'Financials' },
   { id: 'schedule',   label: 'Schedule' },
   { id: 'terms',      label: 'Terms' },
@@ -997,6 +1000,13 @@ export default function EstimateDetailPage() {
 
         {activeTab === 'progress' && (
           <ProgressPanel estimateId={String(estimate.id)} />
+        )}
+
+        {activeTab === 'reports' && (
+          <ReportsPanel
+            estimateId={String(estimate.id)}
+            cadenceLabel={cadenceLabel((estimate as any).reporting_cadence, (estimate as any).reporting_day)}
+          />
         )}
 
         {activeTab === 'financials' && (

@@ -6,6 +6,7 @@ import { getOptionsWithChoices, selectionsDelta } from '@/lib/estimate-options';
 import { OPTION_PRESETS, findOptionPreset, presetChoicesWithImages } from '@/lib/option-presets';
 import { searchLinePresets, GENERAL_LINE_PRESETS } from '@/lib/line-presets';
 import { searchImages, suggestImages, imageForKey } from '@/lib/option-images';
+import { rollUpProgress, cadenceLabel } from '@/lib/reporting';
 import { summarizeVisits, eventSentence, fmtSeconds, timeAgo } from '@/lib/doc-events-summary';
 import { getTraffic } from '@/lib/cloudflare-analytics';
 import { computeInsights } from '@/lib/analytics-insights';
@@ -272,6 +273,21 @@ const OPTIONS_TOOLS = [
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, option_id: { type: 'string' }, option_label: { type: 'string' }, label: { type: 'string' }, description: { type: 'string' }, selection_type: { type: 'string' }, required: { type: 'boolean' }, choices: { type: 'array', items: { type: 'object' } } } } },
   { name: 'delete_option_group', description: 'Remove an option group (and its choices) from an estimate. Identify by option_id or label.',
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, option_id: { type: 'string' }, option_label: { type: 'string' } } } },
+];
+
+const PROGRESS_TOOLS = [
+  { name: 'get_job_progress', description: "Percent complete by phase for a contract, plus JR's schedule/budget status. Overall percent is weighted by the dollar value of each phase.",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' } } } },
+  { name: 'set_phase_progress', description: 'Set how far along a phase is on a contract (0-100). Phase names come from the line items — call get_job_progress first if unsure.',
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, phase: { type: 'string' }, percent_complete: { type: 'number' } }, required: ['phase', 'percent_complete'] } },
+  { name: 'set_job_status', description: "Set the job's schedule and/or budget status flags (internal only — customers never see these). schedule_status: ahead|on|behind. budget_status: under|on|over. When behind, set status_reason: weather|permits|materials|owner|change_order|subcontractor.",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, schedule_status: { type: 'string' }, budget_status: { type: 'string' }, status_reason: { type: 'string' }, status_note: { type: 'string' } } } },
+  { name: 'list_progress_reports', description: 'Progress reports for a contract — drafts and sent, with their share links and view counts.',
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' } } } },
+  { name: 'draft_progress_report', description: 'Write the next progress report for a contract from its phases, photos and billing. Creates a DRAFT only — it is never visible to the customer until send_progress_report runs.',
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, summary: { type: 'string', description: 'Optional: replace the auto-written summary' } } } },
+  { name: 'send_progress_report', description: 'Send a drafted progress report to the customer. skip_email:true just activates the link for texting instead of emailing. Confirm with the user before calling — this reaches the customer.',
+    input_schema: { type: 'object' as const, properties: { report_id: { type: 'string' }, estimate_number: { type: 'string' }, skip_email: { type: 'boolean' }, to_email: { type: 'string' } } } },
 ];
 
 const INVOICE_WRITE_TOOLS = [
@@ -680,7 +696,7 @@ const WRITE_TOOLS = [
   },
 ];
 
-const ALL_TOOLS = [...READ_TOOLS, ...INVOICE_READ_TOOLS, ...OPTIONS_TOOLS, ...WRITE_TOOLS];
+const ALL_TOOLS = [...READ_TOOLS, ...INVOICE_READ_TOOLS, ...OPTIONS_TOOLS, ...PROGRESS_TOOLS, ...WRITE_TOOLS];
 
 // Trivial one-liner greetings on a fresh conversation don't need tools.
 // Everything else always gets the FULL tool set in deterministic order —
@@ -846,6 +862,109 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
     }
 
     // ── WRITE TOOLS ──
+    case 'get_job_progress':
+    case 'set_phase_progress':
+    case 'set_job_status':
+    case 'list_progress_reports':
+    case 'draft_progress_report':
+    case 'send_progress_report': {
+      const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+
+      // send_progress_report can be addressed by report id alone.
+      let estId = input.estimate_id;
+      if (!estId && input.estimate_number) {
+        const { data: e } = await supabase.from('estimates').select('id').eq('estimate_number', String(input.estimate_number).trim()).single();
+        if (!e) return { result: 'Contract not found.' };
+        estId = e.id;
+      }
+
+      if (name === 'send_progress_report') {
+        let reportId = input.report_id;
+        if (!reportId) {
+          if (!estId) return { result: 'Error: report_id or estimate_number required.' };
+          const { data: draft } = await supabase.from('progress_reports')
+            .select('id').eq('estimate_id', estId).eq('status', 'draft')
+            .order('created_at', { ascending: false }).limit(1);
+          if (!draft || !draft.length) return { result: 'No draft report waiting on that contract — draft one first.' };
+          reportId = draft[0].id;
+        }
+        const res = await fetch(`${base}/api/admin/reports/${reportId}/send`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ skip_email: !!input.skip_email, to_email: input.to_email }),
+        });
+        const data = await res.json();
+        if (!data.sent) return { result: `Error: ${data.error || 'send failed'}` };
+        return { result: JSON.stringify({ sent: true, emailed: !!data.emailed, to: data.to || null, link: data.link, note: data.note || data.error || null }) };
+      }
+
+      if (!estId) return { result: 'Error: estimate_id or estimate_number required.' };
+
+      if (name === 'get_job_progress') {
+        const res = await fetch(`${base}/api/admin/estimates/${estId}/progress`);
+        const d = await res.json();
+        if (d.error) return { result: `Error: ${d.error}` };
+        return { result: JSON.stringify({
+          estimate_number: d.estimate_number, percent: d.percent,
+          earned: d.earned, contract_value: d.total_value,
+          phases: d.phases.map((p: any) => ({ phase: p.phase, percent: p.percent, value: p.value })),
+          schedule_status: d.schedule_status, budget_status: d.budget_status,
+          status_reason: d.status_reason, status_note: d.status_note,
+          reporting: cadenceLabel(d.reporting_cadence, d.reporting_day),
+        }) };
+      }
+
+      if (name === 'set_phase_progress' || name === 'set_job_status') {
+        const body: any = name === 'set_phase_progress'
+          ? { phase: input.phase, percent_complete: input.percent_complete }
+          : {};
+        if (name === 'set_job_status') {
+          for (const k of ['schedule_status', 'budget_status', 'status_reason', 'status_note']) {
+            if (input[k] !== undefined) body[k] = input[k];
+          }
+          if (!Object.keys(body).length) return { result: 'Nothing to set — pass schedule_status, budget_status, status_reason or status_note.' };
+        }
+        const res = await fetch(`${base}/api/admin/estimates/${estId}/progress`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        });
+        const d = await res.json();
+        if (d.error) return { result: `Error: ${d.error}` };
+        return {
+          result: JSON.stringify({ success: true, percent: d.percent, phases: d.phases.map((p: any) => p.phase + ': ' + p.percent + '%'), schedule_status: d.schedule_status, budget_status: d.budget_status }),
+          action: { type: 'navigate', path: `/admin/estimates/${estId}`, description: 'Open job progress' },
+        };
+      }
+
+      if (name === 'list_progress_reports') {
+        const res = await fetch(`${base}/api/admin/estimates/${estId}/reports`);
+        const d = await res.json();
+        if (d.error) return { result: `Error: ${d.error}` };
+        return { result: JSON.stringify((d.reports || []).slice(0, 12).map((r: any) => ({
+          id: r.id, date: r.period_end, percent: r.percent, status: r.status,
+          views: r.view_count, link: r.status === 'sent' ? r.link : null,
+          summary: (r.summary || '').slice(0, 160),
+        }))) };
+      }
+
+      // draft_progress_report
+      const res = await fetch(`${base}/api/admin/estimates/${estId}/reports`, { method: 'POST' });
+      const d = await res.json();
+      if (d.error || !d.report) return { result: `Error: ${d.error || 'could not draft'}` };
+      if (input.summary) {
+        await fetch(`${base}/api/admin/reports/${d.report.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ summary: input.summary }),
+        });
+      }
+      return {
+        result: JSON.stringify({
+          drafted: true, report_id: d.report.id, percent: d.report.percent,
+          completed: d.report.completed, summary: input.summary || d.report.summary,
+          note: 'Draft only — the customer sees nothing until send_progress_report.',
+        }),
+        action: { type: 'navigate', path: `/admin/estimates/${estId}`, description: 'Review the report' },
+      };
+    }
+
     case 'get_estimate_options': {
       let estId = input.estimate_id;
       if (!estId && input.estimate_number) {
@@ -2407,6 +2526,17 @@ Customer-selectable options (the configurator on estimate/contract links):
 - After adding groups, offer the Preview Link / share link so the user can check it.
 </options>`;
 
+const PROMPT_PROGRESS = `<progress>
+Job progress and customer progress reports:
+- Phases come from the contract's line items. Overall percent is weighted by each phase's dollar value, so a small phase finishing moves it a little, not a lot.
+- schedule_status/budget_status are JR's own internal flags — customers never see them. Set status_reason whenever schedule_status is "behind".
+- draft_progress_report writes the update from the phases, photos and billing. It is a DRAFT: the customer sees nothing until send_progress_report.
+- ALWAYS confirm with the user before send_progress_report — it reaches the customer. Offer skip_email:true when they'd rather text the link.
+- The signed contract link shows the customer their percentages automatically; a report is the push version of the same truth.
+</progress>`;
+
+const PROGRESS_TOOL_NAMES = new Set(['get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report']);
+
 const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets','list_line_presets','search_option_images','add_option_group','update_option_group','delete_option_group']);
 
 const INVOICE_TOOL_NAMES = new Set(['search_invoices','get_invoice_details','get_ar_summary','create_invoice','update_invoice','record_invoice_payment','send_invoice']);
@@ -2430,6 +2560,7 @@ function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: stri
   if (hasEstimates) blocks.push(PROMPT_ESTIMATES);
   if (names.some(n => INVOICE_TOOL_NAMES.has(n))) blocks.push(PROMPT_INVOICES);
   if (names.some(n => OPTIONS_TOOL_NAMES.has(n))) blocks.push(PROMPT_OPTIONS);
+  if (names.some(n => PROGRESS_TOOL_NAMES.has(n))) blocks.push(PROMPT_PROGRESS);
   if (hasTasks) blocks.push(PROMPT_TASKS);
   if (hasProperty) blocks.push(PROMPT_PROPERTY);
   if (hasAnalytics) blocks.push(PROMPT_ANALYTICS);
