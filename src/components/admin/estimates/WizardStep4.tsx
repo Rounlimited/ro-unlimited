@@ -6,6 +6,7 @@ import {
   ArrowUp, ArrowDown, X, PackageSearch, Loader2, Copy, BookmarkPlus, Sparkles, Undo2,
 } from 'lucide-react';
 import AiAssistPanel from './AiAssistPanel';
+import { LINE_PRESETS_BY_DIVISION, GENERAL_LINE_PRESETS, type LinePreset } from '@/lib/line-presets';
 
 const FALLBACK_PHASES = [
   'Demolition', 'Site Prep', 'Foundation', 'Framing', 'Roofing',
@@ -14,6 +15,12 @@ const FALLBACK_PHASES = [
 ];
 
 const CATEGORIES = ['material', 'labor', 'subcontractor', 'equipment', 'rental', 'other'];
+
+// Line-preset units → the wizard's unit vocabulary.
+const UNIT_MAP: Record<string, string> = {
+  LS: 'lot', LF: 'lnft', SF: 'sqft', SQ: 'each', EA: 'each', CY: 'cuyd', TON: 'each',
+  HR: 'hour', DAY: 'day', AC: 'each', VF: 'lnft', SHEET: 'each', SPACE: 'each', PR: 'each', '%': 'lot',
+};
 const FALLBACK_UNITS = ['each', 'sqft', 'lnft', 'hour', 'day', 'lot', 'cuyd'];
 
 interface LineItem {
@@ -286,6 +293,32 @@ export default function WizardStep4({ lineItems, onChange, division, documentMod
     };
     onChange([...lineItems, item]);
   };
+
+  // The division preset library, shaped like cost items so it searches and adds
+  // through the same path. Division matches first, then the general set.
+  const presetCostItems: CostItem[] = (() => {
+    const divKey = (division || '') as keyof typeof LINE_PRESETS_BY_DIVISION;
+    const forDiv: LinePreset[] = LINE_PRESETS_BY_DIVISION[divKey] || [];
+    const rest: LinePreset[] = forDiv.length
+      ? GENERAL_LINE_PRESETS
+      : Object.values(LINE_PRESETS_BY_DIVISION).flat().concat(GENERAL_LINE_PRESETS);
+    const label = forDiv.length ? String(division) : 'Preset';
+    return [...forDiv, ...rest].map((p, i) => ({
+      id: 'preset:' + i + ':' + p.description,
+      name: p.description,
+      category: 'other',
+      unit: UNIT_MAP[p.unit] || 'each',
+      default_cost: p.unit_price,
+      default_markup_percent: 0,
+      trade: i < forDiv.length ? label : 'Preset',
+    }));
+  })();
+
+  const filteredPresets = presetCostItems.filter(ci => {
+    if (!librarySearch) return true;
+    const q = librarySearch.toLowerCase();
+    return ci.name.toLowerCase().includes(q) || (ci.trade || '').toLowerCase().includes(q);
+  }).slice(0, 60);
 
   const filteredCostItems = costItems.filter(ci => {
     if (!librarySearch) return true;
@@ -603,10 +636,10 @@ export default function WizardStep4({ lineItems, onChange, division, documentMod
                 <div className="flex items-center justify-center py-12">
                   <Loader2 size={20} className="animate-spin text-[#C9A84C]" />
                 </div>
-              ) : filteredCostItems.length === 0 ? (
+              ) : filteredCostItems.length === 0 && filteredPresets.length === 0 ? (
                 <div className="text-center py-12 text-[14px] text-white/40">No items found</div>
               ) : (
-                filteredCostItems.map(ci => (
+                [...filteredCostItems, ...filteredPresets].map(ci => (
                   <button
                     key={ci.id}
                     onClick={() => addFromLibrary(ci)}

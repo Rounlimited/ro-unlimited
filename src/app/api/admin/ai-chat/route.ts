@@ -4,6 +4,8 @@ import { createInvoice, effectiveStatus, reconcilePayments } from '@/lib/invoice
 import { sendInvoiceEmail } from '@/lib/invoice-send';
 import { getOptionsWithChoices, selectionsDelta } from '@/lib/estimate-options';
 import { OPTION_PRESETS, findOptionPreset, presetChoicesWithImages } from '@/lib/option-presets';
+import { searchLinePresets, GENERAL_LINE_PRESETS } from '@/lib/line-presets';
+import { searchImages, suggestImages, imageForKey } from '@/lib/option-images';
 import { summarizeVisits, eventSentence, fmtSeconds, timeAgo } from '@/lib/doc-events-summary';
 import { getTraffic } from '@/lib/cloudflare-analytics';
 import { computeInsights } from '@/lib/analytics-insights';
@@ -254,6 +256,10 @@ const OPTIONS_TOOLS = [
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' } } } },
   { name: 'list_option_presets', description: 'Browse the built-in option-group presets (roof color, driveway finish, septic tank size, grease interceptor capacity, water line material...). Filter by division. Use a preset name with add_option_group via the preset field.',
     input_schema: { type: 'object' as const, properties: { division: { type: 'string', description: 'utilities|septic|grease_traps|grading|concrete|roofing|electrical|plumbing|repairs|residential|commercial' }, query: { type: 'string' } } } },
+  { name: 'list_line_presets', description: 'Browse ready-made line items for a division (utilities, septic, grease_traps, grading, concrete, roofing, electrical, plumbing, repairs, residential, commercial) with units and Southeast unit prices. Use before writing line items by hand so pricing stays consistent.',
+    input_schema: { type: 'object' as const, properties: { division: { type: 'string' }, query: { type: 'string' } } } },
+  { name: 'search_option_images', description: 'Search the option photo library for a choice image. Returns image keys and URLs — pass a key as image_key on a choice (or the url as image_url) so the customer sees a photo on their link.',
+    input_schema: { type: 'object' as const, properties: { query: { type: 'string' }, choice_label: { type: 'string' }, division: { type: 'string' } } } },
   { name: 'add_option_group', description: 'Add a customer-selectable option group to an estimate/contract. Either pass a preset name (from list_option_presets) or explicit choices. selection_type: single (pick one, e.g. roof color) | multi (pick any) | addon (optional yes/no extra). Price deltas are relative to the base estimate; 0 = included. Set one choice is_default for single groups.',
     input_schema: { type: 'object' as const, properties: {
       estimate_id: { type: 'string' }, estimate_number: { type: 'string' },
@@ -865,6 +871,21 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       }) };
     }
 
+    case 'list_line_presets': {
+      const list = input.query || input.division
+        ? searchLinePresets(String(input.query || ''), input.division ? String(input.division).toLowerCase() : undefined, 60)
+        : GENERAL_LINE_PRESETS.map((p) => ({ ...p, division: 'general' }));
+      return { result: JSON.stringify(list.map((p: any) => ({ description: p.description, unit: p.unit, unit_price: p.unit_price, division: p.division }))) };
+    }
+
+    case 'search_option_images': {
+      const hits = input.choice_label
+        ? suggestImages(String(input.choice_label), input.query ? String(input.query) : undefined, 12)
+        : searchImages(String(input.query || ''), input.division ? String(input.division) : undefined).slice(0, 12);
+      if (!hits.length) return { result: 'No library photos match. The user can upload their own from the Options tab.' };
+      return { result: JSON.stringify(hits.map((im) => ({ image_key: im.key, label: im.label, url: im.url }))) };
+    }
+
     case 'list_option_presets': {
       let list = OPTION_PRESETS;
       if (input.division) list = list.filter((pr) => pr.division === String(input.division).toLowerCase());
@@ -886,9 +907,13 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         estId = e.id;
       }
       if (!estId) return { result: 'Error: estimate_id or estimate_number required.' };
+      // Choices may name a library photo by image_key — resolve it to a URL.
+      const withImages = (list: any[]) => (Array.isArray(list) ? list.map((ch: any) => ({
+        ...ch, image_url: ch.image_url || imageForKey(ch.image_key) || null,
+      })) : list);
       let body: any = {
         label: input.label, description: input.description, selection_type: input.selection_type,
-        required: input.required, choices: input.choices,
+        required: input.required, choices: withImages(input.choices),
       };
       if (input.preset) {
         const pr = findOptionPreset(String(input.preset));
@@ -896,7 +921,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         body = {
           label: input.label || pr.label, description: input.description || pr.description,
           selection_type: input.selection_type || pr.selection_type, required: input.required ?? pr.required,
-          choices: (input.choices && input.choices.length) ? input.choices : presetChoicesWithImages(pr),
+          choices: (input.choices && input.choices.length) ? withImages(input.choices) : presetChoicesWithImages(pr),
         };
       }
       if (!body.label || !Array.isArray(body.choices) || !body.choices.length) {
@@ -940,6 +965,9 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       }
       const fields: any = {};
       for (const k of ['label', 'description', 'selection_type', 'required', 'choices']) if (input[k] !== undefined) fields[k] = input[k];
+      if (Array.isArray(fields.choices)) fields.choices = fields.choices.map((ch: any) => ({
+        ...ch, image_url: ch.image_url || imageForKey(ch.image_key) || null,
+      }));
       if (!Object.keys(fields).length) return { result: 'No fields to update.' };
       const res = await fetch(base, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields) });
       const data = await res.json();
@@ -2374,10 +2402,12 @@ Customer-selectable options (the configurator on estimate/contract links):
 - Use list_option_presets first when the user names a common thing ("add roof colors", "let them pick the septic tank size") — presets carry sensible choices and Southeast pricing; override deltas if the user gives numbers.
 - Deltas are relative to the base line items, never absolute prices. 0 = included.
 - Picks lock when the customer signs; add_option_group/update/delete fail with "locked" after that — say so plainly.
+- Presets carry a default photo already. To change one, or to picture a custom choice, call search_option_images and pass the image_key you get back on that choice.
+- list_line_presets gives priced line items per division — use it when writing an estimate's line items so units and pricing match how RO quotes.
 - After adding groups, offer the Preview Link / share link so the user can check it.
 </options>`;
 
-const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets','add_option_group','update_option_group','delete_option_group']);
+const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets','list_line_presets','search_option_images','add_option_group','update_option_group','delete_option_group']);
 
 const INVOICE_TOOL_NAMES = new Set(['search_invoices','get_invoice_details','get_ar_summary','create_invoice','update_invoice','record_invoice_payment','send_invoice']);
 

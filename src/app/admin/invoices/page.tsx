@@ -6,6 +6,7 @@ import {
   Receipt, Plus, Search, X, ChevronRight, DollarSign, Clock,
   AlertTriangle, CheckCircle2, Loader2, User, Building2, Trash2,
 } from 'lucide-react';
+import { GENERAL_LINE_PRESETS, searchLinePresets } from '@/lib/line-presets';
 
 /**
  * Invoices — list + AR pulse + create + record payment (Phase 1/2 of the
@@ -43,21 +44,18 @@ interface Summary {
 interface CustomerLite { id: string; first_name: string | null; last_name: string | null; company_name: string | null; email: string | null }
 
 /** Built-in line presets — always available; cost-library items merge in on top. */
-const LINE_PRESETS: { label: string; description: string }[] = [
-  { label: 'Progress billing', description: 'Progress billing — ' },
-  { label: 'Deposit', description: 'Project deposit — ' },
-  { label: 'Final balance', description: 'Final balance — ' },
-  { label: 'Mobilization', description: 'Mobilization & site setup' },
-  { label: 'Change order', description: 'Change order — ' },
-  { label: 'Site prep & grading', description: 'Site preparation & grading' },
-  { label: 'Storm drainage', description: 'Storm drainage installation' },
-  { label: 'Sewer tie-in', description: 'Sanitary sewer tie-in' },
-  { label: 'Water service', description: 'Water service installation' },
-  { label: 'Septic install', description: 'Septic system installation' },
-  { label: 'Materials', description: 'Materials' },
-  { label: 'Labor', description: 'Labor' },
-  { label: 'Equipment', description: 'Equipment & machine time' },
-];
+// Quick chips under the description box: the general set, then anything in the
+// division libraries that matches what JR has typed (src/lib/line-presets.ts).
+const linePresetChips = (q: string) => {
+  const list = q
+    ? searchLinePresets(q, undefined, 12)
+    : GENERAL_LINE_PRESETS.map((p) => ({ ...p, division: 'general' as const }));
+  return list.map((p) => ({
+    label: p.description.length > 30 ? p.description.slice(0, 28) + '…' : p.description,
+    description: p.description,
+    price: p.unit_price || undefined,
+  }));
+};
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   draft:     { label: 'Draft',    color: '#9ca3af', bg: 'rgba(156,163,175,0.12)', icon: Clock },
@@ -568,10 +566,7 @@ function CreateSheet({ onClose, onCreated }: { onClose: () => void; onCreated: (
             .filter((ci) => ci.name && (!q || ci.name.toLowerCase().includes(q)))
             .slice(0, 4)
             .map((ci) => ({ label: ci.name, description: ci.name, price: (ci as any).unit_cost }));
-          const presetSugg = LINE_PRESETS
-            .filter((ps) => !q || ps.label.toLowerCase().includes(q) || ps.description.toLowerCase().includes(q))
-            .slice(0, 8 - librarySugg.length)
-            .map((ps) => ({ ...ps, price: undefined as number | undefined }));
+          const presetSugg = linePresetChips(q).slice(0, 8 - librarySugg.length);
           const suggestions = [...librarySugg, ...presetSugg];
           return (
             <div key={i}>

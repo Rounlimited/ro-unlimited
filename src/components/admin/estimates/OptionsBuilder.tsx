@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Layers, Plus, X, Trash2, Pencil, Loader2, ImagePlus, Star, Lock, CheckCircle2,
+  Layers, Plus, X, Trash2, Pencil, Loader2, ImagePlus, Star, Lock, CheckCircle2, Search, Upload, Image as ImageIcon,
 } from 'lucide-react';
 import { compressImage } from '@/components/admin/estimates/EstimatePhotos';
 import { OPTION_PRESETS, DIVISION_LABELS, presetChoicesWithImages, type OptionPreset, type PresetDivision } from '@/lib/option-presets';
+import { OPTION_IMAGES, searchImages, suggestImages, type OptionImage } from '@/lib/option-images';
 
 /**
  * OptionsBuilder — JR builds customer-selectable option groups on an
@@ -217,13 +218,16 @@ function GroupSheet({ estimateId, group, onClose, onSaved }: {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  const [pickerIdx, setPickerIdx] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingIdx = useRef<number>(0);
 
   const inputCls = 'w-full min-h-[52px] px-4 rounded-xl bg-white/5 border border-white/10 text-[17px] placeholder:text-white/25 focus:outline-none focus:border-[#C9A84C]/50';
   const labelCls = 'block text-[14px] font-semibold text-white/50 uppercase tracking-wide mb-1.5';
 
-  const pickImage = (idx: number) => { pendingIdx.current = idx; fileRef.current?.click(); };
+  const pickImage = (idx: number) => { setPickerIdx(idx); };
+  const uploadOwn = (idx: number) => { pendingIdx.current = idx; setPickerIdx(null); fileRef.current?.click(); };
+  const useLibrary = (idx: number, url: string) => { setChoices((cs) => cs.map((c, i) => (i === idx ? { ...c, image_url: url } : c))); setPickerIdx(null); };
 
   const uploadImage = async (file: File) => {
     const idx = pendingIdx.current;
@@ -356,6 +360,18 @@ function GroupSheet({ estimateId, group, onClose, onSaved }: {
           + Add choice
         </button>
 
+        {pickerIdx !== null && (
+          <ImagePicker
+            choiceLabel={choices[pickerIdx]?.label || ''}
+            groupLabel={label}
+            current={choices[pickerIdx]?.image_url || null}
+            onPick={(url) => useLibrary(pickerIdx, url)}
+            onUpload={() => uploadOwn(pickerIdx)}
+            onClear={() => useLibrary(pickerIdx, '')}
+            onClose={() => setPickerIdx(null)}
+          />
+        )}
+
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])} />
 
@@ -442,6 +458,90 @@ function PresetSheet({ existing, busy, onAdd, onClose }: {
               </div>
             );
           })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ── Image picker: Library (suggested + search) or Upload your own ── */
+function ImagePicker({ choiceLabel, groupLabel, current, onPick, onUpload, onClear, onClose }: {
+  choiceLabel: string; groupLabel: string; current: string | null;
+  onPick: (url: string) => void; onUpload: () => void; onClear: () => void; onClose: () => void;
+}) {
+  const [q, setQ] = useState('');
+  const suggested = q.trim() ? [] : suggestImages(choiceLabel, groupLabel, 12);
+  const results: OptionImage[] = q.trim() ? searchImages(q) : OPTION_IMAGES;
+  const suggestedKeys = new Set(suggested.map((im) => im.key + im.url));
+  const rest = results.filter((im) => !suggestedKeys.has(im.key + im.url));
+
+  const Tile = ({ im }: { im: OptionImage }) => {
+    const active = current === im.url;
+    return (
+      <button onClick={() => onPick(im.url)}
+        className="rounded-xl overflow-hidden border text-left active:scale-95 transition-transform"
+        style={{ borderColor: active ? '#D4B965' : 'rgba(255,255,255,0.1)', boxShadow: active ? '0 0 0 2px rgba(212,185,101,0.5)' : undefined }}>
+        <div className="aspect-[4/3] bg-black/40">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={thumb(im.url)} alt={im.label} loading="lazy" className="w-full h-full object-cover" />
+        </div>
+        <p className="text-[13px] font-semibold px-2 py-1.5 truncate">{im.label}</p>
+      </button>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end sm:items-center sm:justify-center">
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-2xl h-[90vh] sm:h-[82vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-[#121212] border-t sm:border border-white/10"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="p-5 pb-3">
+          <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4 sm:hidden" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="min-w-0">
+              <h2 className="text-[20px] font-bold">Choose a Photo</h2>
+              {choiceLabel && <p className="text-[14px] text-white/40 truncate">for "{choiceLabel}"</p>}
+            </div>
+            <button onClick={onClose} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5 shrink-0"><X size={20} className="text-white/60" /></button>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5 mb-3">
+            <button onClick={onUpload}
+              className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.99]"
+              style={{ background: 'linear-gradient(145deg, #C9A84C, #a8893d)', color: '#000', boxShadow: '0 4px 16px rgba(201,168,76,0.3)' }}>
+              <Upload size={18} /> Upload Your Own
+            </button>
+            <button onClick={onClear} disabled={!current}
+              className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-30"
+              style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.12)' }}>
+              <X size={18} /> No Photo
+            </button>
+          </div>
+          <div className="relative">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the photo library… (roof, brick, fence)"
+              className="w-full min-h-[48px] pl-11 pr-4 rounded-xl bg-white/5 border border-white/10 text-[16px] placeholder:text-white/25 focus:outline-none focus:border-[#C9A84C]/50" />
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 pb-6">
+          {OPTION_IMAGES.length === 0 && (
+            <p className="text-[15px] text-white/35 py-8 text-center">The photo library is empty — upload your own for now.</p>
+          )}
+          {suggested.length > 0 && (
+            <>
+              <p className="text-[13px] font-bold text-white/40 uppercase tracking-wide mb-2 flex items-center gap-1.5"><ImageIcon size={14} /> Suggested</p>
+              <div className="grid grid-cols-3 gap-2.5 mb-5">{suggested.map((im) => <Tile key={'s' + im.key + im.url} im={im} />)}</div>
+            </>
+          )}
+          {rest.length > 0 && (
+            <>
+              <p className="text-[13px] font-bold text-white/40 uppercase tracking-wide mb-2">{q.trim() ? 'Results' : 'All Photos'} · {rest.length}</p>
+              <div className="grid grid-cols-3 gap-2.5">{rest.map((im) => <Tile key={im.key + im.url} im={im} />)}</div>
+            </>
+          )}
+          {q.trim() && results.length === 0 && OPTION_IMAGES.length > 0 && (
+            <p className="text-[15px] text-white/35 py-8 text-center">Nothing matches "{q}" — try another word or upload your own.</p>
+          )}
         </div>
       </div>
     </div>
