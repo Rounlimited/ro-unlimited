@@ -82,6 +82,17 @@ export function useDocIntro(ready: boolean) {
             });
           }
 
+          // Progress phase bars ripple in the same way option cards do
+          const progRows = gsap.utils.toArray('#doc-progress .prog-row') as Element[];
+          if (progRows.length) {
+            gsap.set(progRows, { y: 14, opacity: 0 });
+            ScrollTrigger.batch(progRows, {
+              start: 'top 92%',
+              once: true,
+              onEnter: (els: Element[]) => gsap.to(els, { y: 0, opacity: 1, duration: 0.45, stagger: 0.06, ease: 'power3.out', clearProps: 'transform' }),
+            });
+          }
+
           // Financial/payment rows stack in one by one
           (gsap.utils.toArray('.doc-rows') as Element[]).forEach((container) => {
             const rows = Array.from(container.children);
@@ -100,7 +111,7 @@ export function useDocIntro(ready: boolean) {
 
         mm.add('(prefers-reduced-motion: reduce)', () => {
           gsap.fromTo(sections, { opacity: 0 }, { opacity: 1, duration: 0.2, stagger: 0.03 });
-          gsap.set(['#doc-options .opt-card', '.doc-rows > *'], { opacity: 1 });
+          gsap.set(['#doc-options .opt-card', '.doc-rows > *', '#doc-progress .prog-row'], { opacity: 1 });
         });
       }, main);
     })();
@@ -459,5 +470,111 @@ export function CeremonyDone({ name, docWord }: { name: string; docWord: string 
         ))}
       </div>
     </div>
+  );
+}
+
+/* ── Live job progress — the customer's side of JR's Progress tab ──
+   Percentages only. His schedule/budget flags never leave the admin. */
+export function ProgressSection({ progress, docWord }: {
+  progress: { percent: number; phases: { phase: string; percent: number }[]; in_progress?: string | null; next_up: string | null; updated_at: string | null };
+  docWord: string;
+}) {
+  const [shown, setShown] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Bars grow and the odometer rolls once the section is actually on screen.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) { setShown(progress.percent); return; }
+    let fired = false;
+    const reveal = () => { if (!fired) { fired = true; setShown(progress.percent); } };
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { reveal(); io.disconnect(); }
+    }, { threshold: 0.35 });
+    io.observe(el);
+    // Belt and braces: the customer must never be shown a stuck 0%.
+    const t = setTimeout(reveal, 1400);
+    return () => { io.disconnect(); clearTimeout(t); };
+  }, [progress.percent]);
+
+  const done = progress.percent >= 100;
+  const updated = progress.updated_at
+    ? new Date(progress.updated_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : null;
+
+  return (
+    <section id="doc-progress" ref={ref} className="rounded-2xl border bg-white p-5 sm:p-6"
+      style={{ borderColor: '#ead9ac' }}>
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <p className="text-[13px] font-bold uppercase tracking-wide" style={{ color: '#8a6d20' }}>
+            Your Project
+          </p>
+          <h2 className="text-[22px] sm:text-[26px] font-bold text-[#1a1a1a] mt-0.5">
+            {done ? 'Work Complete' : 'Progress to Date'}
+          </h2>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-[38px] sm:text-[44px] font-bold leading-none tabular-nums"
+            style={{ color: done ? '#187a4b' : '#C9A84C' }}>
+            <NumberFlow value={shown} suffix="%" />
+          </p>
+        </div>
+      </div>
+
+      <div className="h-3.5 rounded-full overflow-hidden mb-5" style={{ background: '#f0ece2' }}>
+        <div className="h-full rounded-full"
+          style={{
+            width: shown + '%',
+            background: done ? '#187a4b' : 'linear-gradient(90deg, #a8893d, #C9A84C)',
+            transition: 'width 1.1s cubic-bezier(0.22, 1, 0.36, 1)',
+          }} />
+      </div>
+
+      <div className="space-y-3.5">
+        {progress.phases.map((p) => (
+          <div key={p.phase} className="prog-row">
+            <div className="flex items-center justify-between gap-3 mb-1">
+              <p className="text-[16px] font-semibold text-[#2a2a2a] truncate flex items-center gap-1.5">
+                {p.percent >= 100 && <CheckCircle2 size={16} style={{ color: '#187a4b' }} className="shrink-0" />}
+                {p.phase}
+              </p>
+              <p className="text-[15px] font-bold shrink-0 tabular-nums"
+                style={{ color: p.percent >= 100 ? '#187a4b' : p.percent > 0 ? '#8a6d20' : '#9ca3af' }}>
+                {p.percent >= 100 ? 'Complete' : p.percent + '%'}
+              </p>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: '#f0ece2' }}>
+              <div className="h-full rounded-full"
+                style={{
+                  width: (shown ? p.percent : 0) + '%',
+                  background: p.percent >= 100 ? '#187a4b' : 'linear-gradient(90deg, #a8893d, #C9A84C)',
+                  transition: 'width 0.9s cubic-bezier(0.22, 1, 0.36, 1)',
+                }} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 pt-4 border-t flex flex-wrap items-center justify-between gap-2" style={{ borderColor: '#f0ece2' }}>
+        {progress.in_progress && !done ? (
+          <p className="text-[15px] text-[#4a4a4a]">
+            <span className="font-semibold">In progress:</span> {progress.in_progress}
+            {progress.next_up && <span className="text-[#9ca3af]"> · up next: {progress.next_up}</span>}
+          </p>
+        ) : progress.next_up && !done ? (
+          <p className="text-[15px] text-[#4a4a4a]">
+            <span className="font-semibold">Up next:</span> {progress.next_up}
+          </p>
+        ) : (
+          <p className="text-[15px] text-[#4a4a4a]">
+            {done ? 'All phases of this ' + docWord + ' are complete.' : 'Work is underway.'}
+          </p>
+        )}
+        {updated && <p className="text-[14px] text-[#9ca3af]">Updated {updated}</p>}
+      </div>
+    </section>
   );
 }

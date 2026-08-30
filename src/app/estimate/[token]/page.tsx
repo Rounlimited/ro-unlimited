@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import SignaturePad from '@/components/public/SignaturePad';
 import {
   useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp, ShineStyles,
+  ProgressSection,
   type PublicOptionGroup,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
@@ -61,6 +62,13 @@ interface EstimateData {
   scope_of_work: string | null;
   photos: { url: string; caption?: string }[] | null;
   signed_at?: string | null;
+  progress?: {
+    percent: number;
+    phases: { phase: string; percent: number }[];
+    in_progress?: string | null;
+    next_up: string | null;
+    updated_at: string | null;
+  } | null;
   signed_name?: string | null;
   document_mode?: string | null;
   options?: PublicOptionGroup[];
@@ -478,6 +486,14 @@ export default function PublicEstimatePage() {
             </div>
           );
         })()}
+
+        {/* ─── Live progress (signed jobs JR has started updating) ─── */}
+        {estimate.progress && estimate.progress.phases.length > 0 && (
+          <ProgressSection
+            progress={estimate.progress}
+            docWord={estimate.document_mode === 'contract' ? 'contract' : 'project'}
+          />
+        )}
 
         {/* ─── Header Card ───────────────────────────────────── */}
         <div className="relative bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

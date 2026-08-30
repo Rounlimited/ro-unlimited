@@ -96,20 +96,27 @@ export interface PhaseRoll {
  * they cannot.
  */
 export function rollUpProgress(
-  lineItems: { phase?: string | null; total?: number | null }[],
+  lineItems: { phase?: string | null; total?: number | null; sort_order?: number | null }[],
   progress: { phase: string; percent_complete: number }[],
 ): { phases: PhaseRoll[]; totalValue: number; earned: number; percent: number } {
   const byPhase = new Map<string, number>();
+  // Phases come back in WORK order — the sort order of their line items — not
+  // alphabetically. A customer reading "Cleanup" first would be confused.
+  const order = new Map<string, number>();
   for (const li of lineItems) {
     const phase = (li.phase || 'Other').trim() || 'Other';
     byPhase.set(phase, (byPhase.get(phase) || 0) + Number(li.total || 0));
+    const at = Number(li.sort_order ?? Number.MAX_SAFE_INTEGER);
+    if (!order.has(phase) || at < (order.get(phase) as number)) order.set(phase, at);
   }
   const pct = new Map(progress.map((p) => [p.phase, Math.max(0, Math.min(100, Number(p.percent_complete) || 0))]));
 
-  const phases: PhaseRoll[] = Array.from(byPhase.entries()).map(([phase, value]) => {
-    const percent = pct.get(phase) ?? 0;
-    return { phase, value, percent, earned: value * (percent / 100) };
-  });
+  const phases: PhaseRoll[] = Array.from(byPhase.entries())
+    .sort((a, b) => (order.get(a[0]) ?? 0) - (order.get(b[0]) ?? 0))
+    .map(([phase, value]) => {
+      const percent = pct.get(phase) ?? 0;
+      return { phase, value, percent, earned: value * (percent / 100) };
+    });
 
   const totalValue = phases.reduce((s, p) => s + p.value, 0);
   const earned = phases.reduce((s, p) => s + p.earned, 0);

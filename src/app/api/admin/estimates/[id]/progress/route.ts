@@ -20,7 +20,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
         .select('id, estimate_number, schedule_status, budget_status, status_reason, status_note, status_updated_at, reporting_cadence, reporting_day, reporting_includes')
         .eq('id', id)
         .single(),
-      supabase.from('estimate_line_items').select('phase, total').eq('estimate_id', id),
+      supabase.from('estimate_line_items').select('phase, total, sort_order').eq('estimate_id', id),
       supabase.from('estimate_phase_progress').select('phase, percent_complete, note, updated_at').eq('estimate_id', id),
     ]);
 

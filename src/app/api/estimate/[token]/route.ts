@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getOptionsWithChoices, selectionsDelta } from '@/lib/estimate-options';
+import { rollUpProgress } from '@/lib/reporting';
 import { recordDocumentEvent, visitorFromCookies, visitorCookie } from '@/lib/doc-events';
 
 type RouteContext = { params: { token: string } };
@@ -63,6 +64,31 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       ...safeEstimate
     } = estimate;
 
+    // Live job progress — only once the customer has signed and JR has actually
+    // set a phase. Percentages only: his schedule/budget flags stay internal.
+    let progress: any = null;
+    if (estimate.signed_at) {
+      const { data: progressRows } = await supabase
+        .from('estimate_phase_progress')
+        .select('phase, percent_complete, updated_at')
+        .eq('estimate_id', estimate.id);
+      if (progressRows && progressRows.length) {
+        const roll = rollUpProgress(lineItems || [], progressRows);
+        const inProgress = roll.phases.find((ph) => ph.percent > 0 && ph.percent < 100);
+        const nextUp = roll.phases.find((ph) => ph.percent === 0);
+        progress = {
+          percent: roll.percent,
+          phases: roll.phases.map((ph) => ({ phase: ph.phase, percent: ph.percent })),
+          in_progress: inProgress ? inProgress.phase : null,
+          next_up: nextUp ? nextUp.phase : null,
+          updated_at: progressRows
+            .map((r) => r.updated_at)
+            .sort()
+            .reverse()[0] || null,
+        };
+      }
+    }
+
     const options = await getOptionsWithChoices(supabase, estimate.id);
     const selections_total = estimate.options_materialized_at ? 0 : selectionsDelta(options);
 
@@ -72,6 +98,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       payment_schedule: paymentSchedule || [],
       disclaimers: disclaimerResult?.data || [],
       options,
+      progress,
       selections_total,
       final_total: Number(estimate.total) + selections_total,
     });
