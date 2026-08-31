@@ -6,6 +6,7 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 import { estimateDisplayDate, toDateInputValue } from '@/lib/estimates';
 import {
+  ClipboardList,
   ArrowLeft, Edit3, Copy, FileText, Send, Trash2, X,
   User, Building2, Mail, Phone, MapPin, Calendar,
   DollarSign, Clock, AlertTriangle, ChevronRight,
@@ -155,12 +156,15 @@ const DIVISION_CONFIG: Record<string, { label: string; icon: any; text: string }
   grease_traps: { label: 'Grease Traps', icon: Mountain,  text: 'text-[#D4772C]' },
 };
 
+// Ordered by how often they're tapped once a job is running. Progress and
+// Reports used to sit past the right edge of the strip on a phone, which is
+// why they may as well not have existed.
 const TABS = [
   { id: 'overview',   label: 'Overview' },
-  { id: 'line-items', label: 'Line Items' },
-  { id: 'options',    label: 'Options' },
   { id: 'progress',   label: 'Progress' },
   { id: 'reports',    label: 'Reports' },
+  { id: 'line-items', label: 'Line Items' },
+  { id: 'options',    label: 'Options' },
   { id: 'financials', label: 'Financials' },
   { id: 'schedule',   label: 'Schedule' },
   { id: 'terms',      label: 'Terms' },
@@ -730,6 +734,34 @@ export default function EstimateDetailPage() {
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-4">
+            {/* Running the job — the two things touched daily, where they
+                cannot be missed. The tab strip scrolls off a phone screen. */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setActiveTab('progress')}
+                className="relative overflow-hidden text-left rounded-2xl p-4 active:scale-[0.98] transition-transform"
+                style={{ background: 'rgba(201,168,76,0.10)', border: '1px solid rgba(201,168,76,0.35)' }}
+              >
+                <Percent size={22} style={{ color: '#D4B965' }} />
+                <p className="text-[17px] font-bold text-white mt-2">Progress</p>
+                <p className="text-[14px] text-white/45 leading-snug mt-0.5">
+                  Tap your phases along and set the job status
+                </p>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('reports')}
+                className="relative overflow-hidden text-left rounded-2xl p-4 active:scale-[0.98] transition-transform"
+                style={{ background: 'rgba(53,208,127,0.10)', border: '1px solid rgba(53,208,127,0.35)' }}
+              >
+                <ClipboardList size={22} style={{ color: '#35d07f' }} />
+                <p className="text-[17px] font-bold text-white mt-2">Log &amp; Reports</p>
+                <p className="text-[14px] text-white/45 leading-snug mt-0.5">
+                  Rain day, work done, then draft the report
+                </p>
+              </button>
+            </div>
+
             {/* Customer Activity — opens, PDF, time reading, last device */}
             {['sent', 'viewed', 'accepted', 'declined', 'expired'].includes(estimate.status) && (
               <CustomerActivity estimateId={id} compact />
