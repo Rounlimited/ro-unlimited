@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import WhatsNewModal, { whatsNewSeen } from '@/components/admin/WhatsNewModal';
 import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Search, ChevronDown, ChevronUp, LayoutDashboard, Compass,
@@ -203,6 +204,9 @@ export default function HelpCenterPage() {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<string>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [unseen, setUnseen] = useState(false);
+  useEffect(() => { setUnseen(!whatsNewSeen()); }, [showWhatsNew]);
 
   const filtered = ARTICLES.filter(a => {
     const matchesCategory = activeTab === 'all' || a.category === activeTab;
@@ -216,6 +220,46 @@ export default function HelpCenterPage() {
       <AdminHeader title="Help Center" subtitle="Learn how to use every feature" />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+
+        {/* ── What's new in this release ── */}
+        <button
+          onClick={() => setShowWhatsNew(true)}
+          className="relative w-full text-left rounded-2xl overflow-hidden p-5 active:scale-[0.995] transition-transform"
+          style={{
+            background: 'linear-gradient(135deg, rgba(201,168,76,0.18), rgba(212,119,44,0.10))',
+            border: '1px solid rgba(201,168,76,0.4)',
+          }}
+        >
+          <style>{`
+            @keyframes hp-shine { from { background-position: 200% 0; } to { background-position: -60% 0; } }
+            .hp-shine { position: absolute; inset: 0; pointer-events: none;
+              background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,0.22) 50%, transparent 58%);
+              background-size: 260% 100%; animation: hp-shine 2.6s cubic-bezier(0.22,1,0.36,1) infinite; }
+            @media (prefers-reduced-motion: reduce) { .hp-shine { animation: none; } }
+          `}</style>
+          <span className="hp-shine" />
+          <div className="relative flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: 'rgba(201,168,76,0.2)', border: '1px solid rgba(201,168,76,0.45)' }}>
+              <Zap size={22} style={{ color: '#D4B965' }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-[18px] font-bold text-white">What&rsquo;s New</p>
+                {unseen && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{ background: '#D4772C', color: '#fff' }}>NEW</span>
+                )}
+              </div>
+              <p className="text-[15px] text-white/55 leading-snug mt-0.5">
+                Progress tracking, the job log, reports that write themselves, and letters on
+                your letterhead &mdash; walked through one at a time.
+              </p>
+            </div>
+            <Play size={20} style={{ color: '#D4B965' }} className="shrink-0" />
+          </div>
+        </button>
 
         {/* ── Search ── */}
         <div className="relative">
@@ -360,6 +404,8 @@ export default function HelpCenterPage() {
         {/* Bottom spacing for tab bar */}
         <div className="h-4" />
       </div>
+
+      {showWhatsNew && <WhatsNewModal onClose={() => setShowWhatsNew(false)} />}
     </div>
   );
 }

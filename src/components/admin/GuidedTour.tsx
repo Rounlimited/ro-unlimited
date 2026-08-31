@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { HelpCircle, X, ArrowRight, ArrowLeft, Play, Check } from 'lucide-react';
+import { HelpCircle, X, ArrowRight, ArrowLeft, Play, Check, Sparkles } from 'lucide-react';
 import { TOURS, tourById, toursForRoute, type Tour, type TourStep } from '@/lib/tours';
+import WhatsNewModal, { whatsNewSeen } from '@/components/admin/WhatsNewModal';
 
 /**
  * The app pointing at itself.
@@ -38,6 +39,7 @@ export default function GuidedTour() {
   const [box, setBox] = useState<Box | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [waiting, setWaiting] = useState(false);
+  const [whatsNew, setWhatsNew] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -147,27 +149,42 @@ export default function GuidedTour() {
     return { top, left, width: W };
   };
 
-  // First visit after the update: offer the what is new walkthrough once,
-  // rather than leaving him to find these on his own.
+  // First visit after the update: the walkthrough shows itself. It never
+  // interrupts twice — closing it stamps the release key.
   useEffect(() => {
-    if (tour) return;
+    if (tour || whatsNew) return;
     if (!pathname.startsWith('/admin')) return;
-    const s = seen();
-    if (s['tour-whats-new'] || s['whats-new-offered']) return;
-    // A brand-new account gets the welcome modal first; don't stack on it.
-    const t = setTimeout(() => {
-      if (document.querySelector('.welcome-modal-backdrop')) return;
-      markSeen('whats-new-offered');
-      setMenuOpen(true);
-    }, 1800);
-    return () => clearTimeout(t);
-  }, [pathname, tour]);
+    if (pathname.startsWith('/admin/login')) return;
+    if (whatsNewSeen()) return;
+    // A brand-new account gets the welcome modal first. Wait for it to clear
+    // rather than giving up — a one-shot timer would silently never fire.
+    let waited = 0;
+    const iv = setInterval(() => {
+      waited += 700;
+      if (document.querySelector('.welcome-modal-backdrop')) {
+        if (waited > 90000) clearInterval(iv);
+        return;
+      }
+      clearInterval(iv);
+      setWhatsNew(true);
+    }, 700);
+    return () => clearInterval(iv);
+  }, [pathname, tour, whatsNew]);
+
+  // Anywhere can open it: window.dispatchEvent(new Event('open-whats-new'))
+  useEffect(() => {
+    const open = () => { setMenuOpen(false); setWhatsNew(true); };
+    window.addEventListener('open-whats-new', open);
+    return () => window.removeEventListener('open-whats-new', open);
+  }, []);
 
   const available = toursForRoute(pathname);
   const seenMap = typeof window !== 'undefined' ? seen() : {};
 
   return (
     <>
+      {whatsNew && <WhatsNewModal onClose={() => setWhatsNew(false)} />}
+
       {/* ── Floating help button ─────────────────────────────── */}
       {!tour && (
         <div className="fixed z-[70]" style={{ right: 16, bottom: 'calc(84px + env(safe-area-inset-bottom))' }}>
@@ -180,6 +197,21 @@ export default function GuidedTour() {
                 </button>
               </div>
               <div className="max-h-[52vh] overflow-y-auto p-2">
+                <button onClick={() => { setMenuOpen(false); setWhatsNew(true); }}
+                  className="w-full text-left px-3 py-3 rounded-xl mb-1 active:scale-[0.99] transition-all"
+                  style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }}>
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={15} style={{ color: '#D4B965' }} />
+                    <p className="text-[16px] font-bold" style={{ color: '#D4B965' }}>What&rsquo;s New</p>
+                    {!whatsNewSeen() && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ background: '#D4772C', color: '#fff' }}>NEW</span>
+                    )}
+                  </div>
+                  <p className="text-[14px] text-white/45 leading-snug mt-0.5">
+                    Everything added this week, one screen at a time
+                  </p>
+                </button>
                 {(available.length ? available : TOURS).map((t) => (
                   <button key={t.id} onClick={() => start(t.id)}
                     className="w-full text-left px-3 py-3 rounded-xl hover:bg-white/5 active:scale-[0.99] transition-all">
@@ -199,12 +231,21 @@ export default function GuidedTour() {
           )}
           <button onClick={() => setMenuOpen((o) => !o)}
             aria-label="Help and tours"
-            className="w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+            className="relative w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-transform"
             style={{
               background: 'linear-gradient(145deg, #C9A84C, #a8893d)',
               boxShadow: '0 6px 22px rgba(201,168,76,0.45)',
             }}>
+            <style>{`
+              @keyframes ro-help-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(212,119,44,0.55); } 50% { box-shadow: 0 0 0 12px rgba(212,119,44,0); } }
+              .ro-help-dot { animation: ro-help-pulse 2.4s ease-in-out infinite; }
+              @media (prefers-reduced-motion: reduce) { .ro-help-dot { animation: none; } }
+            `}</style>
             {menuOpen ? <X size={24} className="text-black" /> : <HelpCircle size={26} className="text-black" />}
+            {!menuOpen && !whatsNewSeen() && (
+              <span className="ro-help-dot absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full border-2"
+                style={{ background: '#D4772C', borderColor: '#0a0a0a' }} />
+            )}
           </button>
         </div>
       )}
