@@ -711,6 +711,7 @@ export default function EstimateDetailPage() {
         <div className="flex gap-1 bg-[#111] border border-white/5 rounded-xl p-1 mb-6 overflow-x-auto">
           {TABS.map((tab) => (
             <button
+              data-tour={"tab-" + tab.id}
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all whitespace-nowrap ${
@@ -987,6 +988,7 @@ export default function EstimateDetailPage() {
                 on their link. Their picks lock in when they sign.
               </p>
               <button
+                data-tour="preview-link"
                 onClick={handlePreviewLink}
                 className="shrink-0 min-h-[48px] px-4 rounded-xl text-[15px] font-bold flex items-center gap-2 active:scale-95 transition-transform"
                 style={{ background: 'rgba(201,168,76,0.12)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.35)' }}

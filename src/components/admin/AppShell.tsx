@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import GuidedTour from '@/components/admin/GuidedTour';
 import { useRouter, usePathname } from 'next/navigation';
 import { gsap } from 'gsap';
 import { createClient } from '@/lib/supabase/client';
@@ -237,7 +238,7 @@ const APP_ICONS: AppIcon[] = [
   { id: 'pipeline', label: 'Pipeline', icon: TrendingUp, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'jobs', label: 'Jobs', icon: HardHat, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'dailylogs', label: 'Daily Logs', icon: FileCheck, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
-  { id: 'documents', label: 'Documents', icon: FileText, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
+  { id: 'documents', label: 'Letters', icon: FileText, href: '/admin/letters', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'invoicing', label: 'Invoices', icon: Receipt, href: '/admin/invoices', active: true, color: '#35d07f', bg: 'rgba(53,208,127,0.15)', badge: 'NEW' },
   { id: 'budgets', label: 'Budgets', icon: BarChart3, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'payments', label: 'Payments', icon: CreditCard, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
@@ -926,6 +927,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1 min-h-0 overflow-hidden relative z-10 flex flex-col">
         {children}
+      <GuidedTour />
       </main>
 
       {/* OPERATIONS boot hint animation */}

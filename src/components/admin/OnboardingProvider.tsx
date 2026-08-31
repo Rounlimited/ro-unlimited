@@ -174,7 +174,8 @@ export default function OnboardingProvider({ children }: OnboardingProviderProps
       if (startTour) {
         // Small delay so the welcome modal fully unmounts before tour starts
         setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('start-tour', { detail: 'dashboard' }));
+          // 'dashboard' had no tour behind it — point at the real one.
+          window.dispatchEvent(new CustomEvent('start-tour', { detail: 'tour-whats-new' }));
         }, 400);
       }
     },

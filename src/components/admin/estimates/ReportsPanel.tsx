@@ -95,7 +95,7 @@ export default function ReportsPanel({ estimateId, cadenceLabel }: { estimateId:
             </p>
           </div>
         </div>
-        <button onClick={draft} disabled={drafting}
+        <button data-tour="draft-report" onClick={draft} disabled={drafting}
           className="w-full min-h-[56px] rounded-xl text-[17px] font-bold text-black disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
           style={{ background: 'linear-gradient(145deg, #C9A84C, #a8893d)', boxShadow: '0 4px 18px rgba(201,168,76,0.35)' }}>
           {drafting ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={18} />}

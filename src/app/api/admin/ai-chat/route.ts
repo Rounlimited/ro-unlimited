@@ -7,6 +7,7 @@ import { OPTION_PRESETS, findOptionPreset, presetChoicesWithImages } from '@/lib
 import { searchLinePresets, GENERAL_LINE_PRESETS } from '@/lib/line-presets';
 import { searchImages, suggestImages, imageForKey } from '@/lib/option-images';
 import { rollUpProgress, cadenceLabel } from '@/lib/reporting';
+import { LETTER_TYPES } from '@/lib/letters';
 import { summarizeVisits, eventSentence, fmtSeconds, timeAgo } from '@/lib/doc-events-summary';
 import { getTraffic } from '@/lib/cloudflare-analytics';
 import { computeInsights } from '@/lib/analytics-insights';
@@ -288,6 +289,19 @@ const PROGRESS_TOOLS = [
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, summary: { type: 'string', description: 'Optional: replace the auto-written summary' } } } },
   { name: 'send_progress_report', description: 'Send a drafted progress report to the customer. skip_email:true just activates the link for texting instead of emailing. Confirm with the user before calling — this reaches the customer.',
     input_schema: { type: 'object' as const, properties: { report_id: { type: 'string' }, estimate_number: { type: 'string' }, skip_email: { type: 'boolean' }, to_email: { type: 'string' } } } },
+];
+
+const LETTER_TOOLS = [
+  { name: 'write_letter', description: "Write a letter or notice on company letterhead — the user describes it in plain words. Kinds: " + LETTER_TYPES.map((t) => t.id).join(', ') + ". Attach estimate_number to pull real job facts in. Returns a link to view or download the PDF. It is saved as a draft document; nothing is sent to anyone.",
+    input_schema: { type: 'object' as const, properties: {
+      prompt: { type: 'string', description: "What the letter needs to say, in the user's own words" },
+      doc_type: { type: 'string' },
+      recipient_name: { type: 'string' },
+      recipient_company: { type: 'string' },
+      estimate_number: { type: 'string' },
+    }, required: ['prompt'] } },
+  { name: 'list_letters', description: 'Recent letters and notices written on company letterhead.',
+    input_schema: { type: 'object' as const, properties: { query: { type: 'string' } } } },
 ];
 
 const INVOICE_WRITE_TOOLS = [
@@ -696,7 +710,7 @@ const WRITE_TOOLS = [
   },
 ];
 
-const ALL_TOOLS = [...READ_TOOLS, ...INVOICE_READ_TOOLS, ...OPTIONS_TOOLS, ...PROGRESS_TOOLS, ...WRITE_TOOLS];
+const ALL_TOOLS = [...READ_TOOLS, ...INVOICE_READ_TOOLS, ...OPTIONS_TOOLS, ...PROGRESS_TOOLS, ...LETTER_TOOLS, ...WRITE_TOOLS];
 
 // Trivial one-liner greetings on a fresh conversation don't need tools.
 // Everything else always gets the FULL tool set in deterministic order —
@@ -862,6 +876,47 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
     }
 
     // ── WRITE TOOLS ──
+    case 'write_letter': {
+      const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+      let estimateId: string | null = null;
+      if (input.estimate_number) {
+        const { data: e } = await supabase.from('estimates').select('id').eq('estimate_number', String(input.estimate_number).trim()).single();
+        estimateId = e?.id || null;
+      }
+      const res = await fetch(`${base}/api/admin/letters`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: input.prompt, doc_type: input.doc_type,
+          recipient_name: input.recipient_name, recipient_company: input.recipient_company,
+          estimate_id: estimateId,
+        }),
+      });
+      const data = await res.json();
+      if (data.error || !data.letter) return { result: `Error: ${data.error || 'could not write it'}` };
+      const l = data.letter;
+      return {
+        result: JSON.stringify({
+          written: true, id: l.id, title: l.title, subject: l.subject, body: l.body,
+          pdf: `${base}/api/admin/letters/${l.id}/pdf`,
+          note: 'Saved as a draft on company letterhead. Anything in [brackets] still needs filling in.',
+        }),
+        action: { type: 'navigate', path: '/admin/letters', description: 'Open letters' },
+      };
+    }
+
+    case 'list_letters': {
+      let q = supabase.from('company_letters')
+        .select('id, title, doc_type, subject, recipient_name, created_at')
+        .order('created_at', { ascending: false }).limit(20);
+      const { data } = await q;
+      let rows = data || [];
+      if (input.query) {
+        const needle = String(input.query).toLowerCase();
+        rows = rows.filter((r: any) => (r.title + ' ' + (r.subject || '') + ' ' + (r.recipient_name || '')).toLowerCase().includes(needle));
+      }
+      return { result: JSON.stringify(rows) };
+    }
+
     case 'get_job_progress':
     case 'set_phase_progress':
     case 'set_job_status':
@@ -2535,6 +2590,16 @@ Job progress and customer progress reports:
 - The signed contract link shows the customer their percentages automatically; a report is the push version of the same truth.
 </progress>`;
 
+const PROMPT_LETTERS = `<letters>
+Letters and notices on company letterhead:
+- write_letter turns a plain-English request into a proper letter — "letter to the county asking them to release the trench", "notice we're delayed on the meter box". Pick the closest doc_type.
+- Never invent dates, dollar amounts, permit numbers or addresses. The writer leaves [BRACKETS] for missing facts; tell the user which blanks need filling.
+- Pass estimate_number when the letter is about a specific job so real job facts get used.
+- It saves a draft and returns a PDF link. Nothing is sent to anyone — the user prints or emails it themselves.
+</letters>`;
+
+const LETTER_TOOL_NAMES = new Set(['write_letter','list_letters']);
+
 const PROGRESS_TOOL_NAMES = new Set(['get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report']);
 
 const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets','list_line_presets','search_option_images','add_option_group','update_option_group','delete_option_group']);
@@ -2561,6 +2626,7 @@ function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: stri
   if (names.some(n => INVOICE_TOOL_NAMES.has(n))) blocks.push(PROMPT_INVOICES);
   if (names.some(n => OPTIONS_TOOL_NAMES.has(n))) blocks.push(PROMPT_OPTIONS);
   if (names.some(n => PROGRESS_TOOL_NAMES.has(n))) blocks.push(PROMPT_PROGRESS);
+  if (names.some(n => LETTER_TOOL_NAMES.has(n))) blocks.push(PROMPT_LETTERS);
   if (hasTasks) blocks.push(PROMPT_TASKS);
   if (hasProperty) blocks.push(PROMPT_PROPERTY);
   if (hasAnalytics) blocks.push(PROMPT_ANALYTICS);

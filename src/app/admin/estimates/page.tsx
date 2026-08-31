@@ -268,6 +268,7 @@ export default function EstimatesPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
+              data-tour="track-job"
               onClick={() => setTrackingJob(true)}
               className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold rounded-xl transition-all active:scale-95"
               style={{ background: 'rgba(201,168,76,0.12)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.35)' }}
@@ -517,7 +518,7 @@ export default function EstimatesPage() {
                   href={`/admin/estimates/${estimate.id}`}
                   className="block bg-[#111] border border-white/5 rounded-xl p-4 hover:border-white/10 hover:bg-[#141414] transition-all"
                 >
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-2" data-tour="estimate-row">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <span className="text-[16px] font-bold text-[#C9A84C]">{estimate.estimate_number}</span>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>{statusCfg.label}</span>

@@ -91,7 +91,7 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
   return (
     <div className="space-y-4">
       {/* ── Overall ── */}
-      <div className="rounded-2xl border border-white/8 bg-[#111] p-5">
+      <div className="rounded-2xl border border-white/8 bg-[#111] p-5" data-tour="progress-overall">
         <div className="flex items-end justify-between mb-3">
           <div>
             <p className="text-[13px] uppercase tracking-wide text-white/40 mb-1">Overall Complete</p>
@@ -122,7 +122,7 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
       </div>
 
       {/* ── Status flags (internal) ── */}
-      <div className="rounded-2xl border border-white/8 bg-[#111] p-5 space-y-4">
+      <div className="rounded-2xl border border-white/8 bg-[#111] p-5 space-y-4" data-tour="progress-status">
         <div className="flex items-center justify-between">
           <p className="text-[17px] font-bold">Job Status</p>
           <span className="text-[12px] text-white/30">Internal — not on the customer link</span>
@@ -211,7 +211,7 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
       </div>
 
       {/* ── Phases ── */}
-      <div className="rounded-2xl border border-white/8 bg-[#111] p-5">
+      <div className="rounded-2xl border border-white/8 bg-[#111] p-5" data-tour="progress-phases">
         <p className="text-[17px] font-bold mb-1">Phases</p>
         <p className="text-[14px] text-white/40 mb-4">Straight from the line items on this contract.</p>
 

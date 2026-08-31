@@ -116,7 +116,7 @@ export default function JobLogPanel({ estimateId }: { estimateId: string }) {
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-3 gap-2 mb-4" data-tour="log-buttons">
         {TYPES.map((t) => {
           const Icon = t.icon;
           return (
@@ -185,7 +185,7 @@ export default function JobLogPanel({ estimateId }: { estimateId: string }) {
           <p className="text-[13px] text-white/30 mb-2">
             {unreported} {unreported === 1 ? 'entry' : 'entries'} will go in the next report
           </p>
-          <div className="space-y-2">
+          <div className="space-y-2" data-tour="log-entries">
             {entries.slice(0, 25).map((e) => {
               const m = META(e.type);
               const Icon = m.icon;
