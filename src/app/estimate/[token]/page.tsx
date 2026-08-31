@@ -6,7 +6,7 @@ import SignaturePad from '@/components/public/SignaturePad';
 import {
   useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp, ShineStyles,
   ProgressSection, StorySection, SitePhotos, DocumentsSection,
-  ChangeOrders, AskSection, BalanceDue,
+  ChangeOrders, AskSection, BalanceDue, CompletionCard, WarrantyCard, FeedbackCard,
   type PublicOptionGroup,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
@@ -75,6 +75,11 @@ interface EstimateData {
   messages?: { author: string; author_name: string | null; body: string; created_at: string }[];
   balance_due?: number;
   pay_href?: string | null;
+  completed_at?: string | null;
+  completion_note?: string | null;
+  warranty_months?: number | null;
+  warranty_notes?: string | null;
+  feedback_rating?: number | null;
   progress?: {
     percent: number;
     phases: { phase: string; percent: number }[];
@@ -516,6 +521,23 @@ export default function PublicEstimatePage() {
           />
         )}
 
+        {/* ─── Finished: the news, then what we stand behind ─── */}
+        {estimate.completed_at && (
+          <CompletionCard
+            completedAt={estimate.completed_at}
+            note={estimate.completion_note || null}
+            phases={estimate.progress?.phases || []}
+          />
+        )}
+
+        {estimate.completed_at && (
+          <WarrantyCard
+            months={estimate.warranty_months ?? null}
+            notes={estimate.warranty_notes || null}
+            completedAt={estimate.completed_at}
+          />
+        )}
+
         {/* ─── Anything waiting on them comes first ─── */}
         {estimate.change_orders && estimate.change_orders.length > 0 && (
           <ChangeOrders token={token} orders={estimate.change_orders} onDone={reload} />
@@ -540,6 +562,10 @@ export default function PublicEstimatePage() {
 
         {(estimate.stage === 'in_progress' || estimate.stage === 'complete' || estimate.stage === 'signed') && (
           <AskSection token={token} messages={estimate.messages || []} onSent={reload} />
+        )}
+
+        {estimate.completed_at && (
+          <FeedbackCard token={token} existingRating={estimate.feedback_rating ?? null} />
         )}
 
         {/* Once work is running, the contract itself is reference material —

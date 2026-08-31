@@ -1,7 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, CalendarClock, Wallet, CheckCircle2, AlertTriangle, Plus, X, Trash2 } from 'lucide-react';
+import {
+  Loader2, CalendarClock, Wallet, CheckCircle2, AlertTriangle, Plus, X, Trash2,
+  PartyPopper, ShieldCheck, RotateCcw,
+} from 'lucide-react';
 import {
   SCHEDULE_META, BUDGET_META, STATUS_REASONS, cadenceLabel,
   type ScheduleStatus, type BudgetStatus,
@@ -26,18 +29,33 @@ const STEPS = [0, 25, 50, 75, 100];
 
 export default function ProgressPanel({ estimateId }: { estimateId: string }) {
   const [data, setData] = useState<Data | null>(null);
+  const [job, setJob] = useState<{ completed_at: string | null; completion_note: string | null; warranty_months: number | null; warranty_notes: string | null }>(
+    { completed_at: null, completion_note: null, warranty_months: null, warranty_notes: null },
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [adding, setAdding] = useState(false);
   const [newPhase, setNewPhase] = useState('');
   const [newWeight, setNewWeight] = useState('');
+  const [closing, setClosing] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/estimates/' + estimateId + '/progress');
       const d = await res.json();
       if (!d.error) { setData(d); setNote(d.status_note || ''); }
+
+      // Completion lives on the estimate itself, not on progress.
+      const est = await fetch('/api/admin/estimates/' + estimateId).then((r) => r.json()).catch(() => null);
+      if (est && !est.error) {
+        setJob({
+          completed_at: est.completed_at || null,
+          completion_note: est.completion_note || null,
+          warranty_months: est.warranty_months ?? null,
+          warranty_notes: est.warranty_notes || null,
+        });
+      }
     } catch { /* keep last */ }
     setLoading(false);
   }, [estimateId]);
@@ -210,6 +228,15 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
         )}
       </div>
 
+      {closing && (
+        <CloseOutSheet
+          estimateId={estimateId}
+          existing={job}
+          onClose={() => setClosing(false)}
+          onDone={() => { setClosing(false); load(); }}
+        />
+      )}
+
       {/* ── Phases ── */}
       <div className="rounded-2xl border border-white/8 bg-[#111] p-5" data-tour="progress-phases">
         <p className="text-[17px] font-bold mb-1">Phases</p>
@@ -268,6 +295,32 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
           ))}
         </div>
 
+        {data.percent >= 100 && !job.completed_at && (
+          <button onClick={() => setClosing(true)}
+            className="w-full min-h-[56px] mt-4 rounded-xl text-[17px] font-bold text-black flex items-center justify-center gap-2 active:scale-[0.99]"
+            style={{ background: 'linear-gradient(145deg, #35d07f, #22b168)', boxShadow: '0 4px 18px rgba(53,208,127,0.3)' }}>
+            <PartyPopper size={19} /> Close This Job Out
+          </button>
+        )}
+
+        {job.completed_at && (
+          <div className="mt-4 rounded-xl p-4"
+            style={{ background: 'rgba(53,208,127,0.08)', border: '1px solid rgba(53,208,127,0.28)' }}>
+            <p className="text-[16px] font-bold flex items-center gap-2" style={{ color: '#35d07f' }}>
+              <CheckCircle2 size={17} /> Closed out {new Date(job.completed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            </p>
+            {!!job.warranty_months && (
+              <p className="text-[15px] text-white/50 mt-1 flex items-center gap-1.5">
+                <ShieldCheck size={14} /> {job.warranty_months}-month warranty showing on the customer&rsquo;s page
+              </p>
+            )}
+            <button onClick={() => setClosing(true)}
+              className="text-[15px] font-semibold mt-2.5 min-h-[44px]" style={{ color: '#D4B965' }}>
+              Edit or reopen
+            </button>
+          </div>
+        )}
+
         {adding ? (
           <div className="mt-4 rounded-xl border border-white/10 bg-white/3 p-3.5">
             <div className="flex items-center justify-between mb-2.5">
@@ -302,6 +355,109 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
             <Plus size={18} /> Add a Phase
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+
+/* ── Closing a job out ────────────────────────────────────────────
+   The completion date, the warranty JR stands behind, and a closing word —
+   all of which land on the customer's link as the record of the job. */
+function CloseOutSheet({ estimateId, existing, onClose, onDone }: {
+  estimateId: string;
+  existing: { completed_at: string | null; completion_note: string | null; warranty_months: number | null; warranty_notes: string | null };
+  onClose: () => void; onDone: () => void;
+}) {
+  const [date, setDate] = useState(
+    existing.completed_at ? existing.completed_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+  );
+  const [months, setMonths] = useState(String(existing.warranty_months ?? 12));
+  const [warrantyNotes, setWarrantyNotes] = useState(
+    existing.warranty_notes
+      || 'Covers our workmanship on the work described in this contract. It does not cover damage caused by others, normal settlement, or work outside our scope.',
+  );
+  const [note, setNote] = useState(existing.completion_note || '');
+  const [busy, setBusy] = useState<'save' | 'reopen' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const send = async (payload: any, mode: 'save' | 'reopen') => {
+    setBusy(mode); setError(null);
+    try {
+      const res = await fetch('/api/admin/estimates/' + estimateId + '/complete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+      });
+      const d = await res.json();
+      if (d.error) { setError(d.error); setBusy(null); return; }
+      onDone();
+    } catch { setError('Could not save that'); }
+    setBusy(null);
+  };
+
+  const inputCls = 'w-full min-h-[52px] px-4 rounded-xl bg-white/5 border border-white/10 text-[17px] placeholder:text-white/25 focus:outline-none focus:border-[#C9A84C]/50';
+  const labelCls = 'block text-[14px] font-semibold text-white/50 uppercase tracking-wide mb-1.5';
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center sm:justify-center">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-[#121212] border-t sm:border border-white/10 p-5"
+        style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
+        <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4 sm:hidden" />
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-[20px] font-bold">Close the job out</h2>
+          <button onClick={onClose} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5">
+            <X size={20} className="text-white/60" />
+          </button>
+        </div>
+        <p className="text-[14px] text-white/40 mb-5">
+          This turns their link into the record of the finished job &mdash; and asks them how it went.
+        </p>
+
+        <label className={labelCls}>Date finished</label>
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls + ' mb-4'} />
+
+        <label className={labelCls}>Warranty (months)</label>
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {['6', '12', '24', ''].map((m) => (
+            <button key={m || 'none'} onClick={() => setMonths(m)}
+              className="min-h-[48px] rounded-xl text-[15px] font-bold active:scale-95"
+              style={months === m
+                ? { background: 'rgba(201,168,76,0.18)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.45)' }
+                : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              {m || 'None'}
+            </button>
+          ))}
+        </div>
+
+        <label className={labelCls}>What the warranty covers</label>
+        <textarea value={warrantyNotes} onChange={(e) => setWarrantyNotes(e.target.value)} rows={3}
+          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-[16px] leading-relaxed focus:outline-none focus:border-[#C9A84C]/50 mb-4" />
+
+        <label className={labelCls}>A closing word (optional)</label>
+        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3}
+          placeholder="Thanks for having us out — the drive is back to grade and the line is tested and in service."
+          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-[16px] leading-relaxed placeholder:text-white/25 focus:outline-none focus:border-[#C9A84C]/50 mb-4" />
+
+        {error && <p className="text-[15px] text-[#f87171] mb-3">{error}</p>}
+
+        <button onClick={() => send({ completed_at: date, warranty_months: months, warranty_notes: warrantyNotes, completion_note: note }, 'save')}
+          disabled={busy !== null}
+          className="w-full min-h-[56px] rounded-xl text-[17px] font-bold text-black disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.99]"
+          style={{ background: 'linear-gradient(145deg, #35d07f, #22b168)' }}>
+          {busy === 'save' ? <Loader2 size={20} className="animate-spin" /> : <PartyPopper size={19} />}
+          {existing.completed_at ? 'Save changes' : 'Mark it complete'}
+        </button>
+
+        {existing.completed_at && (
+          <button onClick={() => send({ reopen: true }, 'reopen')} disabled={busy !== null}
+            className="w-full min-h-[48px] mt-2.5 rounded-xl text-[15px] font-semibold flex items-center justify-center gap-2 text-white/45 active:scale-[0.99]">
+            {busy === 'reopen' ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={15} />} Reopen the job
+          </button>
+        )}
+
+        <p className="text-[13px] text-white/30 text-center mt-3">
+          Any phase not at 100% is finished off when you mark it complete.
+        </p>
       </div>
     </div>
   );

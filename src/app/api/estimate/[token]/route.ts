@@ -77,6 +77,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     let messages: any[] = [];
     let balanceDue = 0;
     let payHref: string | null = null;
+    let feedbackRating: number | null = null;
 
     // Live job progress — only once the customer has signed and JR has actually
     // set a phase. Percentages only: his schedule/budget flags stay internal.
@@ -104,7 +105,16 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     }
 
     if (running) {
-      stage = progress ? (progress.percent >= 100 ? 'complete' : 'in_progress') : 'signed';
+      // Complete is JR's call — he closes it out. A bar reaching 100% shows
+      // complete too, but the warranty and the "how did we do" only appear
+      // once he's actually signed the job off.
+      stage = estimate.completed_at
+        ? 'complete'
+        : progress ? (progress.percent >= 100 ? 'complete' : 'in_progress') : 'signed';
+
+      const { data: fb } = await supabase
+        .from('project_feedback').select('rating').eq('estimate_id', estimate.id).maybeSingle();
+      feedbackRating = fb?.rating ?? null;
 
       // What happened, in JR's words. Only entries he's left switched on —
       // the ON/OFF on each log entry is exactly this decision.
@@ -200,6 +210,11 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       messages,
       balance_due: Math.round(balanceDue),
       pay_href: payHref,
+      completed_at: estimate.completed_at || null,
+      completion_note: estimate.completion_note || null,
+      warranty_months: estimate.warranty_months ?? null,
+      warranty_notes: estimate.warranty_notes || null,
+      feedback_rating: feedbackRating,
       selections_total,
       final_total: Number(estimate.total) + selections_total,
     });

@@ -5,7 +5,7 @@ import NumberFlow from '@number-flow/react';
 import {
   CheckCircle2, Check, Loader2, PenLine, CloudRain, Hammer, Flag, ClipboardCheck,
   AlertTriangle, Camera, X, FileText, Receipt, ChevronRight,
-  FilePlus2, MessageCircle, Send, CreditCard,
+  FilePlus2, MessageCircle, Send, CreditCard, ShieldCheck, Star, PartyPopper,
 } from 'lucide-react';
 
 /**
@@ -960,6 +960,176 @@ export function BalanceDue({ amount, href }: { amount: number; href: string | nu
           </a>
         )}
       </div>
+    </section>
+  );
+}
+
+
+/* ── The job is finished ──────────────────────────────────────── */
+export function CompletionCard({ completedAt, note, phases }: {
+  completedAt: string; note: string | null; phases: { phase: string; percent: number }[];
+}) {
+  const when = new Date(completedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  return (
+    <section className="rounded-2xl border p-5 sm:p-6"
+      style={{ background: '#e8f8f0', borderColor: '#b5e6cd' }}>
+      <div className="flex items-start gap-3">
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+          style={{ background: 'rgba(24,122,75,0.12)' }}>
+          <PartyPopper size={24} style={{ color: '#187a4b' }} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[13px] font-bold uppercase tracking-wide" style={{ color: '#187a4b' }}>
+            Finished
+          </p>
+          <h2 className="text-[24px] font-bold text-[#1a1a1a] leading-tight">Your project is complete</h2>
+          <p className="text-[16px] text-[#4a6b5a] mt-0.5">Work completed {when}</p>
+        </div>
+      </div>
+
+      {note && (
+        <p className="text-[17px] text-[#2a4a3a] leading-relaxed mt-4 whitespace-pre-line">{note}</p>
+      )}
+
+      {phases.length > 0 && (
+        <div className="doc-rows mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-1.5">
+          {phases.map((p) => (
+            <div key={p.phase} className="flex items-center gap-2 text-[16px] text-[#2a4a3a]">
+              <CheckCircle2 size={16} style={{ color: '#187a4b' }} className="shrink-0" />
+              {p.phase}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ── What we stand behind ─────────────────────────────────────── */
+export function WarrantyCard({ months, notes, completedAt }: {
+  months: number | null; notes: string | null; completedAt: string | null;
+}) {
+  if (!months && !notes) return null;
+  const until = months && completedAt
+    ? new Date(new Date(completedAt).setMonth(new Date(completedAt).getMonth() + months))
+      .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : null;
+
+  return (
+    <section className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-3 flex items-center gap-1.5" style={{ color: '#8a6d20' }}>
+        <ShieldCheck size={15} /> Your Warranty
+      </p>
+      {months ? (
+        <p className="text-[19px] font-bold text-[#1a1a1a] mb-1">
+          {months} month{months === 1 ? '' : 's'} on our workmanship
+        </p>
+      ) : null}
+      {until && <p className="text-[16px] text-[#6b7280] mb-3">Covered through {until}</p>}
+      {notes && <p className="text-[17px] text-[#2a2a2a] leading-relaxed whitespace-pre-line">{notes}</p>}
+      <p className="text-[16px] text-[#4a4a4a] leading-relaxed mt-3">
+        Something not right? Call <a href="tel:+18643040139" className="font-bold" style={{ color: '#8a6d20' }}>(864) 304-0139</a> and
+        we&rsquo;ll come look at it.
+      </p>
+    </section>
+  );
+}
+
+/* ── How did we do ────────────────────────────────────────────────
+   Four or five stars gets pointed at a public review. Anything lower goes
+   to the owner instead — a customer who was let down should reach a person,
+   not a review form. */
+export function FeedbackCard({ token, existingRating, reviewUrl }: {
+  token: string; existingRating: number | null; reviewUrl?: string;
+}) {
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comment, setComment] = useState('');
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const done = existingRating != null || sent != null;
+  const finalRating = sent ?? existingRating ?? 0;
+
+  const submit = async () => {
+    if (!rating) { setError('Tap a star rating first'); return; }
+    setBusy(true); setError(null);
+    try {
+      const res = await fetch('/api/estimate/' + token + '/feedback', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating, comment: comment.trim(), name: name.trim() }),
+      });
+      const d = await res.json();
+      if (d.error) setError(d.error);
+      else setSent(rating);
+    } catch { setError('Could not send that — please call us.'); }
+    setBusy(false);
+  };
+
+  return (
+    <section className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-3" style={{ color: '#8a6d20' }}>
+        How Did We Do?
+      </p>
+
+      <div className="flex items-center gap-1.5 mb-4">
+        {[1, 2, 3, 4, 5].map((i) => {
+          const lit = done ? i <= finalRating : i <= (hover || rating);
+          return (
+            <button key={i} disabled={done}
+              onClick={() => { setRating(i); setError(null); }}
+              onMouseEnter={() => !done && setHover(i)}
+              onMouseLeave={() => !done && setHover(0)}
+              aria-label={`${i} star${i === 1 ? '' : 's'}`}
+              className="p-1 disabled:cursor-default active:scale-90 transition-transform">
+              <Star size={32} className={lit ? 'fill-[#C9A84C] text-[#C9A84C]' : 'text-gray-200'} />
+            </button>
+          );
+        })}
+      </div>
+
+      {done ? (
+        finalRating >= 4 ? (
+          <div>
+            <p className="text-[17px] text-[#2a2a2a] mb-3">
+              Thank you — that genuinely means a lot to the crew.
+            </p>
+            {reviewUrl ? (
+              <a href={reviewUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 min-h-[52px] px-6 rounded-xl text-black text-[16px] font-bold"
+                style={{ background: '#C9A84C' }}>
+                <Star size={18} /> Share it in a Google review
+              </a>
+            ) : (
+              <p className="text-[16px] text-[#6b7280]">
+                If you know someone who needs dirt moved or utilities run — pass our name along.
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-[17px] text-[#2a2a2a] leading-relaxed">
+            Thank you for the honesty. This goes straight to the owner, and you may hear from
+            us so we can put it right.
+          </p>
+        )
+      ) : (
+        <>
+          <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3}
+            placeholder="Anything you want to tell us (optional)"
+            className="w-full px-4 py-3 rounded-xl border text-[17px] leading-relaxed mb-2.5"
+            style={{ borderColor: '#e5e0d3' }} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name (optional)"
+            className="w-full min-h-[50px] px-4 rounded-xl border text-[16px] mb-3" style={{ borderColor: '#e5e0d3' }} />
+          {error && <p className="text-[15px] mb-2" style={{ color: '#c2410c' }}>{error}</p>}
+          <button onClick={submit} disabled={busy}
+            className="w-full min-h-[52px] rounded-xl text-[16px] font-bold text-black disabled:opacity-40 flex items-center justify-center gap-2"
+            style={{ background: '#C9A84C' }}>
+            {busy ? <Loader2 size={18} className="animate-spin" /> : <Star size={17} />} Send
+          </button>
+        </>
+      )}
     </section>
   );
 }
