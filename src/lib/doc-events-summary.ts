@@ -110,7 +110,9 @@ export function eventSentence(e: DocEventRow): string {
     case 'signed': return `Signed${e.meta?.signed_name ? ` as ${e.meta.signed_name}` : ''}`;
     case 'email_sent': return `Emailed to ${e.meta?.to || 'customer'}`;
     case 'email_delivered': return 'Email delivered';
-    case 'email_opened': return 'Email opened';
+    case 'email_opened': return e.meta?.automated
+      ? 'Email opened (automatic — mail scanner, not the customer)'
+      : 'Email opened';
     case 'email_clicked': return 'Clicked the link in the email';
     case 'email_bounced': return 'Email bounced';
     default: return e.event.replace(/_/g, ' ');

@@ -90,6 +90,18 @@ export function describeVisitor(req: Request, existingVisitorId?: string | null)
   };
 }
 
+/**
+ * A stable id for a visitor with no cookie yet. The cookie is issued in the
+ * response, so a page that fires two requests back-to-back would otherwise
+ * mint two ids and look like two people. Derived from IP + device instead.
+ */
+export function fallbackVisitorId(v: Visitor): string | null {
+  if (!v.ip_hash) return null;
+  return 'ip' + crypto.createHash('sha256')
+    .update(v.ip_hash + '|' + v.device_type + '|' + v.os + '|' + v.browser)
+    .digest('hex').slice(0, 22);
+}
+
 /** Read the visitor cookie, minting one if absent. Returns {id, isNew}. */
 export function visitorFromCookies(): { id: string; isNew: boolean } {
   try {
@@ -105,10 +117,36 @@ export function visitorCookie(id: string): string {
   return `${VISITOR_COOKIE}=${id}; Path=/; Max-Age=${60 * 60 * 24 * 365}; SameSite=Lax; Secure; HttpOnly`;
 }
 
+/**
+ * Mail providers and security scanners fetch the tracking pixel on their own —
+ * Apple Mail Privacy Protection does it for every message, corporate filters
+ * do it before the recipient ever sees the mail. An "open" seconds after
+ * delivery, or a burst of them, is a machine, not a customer.
+ */
+export const AUTO_OPEN_WINDOW_MS = 120_000;
+
+/**
+ * Cities that are data centres rather than places a customer sits. A link
+ * scanner resolving to "San Jose, CA" told JR his Upstate customer was in
+ * California. Better to show nothing than something false.
+ */
+const DATACENTER_CITIES = new Set([
+  'san jose', 'ashburn', 'boardman', 'the dalles', 'council bluffs', 'des moines',
+  'columbus', 'dublin', 'san francisco', 'seattle', 'santa clara', 'mountain view',
+  'redmond', 'quincy', 'omaha', 'cheyenne', 'kansas city', 'north bergen',
+  'secaucus', 'sterling', 'chantilly', 'reston', 'amsterdam', 'frankfurt',
+]);
+
+export function looksLikeDatacenter(v: { city?: string | null }): boolean {
+  return !!v.city && DATACENTER_CITIES.has(v.city.trim().toLowerCase());
+}
+
 export function describeDevice(v: { device_type?: string | null; os?: string | null; browser?: string | null }): string {
   return [v.device_type, v.os, v.browser].filter(Boolean).join(' · ');
 }
 export function describeLocation(v: { city?: string | null; region?: string | null; country?: string | null }): string {
+  // A data-centre city is the scanner's location, not the customer's.
+  if (looksLikeDatacenter(v)) return '';
   const parts = [v.city, v.region].filter(Boolean);
   if (!parts.length) return v.country || '';
   return v.country && v.country !== 'US' ? `${parts.join(', ')} ${v.country}` : parts.join(', ');
@@ -147,6 +185,48 @@ export async function recordDocumentEvent(args: RecordArgs): Promise<RecordResul
       internal = !!user;
     }
 
+    // The caller mints a visitor id even on a first visit, so two requests made
+    // before the cookie comes back would look like two people. If the request
+    // carried no cookie, key off IP + device instead.
+    const hadCookie = /(?:^|;\s*)ro_vid=/.test(req.headers.get('cookie') || '');
+    if (!hadCookie) visitor.visitor_id = fallbackVisitorId(visitor) || visitor.visitor_id;
+
+    // The same event landing twice within a few seconds is one action —
+    // a double-fired click, a retried beacon, a scanner hitting the pixel twice.
+    const DEDUPE_MS = 6000;
+    let dupeQuery = supabase
+      .from('document_events')
+      .select('id, created_at')
+      .eq('doc_id', doc.id)
+      .eq('event', event)
+      .gte('created_at', new Date(Date.now() - DEDUPE_MS).toISOString());
+    // Scope to this visitor so two different people opening at the same moment
+    // still count as two. Email events carry no visitor, so they dedupe on the
+    // document alone — which is exactly the pixel-fired-twice case.
+    if (visitor.visitor_id) dupeQuery = dupeQuery.eq('visitor_id', visitor.visitor_id);
+    const { data: recent } = await dupeQuery.limit(1);
+    if (recent && recent.length) {
+      return { internal, visitor, isFirstView: false };
+    }
+
+    // An "open" within two minutes of delivery is the mail provider, not a
+    // person. Recorded, but never counted or shown as a customer action.
+    let automated = false;
+    if (event === 'email_opened') {
+      const { data: delivered } = await supabase
+        .from('document_events')
+        .select('created_at')
+        .eq('doc_id', doc.id)
+        .eq('event', 'email_delivered')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const at = delivered?.[0]?.created_at ? new Date(delivered[0].created_at).getTime() : 0;
+      if (at && Date.now() - at < AUTO_OPEN_WINDOW_MS) automated = true;
+    }
+    // A data-centre city (VPN, corporate egress, link scanner) means we cannot
+    // say where they are — it does NOT mean it was not a person. Suppress the
+    // location, keep the view. describeLocation() already returns empty here.
+
     const h = req.headers;
     const geoExtra: Record<string, string> = {};
     for (const [k, name] of [['cf-postal-code', 'postal_code'], ['cf-metro-code', 'metro_code'], ['cf-timezone', 'timezone'], ['cf-region', 'region_name']] as const) {
@@ -159,10 +239,14 @@ export async function recordDocumentEvent(args: RecordArgs): Promise<RecordResul
       city: visitor.city, region: visitor.region, country: visitor.country,
       latitude: visitor.latitude, longitude: visitor.longitude,
       ip_hash: visitor.ip_hash, referrer: visitor.referrer, user_agent: visitor.user_agent,
-      meta: { ...(args.meta || {}), ...(Object.keys(geoExtra).length ? { geo: geoExtra } : {}) },
+      meta: {
+        ...(args.meta || {}),
+        ...(Object.keys(geoExtra).length ? { geo: geoExtra } : {}),
+        ...(automated ? { automated: true } : {}),
+      },
     });
 
-    if (internal) return { internal, visitor, isFirstView: false };
+    if (internal || automated) return { internal, visitor, isFirstView: false };
 
     const table = docType === 'estimate' ? 'estimates' : 'invoices';
     const isView = event === 'link_view';
