@@ -64,6 +64,16 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       ...safeEstimate
     } = estimate;
 
+    /* ── The living project ─────────────────────────────────────
+       Before signing this is a proposal. After signing it becomes the place
+       the customer follows their job: how far along, what happened when,
+       photos from site, and every document in one spot. One link, whole job. */
+    const running = !!estimate.signed_at;
+    let stage: 'proposal' | 'signed' | 'in_progress' | 'complete' = 'proposal';
+    let story: any[] = [];
+    let sitePhotos: any[] = [];
+    let documents: any[] = [];
+
     // Live job progress — only once the customer has signed and JR has actually
     // set a phase. Percentages only: his schedule/budget flags stay internal.
     let progress: any = null;
@@ -89,6 +99,67 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       }
     }
 
+    if (running) {
+      stage = progress ? (progress.percent >= 100 ? 'complete' : 'in_progress') : 'signed';
+
+      // What happened, in JR's words. Only entries he's left switched on —
+      // the ON/OFF on each log entry is exactly this decision.
+      const { data: logRows } = await supabase
+        .from('job_log_entries')
+        .select('entry_date, type, text')
+        .eq('estimate_id', estimate.id)
+        .eq('include_in_report', true)
+        .order('entry_date', { ascending: false })
+        .limit(40);
+      story = (logRows || []).map((e) => ({
+        entry_date: e.entry_date,
+        type: e.type,
+        text: e.text || (e.type === 'rain' ? null : ''),
+      }));
+
+      // Jobsite photos already attached to the job.
+      sitePhotos = Array.isArray(estimate.photos)
+        ? (estimate.photos as any[]).slice(-12).reverse().map((ph) => ({
+            url: ph.url, caption: ph.caption || null,
+          }))
+        : [];
+
+      // Their paperwork, in one place: every report sent, every invoice raised.
+      const [reportsRes, invoicesRes] = await Promise.all([
+        supabase.from('progress_reports')
+          .select('share_token, period_end, percent, sent_at')
+          .eq('estimate_id', estimate.id).eq('status', 'sent')
+          .order('period_end', { ascending: false }),
+        supabase.from('invoices')
+          .select('invoice_number, total, amount_paid, status, due_date, share_token, link_enabled')
+          .eq('estimate_id', estimate.id).neq('status', 'draft').neq('status', 'cancelled')
+          .order('created_at', { ascending: false }),
+      ]);
+
+      for (const r of reportsRes.data || []) {
+        documents.push({
+          kind: 'report',
+          title: 'Progress report',
+          date: r.period_end,
+          detail: `${r.percent}% complete`,
+          href: r.share_token ? `/r/${r.share_token}` : null,
+        });
+      }
+      for (const inv of invoicesRes.data || []) {
+        const balance = Number(inv.total || 0) - Number(inv.amount_paid || 0);
+        documents.push({
+          kind: 'invoice',
+          title: `Invoice ${inv.invoice_number}`,
+          date: inv.due_date,
+          detail: inv.status === 'paid'
+            ? 'Paid in full'
+            : balance > 0 ? `$${Math.round(balance).toLocaleString()} due` : 'Issued',
+          paid: inv.status === 'paid',
+          href: inv.share_token && inv.link_enabled ? `/i/${inv.share_token}` : null,
+        });
+      }
+    }
+
     const options = await getOptionsWithChoices(supabase, estimate.id);
     const selections_total = estimate.options_materialized_at ? 0 : selectionsDelta(options);
 
@@ -98,7 +169,11 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       payment_schedule: paymentSchedule || [],
       disclaimers: disclaimerResult?.data || [],
       options,
+      stage,
       progress,
+      story,
+      site_photos: sitePhotos,
+      documents,
       selections_total,
       final_total: Number(estimate.total) + selections_total,
     });

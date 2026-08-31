@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import NumberFlow from '@number-flow/react';
-import { CheckCircle2, Check, Loader2, PenLine } from 'lucide-react';
+import {
+  CheckCircle2, Check, Loader2, PenLine, CloudRain, Hammer, Flag, ClipboardCheck,
+  AlertTriangle, Camera, X, FileText, Receipt, ChevronRight,
+} from 'lucide-react';
 
 /**
  * DocExperience v2 — the animated layer of the customer document links.
@@ -574,6 +577,151 @@ export function ProgressSection({ progress, docWord }: {
           </p>
         )}
         {updated && <p className="text-[14px] text-[#9ca3af]">Updated {updated}</p>}
+      </div>
+    </section>
+  );
+}
+
+/* ── The living project: what happened, in order ──────────────────
+   Straight from JR's job log — only the entries he's left switched on. */
+export function StorySection({ story }: {
+  story: { entry_date: string; type: string; text: string | null }[];
+}) {
+  const [showAll, setShowAll] = useState(false);
+  if (!story.length) return null;
+
+  const shown = showAll ? story : story.slice(0, 6);
+  const icon = (t: string) =>
+    t === 'rain' ? CloudRain : t === 'milestone' ? Flag : t === 'inspection' ? ClipboardCheck
+      : t === 'delay' ? AlertTriangle : Hammer;
+  const color = (t: string) =>
+    t === 'rain' ? '#5ba3dc' : t === 'milestone' ? '#187a4b' : t === 'inspection' ? '#7c5cd6'
+      : t === 'delay' ? '#c2410c' : '#8a6d20';
+
+  const day = (d: string) =>
+    new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  return (
+    <section className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-4" style={{ color: '#8a6d20' }}>
+        What&rsquo;s Been Happening
+      </p>
+
+      <div className="doc-rows space-y-4">
+        {shown.map((e, i) => {
+          const Icon = icon(e.type);
+          return (
+            <div key={i} className="flex gap-3">
+              <div className="flex flex-col items-center shrink-0">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center"
+                  style={{ background: color(e.type) + '15', border: '1px solid ' + color(e.type) + '35' }}>
+                  <Icon size={16} style={{ color: color(e.type) }} />
+                </div>
+                {i < shown.length - 1 && <div className="w-px flex-1 mt-1" style={{ background: '#f0ece2' }} />}
+              </div>
+              <div className="min-w-0 pb-1">
+                <p className="text-[14px] text-[#9ca3af]">{day(e.entry_date)}</p>
+                <p className="text-[17px] text-[#2a2a2a] leading-snug">
+                  {e.text || (e.type === 'rain' ? 'Rained out — no work on site.' : '')}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {story.length > 6 && (
+        <button onClick={() => setShowAll((v) => !v)}
+          className="mt-4 min-h-[48px] px-4 rounded-xl text-[15px] font-bold"
+          style={{ background: '#fdf6e7', color: '#8a6d20', border: '1px solid #ead9ac' }}>
+          {showAll ? 'Show less' : `Show all ${story.length} days`}
+        </button>
+      )}
+    </section>
+  );
+}
+
+/* ── Photos from site ─────────────────────────────────────────── */
+export function SitePhotos({ photos }: { photos: { url: string; caption?: string | null }[] }) {
+  const [open, setOpen] = useState<string | null>(null);
+  if (!photos.length) return null;
+  const src = (u: string, w: number) => (u.includes('cdn.sanity.io') ? `${u}?w=${w}&auto=format` : u);
+
+  return (
+    <section className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-3 flex items-center gap-1.5" style={{ color: '#8a6d20' }}>
+        <Camera size={14} /> From the Jobsite
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        {photos.map((p, i) => (
+          <button key={i} onClick={() => setOpen(p.url)}
+            className="rounded-xl overflow-hidden border active:scale-95 transition-transform"
+            style={{ borderColor: '#f0ece2' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={src(p.url, 500)} alt={p.caption || 'Jobsite photo'} loading="lazy"
+              className="w-full h-32 sm:h-36 object-cover" />
+          </button>
+        ))}
+      </div>
+
+      {open && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/85"
+          onClick={() => setOpen(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src(open, 1400)} alt="Jobsite photo" className="max-w-full max-h-full rounded-xl" />
+          <button onClick={() => setOpen(null)}
+            className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/15 flex items-center justify-center">
+            <X size={22} className="text-white" />
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ── Everything to do with this job, in one place ─────────────── */
+export function DocumentsSection({ documents }: {
+  documents: { kind: string; title: string; date: string | null; detail: string; href: string | null; paid?: boolean }[];
+}) {
+  if (!documents.length) return null;
+  const when = (d: string | null) =>
+    d ? new Date(d.length === 10 ? d + 'T00:00:00' : d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+  return (
+    <section className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-3" style={{ color: '#8a6d20' }}>
+        Your Paperwork
+      </p>
+      <div className="doc-rows space-y-2">
+        {documents.map((d, i) => {
+          const Icon = d.kind === 'invoice' ? Receipt : FileText;
+          const body = (
+            <>
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: d.kind === 'invoice' ? '#e8f8f0' : '#fdf6e7' }}>
+                <Icon size={18} style={{ color: d.kind === 'invoice' ? '#187a4b' : '#8a6d20' }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[17px] font-semibold text-[#2a2a2a] truncate">{d.title}</p>
+                <p className="text-[14px] text-[#6b7280]">
+                  {[when(d.date), d.detail].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+              {d.href && <ChevronRight size={18} className="text-[#c9c3b5] shrink-0" />}
+            </>
+          );
+          return d.href ? (
+            <a key={i} href={d.href}
+              className="flex items-center gap-3 rounded-xl p-3 border transition-colors"
+              style={{ borderColor: '#f0ece2' }}>
+              {body}
+            </a>
+          ) : (
+            <div key={i} className="flex items-center gap-3 rounded-xl p-3 border" style={{ borderColor: '#f0ece2' }}>
+              {body}
+            </div>
+          );
+        })}
       </div>
     </section>
   );

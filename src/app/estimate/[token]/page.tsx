@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import SignaturePad from '@/components/public/SignaturePad';
 import {
   useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp, ShineStyles,
-  ProgressSection,
+  ProgressSection, StorySection, SitePhotos, DocumentsSection,
   type PublicOptionGroup,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
@@ -62,6 +62,10 @@ interface EstimateData {
   scope_of_work: string | null;
   photos: { url: string; caption?: string }[] | null;
   signed_at?: string | null;
+  stage?: 'proposal' | 'signed' | 'in_progress' | 'complete';
+  story?: { entry_date: string; type: string; text: string | null }[];
+  site_photos?: { url: string; caption?: string | null }[];
+  documents?: { kind: string; title: string; date: string | null; detail: string; href: string | null; paid?: boolean }[];
   progress?: {
     percent: number;
     phases: { phase: string; percent: number }[];
@@ -475,8 +479,14 @@ export default function PublicEstimatePage() {
         {(() => {
           const signed = !!estimate.signed_at;
           const accepted = estimate.status === 'accepted';
-          const b = signed || accepted
-            ? { bg: '#e8f8f0', border: '#b5e6cd', color: '#187a4b', text: signed ? `Accepted & signed${estimate.signed_name ? ' by ' + estimate.signed_name : ''} — thank you.` : 'Accepted — thank you.' }
+          const stage = estimate.stage;
+          const pct = estimate.progress?.percent ?? 0;
+          const b = stage === 'complete'
+            ? { bg: '#e8f8f0', border: '#b5e6cd', color: '#187a4b', text: 'Work complete — thank you for your business.' }
+            : stage === 'in_progress'
+            ? { bg: '#fdf6e7', border: '#ead9ac', color: '#8a6d20', text: `Your project is underway — ${pct}% complete. This page updates as we go.` }
+            : signed || accepted
+            ? { bg: '#e8f8f0', border: '#b5e6cd', color: '#187a4b', text: signed ? `Accepted & signed${estimate.signed_name ? ' by ' + estimate.signed_name : ''} — thank you. We'll post progress here as work starts.` : 'Accepted — thank you.' }
             : ['declined', 'expired'].includes(estimate.status)
               ? { bg: '#f3f4f6', border: '#e5e7eb', color: '#6b7280', text: 'This document is no longer open — call us at (864) 304-0139 for a current version.' }
               : { bg: '#fdf6e7', border: '#ead9ac', color: '#8a6d20', text: `${estimate.document_mode === 'contract' ? 'Contract' : 'Estimate'} ready for your review — ${fmt(estimate.total)}. Sign below when you're ready.` };
@@ -493,6 +503,27 @@ export default function PublicEstimatePage() {
             progress={estimate.progress}
             docWord={estimate.document_mode === 'contract' ? 'contract' : 'project'}
           />
+        )}
+
+        {/* ─── The living project: the story, the site, the paperwork ─── */}
+        {estimate.story && estimate.story.length > 0 && (
+          <StorySection story={estimate.story} />
+        )}
+
+        {estimate.site_photos && estimate.site_photos.length > 0 && (
+          <SitePhotos photos={estimate.site_photos} />
+        )}
+
+        {estimate.documents && estimate.documents.length > 0 && (
+          <DocumentsSection documents={estimate.documents} />
+        )}
+
+        {/* Once work is running, the contract itself is reference material —
+            say so, rather than leaving them scrolling a proposal. */}
+        {(estimate.stage === 'in_progress' || estimate.stage === 'complete') && (
+          <p className="text-[15px] text-[#9ca3af] px-1">
+            Your signed agreement and full scope of work are below for reference.
+          </p>
         )}
 
         {/* ─── Header Card ───────────────────────────────────── */}
