@@ -73,6 +73,10 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     let story: any[] = [];
     let sitePhotos: any[] = [];
     let documents: any[] = [];
+    let changeOrders: any[] = [];
+    let messages: any[] = [];
+    let balanceDue = 0;
+    let payHref: string | null = null;
 
     // Live job progress — only once the customer has signed and JR has actually
     // set a phase. Percentages only: his schedule/budget flags stay internal.
@@ -124,6 +128,20 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
           }))
         : [];
 
+      // Extra work waiting on them, and the thread of questions.
+      const [coRes, msgRes] = await Promise.all([
+        supabase.from('change_orders')
+          .select('id, number, title, description, amount, days_added, status, approved_at, approved_name')
+          .eq('estimate_id', estimate.id).neq('status', 'draft')
+          .order('created_at', { ascending: false }),
+        supabase.from('project_messages')
+          .select('author, author_name, body, created_at')
+          .eq('estimate_id', estimate.id)
+          .order('created_at', { ascending: true }).limit(60),
+      ]);
+      changeOrders = coRes.data || [];
+      messages = msgRes.data || [];
+
       // Their paperwork, in one place: every report sent, every invoice raised.
       const [reportsRes, invoicesRes] = await Promise.all([
         supabase.from('progress_reports')
@@ -147,6 +165,10 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       }
       for (const inv of invoicesRes.data || []) {
         const balance = Number(inv.total || 0) - Number(inv.amount_paid || 0);
+        if (inv.status !== 'paid' && balance > 0) balanceDue += balance;
+        if (inv.status !== 'paid' && balance > 0 && inv.share_token && inv.link_enabled && !payHref) {
+          payHref = '/i/' + inv.share_token;
+        }
         documents.push({
           kind: 'invoice',
           title: `Invoice ${inv.invoice_number}`,
@@ -174,6 +196,10 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       story,
       site_photos: sitePhotos,
       documents,
+      change_orders: changeOrders,
+      messages,
+      balance_due: Math.round(balanceDue),
+      pay_href: payHref,
       selections_total,
       final_total: Number(estimate.total) + selections_total,
     });

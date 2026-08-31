@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import SignaturePad from '@/components/public/SignaturePad';
 import {
   useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp, ShineStyles,
   ProgressSection, StorySection, SitePhotos, DocumentsSection,
+  ChangeOrders, AskSection, BalanceDue,
   type PublicOptionGroup,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
@@ -66,6 +67,14 @@ interface EstimateData {
   story?: { entry_date: string; type: string; text: string | null }[];
   site_photos?: { url: string; caption?: string | null }[];
   documents?: { kind: string; title: string; date: string | null; detail: string; href: string | null; paid?: boolean }[];
+  change_orders?: {
+    id: string; number: string | null; title: string; description: string | null;
+    amount: number; days_added: number; status: string;
+    approved_at: string | null; approved_name: string | null;
+  }[];
+  messages?: { author: string; author_name: string | null; body: string; created_at: string }[];
+  balance_due?: number;
+  pay_href?: string | null;
   progress?: {
     percent: number;
     phases: { phase: string; percent: number }[];
@@ -241,8 +250,7 @@ export default function PublicEstimatePage() {
   const [msgSending, setMsgSending] = useState(false);
   const [msgSent, setMsgSent] = useState(false);
 
-  useEffect(() => {
-    const fetchEstimate = async () => {
+  const fetchEstimate = useCallback(async () => {
       try {
         const res = await fetch(`/api/estimate/${token}`);
         if (res.status === 410) {
@@ -265,9 +273,12 @@ export default function PublicEstimatePage() {
       } finally {
         setLoading(false);
       }
-    };
-    fetchEstimate();
   }, [token]);
+
+  useEffect(() => { fetchEstimate(); }, [fetchEstimate]);
+
+  /** Pull the page fresh — after approving extra work, or asking a question. */
+  const reload = useCallback(() => { fetchEstimate(); }, [fetchEstimate]);
 
   const handlePreviewPdf = async () => {
     if (!estimate) return;
@@ -505,6 +516,15 @@ export default function PublicEstimatePage() {
           />
         )}
 
+        {/* ─── Anything waiting on them comes first ─── */}
+        {estimate.change_orders && estimate.change_orders.length > 0 && (
+          <ChangeOrders token={token} orders={estimate.change_orders} onDone={reload} />
+        )}
+
+        {!!estimate.balance_due && (
+          <BalanceDue amount={estimate.balance_due} href={estimate.pay_href || null} />
+        )}
+
         {/* ─── The living project: the story, the site, the paperwork ─── */}
         {estimate.story && estimate.story.length > 0 && (
           <StorySection story={estimate.story} />
@@ -516,6 +536,10 @@ export default function PublicEstimatePage() {
 
         {estimate.documents && estimate.documents.length > 0 && (
           <DocumentsSection documents={estimate.documents} />
+        )}
+
+        {(estimate.stage === 'in_progress' || estimate.stage === 'complete' || estimate.stage === 'signed') && (
+          <AskSection token={token} messages={estimate.messages || []} onSent={reload} />
         )}
 
         {/* Once work is running, the contract itself is reference material —

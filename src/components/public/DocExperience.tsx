@@ -5,6 +5,7 @@ import NumberFlow from '@number-flow/react';
 import {
   CheckCircle2, Check, Loader2, PenLine, CloudRain, Hammer, Flag, ClipboardCheck,
   AlertTriangle, Camera, X, FileText, Receipt, ChevronRight,
+  FilePlus2, MessageCircle, Send, CreditCard,
 } from 'lucide-react';
 
 /**
@@ -722,6 +723,242 @@ export function DocumentsSection({ documents }: {
             </div>
           );
         })}
+      </div>
+    </section>
+  );
+}
+
+
+/* ── Extra work, waiting on them ──────────────────────────────────
+   Approved on the same page they signed the contract on, so there's no
+   separate paperwork and no "reply to approve" nobody can find later. */
+export function ChangeOrders({ token, orders, onDone }: {
+  token: string;
+  orders: {
+    id: string; number: string | null; title: string; description: string | null;
+    amount: number; days_added: number; status: string;
+    approved_at: string | null; approved_name: string | null;
+  }[];
+  onDone: () => void;
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!orders.length) return null;
+  const money = (n: number) => (n >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(n)).toLocaleString();
+  const waiting = orders.filter((o) => o.status === 'sent');
+
+  const answer = async (id: string, decision: 'approve' | 'decline') => {
+    if (decision === 'approve' && !name.trim()) { setError('Please type your name to approve'); return; }
+    setBusy(true); setError(null);
+    try {
+      const res = await fetch('/api/estimate/' + token + '/change-order', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ change_order_id: id, decision, name: name.trim() }),
+      });
+      const d = await res.json();
+      if (d.error) setError(d.error);
+      else { setOpenId(null); setName(''); onDone(); }
+    } catch { setError('Something went wrong — please call us.'); }
+    setBusy(false);
+  };
+
+  return (
+    <section className="rounded-2xl border p-5 sm:p-6"
+      style={{ background: waiting.length ? '#fdf6e7' : '#fff', borderColor: waiting.length ? '#ead9ac' : '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-1 flex items-center gap-1.5" style={{ color: '#8a6d20' }}>
+        <FilePlus2 size={14} /> Extra Work
+      </p>
+      {waiting.length > 0 && (
+        <p className="text-[16px] text-[#4a4a4a] mb-4">
+          {waiting.length === 1 ? 'One item needs' : `${waiting.length} items need`} your approval before we go ahead.
+        </p>
+      )}
+
+      <div className="space-y-3">
+        {orders.map((o) => {
+          const open = openId === o.id;
+          const done = o.status === 'approved' || o.status === 'declined';
+          return (
+            <div key={o.id} className="rounded-xl border bg-white p-4" style={{ borderColor: '#f0ece2' }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[18px] font-bold text-[#1a1a1a]">{o.title}</p>
+                  {o.number && <p className="text-[13px] text-[#9ca3af]">{o.number}</p>}
+                </div>
+                <p className="text-[19px] font-bold shrink-0" style={{ color: o.amount >= 0 ? '#8a6d20' : '#187a4b' }}>
+                  {money(o.amount)}
+                </p>
+              </div>
+
+              {o.description && (
+                <p className="text-[16px] text-[#4a4a4a] leading-relaxed mt-2">{o.description}</p>
+              )}
+              {o.days_added > 0 && (
+                <p className="text-[15px] text-[#6b7280] mt-1.5">
+                  Adds about {o.days_added} day{o.days_added === 1 ? '' : 's'} to the schedule.
+                </p>
+              )}
+
+              {o.status === 'approved' && (
+                <p className="text-[15px] font-semibold mt-3" style={{ color: '#187a4b' }}>
+                  ✓ Approved{o.approved_name ? ' by ' + o.approved_name : ''}
+                </p>
+              )}
+              {o.status === 'declined' && (
+                <p className="text-[15px] font-semibold mt-3 text-[#6b7280]">Declined — we&rsquo;ll leave it out.</p>
+              )}
+
+              {!done && !open && (
+                <button onClick={() => { setOpenId(o.id); setError(null); }}
+                  className="w-full min-h-[52px] mt-3 rounded-xl text-[16px] font-bold text-black active:scale-[0.99]"
+                  style={{ background: '#C9A84C' }}>
+                  Review &amp; Approve
+                </button>
+              )}
+
+              {!done && open && (
+                <div className="mt-3">
+                  <label className="block text-[14px] font-semibold text-[#6b7280] mb-1.5">
+                    Type your name to approve
+                  </label>
+                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name"
+                    className="w-full min-h-[52px] px-4 rounded-xl border text-[17px] mb-3"
+                    style={{ borderColor: '#e5e0d3', background: '#fff' }} />
+                  {error && <p className="text-[15px] mb-2" style={{ color: '#c2410c' }}>{error}</p>}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button onClick={() => answer(o.id, 'decline')} disabled={busy}
+                      className="min-h-[52px] rounded-xl text-[16px] font-bold disabled:opacity-40"
+                      style={{ background: '#f3f4f6', color: '#6b7280' }}>
+                      No thanks
+                    </button>
+                    <button onClick={() => answer(o.id, 'approve')} disabled={busy}
+                      className="min-h-[52px] rounded-xl text-[16px] font-bold text-black disabled:opacity-40 flex items-center justify-center gap-2"
+                      style={{ background: '#C9A84C' }}>
+                      {busy ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} Approve
+                    </button>
+                  </div>
+                  <p className="text-[13px] text-[#9ca3af] mt-2">
+                    Approving adds this to your contract total.
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/* ── Ask us something ─────────────────────────────────────────── */
+export function AskSection({ token, messages, onSent }: {
+  token: string;
+  messages: { author: string; author_name: string | null; body: string; created_at: string }[];
+  onSent: () => void;
+}) {
+  const [text, setText] = useState('');
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const send = async () => {
+    if (!text.trim()) { setError('Write your question first'); return; }
+    setBusy(true); setError(null);
+    try {
+      const res = await fetch('/api/estimate/' + token + '/messages', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: text.trim(), name: name.trim() }),
+      });
+      const d = await res.json();
+      if (d.error) setError(d.error);
+      else { setText(''); setSent(true); onSent(); }
+    } catch { setError('Could not send that — please call us.'); }
+    setBusy(false);
+  };
+
+  const when = (iso: string) =>
+    new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  return (
+    <section className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-3 flex items-center gap-1.5" style={{ color: '#8a6d20' }}>
+        <MessageCircle size={14} /> Questions
+      </p>
+
+      {messages.length > 0 && (
+        <div className="doc-rows space-y-2.5 mb-4">
+          {messages.map((m, i) => (
+            <div key={i} className="rounded-xl p-3.5"
+              style={m.author === 'ro'
+                ? { background: '#fdf6e7', border: '1px solid #ead9ac' }
+                : { background: '#f7f7f5', border: '1px solid #f0ece2' }}>
+              <p className="text-[13px] font-bold mb-1" style={{ color: m.author === 'ro' ? '#8a6d20' : '#6b7280' }}>
+                {m.author === 'ro' ? 'RO Unlimited' : m.author_name || 'You'} · {when(m.created_at)}
+              </p>
+              <p className="text-[16px] text-[#2a2a2a] leading-relaxed whitespace-pre-line">{m.body}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {sent ? (
+        <div className="rounded-xl p-4" style={{ background: '#e8f8f0', border: '1px solid #b5e6cd' }}>
+          <p className="text-[16px] font-semibold" style={{ color: '#187a4b' }}>
+            Got it — we&rsquo;ll come back to you shortly.
+          </p>
+          <button onClick={() => setSent(false)} className="text-[15px] font-semibold mt-2" style={{ color: '#8a6d20' }}>
+            Ask something else
+          </button>
+        </div>
+      ) : (
+        <>
+          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3}
+            placeholder="Anything you want to know about the work…"
+            className="w-full px-4 py-3 rounded-xl border text-[17px] leading-relaxed mb-2.5"
+            style={{ borderColor: '#e5e0d3' }} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name (optional)"
+            className="w-full min-h-[50px] px-4 rounded-xl border text-[16px] mb-3" style={{ borderColor: '#e5e0d3' }} />
+          {error && <p className="text-[15px] mb-2" style={{ color: '#c2410c' }}>{error}</p>}
+          <button onClick={send} disabled={busy}
+            className="w-full min-h-[52px] rounded-xl text-[16px] font-bold text-black disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.99]"
+            style={{ background: '#C9A84C' }}>
+            {busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={17} />} Send it
+          </button>
+          <p className="text-[14px] text-[#9ca3af] text-center mt-2">
+            Or call <a href="tel:+18643040139" className="font-semibold" style={{ color: '#8a6d20' }}>(864) 304-0139</a>
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+
+/* ── What's owed, and a way to pay it ─────────────────────────── */
+export function BalanceDue({ amount, href }: { amount: number; href: string | null }) {
+  if (!amount || amount <= 0) return null;
+  return (
+    <section className="rounded-2xl border p-5 sm:p-6"
+      style={{ background: '#fff', borderColor: '#ead9ac' }}>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-[13px] font-bold uppercase tracking-wide" style={{ color: '#8a6d20' }}>
+            Balance Due
+          </p>
+          <p className="text-[32px] font-bold text-[#1a1a1a] leading-none mt-1">
+            ${Math.round(amount).toLocaleString()}
+          </p>
+        </div>
+        {href && (
+          <a href={href}
+            className="shrink-0 inline-flex items-center gap-2 min-h-[52px] px-5 rounded-xl text-[16px] font-bold text-black"
+            style={{ background: '#C9A84C' }}>
+            <CreditCard size={18} /> Pay
+          </a>
+        )}
       </div>
     </section>
   );
