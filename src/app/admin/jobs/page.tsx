@@ -6,7 +6,7 @@ import AppShell from '@/components/admin/AppShell';
 import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Loader2, HardHat, ChevronRight, AlertTriangle, FileText, CalendarClock,
-  Phone, CheckCircle2, CloudRain, Hammer, Sparkles, X, Search,
+  Phone, CheckCircle2, CloudRain, Hammer, Sparkles, X, Search, Check, Sun,
 } from 'lucide-react';
 import { SCHEDULE_META, BUDGET_META, cadenceLabel, type ScheduleStatus, type BudgetStatus } from '@/lib/reporting';
 
@@ -27,7 +27,7 @@ interface Job {
   schedule_status: ScheduleStatus | null; budget_status: BudgetStatus | null;
   reporting_cadence: string | null; reporting_day: string | null;
   report_due: boolean; draft_waiting: boolean; last_report_sent: string | null;
-  last_log_at: string | null; stale: boolean;
+  last_log_at: string | null; logged_today: boolean; stale: boolean;
   earned: number; billed: number; paid: number;
   tracked: boolean; complete: boolean; reasons: string[];
 }
@@ -47,6 +47,10 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [counts, setCounts] = useState({ all: 0, attention: 0, running: 0, behind: 0, complete: 0 });
   const [money, setMoney] = useState({ contract: 0, earned: 0, billed: 0 });
+  const [today, setToday] = useState<{ date: string; running: number; logged: number; unlogged: { id: string; name: string }[] }>(
+    { date: '', running: 0, logged: 0, unlogged: [] },
+  );
+  const [pickJobs, setPickJobs] = useState(false);
   const [filter, setFilter] = useState<Filter>('attention');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -62,6 +66,7 @@ export default function JobsPage() {
       if (Array.isArray(d.jobs)) setJobs(d.jobs);
       if (d.counts) setCounts(d.counts);
       if (d.money) setMoney(d.money);
+      if (d.today) setToday(d.today);
     } catch { /* keep last */ }
     setLoading(false);
   }, []);
@@ -117,6 +122,31 @@ export default function JobsPage() {
     setLogFor(null);
   };
 
+  /** One tap, every running job that hasn't already been logged today. */
+  const logEverywhere = async (jobIds?: string[]) => {
+    const ids = jobIds ?? today.unlogged.map((u) => u.id);
+    if (!ids.length) return;
+    setBusy('all');
+    try {
+      const res = await fetch('/api/admin/jobs/log-all', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'rain', job_ids: ids }),
+      });
+      const d = await res.json();
+      if (d.error) setToast(d.error);
+      else {
+        setToast(
+          d.logged === 0 ? 'Already logged on every job'
+            : `Rain day logged on ${d.logged} job${d.logged === 1 ? '' : 's'}`
+            + (d.skipped ? ` · ${d.skipped} already had one` : ''),
+        );
+        load();
+      }
+    } catch { setToast('Could not log that'); }
+    setBusy(null);
+    setPickJobs(false);
+  };
+
   const TABS: { id: Filter; label: string; n: number }[] = [
     { id: 'attention', label: 'Needs You', n: counts.attention },
     { id: 'running', label: 'Running', n: counts.running },
@@ -128,6 +158,51 @@ export default function JobsPage() {
     <AppShell>
       <AdminHeader title="Jobs" subtitle="Work in progress" />
       <div className="px-4 sm:px-6 pb-28 max-w-3xl mx-auto w-full min-w-0 overflow-x-hidden">
+
+        {/* ── Today, across every job at once ── */}
+        {today.running > 0 && (
+          <div className="rounded-2xl border p-4 mb-4"
+            style={{ background: 'linear-gradient(135deg, rgba(91,163,220,0.08), rgba(201,168,76,0.05))', borderColor: 'rgba(255,255,255,0.1)' }}>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold uppercase tracking-wide" style={{ color: '#D4B965' }}>
+                  {new Date(today.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </p>
+                <p className="text-[17px] font-bold mt-0.5">
+                  {today.logged === today.running
+                    ? `All ${today.running} job${today.running === 1 ? '' : 's'} logged`
+                    : `${today.running - today.logged} of ${today.running} still to log`}
+                </p>
+              </div>
+              {today.logged === today.running ? (
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(53,208,127,0.15)' }}>
+                  <Check size={22} style={{ color: '#35d07f' }} />
+                </div>
+              ) : (
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(201,168,76,0.12)' }}>
+                  <Sun size={21} style={{ color: '#D4B965' }} />
+                </div>
+              )}
+            </div>
+
+            {today.unlogged.length > 0 && (
+              <>
+                <button onClick={() => logEverywhere()} disabled={busy === 'all'}
+                  className="w-full min-h-[56px] rounded-xl text-[17px] font-bold flex items-center justify-center gap-2.5 active:scale-[0.99] disabled:opacity-50"
+                  style={{ background: 'rgba(91,163,220,0.16)', color: '#5ba3dc', border: '1px solid rgba(91,163,220,0.45)' }}>
+                  {busy === 'all' ? <Loader2 size={20} className="animate-spin" /> : <CloudRain size={20} />}
+                  Rained out — log all {today.unlogged.length}
+                </button>
+                <button onClick={() => setPickJobs(true)}
+                  className="w-full min-h-[44px] mt-1.5 text-[15px] font-semibold text-white/40 active:scale-[0.99]">
+                  Only some of them…
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {/* ── Money position across everything running ── */}
         {money.contract > 0 && (
@@ -193,6 +268,15 @@ export default function JobsPage() {
           </div>
         )}
       </div>
+
+      {pickJobs && (
+        <PickJobsSheet
+          jobs={today.unlogged}
+          busy={busy === 'all'}
+          onClose={() => setPickJobs(false)}
+          onConfirm={(ids) => logEverywhere(ids)}
+        />
+      )}
 
       {logFor && (
         <QuickLogSheet job={logFor} busy={busy === logFor.id}
@@ -277,9 +361,12 @@ function JobCard({ job: j, busy, onOpen, onDraft, onLog }: {
         </div>
 
         <div className="flex items-center justify-between gap-3 mt-2.5">
-          <p className="text-[14px] text-white/35 truncate">
-            {j.in_progress ? `Working: ${j.in_progress}` : j.next_up ? `Up next: ${j.next_up}` : 'No phases yet'}
-            {j.last_log_at ? ` · logged ${daysAgo(j.last_log_at)}` : ''}
+          <p className="text-[14px] text-white/35 truncate flex items-center gap-1.5">
+            {j.logged_today && <Check size={14} style={{ color: '#35d07f' }} className="shrink-0" />}
+            <span className="truncate">
+              {j.in_progress ? `Working: ${j.in_progress}` : j.next_up ? `Up next: ${j.next_up}` : 'No phases yet'}
+              {j.logged_today ? ' · logged today' : j.last_log_at ? ` · logged ${daysAgo(j.last_log_at)}` : ''}
+            </span>
           </p>
           <ChevronRight size={16} className="text-white/20 shrink-0" />
         </div>
@@ -380,6 +467,62 @@ function EmptyState({ filter, anyJobs, onGo }: { filter: Filter; anyJobs: boolea
           Go to Estimates
         </button>
       )}
+    </div>
+  );
+}
+
+
+/* ── Pick which sites got rained out ──────────────────────────── */
+function PickJobsSheet({ jobs, busy, onClose, onConfirm }: {
+  jobs: { id: string; name: string }[]; busy: boolean;
+  onClose: () => void; onConfirm: (ids: string[]) => void;
+}) {
+  const [picked, setPicked] = useState<string[]>(jobs.map((j) => j.id));
+  const toggle = (id: string) =>
+    setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  return (
+    <div className="fixed inset-0 z-[85] flex items-end sm:items-center sm:justify-center">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-md max-h-[88vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-[#121212] border-t sm:border border-white/10 p-5"
+        style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
+        <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4 sm:hidden" />
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-[20px] font-bold">Which sites?</h2>
+          <button onClick={onClose} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/5">
+            <X size={20} className="text-white/60" />
+          </button>
+        </div>
+        <p className="text-[14px] text-white/40 mb-4">Tap any that kept working.</p>
+
+        <div className="space-y-2 mb-4">
+          {jobs.map((j) => {
+            const on = picked.includes(j.id);
+            return (
+              <button key={j.id} onClick={() => toggle(j.id)}
+                className="w-full flex items-center gap-3 rounded-xl p-3.5 text-left active:scale-[0.99]"
+                style={on
+                  ? { background: 'rgba(91,163,220,0.12)', border: '1px solid rgba(91,163,220,0.4)' }
+                  : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                  style={on
+                    ? { background: '#5ba3dc' }
+                    : { border: '1.5px solid rgba(255,255,255,0.25)' }}>
+                  {on && <Check size={15} className="text-black" />}
+                </div>
+                <span className="text-[17px] font-semibold truncate">{j.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button onClick={() => onConfirm(picked)} disabled={busy || !picked.length}
+          className="w-full min-h-[56px] rounded-xl text-[17px] font-bold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.99]"
+          style={{ background: 'rgba(91,163,220,0.16)', color: '#5ba3dc', border: '1px solid rgba(91,163,220,0.45)' }}>
+          {busy ? <Loader2 size={19} className="animate-spin" /> : <CloudRain size={19} />}
+          Log rain on {picked.length} job{picked.length === 1 ? '' : 's'}
+        </button>
+      </div>
     </div>
   );
 }

@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       supabase.from('estimate_line_items').select('estimate_id, phase, total, sort_order').in('estimate_id', ids),
       supabase.from('estimate_phase_progress').select('estimate_id, phase, percent_complete, weight, sort_order').in('estimate_id', ids),
       supabase.from('progress_reports').select('estimate_id, status, period_end, sent_at').in('estimate_id', ids),
-      supabase.from('job_log_entries').select('estimate_id, entry_date, created_at').in('estimate_id', ids),
+      supabase.from('job_log_entries').select('estimate_id, entry_date, type, created_at').in('estimate_id', ids),
       supabase.from('invoices').select('estimate_id, total, amount_paid, status').in('estimate_id', ids),
     ]);
 
@@ -71,6 +71,7 @@ export async function GET(req: NextRequest) {
 
       const entries = logs.get(j.id) || [];
       const lastLog = entries.map((e: any) => e.created_at).sort().reverse()[0] || null;
+      const loggedToday = entries.some((e: any) => e.entry_date === today);
       const stale = !lastLog || new Date(lastLog).getTime() < staleCutoff;
 
       const inv = invoices.get(j.id) || [];
@@ -120,6 +121,7 @@ export async function GET(req: NextRequest) {
         draft_waiting: draftWaiting,
         last_report_sent: lastSent,
         last_log_at: lastLog,
+        logged_today: loggedToday,
         stale,
         earned: Math.round(earned),
         billed: Math.round(billed),
@@ -144,6 +146,14 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       jobs: sorted,
+      today: {
+        date: today,
+        running: open.length,
+        logged: open.filter((r) => r.logged_today).length,
+        unlogged: open.filter((r) => !r.logged_today).map((r) => ({
+          id: r.id, name: r.project_name || r.number,
+        })),
+      },
       counts: {
         all: rows.length,
         attention: attention.length,
