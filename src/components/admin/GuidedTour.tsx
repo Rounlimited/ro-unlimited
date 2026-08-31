@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { HelpCircle, X, ArrowRight, ArrowLeft, Play, Check, Sparkles } from 'lucide-react';
+import { X, ArrowRight, ArrowLeft, Play, Check, Sparkles } from 'lucide-react';
 import { TOURS, tourById, toursForRoute, type Tour, type TourStep } from '@/lib/tours';
 import WhatsNewModal, { whatsNewSeen } from '@/components/admin/WhatsNewModal';
 
@@ -171,12 +171,25 @@ export default function GuidedTour() {
     return () => clearInterval(iv);
   }, [pathname, tour, whatsNew]);
 
-  // Anywhere can open it: window.dispatchEvent(new Event('open-whats-new'))
+  // Anywhere can open these:
+  //   window.dispatchEvent(new Event('open-whats-new'))
+  //   window.dispatchEvent(new Event('open-help-menu'))   ← the header button
   useEffect(() => {
-    const open = () => { setMenuOpen(false); setWhatsNew(true); };
-    window.addEventListener('open-whats-new', open);
-    return () => window.removeEventListener('open-whats-new', open);
+    const openNew = () => { setMenuOpen(false); setWhatsNew(true); };
+    const openMenu = () => setMenuOpen((o) => !o);
+    window.addEventListener('open-whats-new', openNew);
+    window.addEventListener('open-help-menu', openMenu);
+    return () => {
+      window.removeEventListener('open-whats-new', openNew);
+      window.removeEventListener('open-help-menu', openMenu);
+    };
   }, []);
+
+  // Mark the header's ? with a dot while this release is unread.
+  useEffect(() => {
+    const dot = document.querySelector('[data-help-dot]') as HTMLElement | null;
+    if (dot) dot.classList.toggle('hidden', whatsNewSeen());
+  }, [whatsNew, menuOpen, pathname]);
 
   const available = toursForRoute(pathname);
   const seenMap = typeof window !== 'undefined' ? seen() : {};
@@ -185,69 +198,51 @@ export default function GuidedTour() {
     <>
       {whatsNew && <WhatsNewModal onClose={() => setWhatsNew(false)} />}
 
-      {/* ── Floating help button ─────────────────────────────── */}
-      {!tour && (
-        <div className="fixed z-[70]" style={{ right: 16, bottom: 'calc(84px + env(safe-area-inset-bottom))' }}>
-          {menuOpen && (
-            <div className="absolute bottom-[64px] right-0 w-[310px] rounded-2xl border border-white/10 bg-[#151515] shadow-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
-                <p className="text-[16px] font-bold">Show me how</p>
-                <button onClick={() => setMenuOpen(false)} className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center">
-                  <X size={15} className="text-white/50" />
-                </button>
-              </div>
-              <div className="max-h-[52vh] overflow-y-auto p-2">
-                <button onClick={() => { setMenuOpen(false); setWhatsNew(true); }}
-                  className="w-full text-left px-3 py-3 rounded-xl mb-1 active:scale-[0.99] transition-all"
-                  style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }}>
-                  <div className="flex items-center gap-2">
-                    <Sparkles size={15} style={{ color: '#D4B965' }} />
-                    <p className="text-[16px] font-bold" style={{ color: '#D4B965' }}>What&rsquo;s New</p>
-                    {!whatsNewSeen() && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ background: '#D4772C', color: '#fff' }}>NEW</span>
-                    )}
-                  </div>
-                  <p className="text-[14px] text-white/45 leading-snug mt-0.5">
-                    Everything added this week, one screen at a time
-                  </p>
-                </button>
-                {(available.length ? available : TOURS).map((t) => (
-                  <button key={t.id} onClick={() => start(t.id)}
-                    className="w-full text-left px-3 py-3 rounded-xl hover:bg-white/5 active:scale-[0.99] transition-all">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[16px] font-bold">{t.title}</p>
-                      {seenMap[t.id] && <Check size={14} className="text-[#35d07f]" />}
-                    </div>
-                    <p className="text-[14px] text-white/45 leading-snug mt-0.5">{t.blurb}</p>
-                  </button>
-                ))}
-                <a href="/admin/help"
-                  className="block px-3 py-3 rounded-xl hover:bg-white/5 text-[15px] font-semibold" style={{ color: '#D4B965' }}>
-                  Read the help guide →
-                </a>
-              </div>
+      {/* ── Help panel — drops from the header's ? button ───── */}
+      {!tour && menuOpen && (
+        <>
+          <div className="fixed inset-0 z-[74]" onClick={() => setMenuOpen(false)} />
+          <div className="fixed z-[75] w-[310px] max-w-[calc(100vw-24px)] rounded-2xl border border-white/10 bg-[#151515] shadow-2xl overflow-hidden"
+            style={{ right: 12, top: 'calc(64px + env(safe-area-inset-top))' }}>
+            <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
+              <p className="text-[16px] font-bold">Show me how</p>
+              <button onClick={() => setMenuOpen(false)} className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center">
+                <X size={15} className="text-white/50" />
+              </button>
             </div>
-          )}
-          <button onClick={() => setMenuOpen((o) => !o)}
-            aria-label="Help and tours"
-            className="relative w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-transform"
-            style={{
-              background: 'linear-gradient(145deg, #C9A84C, #a8893d)',
-              boxShadow: '0 6px 22px rgba(201,168,76,0.45)',
-            }}>
-            <style>{`
-              @keyframes ro-help-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(212,119,44,0.55); } 50% { box-shadow: 0 0 0 12px rgba(212,119,44,0); } }
-              .ro-help-dot { animation: ro-help-pulse 2.4s ease-in-out infinite; }
-              @media (prefers-reduced-motion: reduce) { .ro-help-dot { animation: none; } }
-            `}</style>
-            {menuOpen ? <X size={24} className="text-black" /> : <HelpCircle size={26} className="text-black" />}
-            {!menuOpen && !whatsNewSeen() && (
-              <span className="ro-help-dot absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full border-2"
-                style={{ background: '#D4772C', borderColor: '#0a0a0a' }} />
-            )}
-          </button>
-        </div>
+            <div className="max-h-[62vh] overflow-y-auto p-2">
+              <button onClick={() => { setMenuOpen(false); setWhatsNew(true); }}
+                className="w-full text-left px-3 py-3 rounded-xl mb-1 active:scale-[0.99] transition-all"
+                style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }}>
+                <div className="flex items-center gap-2">
+                  <Sparkles size={15} style={{ color: '#D4B965' }} />
+                  <p className="text-[16px] font-bold" style={{ color: '#D4B965' }}>What&rsquo;s New</p>
+                  {!whatsNewSeen() && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: '#D4772C', color: '#fff' }}>NEW</span>
+                  )}
+                </div>
+                <p className="text-[14px] text-white/45 leading-snug mt-0.5">
+                  Everything added this week, one screen at a time
+                </p>
+              </button>
+              {(available.length ? available : TOURS).map((t) => (
+                <button key={t.id} onClick={() => start(t.id)}
+                  className="w-full text-left px-3 py-3 rounded-xl hover:bg-white/5 active:scale-[0.99] transition-all">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[16px] font-bold">{t.title}</p>
+                    {seenMap[t.id] && <Check size={14} className="text-[#35d07f]" />}
+                  </div>
+                  <p className="text-[14px] text-white/45 leading-snug mt-0.5">{t.blurb}</p>
+                </button>
+              ))}
+              <a href="/admin/help"
+                className="block px-3 py-3 rounded-xl hover:bg-white/5 text-[15px] font-semibold" style={{ color: '#D4B965' }}>
+                Read the help guide →
+              </a>
+            </div>
+          </div>
+        </>
       )}
 
       {/* ── The tour itself ──────────────────────────────────── */}

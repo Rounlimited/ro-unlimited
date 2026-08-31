@@ -236,7 +236,7 @@ const APP_ICONS: AppIcon[] = [
   { id: 'settings', label: 'Settings', icon: Settings, href: '/admin/settings', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'proposals', label: 'Proposals', icon: Briefcase, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'pipeline', label: 'Pipeline', icon: TrendingUp, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
-  { id: 'jobs', label: 'Jobs', icon: HardHat, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
+  { id: 'jobs', label: 'Jobs', icon: HardHat, href: '/admin/jobs', active: true, color: '#f0a04b', bg: 'rgba(240,160,75,0.15)', badge: 'NEW' },
   { id: 'dailylogs', label: 'Daily Logs', icon: FileCheck, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'documents', label: 'Letters', icon: FileText, href: '/admin/letters', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'invoicing', label: 'Invoices', icon: Receipt, href: '/admin/invoices', active: true, color: '#35d07f', bg: 'rgba(53,208,127,0.15)', badge: 'NEW' },

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ExternalLink, LogOut } from 'lucide-react';
+import { ArrowLeft, ExternalLink, LogOut, HelpCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useDeviceContext } from '@/components/animations/useMediaQuery';
 
@@ -45,6 +45,17 @@ export default function AdminHeader({ title, subtitle, backHref, showLogout = tr
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* Help lives here rather than floating over the page — it used to
+              sit on top of whatever you were trying to tap. */}
+          <button
+            onClick={() => window.dispatchEvent(new Event('open-help-menu'))}
+            aria-label="Help and tours"
+            title="Help — show me how"
+            className="relative w-11 h-11 flex items-center justify-center rounded-lg border border-white/5 hover:border-[#C9A84C]/40 text-white/30 hover:text-[#C9A84C] transition-all"
+          >
+            <HelpCircle size={19} />
+            <span data-help-dot className="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#D4772C' }} />
+          </button>
           {!isDesktop && (
             <a href="/" target="_blank" className="flex items-center gap-2 px-3 py-1.5 text-xs text-white/30 hover:text-white border border-white/5 hover:border-white/10 rounded transition-all">
               <ExternalLink size={12} /> Live Site

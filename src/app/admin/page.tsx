@@ -5,6 +5,7 @@ import Link from 'next/link';
 import IndustryPulse from '@/components/admin/IndustryPulse';
 import { gsap } from 'gsap';
 import {
+  HardHat,
   Video, FileText, ArrowUpRight, CheckCircle2,
   AlertCircle, Camera, Clock, MessageCircle, Mail, Users, Calculator, HardDrive, CheckSquare, Receipt
 , BarChart3 } from 'lucide-react';
@@ -16,6 +17,7 @@ export default function AdminDashboard() {
   const [projectCount, setProjectCount] = useState(0);
   const [employeeCount, setEmployeeCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [jobStats, setJobStats] = useState({ open: 0, attention: 0 });
   const [estimateCount, setEstimateCount] = useState({ drafts: 0, sent: 0 });
   const [invoiceAR, setInvoiceAR] = useState<{ outstanding: number; open_count: number } | null>(null);
   const [invoiceActivity, setInvoiceActivity] = useState(0);
@@ -48,6 +50,12 @@ export default function AdminDashboard() {
   const card3Ref       = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Jobs running, and how many are waiting on JR for a report.
+    fetch('/api/admin/jobs/list')
+      .then((r) => r.json())
+      .then((d) => setJobStats({ open: d.counts?.open || 0, attention: d.needs_attention || 0 }))
+      .catch(() => {});
+
     fetch('/api/admin/settings').then(r => r.json()).then(setSettings).catch(() => {});
     fetch('/api/admin/projects').then(r => r.json()).then(d => setProjectCount(Array.isArray(d) ? d.length : 0)).catch(() => {});
     fetch('/api/admin/employees').then(r => r.json()).then(d => setEmployeeCount(Array.isArray(d) ? d.filter((e: any) => e.status === 'active').length : 0)).catch(() => {});
@@ -425,6 +433,37 @@ export default function AdminDashboard() {
               <p className="text-[10px] text-white/25 mt-0.5">{estimateCount.drafts > 0 ? `${estimateCount.drafts} drafts` : 'Create new'}</p>
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #C9A84C, transparent)' }} />
+          </Link>
+
+          {/* Jobs — the work that's actually running */}
+          <Link href="/admin/jobs"
+            className="relative overflow-hidden border rounded-2xl p-2.5 lg:p-3 flex flex-col items-center gap-1.5 lg:gap-2 group active:scale-[0.97] transition-transform"
+            style={{ background: 'linear-gradient(145deg, #1b1206, #140d04)', borderColor: 'rgba(240,160,75,0.28)' }}
+          >
+            <div className="relative flex-shrink-0">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(145deg, #f0a04b, #c9762c)',
+                  boxShadow: '0 4px 15px rgba(240,160,75,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
+                }}>
+                <HardHat size={20} className="text-white" />
+              </div>
+              {jobStats.attention > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[8px] font-bold px-0.5"
+                  style={{ background: '#f87171', color: '#000', boxShadow: '0 2px 10px rgba(248,113,113,0.6)' }}>
+                  {jobStats.attention}
+                </span>
+              )}
+            </div>
+            <div className="text-center min-w-0">
+              <p className="text-[12px] lg:text-[13px] font-bold leading-tight" style={{ color: '#f0a04b' }}>Jobs</p>
+              <p className="text-[10px] text-white/25 mt-0.5">
+                {jobStats.attention > 0
+                  ? jobStats.attention + ' need' + (jobStats.attention === 1 ? 's' : '') + ' you'
+                  : jobStats.open > 0 ? jobStats.open + ' running' : 'In progress'}
+              </p>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #f0a04b, transparent)' }} />
           </Link>
 
           {/* Team — orange */}
