@@ -7,6 +7,7 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import {
   Loader2, HardHat, ChevronRight, AlertTriangle, FileText, CalendarClock,
   Phone, CheckCircle2, CloudRain, Hammer, Sparkles, X, Search, Check, Sun,
+  Navigation, Wallet, Receipt, Route,
 } from 'lucide-react';
 import { SCHEDULE_META, BUDGET_META, cadenceLabel, type ScheduleStatus, type BudgetStatus } from '@/lib/reporting';
 
@@ -32,9 +33,22 @@ interface Job {
   tracked: boolean; complete: boolean; reasons: string[];
 }
 
-type Filter = 'attention' | 'running' | 'behind' | 'complete';
+type Filter = 'attention' | 'running' | 'behind' | 'money' | 'complete';
 
 const fmt$ = (n: number) => '$' + Math.round(n).toLocaleString();
+
+/** Hand the address to whatever maps app is on the phone. */
+const directionsTo = (address: string) =>
+  'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(address);
+
+/** One run through every site, in the order they're listed. */
+const routeFor = (addresses: string[]) => {
+  if (!addresses.length) return null;
+  const dest = encodeURIComponent(addresses[addresses.length - 1]);
+  const stops = addresses.slice(0, -1).map(encodeURIComponent).join('|');
+  return 'https://www.google.com/maps/dir/?api=1&destination=' + dest
+    + (stops ? '&waypoints=' + stops : '');
+};
 const shortDate = (s: string | null) =>
   s ? new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
 const daysAgo = (s: string | null) => {
@@ -89,12 +103,25 @@ export default function JobsPage() {
       if (filter === 'attention' && (j.complete || !j.reasons.length)) return false;
       if (filter === 'running' && j.complete) return false;
       if (filter === 'behind' && (j.complete || j.schedule_status !== 'behind')) return false;
+      if (filter === 'money' && j.complete) return false;
       if (filter === 'complete' && !j.complete) return false;
       if (!q) return true;
       return [j.project_name, j.customer_name, j.number, j.address].filter(Boolean)
         .join(' ').toLowerCase().includes(q);
     });
   }, [jobs, filter, search]);
+
+  const ordered = useMemo(
+    () => (filter === 'money'
+      ? [...shown].sort((a, b) => (b.earned - b.billed) - (a.earned - a.billed))
+      : shown),
+    [shown, filter],
+  );
+
+  const routeUrl = useMemo(() => {
+    const stops = jobs.filter((j) => !j.complete && j.address).map((j) => j.address as string);
+    return routeFor(stops.slice(0, 9)); // Google caps the waypoints it will take
+  }, [jobs]);
 
   const draftReport = async (j: Job) => {
     setBusy(j.id);
@@ -147,10 +174,27 @@ export default function JobsPage() {
     setPickJobs(false);
   };
 
+  /** Turn earned-but-unbilled into a draft invoice. */
+  const billEarned = async (j: Job) => {
+    setBusy(j.id);
+    try {
+      const res = await fetch('/api/admin/jobs/' + j.id + '/bill', { method: 'POST' });
+      const d = await res.json();
+      if (d.error) setToast(d.error);
+      else {
+        setToast('Draft invoice for ' + fmt$(d.amount) + ' — opening it');
+        const invId = d.invoice?.id;
+        router.push(invId ? '/admin/invoices/' + invId : '/admin/invoices');
+      }
+    } catch { setToast('Could not raise that invoice'); }
+    setBusy(null);
+  };
+
   const TABS: { id: Filter; label: string; n: number }[] = [
     { id: 'attention', label: 'Needs You', n: counts.attention },
     { id: 'running', label: 'Running', n: counts.running },
     { id: 'behind', label: 'Behind', n: counts.behind },
+    { id: 'money', label: 'Money', n: 0 },
     { id: 'complete', label: 'Complete', n: counts.complete },
   ];
 
@@ -186,6 +230,14 @@ export default function JobsPage() {
                 </div>
               )}
             </div>
+
+            {routeUrl && (
+              <a href={routeUrl} target="_blank" rel="noopener noreferrer"
+                className="w-full min-h-[52px] mb-2.5 rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99]"
+                style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.14)' }}>
+                <Route size={18} /> Route today&rsquo;s sites
+              </a>
+            )}
 
             {today.unlogged.length > 0 && (
               <>
@@ -254,12 +306,13 @@ export default function JobsPage() {
           <div className="flex items-center gap-3 text-white/40 py-8">
             <Loader2 size={20} className="animate-spin" /> Loading jobs…
           </div>
-        ) : shown.length === 0 ? (
+        ) : ordered.length === 0 ? (
           <EmptyState filter={filter} anyJobs={jobs.length > 0} onGo={() => router.push('/admin/estimates')} />
         ) : (
           <div className="space-y-2.5">
-            {shown.map((j) => (
-              <JobCard key={j.id} job={j} busy={busy === j.id}
+            {ordered.map((j) => (
+              <JobCard key={j.id} job={j} busy={busy === j.id} money={filter === 'money'}
+                onBill={() => billEarned(j)}
                 onOpen={() => router.push('/admin/estimates/' + j.id)}
                 onDraft={() => draftReport(j)}
                 onLog={() => setLogFor(j)}
@@ -295,9 +348,11 @@ export default function JobsPage() {
 }
 
 /* ── One job ──────────────────────────────────────────────────── */
-function JobCard({ job: j, busy, onOpen, onDraft, onLog }: {
-  job: Job; busy: boolean; onOpen: () => void; onDraft: () => void; onLog: () => void;
+function JobCard({ job: j, busy, money, onOpen, onDraft, onLog, onBill }: {
+  job: Job; busy: boolean; money?: boolean;
+  onOpen: () => void; onDraft: () => void; onLog: () => void; onBill?: () => void;
 }) {
+  const gap = Math.round(j.earned - j.billed);
   const sched = j.schedule_status ? SCHEDULE_META[j.schedule_status] : null;
   const budget = j.budget_status ? BUDGET_META[j.budget_status] : null;
   const cadence = cadenceLabel(j.reporting_cadence, j.reporting_day);
@@ -333,6 +388,35 @@ function JobCard({ job: j, busy, onOpen, onDraft, onLog }: {
           <div className="h-full rounded-full transition-all duration-500"
             style={{ width: j.percent + '%', background: j.complete ? '#35d07f' : 'linear-gradient(90deg, #a8893d, #D4B965)' }} />
         </div>
+
+        {/* Where the money is on this job */}
+        {money && (
+          <div className="rounded-xl p-3 mb-2.5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <div className="grid grid-cols-3 gap-2 mb-1.5">
+              {[
+                ['Contract', j.total, 'rgba(255,255,255,0.65)'],
+                ['Earned', j.earned, '#35d07f'],
+                ['Billed', j.billed, 'rgba(255,255,255,0.65)'],
+              ].map(([label, v, c]) => (
+                <div key={String(label)}>
+                  <p className="text-[11px] uppercase tracking-wide text-white/35">{label}</p>
+                  <p className="text-[16px] font-bold" style={{ color: c as string }}>{fmt$(Number(v))}</p>
+                </div>
+              ))}
+            </div>
+            {gap > 0 ? (
+              <p className="text-[14px]" style={{ color: '#f87171' }}>
+                {fmt$(gap)} of work done and not billed
+              </p>
+            ) : gap < 0 ? (
+              <p className="text-[14px]" style={{ color: '#35d07f' }}>
+                Billed {fmt$(-gap)} ahead of the work
+              </p>
+            ) : (
+              <p className="text-[14px] text-white/35">Billing is level with the work</p>
+            )}
+          </div>
+        )}
 
         {/* Why it wants him — plain words, first reason only */}
         {flagged && (
@@ -386,16 +470,32 @@ function JobCard({ job: j, busy, onOpen, onDraft, onLog }: {
             {busy ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
             {j.draft_waiting ? 'Send' : 'Report'}
           </button>
-          {j.customer_phone ? (
+          {j.address ? (
+            <a href={directionsTo(j.address)} target="_blank" rel="noopener noreferrer"
+              className="min-h-[54px] flex items-center justify-center gap-2 text-[15px] font-bold active:scale-95"
+              style={{ color: 'rgba(255,255,255,0.55)' }}>
+              <Navigation size={16} /> Drive
+            </a>
+          ) : j.customer_phone ? (
             <a href={`tel:${j.customer_phone}`}
               className="min-h-[54px] flex items-center justify-center gap-2 text-[15px] font-bold active:scale-95"
               style={{ color: 'rgba(255,255,255,0.55)' }}>
               <Phone size={16} /> Call
             </a>
           ) : (
-            <span className="min-h-[54px] flex items-center justify-center text-[15px] text-white/20">No phone</span>
+            <span className="min-h-[54px] flex items-center justify-center text-[15px] text-white/20">—</span>
           )}
         </div>
+      )}
+
+      {/* On the money view, the one action that matters */}
+      {money && gap > 0 && onBill && (
+        <button onClick={onBill} disabled={busy}
+          className="w-full min-h-[54px] border-t border-white/8 flex items-center justify-center gap-2 text-[16px] font-bold active:scale-95 disabled:opacity-40"
+          style={{ color: '#35d07f' }}>
+          {busy ? <Loader2 size={17} className="animate-spin" /> : <Receipt size={17} />}
+          Bill {fmt$(gap)} now
+        </button>
       )}
     </div>
   );
@@ -446,6 +546,7 @@ function QuickLogSheet({ job, busy, onClose, onPick }: {
 function EmptyState({ filter, anyJobs, onGo }: { filter: Filter; anyJobs: boolean; onGo: () => void }) {
   const copy: Record<Filter, { title: string; body: string }> = {
     attention: { title: 'Nothing needs you', body: 'Every running job is logged, reported and on track.' },
+    money: { title: 'Nothing running', body: 'Money shows up here once a job is underway.' },
     running: { title: 'No jobs running', body: 'An estimate becomes a job the moment it’s accepted. Bid something on paper? Track it by hand from the Estimates screen.' },
     behind: { title: 'Nothing behind', body: 'No job is flagged behind schedule.' },
     complete: { title: 'Nothing finished yet', body: 'Jobs move here when every phase hits 100%.' },
