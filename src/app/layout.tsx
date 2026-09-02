@@ -20,10 +20,10 @@ export const metadata: Metadata = {
   // "From the Underground Up" lives in the meta description (CTR copy) and on
   // the page itself, where taglines belong.
   title: {
-    default: 'Underground Utility & Sitework Contractor | Greenville–Easley SC | RO Unlimited',
+    default: 'General Contractor & Builder | Commercial, Custom Homes & Site Work | Greenville–Easley SC | RO Unlimited',
     template: `%s | ${COMPANY.name}`,
   },
-  description: 'From the underground up: water mains, hot taps, sewer, storm drainage, and septic for commercial sites — plus grading and full construction. Licensed in SC, NC & GA. Based in Easley, SC.',
+  description: 'Licensed general contractor building commercial buildings and custom homes — and self-performing our own site work and underground utilities. One company from the first cut to the finished building. SC, NC & GA. Based in Easley, SC.',
   applicationName: COMPANY.name,
   authors: [{ name: COMPANY.fullName, url: SITE_URL }],
   creator: COMPANY.fullName,
@@ -34,8 +34,8 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: SITE_URL,
     siteName: COMPANY.name,
-    title: `${COMPANY.fullName} | Underground Utility & Sitework Contractor`,
-    description: 'From the underground up — water mains, sewer, storm, septic, grading, and full construction. Licensed in SC, NC & GA.',
+    title: `${COMPANY.fullName} | General Contractor, Builder & Site Work`,
+    description: 'Commercial buildings, custom homes, site development and underground utilities — self-performed by one licensed contractor. SC, NC & GA.',
     images: [{ url: `${SITE_URL}/og-default.jpg`, width: 1200, height: 630, alt: COMPANY.fullName }],
   },
   twitter: {
@@ -104,12 +104,17 @@ const organizationJsonLd = {
   sameAs: [COMPANY.facebook],
   logo: `${SITE_URL}/icons/icon-512x512.png`,
   image: `${SITE_URL}/og-default.jpg`,
+  // Ordered deliberately: what RO builds first, then how it gets built. Search
+  // engines and AI summarisers read this list as what the company IS.
   knowsAbout: [
+    'General Contracting', 'Commercial Construction', 'Custom Home Building',
+    'Residential Construction', 'Ground-Up Commercial Buildings', 'Design-Build Construction',
+    'Site Development', 'Land Grading', 'Site Preparation',
     'Underground Utilities', 'Water Main Taps', 'Hot Taps', 'Water Line Installation',
     'Sanitary Sewer Installation', 'Storm Drainage', 'Commercial Septic Systems',
     'Grease Interceptors', 'Boring and Tunneling', 'Directional Boring',
-    'Highway and Bridge Construction', 'Residential Construction', 'Commercial Construction',
-    'Land Grading', 'Site Preparation', 'Roofing', 'Electrical Services', 'Plumbing',
+    'Highway and Bridge Construction',
+    'Roofing', 'Electrical Services', 'Plumbing',
     'Septic Systems', 'Drywall Repair', 'Deck Building', 'Fence Installation', 'Concrete Work',
   ],
   // The seven state license classifications RO holds (owner-confirmed 2026-08).

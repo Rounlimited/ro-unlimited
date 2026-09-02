@@ -393,7 +393,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
 
             {/* Description */}
             <p ref={descRef} className="max-w-2xl sm:mx-auto text-ro-white/90 text-lg sm:text-xl font-body leading-relaxed tracking-wide mb-12 drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]">
-              Underground utilities. Sitework. Commercial and residential construction &mdash; one company, licensed in SC, NC &amp; GA, from the first cut to the finished build.
+              Commercial buildings and custom homes &mdash; built by a licensed general contractor who self-performs the site work and underground utilities most builders sub out. One company, SC, NC &amp; GA, from the first cut to the finished building.
             </p>
 
             {/* CTAs */}

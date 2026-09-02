@@ -14,7 +14,23 @@ export const COMPANY = {
   facebook: 'https://www.facebook.com/profile.php?id=61578630061375',
 } as const;
 
+// Order matters on the homepage: what RO BUILDS comes first. A real estate
+// agent read a sitework-led page and concluded RO only moved dirt.
 export const DIVISIONS = [
+  {
+    id: 'commercial', name: 'Commercial Division', shortName: 'Commercial', href: '/commercial',
+    description: 'Ground-up commercial buildings \u2014 offices, retail, warehouses and shells, built complete. We develop the site and run the utilities ourselves, so the building never waits on another contractor.',
+    services: ['Ground-Up Commercial Builds','QSR & Franchise Buildouts','Retail & Strip Centers','Steel & Mixed-Material Construction','Light Multi-Family Development','Development Consulting'],
+    icon: 'building', targetAudience: 'Commercial developers, project managers, general contractors',
+    featured: true,
+  },
+  {
+    id: 'residential', name: 'Residential Division', shortName: 'Residential', href: '/residential',
+    description: 'Custom homes built start to finish \u2014 foundations, framing, and full interior finishes, including the driveway, septic and water service on the way in.',
+    services: ['Custom Home Framing','Ground-Up New Builds','Complex Structural Shells','Luxury Interior Renovations','Modern Industrial Design','Vaulted Ceilings & Complex Gables'],
+    icon: 'home', targetAudience: 'Homeowners, luxury buyers, real estate investors',
+    featured: true,
+  },
   {
     id: 'grading', name: 'Site Development & Grading', shortName: 'Site Development', href: '/grading',
     description: 'From raw land to pad-ready \u2014 clearing, mass grading, stormwater, and complete commercial site development, self-performed on our own iron.',
@@ -27,20 +43,6 @@ export const DIVISIONS = [
     description: 'Licensed water, sewer, and septic infrastructure \u2014 main taps, ductile iron and C900 water lines, storm drainage, and commercial grease traps.',
     services: ['Water Main Taps & Hot Taps','Ductile Iron & C900 Water Lines','Sanitary Sewer Installation','Storm Drainage Systems','Tier 2 Septic Systems','Commercial Grease Traps'],
     icon: 'droplets', targetAudience: 'Commercial developers, general contractors, municipalities',
-    featured: true,
-  },
-  {
-    id: 'commercial', name: 'Commercial Division', shortName: 'Commercial', href: '/commercial',
-    description: 'Ground-up commercial construction on sites we develop ourselves \u2014 sitework and utilities self-performed, vertical construction delivered with proven subs.',
-    services: ['Ground-Up Commercial Builds','QSR & Franchise Buildouts','Retail & Strip Centers','Steel & Mixed-Material Construction','Light Multi-Family Development','Development Consulting'],
-    icon: 'building', targetAudience: 'Commercial developers, project managers, general contractors',
-    featured: true,
-  },
-  {
-    id: 'residential', name: 'Residential Division', shortName: 'Residential', href: '/residential',
-    description: 'Large-scale custom homes, complex structural framing, and luxury interior renovations.',
-    services: ['Custom Home Framing','Ground-Up New Builds','Complex Structural Shells','Luxury Interior Renovations','Modern Industrial Design','Vaulted Ceilings & Complex Gables'],
-    icon: 'home', targetAudience: 'Homeowners, luxury buyers, real estate investors',
     featured: true,
   },
   {
