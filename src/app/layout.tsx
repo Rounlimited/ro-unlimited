@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
   // Leads with the buildings. The underground is the reason RO is different,
   // not the thing RO is — an agent read the old copy and assumed dirt only.
-  description: 'RO Unlimited builds commercial buildings and custom homes across SC, NC and GA — offices, retail, warehouses, shells and ground-up homes. We also run our own grading, water, sewer and septic, so your build never waits on another contractor. 25+ years. Licensed general contractor in Easley, SC.',
+  description: 'Commercial buildings and custom homes across SC, NC and GA — offices, retail, warehouses and ground-up homes. The grading, water, sewer and septic beneath them are ours as well, so one company carries the job from the first cut to the final walkthrough. Licensed general contractor, 25+ years, Easley SC.',
   applicationName: COMPANY.name,
   authors: [{ name: COMPANY.fullName, url: SITE_URL }],
   creator: COMPANY.fullName,
@@ -37,14 +37,14 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: COMPANY.name,
     title: `${COMPANY.fullName} | General Contractor, Builder & Site Work`,
-    description: 'We build commercial buildings and custom homes — and self-perform the grading, water, sewer and septic underneath them. One licensed contractor, SC, NC & GA.',
-    images: [{ url: `${SITE_URL}/og-default.jpg`, width: 1200, height: 630, alt: COMPANY.fullName }],
+    description: 'Commercial buildings and custom homes — with the site work and utilities beneath them handled by the same company. One contractor, first cut to final walkthrough.',
+    images: [{ url: `${SITE_URL}/og-builder.jpg`, width: 1200, height: 630, alt: `${COMPANY.fullName} — commercial buildings and custom homes` }],
   },
   twitter: {
     card: 'summary_large_image',
     title: COMPANY.fullName,
-    description: `${COMPANY.experience} years of construction in the tri-state. Custom homes, commercial, roofing, electrical, plumbing, septic, repairs.`,
-    images: [`${SITE_URL}/og-default.jpg`],
+    description: `Commercial buildings and custom homes, and the site work and utilities beneath them. One licensed contractor across SC, NC & GA. ${COMPANY.experience} years.`,
+    images: [`${SITE_URL}/og-builder.jpg`],
   },
   robots: {
     index: true,
@@ -105,7 +105,7 @@ const organizationJsonLd = {
   },
   sameAs: [COMPANY.facebook],
   logo: `${SITE_URL}/icons/icon-512x512.png`,
-  image: `${SITE_URL}/og-default.jpg`,
+  image: `${SITE_URL}/og-builder.jpg`,
   // Ordered deliberately: what RO builds first, then how it gets built. Search
   // engines and AI summarisers read this list as what the company IS.
   knowsAbout: [

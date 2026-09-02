@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     url: 'https://rounlimited.com/commercial',
     siteName: 'RO Unlimited',
     type: 'website',
-    images: [{ url: 'https://rounlimited.com/images/divisions/commercial-hero.jpg', width: 1200, height: 630 }],
+    images: [{ url: 'https://rounlimited.com/images/divisions/commercial-building-v2.jpg', width: 1200, height: 630 }],
   },
 };
 
