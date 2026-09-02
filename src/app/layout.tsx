@@ -23,7 +23,9 @@ export const metadata: Metadata = {
     default: 'General Contractor & Builder | Commercial, Custom Homes & Site Work | Greenville–Easley SC | RO Unlimited',
     template: `%s | ${COMPANY.name}`,
   },
-  description: 'Licensed general contractor building commercial buildings and custom homes — and self-performing our own site work and underground utilities. One company from the first cut to the finished building. SC, NC & GA. Based in Easley, SC.',
+  // Leads with the buildings. The underground is the reason RO is different,
+  // not the thing RO is — an agent read the old copy and assumed dirt only.
+  description: 'RO Unlimited builds commercial buildings and custom homes across SC, NC and GA — offices, retail, warehouses, shells and ground-up homes. We also run our own grading, water, sewer and septic, so your build never waits on another contractor. 25+ years. Licensed general contractor in Easley, SC.',
   applicationName: COMPANY.name,
   authors: [{ name: COMPANY.fullName, url: SITE_URL }],
   creator: COMPANY.fullName,
@@ -35,7 +37,7 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: COMPANY.name,
     title: `${COMPANY.fullName} | General Contractor, Builder & Site Work`,
-    description: 'Commercial buildings, custom homes, site development and underground utilities — self-performed by one licensed contractor. SC, NC & GA.',
+    description: 'We build commercial buildings and custom homes — and self-perform the grading, water, sewer and septic underneath them. One licensed contractor, SC, NC & GA.',
     images: [{ url: `${SITE_URL}/og-default.jpg`, width: 1200, height: 630, alt: COMPANY.fullName }],
   },
   twitter: {
