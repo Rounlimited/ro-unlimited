@@ -206,6 +206,21 @@ export default function Footer() {
             </button>
           </div>
         </div>
+
+        {/* Build credit — small, last thing on the page, no competing with the
+            client's own footer. */}
+        {/* Clear the sticky call bar on mobile, or this line hides behind it. */}
+        <p className="mt-6 mb-24 md:mb-0 text-center text-ro-gray-700 text-[11px] tracking-wide">
+          Like this site?{' '}
+          <a
+            href="https://nexavisiongroup.com"
+            target="_blank"
+            rel="noopener"
+            className="text-ro-gray-600 hover:text-ro-gold underline underline-offset-2 transition-colors"
+          >
+            NexaVisionGroup.com
+          </a>
+        </p>
       </div>
     </footer>
   );
