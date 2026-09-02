@@ -20,12 +20,12 @@ export const metadata: Metadata = {
   // "From the Underground Up" lives in the meta description (CTR copy) and on
   // the page itself, where taglines belong.
   title: {
-    default: 'General Contractor & Builder | Commercial, Custom Homes & Site Work | Greenville–Easley SC | RO Unlimited',
+    default: 'Commercial General Contractor | Buildings, Site Work & Utilities | Greenville–Easley SC | RO Unlimited',
     template: `%s | ${COMPANY.name}`,
   },
   // Leads with the buildings. The underground is the reason RO is different,
   // not the thing RO is — an agent read the old copy and assumed dirt only.
-  description: 'Commercial buildings and custom homes across SC, NC and GA — offices, retail, warehouses and ground-up homes. The grading, water, sewer and septic beneath them are ours as well, so one company carries the job from the first cut to the final walkthrough. Licensed general contractor, 25+ years, Easley SC.',
+  description: 'Commercial construction across SC, NC and GA — offices, retail, warehouses and ground-up builds. The grading, water, sewer and septic beneath them are ours as well, so one company carries the job from the first cut to the final walkthrough. Licensed general contractor, 25+ years, Easley SC.',
   applicationName: COMPANY.name,
   authors: [{ name: COMPANY.fullName, url: SITE_URL }],
   creator: COMPANY.fullName,
@@ -36,15 +36,15 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: SITE_URL,
     siteName: COMPANY.name,
-    title: `${COMPANY.fullName} | General Contractor, Builder & Site Work`,
-    description: 'Commercial buildings and custom homes — with the site work and utilities beneath them handled by the same company. One contractor, first cut to final walkthrough.',
-    images: [{ url: `${SITE_URL}/og-builder.jpg`, width: 1200, height: 630, alt: `${COMPANY.fullName} — commercial buildings and custom homes` }],
+    title: `${COMPANY.fullName} | Commercial General Contractor`,
+    description: 'Commercial buildings — with the site work and utilities beneath them handled by the same company. One contractor, first cut to final walkthrough.',
+    images: [{ url: `${SITE_URL}/og-commercial.jpg`, width: 1200, height: 630, alt: `${COMPANY.fullName} — commercial construction` }],
   },
   twitter: {
     card: 'summary_large_image',
     title: COMPANY.fullName,
-    description: `Commercial buildings and custom homes, and the site work and utilities beneath them. One licensed contractor across SC, NC & GA. ${COMPANY.experience} years.`,
-    images: [`${SITE_URL}/og-builder.jpg`],
+    description: `Commercial buildings, and the site work and utilities beneath them. One licensed contractor across SC, NC & GA. ${COMPANY.experience} years.`,
+    images: [`${SITE_URL}/og-commercial.jpg`],
   },
   robots: {
     index: true,
@@ -66,7 +66,7 @@ const organizationJsonLd = {
   url: SITE_URL,
   telephone: COMPANY.phone,
   email: COMPANY.email,
-  description: `${COMPANY.experience} years of commercial and residential construction in ${COMPANY.serviceArea}.`,
+  description: `${COMPANY.experience} years of commercial construction and site development in ${COMPANY.serviceArea}.`,
   // Service-area business (no public street address yet) — keep this list in
   // sync with the service areas declared on the Google Business Profile.
   address: {
@@ -105,12 +105,12 @@ const organizationJsonLd = {
   },
   sameAs: [COMPANY.facebook],
   logo: `${SITE_URL}/icons/icon-512x512.png`,
-  image: `${SITE_URL}/og-builder.jpg`,
+  image: `${SITE_URL}/og-commercial.jpg`,
   // Ordered deliberately: what RO builds first, then how it gets built. Search
   // engines and AI summarisers read this list as what the company IS.
   knowsAbout: [
-    'General Contracting', 'Commercial Construction', 'Custom Home Building',
-    'Residential Construction', 'Ground-Up Commercial Buildings', 'Design-Build Construction',
+    'General Contracting', 'Commercial Construction',
+    'Ground-Up Commercial Buildings', 'Design-Build Construction',
     'Site Development', 'Land Grading', 'Site Preparation',
     'Underground Utilities', 'Water Main Taps', 'Hot Taps', 'Water Line Installation',
     'Sanitary Sewer Installation', 'Storm Drainage', 'Commercial Septic Systems',

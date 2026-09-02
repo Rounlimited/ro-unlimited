@@ -39,7 +39,6 @@ export default function NotFound() {
 
           <div className="text-ro-gray-600 text-xs font-mono tracking-wider uppercase mb-4">Popular Pages</div>
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs">
-            <Link href="/residential" className="text-ro-gold/70 hover:text-ro-gold transition-colors">Residential</Link>
             <Link href="/commercial" className="text-ro-gold/70 hover:text-ro-gold transition-colors">Commercial</Link>
             <Link href="/services/roofing" className="text-ro-gold/70 hover:text-ro-gold transition-colors">Roofing</Link>
             <Link href="/services/electrical" className="text-ro-gold/70 hover:text-ro-gold transition-colors">Electrical</Link>

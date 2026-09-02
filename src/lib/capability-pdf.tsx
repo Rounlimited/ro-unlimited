@@ -74,7 +74,6 @@ const UTILITIES_CAPS = [
 const SITE_CAPS = [
   'Site development, clearing & mass grading',
   'Commercial construction — ground-up & buildouts',
-  'Residential construction — custom homes & structural',
   'Specialty concrete & masonry',
   'Full-service repairs division',
 ];

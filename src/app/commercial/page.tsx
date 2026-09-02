@@ -35,7 +35,6 @@ const DIFFERENTIATORS = [
 ];
 
 const CROSS_DIVISIONS = [
-  { id: 'residential', label: 'Residential Division', desc: 'Custom homes & luxury builds', href: '/residential', icon: '◆' },
   { id: 'grading', label: 'Land Grading & Site Prep', desc: 'Excavation & foundation work', href: '/grading', icon: '◆' },
   { id: 'process', label: 'The Build Process', desc: 'See how we deliver — phase by phase', href: '/process', icon: '◆' },
 ];

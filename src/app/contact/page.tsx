@@ -133,8 +133,8 @@ export default function ContactPage() {
                         <label className="block text-ro-gray-500 text-xs uppercase tracking-wider mb-2">Project Type</label>
                         <select value={formData.projectType} onChange={(e) => setFormData({...formData, projectType: e.target.value})} className="w-full bg-ro-black border border-ro-gray-700 px-4 py-3 text-ro-white text-sm focus:border-ro-gold/50 focus:outline-none transition-colors">
                           <option value="">Select a project type</option>
-                          <option value="residential">Residential / Custom Home</option>
                           <option value="commercial">Commercial Build</option>
+                          <option value="residential">Residential / Custom Home</option>
                           <option value="grading">Land Grading / Site Prep</option>
                           <option value="renovation">Renovation / Remodel</option>
                           <option value="other">Other</option>

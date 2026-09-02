@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Contact RO Unlimited — Get a Quote in Upstate SC',
-  description: 'Contact RO Unlimited for residential, commercial, roofing, electrical, plumbing, septic, or general repair work in Upstate SC. Call (864) 304-0139 or request a quote online. Honest pricing, fast response.',
+  description: 'Contact RO Unlimited for commercial construction, site work, utilities, roofing, electrical, plumbing, septic, or general repair work in Upstate SC. Call (864) 304-0139 or request a quote online. Honest pricing, fast response.',
   alternates: { canonical: 'https://rounlimited.com/contact' },
   openGraph: {
     title: 'Contact RO Unlimited',

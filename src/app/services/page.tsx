@@ -35,7 +35,6 @@ const PROCESS_STEPS = [
 ];
 
 const CROSS_DIVISIONS = [
-  { id: 'residential', label: 'Residential Division', desc: 'Custom homes & luxury renovations', href: '/residential', icon: '◆' },
   { id: 'commercial', label: 'Commercial Division', desc: 'Steel builds & commercial development', href: '/commercial', icon: '◆' },
   { id: 'grading', label: 'Land Grading & Site Prep', desc: 'Excavation & foundation work', href: '/grading', icon: '◆' },
 ];

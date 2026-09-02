@@ -29,7 +29,7 @@ export default function ConstructionCTA() {
         {/* Right: desc + buttons */}
         <div className="lg:flex-1 text-center lg:text-left">
           <p className="text-ro-gray-400 text-base sm:text-lg mb-8">
-            Commercial or residential — from raw land to finished product. {COMPANY.experience} years of showing up where it counts and building it right.
+            From raw land to finished building. {COMPANY.experience} years of showing up where it counts and building it right.
           </p>
           <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-center lg:items-start justify-center lg:justify-start gap-4">
             <Link href="/contact" className="group flex items-center gap-3 px-8 py-4 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-all duration-300">

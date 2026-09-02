@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     const projectLabels: Record<string, string> = {
-      residential: 'Residential / Custom Home',
+      residential: 'Residential / Custom Home', // legacy submissions only
       commercial: 'Commercial Build',
       grading: 'Land Grading / Site Prep',
       renovation: 'Renovation / Remodel',

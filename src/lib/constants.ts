@@ -16,6 +16,8 @@ export const COMPANY = {
 
 // Order matters on the homepage: what RO BUILDS comes first. A real estate
 // agent read a sitework-led page and concluded RO only moved dirt.
+// Residential stays live but unadvertised (owner, 2026-09): featured: false
+// keeps it off the homepage cards while /residential remains reachable.
 export const DIVISIONS = [
   {
     id: 'commercial', name: 'Commercial Division', shortName: 'Commercial', href: '/commercial',
@@ -24,13 +26,7 @@ export const DIVISIONS = [
     icon: 'building', targetAudience: 'Commercial developers, project managers, general contractors',
     featured: true,
   },
-  {
-    id: 'residential', name: 'Residential Division', shortName: 'Residential', href: '/residential',
-    description: 'Custom homes built start to finish \u2014 foundations, framing, and full interior finishes, including the driveway, septic and water service on the way in.',
-    services: ['Custom Home Framing','Ground-Up New Builds','Complex Structural Shells','Luxury Interior Renovations','Modern Industrial Design','Vaulted Ceilings & Complex Gables'],
-    icon: 'home', targetAudience: 'Homeowners, luxury buyers, real estate investors',
-    featured: true,
-  },
+  
   {
     id: 'grading', name: 'Site Development & Grading', shortName: 'Site Development', href: '/grading',
     description: 'From raw land to pad-ready \u2014 clearing, mass grading, stormwater, and complete commercial site development, self-performed on our own iron.',
@@ -44,6 +40,13 @@ export const DIVISIONS = [
     services: ['Water Main Taps & Hot Taps','Ductile Iron & C900 Water Lines','Sanitary Sewer Installation','Storm Drainage Systems','Tier 2 Septic Systems','Commercial Grease Traps'],
     icon: 'droplets', targetAudience: 'Commercial developers, general contractors, municipalities',
     featured: true,
+  },
+  {
+    id: 'residential', name: 'Residential Division', shortName: 'Residential', href: '/residential',
+    description: 'Custom homes built start to finish \u2014 foundations, framing, and full interior finishes, including the driveway, septic and water service on the way in.',
+    services: ['Custom Home Framing','Ground-Up New Builds','Complex Structural Shells','Luxury Interior Renovations','Modern Industrial Design','Vaulted Ceilings & Complex Gables'],
+    icon: 'home', targetAudience: 'Homeowners, luxury buyers, real estate investors',
+    featured: false,
   },
   {
     id: 'services', name: 'RO Services', shortName: 'Services', href: '/services',
@@ -61,6 +64,7 @@ export const DIVISIONS = [
   },
 ] as const;
 
+
 // Order tells the story: what we do (the four divisions in build sequence —
 // dirt, underground, vertical, upkeep), then who we are, then contact.
 export const NAV_LINKS = [
@@ -68,7 +72,6 @@ export const NAV_LINKS = [
   { label: 'Site Development', href: '/grading' },
   { label: 'Utilities', href: '/utilities' },
   { label: 'Commercial', href: '/commercial' },
-  { label: 'Residential', href: '/residential' },
   { label: 'Services', href: '/services' },
   { label: 'Our Process', href: '/process' },
   { label: 'Our Story', href: '/our-story' },

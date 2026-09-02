@@ -19,7 +19,6 @@ const HERO_STATS = [
 ];
 
 const CROSS_DIVISIONS = [
-  { id: 'residential', label: 'Residential Division', desc: 'Custom homes & luxury renovations', href: '/residential' },
   { id: 'commercial', label: 'Commercial Division', desc: 'Steel builds & commercial development', href: '/commercial' },
   { id: 'services', label: 'All Services', desc: 'Plumbing, electrical, septic & more', href: '/services' },
 ];
