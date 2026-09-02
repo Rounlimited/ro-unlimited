@@ -16,8 +16,8 @@ export const COMPANY = {
 
 // Order matters on the homepage: what RO BUILDS comes first. A real estate
 // agent read a sitework-led page and concluded RO only moved dirt.
-// Residential stays live but unadvertised (owner, 2026-09): featured: false
-// keeps it off the homepage cards while /residential remains reachable.
+// Residential stays listed (card + nav), but the site's headline copy and
+// metadata lead commercial (owner, 2026-09).
 export const DIVISIONS = [
   {
     id: 'commercial', name: 'Commercial Division', shortName: 'Commercial', href: '/commercial',
@@ -46,7 +46,7 @@ export const DIVISIONS = [
     description: 'Custom homes built start to finish \u2014 foundations, framing, and full interior finishes, including the driveway, septic and water service on the way in.',
     services: ['Custom Home Framing','Ground-Up New Builds','Complex Structural Shells','Luxury Interior Renovations','Modern Industrial Design','Vaulted Ceilings & Complex Gables'],
     icon: 'home', targetAudience: 'Homeowners, luxury buyers, real estate investors',
-    featured: false,
+    featured: true,
   },
   {
     id: 'services', name: 'RO Services', shortName: 'Services', href: '/services',
@@ -72,6 +72,7 @@ export const NAV_LINKS = [
   { label: 'Site Development', href: '/grading' },
   { label: 'Utilities', href: '/utilities' },
   { label: 'Commercial', href: '/commercial' },
+  { label: 'Residential', href: '/residential' },
   { label: 'Services', href: '/services' },
   { label: 'Our Process', href: '/process' },
   { label: 'Our Story', href: '/our-story' },
