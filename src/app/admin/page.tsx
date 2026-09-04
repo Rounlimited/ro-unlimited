@@ -340,11 +340,11 @@ export default function AdminDashboard() {
         {/* Tasks Widget */}
         <Link href="/admin/tasks" className="block relative z-10 rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
           style={{ background: 'linear-gradient(135deg, #1a1508, #120f04)', border: '1px solid rgba(201,168,76,0.2)' }}>
-          <div className="px-4 py-3 flex items-center justify-between">
+          <div className="px-4 py-2 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{ background: 'linear-gradient(145deg, #C9A84C, #a8893d)', boxShadow: '0 4px 12px rgba(201,168,76,0.3)' }}>
-                <CheckSquare size={18} className="text-white" />
+                <CheckSquare size={15} className="text-white" />
               </div>
               <div>
                 <p className="text-[14px] font-bold text-white leading-tight">Tasks & Reminders</p>
@@ -376,7 +376,9 @@ export default function AdminDashboard() {
           <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #C9A84C, transparent)' }} />
         </Link>
 
-        {/* Row 3: Hero buttons — Email + Estimates + Team */}
+        {/* Row 3: the four daily doors — Email, Estimates, Jobs, Invoices.
+            Exactly four: this grid is 4-across on a phone, and a fifth card
+            orphans onto its own row (which is how the layout broke). */}
         <div ref={row3Ref} data-tour="hero-buttons" className="grid grid-cols-4 md:grid-cols-6 gap-1.5 md:gap-2.5 lg:gap-3 relative z-10">
           {/* Email — blue */}
           <Link href="/admin/inbox"
@@ -466,25 +468,6 @@ export default function AdminDashboard() {
             <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #f0a04b, transparent)' }} />
           </Link>
 
-          {/* Team — orange */}
-          <Link href="/admin/employees"
-            className="theme-card-orange relative overflow-hidden border border-[#D4772C]/25 rounded-2xl p-2.5 lg:p-3 flex flex-col items-center gap-1.5 lg:gap-2 group active:scale-[0.97] transition-transform"
-            style={{ background: 'linear-gradient(145deg, #1a1208, #140e06)' }}
-          >
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{
-                background: 'linear-gradient(145deg, #D4772C, #b8621e)',
-                boxShadow: '0 4px 15px rgba(212,119,44,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
-              }}>
-              <Users size={20} className="text-white" />
-            </div>
-            <div className="text-center min-w-0">
-              <p className="text-[12px] lg:text-[13px] font-bold leading-tight text-[#D4772C]">Team</p>
-              <p className="text-[10px] text-white/25 mt-0.5">{employeeCount > 0 ? `${employeeCount} active` : 'Employees'}</p>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #D4772C, transparent)' }} />
-          </Link>
-
           {/* Invoices — money green, the fancy one: conic border sweep + shimmer.
               CSS lives in globals.css (.inv-fancy-*) so this stays a plain card. */}
           <Link href="/admin/invoices"
@@ -526,7 +509,26 @@ export default function AdminDashboard() {
         </div>
 
         {/* Row 4: Quick Actions */}
-        <div data-tour="quick-actions" className="grid grid-cols-4 md:grid-cols-6 gap-1.5 md:gap-2.5 lg:gap-3 relative z-10">
+        <div data-tour="quick-actions" className="grid grid-cols-3 md:grid-cols-6 gap-1.5 md:gap-2.5 lg:gap-3 relative z-10">
+          {/* Team — orange */}
+          <Link href="/admin/employees"
+            className="theme-card-orange relative overflow-hidden border border-[#D4772C]/25 rounded-2xl p-2.5 lg:p-3 flex flex-col items-center gap-1.5 lg:gap-2 group active:scale-[0.97] transition-transform"
+            style={{ background: 'linear-gradient(145deg, #1a1208, #140e06)' }}
+          >
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{
+                background: 'linear-gradient(145deg, #D4772C, #b8621e)',
+                boxShadow: '0 4px 15px rgba(212,119,44,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
+              }}>
+              <Users size={20} className="text-white" />
+            </div>
+            <div className="text-center min-w-0">
+              <p className="text-[12px] lg:text-[13px] font-bold leading-tight text-[#D4772C]">Team</p>
+              <p className="text-[10px] text-white/25 mt-0.5">{employeeCount > 0 ? `${employeeCount} active` : 'Employees'}</p>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #D4772C, transparent)' }} />
+          </Link>
+
           {/* Portfolio — gold */}
           <Link href="/admin/projects"
             className="theme-card-gold relative overflow-hidden border border-[#C9A84C]/20 rounded-2xl p-3 flex flex-col items-center gap-2 group active:scale-[0.97] transition-transform"

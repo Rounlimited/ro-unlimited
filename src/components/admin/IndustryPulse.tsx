@@ -201,7 +201,7 @@ export default function IndustryPulse() {
       {hasContent && (
         <div className="relative z-10 bg-[#111] border border-white/5 rounded-xl">
           {/* Header row — always visible; tap to expand/collapse */}
-          <button type="button" onClick={toggle} aria-expanded={expanded} className="w-full flex items-center justify-between gap-3 p-4 text-left">
+          <button type="button" onClick={toggle} aria-expanded={expanded} className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left">
             <div className="min-w-0">
               <h3 className="text-[15px] font-semibold text-white flex items-center gap-2"><Newspaper size={15} className="text-[#C9A84C]" /> Good to know today</h3>
               {!expanded && summaryBits && <p className="text-[13px] text-white/40 mt-0.5 truncate">{summaryBits}</p>}
