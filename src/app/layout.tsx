@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
   // Leads with the buildings. The underground is the reason RO is different,
   // not the thing RO is — an agent read the old copy and assumed dirt only.
-  description: 'Commercial construction across SC, NC and GA — offices, retail, warehouses and ground-up builds. The grading, water, sewer and septic beneath them are ours as well, so one company carries the job from the first cut to the final walkthrough. Licensed general contractor, 25+ years, Easley SC.',
+  description: 'RO Unlimited Construction & Development, providing professional full-range commercial construction — including site development and utility services — throughout South Carolina, Georgia, and North Carolina. Licensed general contractor, 25+ years, based in Easley SC.',
   applicationName: COMPANY.name,
   authors: [{ name: COMPANY.fullName, url: SITE_URL }],
   creator: COMPANY.fullName,
@@ -37,13 +37,13 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: COMPANY.name,
     title: `${COMPANY.fullName} | Commercial General Contractor`,
-    description: 'Commercial buildings — with the site work and utilities beneath them handled by the same company. One contractor, first cut to final walkthrough.',
+    description: 'Professional full-range commercial construction — including site development and utility services — throughout South Carolina, Georgia, and North Carolina.',
     images: [{ url: `${SITE_URL}/og-commercial.jpg`, width: 1200, height: 630, alt: `${COMPANY.fullName} — commercial construction` }],
   },
   twitter: {
     card: 'summary_large_image',
     title: COMPANY.fullName,
-    description: `Commercial buildings, and the site work and utilities beneath them. One licensed contractor across SC, NC & GA. ${COMPANY.experience} years.`,
+    description: `Full-range commercial construction — including site development and utility services — across SC, GA & NC. ${COMPANY.experience} years.`,
     images: [`${SITE_URL}/og-commercial.jpg`],
   },
   robots: {
