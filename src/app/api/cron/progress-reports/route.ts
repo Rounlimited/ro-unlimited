@@ -26,8 +26,9 @@ export async function GET(req: NextRequest) {
 
   const { data: contracts } = await supabase
     .from('estimates')
-    .select('id, estimate_number, project_name, reporting_cadence, reporting_day, next_report_due, signed_at')
+    .select('id, estimate_number, project_name, reporting_cadence, reporting_day, next_report_due, signed_at, completed_at')
     .not('signed_at', 'is', null)
+    .is('completed_at', null)   // a finished job owes no more reports
     .not('reporting_cadence', 'is', null)
     .neq('reporting_cadence', 'none');
 
@@ -37,7 +38,9 @@ export async function GET(req: NextRequest) {
     try {
       // First time we've seen this contract: schedule it, don't draft yet.
       if (!c.next_report_due) {
-        const due = nextDueDate(c.reporting_cadence, c.reporting_day, new Date(c.signed_at));
+        // Schedule forward from today, not from an old signing date — a job
+        // signed weeks ago would otherwise come due in the past immediately.
+        const due = nextDueDate(c.reporting_cadence, c.reporting_day);
         await supabase.from('estimates').update({ next_report_due: due }).eq('id', c.id);
         results.push({ estimate: c.estimate_number, scheduled: due });
         continue;
