@@ -11,6 +11,7 @@ import {
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 import { downloadPdfBlob } from '@/lib/pdf-preview';
+import { docStage } from '@/lib/doc-stage';
 import { estimateDisplayDate } from '@/lib/estimates';
 
 /* ─── Types ──────────────────────────────────────────────── */
@@ -394,6 +395,7 @@ export default function PublicEstimatePage() {
   if (!estimate) return null;
 
   const status = STATUS_LABELS[estimate.status] || STATUS_LABELS.draft;
+  const stageWord = docStage(estimate as any).label;
   const daysLeft = getDaysUntil(estimate.valid_until);
   const customerName = estimate.customer
     ? [estimate.customer.first_name, estimate.customer.last_name].filter(Boolean).join(' ')
@@ -583,6 +585,7 @@ export default function PublicEstimatePage() {
           <div className="p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
+                <div className="text-[12px] font-bold uppercase tracking-[0.18em] mb-1" style={{ color: '#C9A84C' }}>{stageWord}</div>
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-[26px] sm:text-[32px] font-bold text-gray-900">{estimate.estimate_number}</h1>
                   <span

@@ -1,5 +1,6 @@
 import { Document, Page, Text, View, Image, StyleSheet, Font, renderToBuffer, Svg, Circle, Line, Rect } from '@react-pdf/renderer';
 import { reportingClause } from '@/lib/reporting';
+import { docStage } from './doc-stage';
 import React from 'react';
 import { estimateDisplayDate } from './estimates';
 
@@ -385,13 +386,8 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
 
   /* ── Document mode labels ─────────────────────────────────── */
   const docMode = estimate.document_mode || 'estimate';
-  const docTitleMap: Record<string, string> = {
-    estimate: 'ESTIMATE',
-    contract: 'PROPOSAL',
-    change_order: 'CHANGE ORDER',
-    quick_quote: 'QUICK QUOTE',
-  };
-  const docTitle = docTitleMap[docMode] || 'ESTIMATE';
+  // Once it's signed, the paper is a contract — whatever it was born as.
+  const docTitle = docStage(estimate).pdfTitle;
   const isContract = docMode === 'contract';
   const isQuickQuote = docMode === 'quick_quote';
 

@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 import { estimateDisplayDate, toDateInputValue } from '@/lib/estimates';
+import { docStage } from '@/lib/doc-stage';
 import {
   ClipboardList,
   ArrowLeft, Edit3, Copy, FileText, Send, Trash2, X,
@@ -578,7 +579,7 @@ export default function EstimateDetailPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white">
-      <AdminHeader title={estimate.estimate_number} subtitle="Estimate Detail" backHref="/admin/estimates" />
+      <AdminHeader title={estimate.estimate_number} subtitle={(estimate as any).completed_at ? 'Completed Project' : (estimate as any).signed_at ? 'Signed Contract' : docStage(estimate as any).label + ' Detail'} backHref="/admin/estimates" />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-32">
         {/* ─── Header Section ───────────────────────────────────── */}
