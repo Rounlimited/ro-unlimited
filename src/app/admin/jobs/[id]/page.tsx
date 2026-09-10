@@ -32,8 +32,12 @@ const CATEGORIES: { id: string; label: string }[] = [
 ];
 const catLabel = (id: string) => CATEGORIES.find((c) => c.id === id)?.label || id;
 
+interface FeedbackRow { id: string; kind: string; section: string | null; question: string | null; answer: string | null; rating: number | null; body: string | null; created_at: string; seen_at: string | null }
+
 interface Room {
   estimate: any;
+  feedback: FeedbackRow[];
+  feedback_unseen: number;
   progress: { percent: number; phases: { phase: string; percent: number; value: number; earned: number }[]; total_value: number };
   money: { contract: number; earned: number; spent: number; margin: number; billed: number; paid: number; unbilled: number; by_category: Record<string, number> };
   costs: { id: string; spent_on: string; category: string; amount: number; vendor: string | null; note: string | null }[];
@@ -80,10 +84,27 @@ export default function JobRoomPage() {
   const load = useCallback(async () => {
     try {
       const d = await fetch('/api/admin/jobs/' + id + '/room').then((r) => r.json());
-      if (!d.error) { setRoom(d); setNotes(d.estimate.internal_notes || ''); }
+      if (!d.error) {
+        setRoom(d); setNotes(d.estimate.internal_notes || '');
+        // Opening the room counts as reading the feedback that was waiting.
+        if (d.feedback_unseen > 0) fetch('/api/admin/estimates/' + id + '/feedback-seen', { method: 'POST' }).catch(() => {});
+      }
     } catch { /* keep last */ }
     setLoading(false);
   }, [id]);
+
+  const [togglingFlag, setTogglingFlag] = useState<string | null>(null);
+  const setFlag = async (field: 'feedback_enabled' | 'reviews_enabled', value: boolean) => {
+    setTogglingFlag(field);
+    try {
+      await fetch('/api/admin/estimates/' + id, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value }),
+      });
+      await load();
+    } catch { /* leave */ }
+    setTogglingFlag(null);
+  };
 
   useEffect(() => { load(); }, [load]);
 
@@ -356,6 +377,56 @@ export default function JobRoomPage() {
             {notesSaved === 'saving' ? <Loader2 size={17} className="animate-spin" /> : notesSaved === 'saved' ? <CheckCircle2 size={17} /> : <Save size={17} />}
             {notesSaved === 'saved' ? 'Saved' : 'Save Notes'}
           </button>
+        </div>
+
+        {/* ── What the customer had to say ── */}
+        <div className="rounded-2xl border border-white/8 bg-[#111] p-5">
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <p className="text-[17px] font-bold">Customer Feedback</p>
+            {room.feedback_unseen > 0 && (
+              <span className="px-3 py-1 rounded-full text-[13px] font-bold" style={{ background: 'rgba(201,168,76,0.18)', color: '#D4B965' }}>
+                {room.feedback_unseen} new
+              </span>
+            )}
+          </div>
+          <p className="text-[14px] text-white/40 mb-3">Notes, quick answers and ratings from their project page — only you see these.</p>
+
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {([['feedback_enabled', 'Notes & questions'], ['reviews_enabled', 'Star ratings']] as const).map(([field, label]) => {
+              const on = e[field] !== false;
+              return (
+                <button key={field} onClick={() => setFlag(field, !on)} disabled={togglingFlag !== null}
+                  className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                  style={on
+                    ? { background: 'rgba(53,208,127,0.12)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.4)' }
+                    : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  {togglingFlag === field ? <Loader2 size={15} className="animate-spin" /> : null}
+                  {label}: {on ? 'ON' : 'OFF'}
+                </button>
+              );
+            })}
+          </div>
+
+          {room.feedback.length === 0 ? (
+            <p className="text-[15px] text-white/35">Nothing yet — when they tap an answer, leave a note or rate the job, it lands here.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {room.feedback.slice(0, 10).map((f) => (
+                <div key={f.id} className="rounded-xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  <p className="text-[14px] text-white/35 flex items-center gap-2 flex-wrap">
+                    {!f.seen_at && <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#D4B965' }} />}
+                    {fmtDay(f.created_at.slice(0, 10))}
+                    {f.kind === 'review' && f.rating != null && (
+                      <span style={{ color: '#D4B965' }}>{'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}</span>
+                    )}
+                    {f.kind === 'pulse' && <span className="px-2 py-0.5 rounded-full text-[12px] font-semibold" style={{ background: /concern/i.test(f.answer || '') ? 'rgba(248,113,113,0.15)' : 'rgba(53,208,127,0.12)', color: /concern/i.test(f.answer || '') ? '#f87171' : '#35d07f' }}>{f.answer}</span>}
+                    {f.kind === 'comment' && f.section && <span className="px-2 py-0.5 rounded-full text-[12px] font-semibold bg-white/8 text-white/50 capitalize">{f.section}</span>}
+                  </p>
+                  {f.body && <p className="text-[16px] text-white/75 mt-1">{f.body}</p>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── The customer's side of the glass ── */}

@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     const supabase = createAdminClient();
     const { id } = params;
 
-    const [estRes, itemsRes, progRes, costsRes, invRes, logRes] = await Promise.all([
+    const [estRes, itemsRes, progRes, costsRes, invRes, logRes, fbRes] = await Promise.all([
       supabase
         .from('estimates')
         .select(`id, estimate_number, project_name, total, division, share_token,
@@ -23,6 +23,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
           schedule_status, budget_status, status_reason, status_note, status_updated_at,
           reporting_cadence, reporting_day, next_report_due, progress_notified_at,
           internal_notes, view_count, first_viewed_at, last_viewed_at, pdf_count,
+          feedback_enabled, reviews_enabled,
           project_address, project_city,
           customer:customers(id, first_name, last_name, company_name, email, phone)`)
         .eq('id', id)
@@ -34,6 +35,8 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       supabase.from('invoices').select('id, invoice_number, total, amount_paid, status, due_date').eq('estimate_id', id),
       supabase.from('job_log_entries').select('id, entry_date, type, text, reason, include_in_report, created_at')
         .eq('estimate_id', id).order('entry_date', { ascending: false }).order('created_at', { ascending: false }).limit(60),
+      supabase.from('job_feedback').select('id, kind, section, question, answer, rating, body, created_at, seen_at')
+        .eq('estimate_id', id).order('created_at', { ascending: false }).limit(30),
     ]);
 
     if (estRes.error || !estRes.data) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -81,6 +84,8 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       log,
       rain_days: rainDays,
       days_on_job: daysOnJob,
+      feedback: fbRes.data || [],
+      feedback_unseen: (fbRes.data || []).filter((f: any) => !f.seen_at).length,
     });
   } catch (err) {
     console.error('[jobs/room] error:', err);

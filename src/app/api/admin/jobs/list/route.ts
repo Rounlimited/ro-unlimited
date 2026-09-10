@@ -36,12 +36,13 @@ export async function GET(req: NextRequest) {
     const ids = (jobs || []).map((j) => j.id);
     if (!ids.length) return NextResponse.json(empty);
 
-    const [itemsRes, progRes, reportsRes, logRes, invRes] = await Promise.all([
+    const [itemsRes, progRes, reportsRes, logRes, invRes, fbRes] = await Promise.all([
       supabase.from('estimate_line_items').select('estimate_id, phase, total, sort_order').in('estimate_id', ids),
       supabase.from('estimate_phase_progress').select('estimate_id, phase, percent_complete, weight, sort_order').in('estimate_id', ids),
       supabase.from('progress_reports').select('estimate_id, status, period_end, sent_at').in('estimate_id', ids),
       supabase.from('job_log_entries').select('estimate_id, entry_date, type, created_at').in('estimate_id', ids),
       supabase.from('invoices').select('estimate_id, total, amount_paid, status').in('estimate_id', ids),
+      supabase.from('job_feedback').select('estimate_id, kind, answer').is('seen_at', null).in('estimate_id', ids),
     ]);
 
     const group = <T extends { estimate_id: string }>(rows: T[] | null) => {
@@ -59,6 +60,7 @@ export async function GET(req: NextRequest) {
     const reports = group(reportsRes.data as any);
     const logs = group(logRes.data as any);
     const invoices = group(invRes.data as any);
+    const newFeedback = group(fbRes.data as any);
 
     const today = new Date().toISOString().slice(0, 10);
     const staleCutoff = Date.now() - STALE_DAYS * 86400000;
@@ -88,6 +90,12 @@ export async function GET(req: NextRequest) {
 
       // Why this job wants him today — first reason wins, most urgent first.
       const reasons: string[] = [];
+      const fb = newFeedback.get(j.id) || [];
+      if (fb.some((f: any) => f.kind === 'pulse' && /concern/i.test(f.answer || ''))) {
+        reasons.push('Customer raised a concern');
+      } else if (fb.length) {
+        reasons.push('New customer feedback');
+      }
       if (draftWaiting) reasons.push('Report written and waiting to send');
       if (!draftWaiting && reportDue) reasons.push('Progress report is due');
       if (j.schedule_status === 'behind') reasons.push('Flagged behind schedule');

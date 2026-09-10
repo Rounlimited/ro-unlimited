@@ -3,6 +3,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import SignaturePad from '@/components/public/SignaturePad';
+import CustomerFeedbackCard from '@/components/public/CustomerFeedbackCard';
 import {
   useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp, ShineStyles,
   ProgressSection, StorySection, SitePhotos, DocumentsSection,
@@ -564,6 +565,12 @@ export default function PublicEstimatePage() {
 
         {(estimate.stage === 'in_progress' || estimate.stage === 'complete' || estimate.stage === 'signed') && (
           <AskSection token={token} messages={estimate.messages || []} onSent={reload} />
+        )}
+
+        {(estimate.stage === 'in_progress' || estimate.stage === 'complete' || estimate.stage === 'signed') && (
+          <CustomerFeedbackCard token={token}
+            feedbackEnabled={(estimate as any).feedback_enabled !== false}
+            reviewsEnabled={(estimate as any).reviews_enabled !== false} />
         )}
 
         {estimate.completed_at && (

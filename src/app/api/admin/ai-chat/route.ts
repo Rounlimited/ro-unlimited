@@ -989,6 +989,9 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           costs_recent: (d.costs || []).slice(0, 8).map((c: any) => ({ date: c.spent_on, category: c.category, amount: Number(c.amount), vendor: c.vendor })),
           log_recent: (d.log || []).slice(0, 8).map((l: any) => ({ date: l.entry_date, type: l.type, text: l.text, internal_only: !l.include_in_report })),
           customer_views: { count: e.view_count || 0, last: e.last_viewed_at },
+          feedback_unseen: d.feedback_unseen || 0,
+          feedback_recent: (d.feedback || []).slice(0, 6).map((f: any) => ({ date: f.created_at?.slice(0, 10), kind: f.kind, section: f.section, answer: f.answer, rating: f.rating, body: f.body, seen: !!f.seen_at })),
+          feedback_switches: { notes_and_questions: e.feedback_enabled !== false, star_ratings: e.reviews_enabled !== false },
           schedule_status: e.schedule_status, budget_status: e.budget_status,
           private_notes: e.internal_notes || null,
           job_room_path: `/admin/jobs/${estId}`,
@@ -2670,6 +2673,7 @@ Job progress and customer progress reports:
 - add_job_cost records real spending ("$500 fuel on Hartwell") — costs are what make the margin and the Over Budget flag real numbers.
 - add_log_entry writes the job diary ("log a rain day"); include_in_report:false keeps an entry internal-only forever.
 - notify_customer_update emails the customer a short "your page has an update" nudge with their link. Confirm with the user first; if it returns a warning (already sent today), ask before retrying with force:true.
+- Customer feedback: their project page has a one-tap pulse ("how's this feeling?"), section notes, and an optional any-time star rating. It all lands in the Job Room (get_job_room returns feedback_recent/feedback_unseen) and notifies JR; a pulse answer of "I have a concern" flags the job on the Jobs board. Two per-job switches control what the customer sees (feedback_enabled = notes+pulse, reviews_enabled = stars) — JR flips them in the Job Room; to change them from chat, PATCH via update_estimate is NOT available, tell the user to use the Job Room toggles.
 </progress>`;
 
 const PROMPT_LETTERS = `<letters>
