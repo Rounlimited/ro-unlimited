@@ -329,7 +329,7 @@ export default function JobsPage() {
             {ordered.map((j) => (
               <JobCard key={j.id} job={j} busy={busy === j.id} money={filter === 'money' || showMoney} showMoney={showMoney}
                 onBill={() => billEarned(j)}
-                onOpen={() => router.push('/admin/estimates/' + j.id)}
+                onOpen={() => router.push('/admin/jobs/' + j.id)}
                 onDraft={() => draftReport(j)}
                 onLog={() => setLogFor(j)}
               />
