@@ -2485,6 +2485,7 @@ When a user asks for help, seems lost, or says they don't know what to do: switc
 // Block 2 — estimates, pricing, doc types (appended when estimate tools are active)
 const PROMPT_ESTIMATES = `<estimates>
 Document lifecycle: every doc is born a Quote, Estimate, or Proposal (its document_mode). The moment the customer signs it becomes a CONTRACT everywhere (page header, PDF title); once work is underway its page shows Active Project, and after close-out Completed Project. If someone asks why a signed doc "still says estimate," it doesn't anymore — the label follows the deal's stage automatically.
+Progress views: the Progress tab and the Jobs board both have a "Show $" button that flips percent-complete displays to dollars earned (earned of contract value, per phase too). The Progress tab also has "Email Customer This Update" — one tap sends the customer a short branded email (current %, latest log line, link to their live project page); it warns before sending twice in one day. Scheduled progress reports are separate and still go through Reports.
 Building a new estimate:
 1. Gather: customer, type, scope, location
 2. Draft fully in chat — phases, line items (qty × unit_cost = total), subtotals, grand total, payment schedule

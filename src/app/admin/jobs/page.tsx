@@ -61,6 +61,15 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [counts, setCounts] = useState({ all: 0, attention: 0, running: 0, behind: 0, complete: 0 });
   const [money, setMoney] = useState({ contract: 0, earned: 0, billed: 0 });
+  // Cards can show dollars earned instead of percent — remembered per device.
+  const [showMoney, setShowMoney] = useState(() => {
+    try { return localStorage.getItem('ro-jobs-money') === '1'; } catch { return false; }
+  });
+  const toggleMoney = () => {
+    const v = !showMoney;
+    setShowMoney(v);
+    try { localStorage.setItem('ro-jobs-money', v ? '1' : '0'); } catch { /* fine */ }
+  };
   const [today, setToday] = useState<{ date: string; running: number; logged: number; unlogged: { id: string; name: string }[] }>(
     { date: '', running: 0, logged: 0, unlogged: [] },
   );
@@ -292,6 +301,13 @@ export default function JobsPage() {
               </button>
             );
           })}
+          <button onClick={toggleMoney}
+            className="shrink-0 min-h-[48px] px-4 rounded-xl text-[15px] font-bold active:scale-95 whitespace-nowrap"
+            style={showMoney
+              ? { background: 'rgba(53,208,127,0.14)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.4)' }
+              : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {showMoney ? 'Show %' : 'Show $'}
+          </button>
         </div>
 
         {jobs.length > 4 && (
@@ -311,7 +327,7 @@ export default function JobsPage() {
         ) : (
           <div className="space-y-2.5">
             {ordered.map((j) => (
-              <JobCard key={j.id} job={j} busy={busy === j.id} money={filter === 'money'}
+              <JobCard key={j.id} job={j} busy={busy === j.id} money={filter === 'money' || showMoney} showMoney={showMoney}
                 onBill={() => billEarned(j)}
                 onOpen={() => router.push('/admin/estimates/' + j.id)}
                 onDraft={() => draftReport(j)}
@@ -348,8 +364,8 @@ export default function JobsPage() {
 }
 
 /* ── One job ──────────────────────────────────────────────────── */
-function JobCard({ job: j, busy, money, onOpen, onDraft, onLog, onBill }: {
-  job: Job; busy: boolean; money?: boolean;
+function JobCard({ job: j, busy, money, showMoney, onOpen, onDraft, onLog, onBill }: {
+  job: Job; busy: boolean; money?: boolean; showMoney?: boolean;
   onOpen: () => void; onDraft: () => void; onLog: () => void; onBill?: () => void;
 }) {
   const gap = Math.round(j.earned - j.billed);
@@ -378,9 +394,19 @@ function JobCard({ job: j, busy, money, onOpen, onDraft, onLog, onBill }: {
             </p>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-[24px] font-bold leading-none"
-              style={{ color: j.complete ? '#35d07f' : '#D4B965' }}>{j.percent}%</p>
-            {j.total > 0 && <p className="text-[13px] text-white/30 mt-1">{fmt$(j.total)}</p>}
+            {showMoney && j.total > 0 ? (
+              <>
+                <p className="text-[20px] font-bold leading-none"
+                  style={{ color: j.complete ? '#35d07f' : '#D4B965' }}>{fmt$(j.earned)}</p>
+                <p className="text-[13px] text-white/30 mt-1">of {fmt$(j.total)} · {j.percent}%</p>
+              </>
+            ) : (
+              <>
+                <p className="text-[24px] font-bold leading-none"
+                  style={{ color: j.complete ? '#35d07f' : '#D4B965' }}>{j.percent}%</p>
+                {j.total > 0 && <p className="text-[13px] text-white/30 mt-1">{fmt$(j.total)}</p>}
+              </>
+            )}
           </div>
         </div>
 

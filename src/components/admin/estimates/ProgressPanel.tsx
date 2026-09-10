@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Loader2, CalendarClock, Wallet, CheckCircle2, AlertTriangle, Plus, X, Trash2,
+  Loader2, CalendarClock, Wallet, CheckCircle2, AlertTriangle, Plus, X, Trash2, Mail,
   PartyPopper, ShieldCheck, RotateCcw,
 } from 'lucide-react';
 import {
@@ -39,6 +39,34 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
   const [newPhase, setNewPhase] = useState('');
   const [newWeight, setNewWeight] = useState('');
   const [closing, setClosing] = useState(false);
+  // Phase rows can show dollars instead of percent — remembered per device.
+  const [showMoney, setShowMoney] = useState(() => {
+    try { return localStorage.getItem('ro-progress-money') === '1'; } catch { return false; }
+  });
+  const [notifying, setNotifying] = useState(false);
+  const [notifyMsg, setNotifyMsg] = useState('');
+  const [forceNotify, setForceNotify] = useState(false);
+
+  const toggleMoney = () => {
+    const v = !showMoney;
+    setShowMoney(v);
+    try { localStorage.setItem('ro-progress-money', v ? '1' : '0'); } catch { /* fine */ }
+  };
+
+  const notifyCustomer = async () => {
+    setNotifying(true);
+    try {
+      const res = await fetch('/api/admin/estimates/' + estimateId + '/notify-update', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: forceNotify }),
+      });
+      const d = await res.json();
+      if (d.warning) { setNotifyMsg(d.warning); setForceNotify(true); }
+      else if (d.emailed) { setNotifyMsg('Emailed ' + d.to + ' \u2713'); setForceNotify(false); }
+      else setNotifyMsg(d.error || 'Could not send.');
+    } catch { setNotifyMsg('Could not send \u2014 try again.'); }
+    setNotifying(false);
+  };
 
   const load = useCallback(async () => {
     try {
@@ -136,6 +164,15 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
           <p className="text-[14px] mt-3 flex items-center gap-2" style={{ color: '#D4B965' }}>
             <CalendarClock size={15} /> Reporting to customer: {cadence}
           </p>
+        )}
+        <button onClick={notifyCustomer} disabled={notifying}
+          className="w-full min-h-[52px] mt-4 rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50"
+          style={{ background: 'rgba(201,168,76,0.14)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }}>
+          {notifying ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />}
+          Email Customer This Update
+        </button>
+        {notifyMsg && (
+          <p className="text-[14px] mt-2 text-center" style={{ color: notifyMsg.includes('\u2713') ? '#35d07f' : '#D4B965' }}>{notifyMsg}</p>
         )}
       </div>
 
@@ -239,7 +276,16 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
 
       {/* ── Phases ── */}
       <div className="rounded-2xl border border-white/8 bg-[#111] p-5" data-tour="progress-phases">
-        <p className="text-[17px] font-bold mb-1">Phases</p>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <p className="text-[17px] font-bold">Phases</p>
+          {data.total_value > 0 && (
+            <button onClick={toggleMoney}
+              className="min-h-[44px] px-4 rounded-xl text-[15px] font-bold active:scale-95"
+              style={{ background: 'rgba(201,168,76,0.14)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }}>
+              {showMoney ? 'Show %' : 'Show $'}
+            </button>
+          )}
+        </div>
         <p className="text-[14px] text-white/40 mb-4">Straight from the line items on this contract.</p>
 
         {data.phases.length === 0 && (
@@ -259,9 +305,15 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
                 </p>
                 <div className="flex items-center gap-2 shrink-0">
                   <p className="text-[15px] font-bold" style={{ color: p.percent === 100 ? '#35d07f' : '#D4B965' }}>
-                    {p.percent}%
-                    {p.value > 0 && (
-                      <span className="text-white/30 font-normal"> · {p.custom && !p.weight ? '' : fmt$(p.value)}</span>
+                    {showMoney && data.total_value > 0 ? (
+                      <>{fmt$(p.earned)}<span className="text-white/30 font-normal"> of {fmt$(p.value)}</span></>
+                    ) : (
+                      <>
+                        {p.percent}%
+                        {p.value > 0 && (
+                          <span className="text-white/30 font-normal"> · {p.custom && !p.weight ? '' : fmt$(p.value)}</span>
+                        )}
+                      </>
                     )}
                   </p>
                   {p.custom && (
