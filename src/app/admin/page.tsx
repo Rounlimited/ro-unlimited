@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import IndustryPulse from '@/components/admin/IndustryPulse';
+import AiCreditsRow from '@/components/admin/AiCreditsRow';
 import { gsap } from 'gsap';
 import {
   HardHat,
@@ -620,6 +621,7 @@ export default function AdminDashboard() {
               </div>
               <span className="text-[11px] text-[#D4772C]/50 flex-shrink-0">{projectCount} projects</span>
             </div>
+            <AiCreditsRow />
           </div>
         </div>
       </div>

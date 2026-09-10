@@ -229,6 +229,8 @@ const READ_TOOLS = [
     input_schema: { type: 'object' as const, properties: { address: { type: 'string', description: 'Job site street address' }, city: { type: 'string', description: 'City/state if no street address, e.g. "Greenville, SC"' }, days: { type: 'number', description: 'Forecast days (default 3, cap 7)' } } } },
   { name: 'get_customer_activity', description: 'What the customer did with an estimate or invoice link: opens, PDF views/downloads, device, city, time reading, whether they scrolled to the price, signatures, messages, email opens. Staff previews excluded. Use for "did they open it", "has X looked at the estimate".',
     input_schema: { type: 'object' as const, properties: { estimate_number: { type: 'string', description: 'e.g. RO-EST-2026-0245 (or an invoice number)' }, id: { type: 'string', description: 'estimate/invoice UUID (alternative)' } } } },
+  { name: 'get_ai_balance', description: "How much prepaid credit the app's AI (Grok) has left, in dollars. Use for \"how much AI credit is left\", \"is the AI running low\".",
+    input_schema: { type: 'object' as const, properties: {} } },
   { name: 'get_analytics_overview', description: 'The analytics snapshot: estimate funnel (sent→opened→PDF→signed with $ values and medians, by division), follow-up list (never-opened / gone-quiet estimates), customer-activity totals, website traffic totals, and the same plain-English insights the Analytics page shows. Use for "how are we doing", "what needs follow-up", "any insights".',
     input_schema: { type: 'object' as const, properties: { days: { type: 'number', description: 'Window in days (default 30)' } } } },
   { name: 'get_website_traffic', description: 'Website traffic (Cloudflare, bots removed): visits/page views by day, most-read pages, referrers, countries, devices. Use for "how is the website doing", "where do visitors come from".',
@@ -923,6 +925,15 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         rows = rows.filter((r: any) => (r.title + ' ' + (r.subject || '') + ' ' + (r.recipient_name || '')).toLowerCase().includes(needle));
       }
       return { result: JSON.stringify(rows) };
+    }
+
+    case 'get_ai_balance': {
+      const base0 = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+      const res = await fetch(`${base0}/api/admin/ai-balance`);
+      const d = await res.json();
+      if (!d.configured) return { result: 'Not set up yet — the xAI management key has to be added before the balance can be read.' };
+      if (d.error) return { result: `Error: ${d.error}` };
+      return { result: JSON.stringify({ provider: d.provider, balance_usd: d.balance_usd, low: d.low }) };
     }
 
     case 'get_job_progress':
@@ -2680,7 +2691,7 @@ const INVOICE_TOOL_NAMES = new Set(['search_invoices','get_invoice_details','get
 const ESTIMATE_TOOL_NAMES = new Set(['create_estimate','get_estimate_details','search_estimates','add_line_items','update_line_items','delete_line_items','update_estimate','update_estimate_status','set_payment_schedule','send_estimate','duplicate_estimate','check_estimate_pricing','search_cost_library','search_templates','search_disclaimers','generate_share_link']);
 const TASK_TOOL_NAMES = new Set(['create_task','list_tasks','complete_task','snooze_task','update_task','delete_task','get_daily_briefing']);
 
-const ANALYTICS_TOOL_NAMES = new Set(['get_customer_activity', 'get_analytics_overview', 'get_website_traffic', 'get_industry_news', 'get_material_prices', 'get_alert_routing', 'refresh_news']);
+const ANALYTICS_TOOL_NAMES = new Set(['get_customer_activity', 'get_analytics_overview', 'get_website_traffic', 'get_industry_news', 'get_material_prices', 'get_alert_routing', 'refresh_news', 'get_ai_balance']);
 const PROMPT_ANALYTICS = `<analytics_and_news>
 The app tracks what customers do with estimate/invoice links: opens, PDF views vs downloads, device, city, reading time, whether they scrolled to the price, signatures, messages, email opens (staff previews never count). Use get_customer_activity for one document, get_analytics_overview for the big picture + follow-up list + plain-English insights, get_website_traffic for the public site. The Analytics page (/admin/analytics) has the charts and PostHog visitor behaviour (session replays); the dashboard ticker + /admin/news carry curated industry news with a Tricks-of-the-Trade lane — get_industry_news reads it, get_material_prices gives BLS price moves for bids. Alerts (push + bell) go out on first open / PDF download / signature, routed per app_settings (get_alert_routing to see who). Estimates have an estimate_date (the date shown on the document when it differs from entry day) — set via update_estimate. Users can change Text Size and Ticker Speed per login in Settings.
 </analytics_and_news>`;
