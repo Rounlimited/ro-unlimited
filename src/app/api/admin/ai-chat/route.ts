@@ -289,6 +289,14 @@ const PROGRESS_TOOLS = [
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, summary: { type: 'string', description: 'Optional: replace the auto-written summary' } } } },
   { name: 'send_progress_report', description: 'Send a drafted progress report to the customer. skip_email:true just activates the link for texting instead of emailing. Confirm with the user before calling — this reaches the customer.',
     input_schema: { type: 'object' as const, properties: { report_id: { type: 'string' }, estimate_number: { type: 'string' }, skip_email: { type: 'boolean' }, to_email: { type: 'string' } } } },
+  { name: 'get_job_room', description: "The Job Room — the internal-only picture of one job: money (contract/earned/SPENT/billed/paid), live margin (earned minus spent), job costs by category, recent log entries (including internal-only ones), rain days, days on job, and how many times the customer has opened their page. Use for \"what's my margin\", \"what have I spent\", \"how's the Hartwell job really doing\".",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' } } } },
+  { name: 'add_job_cost', description: "Record money actually spent on a job — \"add $500 fuel to Hartwell\", \"$2,400 pipe from Ferguson\". category: materials|subcontractor|labor|equipment|hauling|fuel|permits|other. This is what makes the job's margin real.",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, amount: { type: 'number' }, category: { type: 'string' }, vendor: { type: 'string', description: 'Who / what — e.g. \"Ferguson — pipe\"' }, spent_on: { type: 'string', description: 'YYYY-MM-DD, default today' } }, required: ['amount'] } },
+  { name: 'add_log_entry', description: "Add a job log entry — \"log a rain day on Hartwell\", \"log that the water line passed inspection\". type: work|rain|delay|milestone|inspection|note. include_in_report:false keeps it internal-only (the customer never sees it).",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, type: { type: 'string' }, text: { type: 'string' }, entry_date: { type: 'string', description: 'YYYY-MM-DD, default today' }, include_in_report: { type: 'boolean' } }, required: ['type'] } },
+  { name: 'notify_customer_update', description: 'Email the customer a short branded nudge that their live project page has an update (current percent, latest log line, link). Confirm with the user before calling — this reaches the customer. If it was already sent today it returns a warning instead; only pass force:true after the user confirms sending again.',
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, force: { type: 'boolean' } } } },
 ];
 
 const LETTER_TOOLS = [
@@ -922,7 +930,11 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
     case 'set_job_status':
     case 'list_progress_reports':
     case 'draft_progress_report':
-    case 'send_progress_report': {
+    case 'send_progress_report':
+    case 'get_job_room':
+    case 'add_job_cost':
+    case 'add_log_entry':
+    case 'notify_customer_update': {
       const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
 
       // send_progress_report can be addressed by report id alone.
@@ -953,6 +965,58 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       }
 
       if (!estId) return { result: 'Error: estimate_id or estimate_number required.' };
+
+      if (name === 'get_job_room') {
+        const res = await fetch(`${base}/api/admin/jobs/${estId}/room`);
+        const d = await res.json();
+        if (d.error) return { result: `Error: ${d.error}` };
+        const e = d.estimate;
+        return { result: JSON.stringify({
+          estimate_number: e.estimate_number, project: e.project_name,
+          percent: d.progress.percent, days_on_job: d.days_on_job, rain_days: d.rain_days,
+          money: d.money,
+          costs_recent: (d.costs || []).slice(0, 8).map((c: any) => ({ date: c.spent_on, category: c.category, amount: Number(c.amount), vendor: c.vendor })),
+          log_recent: (d.log || []).slice(0, 8).map((l: any) => ({ date: l.entry_date, type: l.type, text: l.text, internal_only: !l.include_in_report })),
+          customer_views: { count: e.view_count || 0, last: e.last_viewed_at },
+          schedule_status: e.schedule_status, budget_status: e.budget_status,
+          private_notes: e.internal_notes || null,
+          job_room_path: `/admin/jobs/${estId}`,
+        }) };
+      }
+
+      if (name === 'add_job_cost') {
+        const res = await fetch(`${base}/api/admin/estimates/${estId}/costs`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: input.amount, category: input.category, vendor: input.vendor, spent_on: input.spent_on }),
+        });
+        const d = await res.json();
+        if (d.error) return { result: `Error: ${d.error}` };
+        return {
+          result: JSON.stringify({ success: true, total_spent: d.total, by_category: d.by_category }),
+          action: { type: 'navigate', path: `/admin/jobs/${estId}`, description: 'Open the Job Room' },
+        };
+      }
+
+      if (name === 'add_log_entry') {
+        const res = await fetch(`${base}/api/admin/estimates/${estId}/log`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: input.type, text: input.text, entry_date: input.entry_date, include_in_report: input.include_in_report }),
+        });
+        const d = await res.json();
+        if (d.error) return { result: `Error: ${d.error}` };
+        return { result: JSON.stringify({ success: true, entry: { date: d.entry?.entry_date, type: d.entry?.type, text: d.entry?.text, internal_only: d.entry ? !d.entry.include_in_report : undefined } }) };
+      }
+
+      if (name === 'notify_customer_update') {
+        const res = await fetch(`${base}/api/admin/estimates/${estId}/notify-update`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force: !!input.force }),
+        });
+        const d = await res.json();
+        if (d.warning) return { result: JSON.stringify({ warning: d.warning, last_notified: d.last_notified }) };
+        if (!d.emailed) return { result: `Error: ${d.error || 'could not send'}` };
+        return { result: JSON.stringify({ emailed: true, to: d.to, percent: d.percent }) };
+      }
 
       if (name === 'get_job_progress') {
         const res = await fetch(`${base}/api/admin/estimates/${estId}/progress`);
@@ -2591,6 +2655,10 @@ Job progress and customer progress reports:
 - draft_progress_report writes the update from the phases, photos and billing. It is a DRAFT: the customer sees nothing until send_progress_report.
 - ALWAYS confirm with the user before send_progress_report — it reaches the customer. Offer skip_email:true when they'd rather text the link.
 - The signed contract link shows the customer their percentages automatically; a report is the push version of the same truth.
+- The Job Room (get_job_room, page /admin/jobs/<id>) is the INTERNAL picture: money incl. spent + live margin (earned minus spent), job costs, full log, private notes, customer open-count. None of it reaches the customer.
+- add_job_cost records real spending ("$500 fuel on Hartwell") — costs are what make the margin and the Over Budget flag real numbers.
+- add_log_entry writes the job diary ("log a rain day"); include_in_report:false keeps an entry internal-only forever.
+- notify_customer_update emails the customer a short "your page has an update" nudge with their link. Confirm with the user first; if it returns a warning (already sent today), ask before retrying with force:true.
 </progress>`;
 
 const PROMPT_LETTERS = `<letters>
@@ -2603,7 +2671,7 @@ Letters and notices on company letterhead:
 
 const LETTER_TOOL_NAMES = new Set(['write_letter','list_letters']);
 
-const PROGRESS_TOOL_NAMES = new Set(['get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report']);
+const PROGRESS_TOOL_NAMES = new Set(['get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report','get_job_room','add_job_cost','add_log_entry','notify_customer_update']);
 
 const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets','list_line_presets','search_option_images','add_option_group','update_option_group','delete_option_group']);
 
