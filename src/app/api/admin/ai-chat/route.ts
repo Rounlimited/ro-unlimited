@@ -299,6 +299,12 @@ const PROGRESS_TOOLS = [
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, type: { type: 'string' }, text: { type: 'string' }, entry_date: { type: 'string', description: 'YYYY-MM-DD, default today' }, include_in_report: { type: 'boolean' } }, required: ['type'] } },
   { name: 'notify_customer_update', description: 'Email the customer a short branded nudge that their live project page has an update (current percent, latest log line, link). Confirm with the user before calling — this reaches the customer. If it was already sent today it returns a warning instead; only pass force:true after the user confirms sending again.',
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, force: { type: 'boolean' } } } },
+  { name: 'get_schedule', description: "The 3-week look-ahead: what's slipped, today, this week, next week, and the make-ready window — across all jobs or one job. Use for \"what's on the schedule\", \"what's happening this week\", \"anything slipped\".",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string', description: 'Limit to one job (optional)' }, days: { type: 'number', description: 'How far ahead, default 21' } } } },
+  { name: 'add_schedule_item', description: "Put something on the schedule — \"schedule the pour for Friday\", \"county inspection Tuesday on Hartwell\". kind: work|pour|inspection|delivery|meeting|other. Dates are YYYY-MM-DD.",
+    input_schema: { type: 'object' as const, properties: { title: { type: 'string' }, starts_on: { type: 'string' }, ends_on: { type: 'string' }, kind: { type: 'string' }, estimate_id: { type: 'string' }, estimate_number: { type: 'string' } }, required: ['title', 'starts_on'] } },
+  { name: 'set_schedule_done', description: 'Mark a schedule item done (or not done), move its date, or remove it. Find the item_id with get_schedule first.',
+    input_schema: { type: 'object' as const, properties: { item_id: { type: 'string' }, done: { type: 'boolean' }, starts_on: { type: 'string', description: 'Move it to this day' }, remove: { type: 'boolean' } }, required: ['item_id'] } },
 ];
 
 const LETTER_TOOLS = [
@@ -934,6 +940,58 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (!d.configured) return { result: 'Not set up yet — the xAI management key has to be added before the balance can be read.' };
       if (d.error) return { result: `Error: ${d.error}` };
       return { result: JSON.stringify({ provider: d.provider, balance_usd: d.balance_usd, low: d.low }) };
+    }
+
+    case 'get_schedule':
+    case 'add_schedule_item':
+    case 'set_schedule_done': {
+      const base1 = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+      let schedEstId = input.estimate_id || null;
+      if (!schedEstId && input.estimate_number) {
+        const { data: e } = await supabase.from('estimates').select('id').eq('estimate_number', String(input.estimate_number).trim()).single();
+        if (!e && name !== 'get_schedule') return { result: 'Job not found.' };
+        schedEstId = e?.id || null;
+      }
+      if (name === 'get_schedule') {
+        const days = Math.min(90, Number(input.days) || 21);
+        const from = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+        const to = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+        const qs = new URLSearchParams({ from, to });
+        if (schedEstId) qs.set('estimate_id', schedEstId);
+        const d = await fetch(`${base1}/api/admin/schedule?` + qs).then((r) => r.json());
+        if (d.error) return { result: `Error: ${d.error}` };
+        const names = new Map((d.jobs || []).map((j: any) => [j.id, j.project_name || j.estimate_number]));
+        const today0 = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+        return { result: JSON.stringify((d.items || []).map((it: any) => ({
+          item_id: it.id, title: it.title, kind: it.kind, date: it.starts_on, thru: it.ends_on,
+          job: it.estimate_id ? names.get(it.estimate_id) || null : null,
+          done: !!it.done_at, slipped: !it.done_at && (it.ends_on || it.starts_on) < today0,
+        }))) };
+      }
+      if (name === 'add_schedule_item') {
+        const res = await fetch(`${base1}/api/admin/schedule`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: input.title, starts_on: input.starts_on, ends_on: input.ends_on, kind: input.kind, estimate_id: schedEstId }),
+        });
+        const d = await res.json();
+        if (d.error) return { result: `Error: ${d.error}` };
+        return {
+          result: JSON.stringify({ success: true, item_id: d.item?.id, scheduled: d.item?.starts_on }),
+          action: { type: 'navigate', path: '/admin/schedule', description: 'Open the schedule' },
+        };
+      }
+      // set_schedule_done
+      if (input.remove) {
+        const d = await fetch(`${base1}/api/admin/schedule/${input.item_id}`, { method: 'DELETE' }).then((r) => r.json());
+        return { result: d.error ? `Error: ${d.error}` : JSON.stringify({ removed: true }) };
+      }
+      const patch: any = {};
+      if (input.done !== undefined) patch.done = !!input.done;
+      if (input.starts_on) patch.starts_on = input.starts_on;
+      const d = await fetch(`${base1}/api/admin/schedule/${input.item_id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+      }).then((r) => r.json());
+      return { result: d.error ? `Error: ${d.error}` : JSON.stringify({ success: true, item: { title: d.item?.title, date: d.item?.starts_on, done: !!d.item?.done_at } }) };
     }
 
     case 'get_job_progress':
@@ -2673,6 +2731,7 @@ Job progress and customer progress reports:
 - add_job_cost records real spending ("$500 fuel on Hartwell") — costs are what make the margin and the Over Budget flag real numbers.
 - add_log_entry writes the job diary ("log a rain day"); include_in_report:false keeps an entry internal-only forever.
 - notify_customer_update emails the customer a short "your page has an update" nudge with their link. Confirm with the user first; if it returns a warning (already sent today), ask before retrying with force:true.
+- The Schedule (/admin/schedule) is a rolling 3-week look-ahead: Slipped, Today, This Week (commitment), Next Week, Week 3 (make-ready — order materials, book inspections while problems are cheap), plus a 6-week Timeline of jobs as bars. get_schedule reads it, add_schedule_item books things ("pour Friday on Hartwell"), set_schedule_done checks them off, moves or removes them. Jobs board cards show each job's next scheduled item; the Job Room's Coming Up card shows that job's next few.
 - Customer feedback: their project page has a one-tap pulse ("how's this feeling?"), section notes, and an optional any-time star rating. It all lands in the Job Room (get_job_room returns feedback_recent/feedback_unseen) and notifies JR; a pulse answer of "I have a concern" flags the job on the Jobs board. Two per-job switches control what the customer sees (feedback_enabled = notes+pulse, reviews_enabled = stars) — JR flips them in the Job Room; to change them from chat, PATCH via update_estimate is NOT available, tell the user to use the Job Room toggles.
 </progress>`;
 
@@ -2686,7 +2745,7 @@ Letters and notices on company letterhead:
 
 const LETTER_TOOL_NAMES = new Set(['write_letter','list_letters']);
 
-const PROGRESS_TOOL_NAMES = new Set(['get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report','get_job_room','add_job_cost','add_log_entry','notify_customer_update']);
+const PROGRESS_TOOL_NAMES = new Set(['get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report','get_job_room','add_job_cost','add_log_entry','notify_customer_update','get_schedule','add_schedule_item','set_schedule_done']);
 
 const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets','list_line_presets','search_option_images','add_option_group','update_option_group','delete_option_group']);
 

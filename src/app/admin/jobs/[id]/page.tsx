@@ -38,6 +38,7 @@ interface Room {
   estimate: any;
   feedback: FeedbackRow[];
   feedback_unseen: number;
+  upcoming: { id: string; title: string; kind: string; starts_on: string; ends_on: string | null }[];
   progress: { percent: number; phases: { phase: string; percent: number; value: number; earned: number }[]; total_value: number };
   money: { contract: number; earned: number; spent: number; margin: number; billed: number; paid: number; unbilled: number; by_category: Record<string, number> };
   costs: { id: string; spent_on: string; category: string; amount: number; vendor: string | null; note: string | null }[];
@@ -377,6 +378,35 @@ export default function JobRoomPage() {
             {notesSaved === 'saving' ? <Loader2 size={17} className="animate-spin" /> : notesSaved === 'saved' ? <CheckCircle2 size={17} /> : <Save size={17} />}
             {notesSaved === 'saved' ? 'Saved' : 'Save Notes'}
           </button>
+        </div>
+
+        {/* ── Coming up on this job ── */}
+        <div className="rounded-2xl border border-white/8 bg-[#111] p-5">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[17px] font-bold">Coming Up</p>
+            <button onClick={() => router.push('/admin/schedule?job=' + e.id)}
+              className="min-h-[44px] px-4 rounded-xl text-[15px] font-semibold active:scale-95"
+              style={{ background: 'rgba(201,168,76,0.14)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }}>
+              Schedule
+            </button>
+          </div>
+          {room.upcoming.length === 0 ? (
+            <p className="text-[15px] text-white/35 mt-1">Nothing scheduled on this job — tap Schedule to put the next pour, inspection or delivery on the board.</p>
+          ) : (
+            <div className="space-y-2 mt-2">
+              {room.upcoming.slice(0, 5).map((s) => {
+                const overdue = s.starts_on < `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+                return (
+                  <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <p className="text-[16px] font-semibold truncate">{s.title}</p>
+                    <p className="text-[14px] font-semibold shrink-0" style={{ color: overdue ? '#f87171' : '#D4B965' }}>
+                      {overdue ? 'Slipped · ' : ''}{fmtDay(s.starts_on)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* ── What the customer had to say ── */}

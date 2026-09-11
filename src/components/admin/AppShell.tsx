@@ -224,7 +224,7 @@ const APP_ICONS: AppIcon[] = [
   { id: 'estimates', label: 'Estimates', icon: FileText, href: '/admin/estimates', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'leads', label: 'Inbox', icon: MessageCircle, href: '/admin/inbox', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'team', label: 'Team', icon: Users, href: '/admin/employees', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
-  { id: 'schedule', label: 'Schedule', icon: CalendarDays, href: '/admin/tasks', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
+  { id: 'schedule', label: 'Schedule', icon: CalendarDays, href: '/admin/schedule', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
   { id: 'drive', label: 'RO Drive', icon: HardDrive, href: '/admin/drive', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', badge: 'NEW' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/admin/analytics', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', badge: 'NEW' },
   { id: 'news', label: 'Industry News', icon: Newspaper, href: '/admin/news', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },

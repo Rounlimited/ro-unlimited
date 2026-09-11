@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     const supabase = createAdminClient();
     const { id } = params;
 
-    const [estRes, itemsRes, progRes, costsRes, invRes, logRes, fbRes] = await Promise.all([
+    const [estRes, itemsRes, progRes, costsRes, invRes, logRes, fbRes, schedRes] = await Promise.all([
       supabase
         .from('estimates')
         .select(`id, estimate_number, project_name, total, division, share_token,
@@ -37,6 +37,9 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
         .eq('estimate_id', id).order('entry_date', { ascending: false }).order('created_at', { ascending: false }).limit(60),
       supabase.from('job_feedback').select('id, kind, section, question, answer, rating, body, created_at, seen_at')
         .eq('estimate_id', id).order('created_at', { ascending: false }).limit(30),
+      supabase.from('job_schedule_items').select('id, title, kind, starts_on, ends_on, done_at')
+        .eq('estimate_id', id).is('done_at', null).gte('starts_on', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10))
+        .order('starts_on', { ascending: true }).limit(8),
     ]);
 
     if (estRes.error || !estRes.data) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -86,6 +89,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       days_on_job: daysOnJob,
       feedback: fbRes.data || [],
       feedback_unseen: (fbRes.data || []).filter((f: any) => !f.seen_at).length,
+      upcoming: schedRes.data || [],
     });
   } catch (err) {
     console.error('[jobs/room] error:', err);

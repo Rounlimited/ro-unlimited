@@ -29,6 +29,7 @@ interface Job {
   reporting_cadence: string | null; reporting_day: string | null;
   report_due: boolean; draft_waiting: boolean; last_report_sent: string | null;
   last_log_at: string | null; logged_today: boolean; stale: boolean;
+  next_scheduled: { title: string; starts_on: string } | null;
   earned: number; billed: number; paid: number;
   tracked: boolean; complete: boolean; reasons: string[];
 }
@@ -414,6 +415,13 @@ function JobCard({ job: j, busy, money, showMoney, onOpen, onDraft, onLog, onBil
           <div className="h-full rounded-full transition-all duration-500"
             style={{ width: j.percent + '%', background: j.complete ? '#35d07f' : 'linear-gradient(90deg, #a8893d, #D4B965)' }} />
         </div>
+
+        {j.next_scheduled && !j.complete && (
+          <p className="text-[14px] text-white/45 mb-2.5">
+            Next up: <span className="text-white/70 font-semibold">{j.next_scheduled.title}</span>
+            {' · '}{new Date(j.next_scheduled.starts_on + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+          </p>
+        )}
 
         {/* Where the money is on this job */}
         {money && (
