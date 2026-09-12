@@ -37,7 +37,7 @@ export default function SignaturePad({ onChange }: { onChange: (dataUrl: string 
     <div>
       <canvas
         ref={canvasRef}
-        className="w-full h-36 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 touch-none"
+        className="w-full h-36 rounded-xl border-2 border-dashed touch-none" style={{ borderColor: '#C9A84C', background: '#fdfbf5' }}
         onPointerDown={(e) => {
           e.preventDefault();
           (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -69,7 +69,7 @@ export default function SignaturePad({ onChange }: { onChange: (dataUrl: string 
           hasInk.current = false;
           onChange(null);
         }}
-        className="mt-2 inline-flex items-center gap-1.5 text-[14px] font-semibold text-gray-400 min-h-[44px] px-2"
+        className="mt-2 inline-flex items-center gap-1.5 text-[14px] font-semibold text-gray-600 min-h-[44px] px-2"
       >
         <Eraser size={15} /> Clear
       </button>

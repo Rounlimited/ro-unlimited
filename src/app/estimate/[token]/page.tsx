@@ -968,12 +968,14 @@ function EstimateSignCard({ token, estimate, missingRequired = [], selectionsDir
 
   if (estimate.signed_at) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
+      <div className="bg-white rounded-xl overflow-hidden" style={{ border: '2px solid #e3d5ac', boxShadow: '0 2px 14px rgba(201,168,76,0.12)' }}>
+        <div className="h-1" style={{ background: 'linear-gradient(90deg, #C9A84C, #D4772C)' }} />
+        <div className="p-5 sm:p-6">
         {justSigned ? (
           <CeremonyDone name={estimate.signed_name || ''} docWord={isContract ? 'contract' : 'estimate'} />
         ) : (
           <>
-            <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-3">Acceptance</h2>
+            <h2 className="text-[14px] font-bold uppercase tracking-wider mb-3" style={{ color: '#8a6d20' }}>Acceptance</h2>
             <div className="flex items-center gap-3 rounded-xl p-4" style={{ background: '#e8f8f0', border: '1px solid #b5e6cd' }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#187a4b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
               <p className="text-[16px] font-semibold" style={{ color: '#187a4b' }}>
@@ -989,6 +991,7 @@ function EstimateSignCard({ token, estimate, missingRequired = [], selectionsDir
             )}
           </>
         )}
+        </div>
       </div>
     );
   }
@@ -1012,11 +1015,13 @@ function EstimateSignCard({ token, estimate, missingRequired = [], selectionsDir
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
-      <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-1">
+    <div className="bg-white rounded-xl overflow-hidden" style={{ border: '2px solid #e3d5ac', boxShadow: '0 2px 14px rgba(201,168,76,0.12)' }}>
+      <div className="h-1" style={{ background: 'linear-gradient(90deg, #C9A84C, #D4772C)' }} />
+      <div className="p-5 sm:p-6">
+      <h2 className="text-[15px] font-bold uppercase tracking-wider mb-1" style={{ color: '#8a6d20' }}>
         {isContract ? 'Accept & Sign Contract' : 'Accept & Sign'}
       </h2>
-      <p className="text-[15px] text-gray-500 mb-4">
+      <p className="text-[16px] text-gray-700 mb-4">
         {isContract
           ? 'Signing below enters a binding construction contract with RO Unlimited for the work described above, subject to the stated terms.'
           : 'Signing below accepts this estimate and authorizes RO Unlimited to begin work as described above, subject to the stated terms.'}
@@ -1046,7 +1051,7 @@ function EstimateSignCard({ token, estimate, missingRequired = [], selectionsDir
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Your full name"
-        className="w-full min-h-[52px] px-4 rounded-xl border border-gray-200 bg-white text-[17px] text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#C9A84C] mb-3"
+        className="w-full min-h-[52px] px-4 rounded-xl border-2 border-gray-300 bg-white text-[17px] text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-[#C9A84C] mb-3"
       />
       <SignaturePad onChange={setSig} />
       {error && <p className="text-[15px] text-[#b03434] mt-2">{error}</p>}
@@ -1058,7 +1063,8 @@ function EstimateSignCard({ token, estimate, missingRequired = [], selectionsDir
         {missingRequired.length === 0 && !busy && <span className="doc-shine-loop" aria-hidden="true" />}
         {busy ? 'Saving…' : missingRequired.length > 0 ? 'Choose options to continue' : (isContract ? 'Sign Contract' : 'Accept & Sign')}
       </button>
-      <p className="text-[13px] text-gray-400 mt-3">Your signature is recorded with a timestamp and appears on the final document.</p>
+      <p className="text-[14px] text-gray-600 mt-3">Your signature is recorded with a timestamp and appears on the final document.</p>
+      </div>
     </div>
   );
 }

@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail } from '@/lib/email';
 import { Resend } from 'resend';
-import { generateEstimatePDF } from '@/lib/estimate-pdf';
-import { getOptionsWithChoices } from '@/lib/estimate-options';
 import crypto from 'crypto';
 
 type RouteContext = { params: { id: string } };
@@ -34,21 +32,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
     }
 
-    // Fetch line items, payment schedule, and disclaimers for PDF
-    const [{ data: lineItems }, { data: paymentScheduleData }] = await Promise.all([
-      supabase.from('estimate_line_items').select('*').eq('estimate_id', id).order('phase').order('sort_order'),
-      supabase.from('estimate_payment_schedules').select('*').eq('estimate_id', id).order('sort_order'),
-    ]);
-
-    let selectedDisclaimers: any[] = [];
-    if (estimate.disclaimer_ids?.length) {
-      const { data: allDisclaimers } = await supabase.from('disclaimers').select('*').in('id', estimate.disclaimer_ids);
-      selectedDisclaimers = allDisclaimers || [];
-    }
-
-    // Generate PDF
-    const options = await getOptionsWithChoices(supabase, estimate.id);
-    const pdfBuffer = await generateEstimatePDF(estimate, lineItems || [], paymentScheduleData || [], selectedDisclaimers, options);
+    // No PDF is generated or attached anymore — the link is the estimate,
+    // and the PDF download lives behind it.
 
     // Generate share token (32 char hex)
     const shareToken = crypto.randomBytes(16).toString('hex');
@@ -74,32 +59,37 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
     const viewLink = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/estimate/${shareToken}`;
 
+    // The LINK is the estimate. It's where they review, pick options, sign,
+    // and later follow the whole job — so the email points at exactly one
+    // thing. No PDF attached; the download lives behind the link.
     const bodyContent = `
       ${message ? `<p>${message}</p>` : ''}
-      <p>Please find your estimate attached as a PDF for your review.</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0 24px;width:100%;">
+      <p style="font-size:16px;">Your ${estimate.document_mode === 'quick_quote' ? 'quote' : 'estimate'} for
+        <strong>${estimate.project_name || estimate.estimate_number}</strong> is ready.
+        Review it, choose your options, and sign — all from your secure link:</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0;">
+        <tr>
+          <td style="background-color:#C9A84C;border-radius:10px;padding:16px 36px;">
+            <a href="${viewLink}" style="color:#000;text-decoration:none;font-size:17px;font-weight:700;display:inline-block;">View &amp; Sign Your Estimate</a>
+          </td>
+        </tr>
+      </table>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 20px;width:100%;">
         <tr>
           <td style="padding:8px 0;color:#999;font-size:13px;width:140px;">Estimate #</td>
           <td style="padding:8px 0;color:#fff;font-size:14px;font-weight:600;">${estimate.estimate_number}</td>
         </tr>
-        ${estimate.project_name ? `
         <tr>
-          <td style="padding:8px 0;color:#999;font-size:13px;">Project</td>
-          <td style="padding:8px 0;color:#fff;font-size:14px;font-weight:600;">${estimate.project_name}</td>
-        </tr>` : ''}
+          <td style="padding:8px 0;color:#999;font-size:13px;">Total</td>
+          <td style="padding:8px 0;color:#fff;font-size:14px;font-weight:600;">$${Number(estimate.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+        </tr>
         <tr>
           <td style="padding:8px 0;color:#999;font-size:13px;">Valid Until</td>
           <td style="padding:8px 0;color:#fff;font-size:14px;">${validUntil}</td>
         </tr>
       </table>
-      <p style="color:#999;font-size:13px;">Open the attached PDF to view the full estimate with itemized costs, payment schedule, and terms.</p>
-      <table role="presentation" cellpadding="0" cellspacing="0">
-        <tr>
-          <td style="background-color:#C9A84C;border-radius:6px;padding:12px 28px;">
-            <a href="${viewLink}" style="color:#000;text-decoration:none;font-size:14px;font-weight:700;display:inline-block;">View Estimate Online</a>
-          </td>
-        </tr>
-      </table>
+      <p style="color:#bbb;font-size:14px;">That link stays with your project — once you approve, it's where you'll follow progress, photos, reports and invoices from the first day to the last.</p>
+      <p style="color:#999;font-size:13px;">Prefer paper? There's a Download PDF button on the same page.</p>
     `;
 
     const subject = `Estimate ${estimate.estimate_number}${estimate.project_name ? ` — ${estimate.project_name}` : ''}`;
@@ -114,12 +104,6 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       // Tags come back on Resend's delivered/opened/clicked webhooks, which is
       // how those events find their way onto this estimate's timeline.
       tags: [{ name: 'doc_type', value: 'estimate' }, { name: 'doc_id', value: id }],
-      attachments: [
-        {
-          filename: `${estimate.estimate_number.replace(/\s/g, '_')}.pdf`,
-          content: pdfBuffer,
-        },
-      ],
     });
 
     if (sendErr) {
@@ -144,7 +128,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       body_html: html,
       body_text: `Estimate ${estimate.estimate_number}${message ? ` — ${message}` : ''}`,
       folder: 'sent',
-      has_attachments: true,
+      has_attachments: false,
       read: true,
     });
 
