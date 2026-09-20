@@ -680,7 +680,7 @@ export default function NewEstimateWizard() {
           inclusions,
           recommendations,
           document_mode: step1.document_mode || 'estimate',
-          total_override: totalOverride,
+          total_override: totalOverride && totalOverride > 0 ? totalOverride : null,
           project_start_date: timeline.project_start_date || null,
           project_duration_days: timeline.project_duration_days || null,
           weather_days: timeline.weather_days || 0,

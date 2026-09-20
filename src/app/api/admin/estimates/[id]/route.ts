@@ -99,7 +99,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     // Check if financial fields changed — if so, recalculate totals
     const financialFields = [
       'overhead_percent', 'markup_percent', 'tax_percent',
-      'contingency_percent', 'permit_fees',
+      'contingency_percent', 'permit_fees', 'total_override',
     ];
     const financialChanged = financialFields.some((f) => body[f] !== undefined);
 
@@ -117,8 +117,9 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       }
     }
 
-    // If total_override is set, use it as the total instead of calculated
-    if (body.total_override !== undefined && body.total_override !== null) {
+    // If a real override is in this patch, it is the total. (Zero and null
+    // mean "no override" — recalc above already restored the math total.)
+    if (Number(body.total_override) > 0) {
       body.total = body.total_override;
     }
 

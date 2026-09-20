@@ -45,6 +45,15 @@ export function recalcEstimateTotals(
     (estimate.permit_fees || 0) +
     contingency_amount;
 
+  // A fixed price beats the math, every time it's recalculated. This is
+  // what makes "one fixed price" survive line-item edits, option changes
+  // at signing, and later financial tweaks — the override used to be
+  // clobbered by any of those.
+  const override = Number((estimate as any).total_override);
+  if (override > 0) {
+    return { subtotal, overhead_amount, markup_amount, tax_amount, contingency_amount, total: override };
+  }
+
   return { subtotal, overhead_amount, markup_amount, tax_amount, contingency_amount, total };
 }
 
