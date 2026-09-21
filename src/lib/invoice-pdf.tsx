@@ -6,7 +6,7 @@ import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from '@
  * as one company. Paid invoices render a PAID stamp and double as receipts.
  */
 
-const LOGO_URL = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/ro-unlimited-logo.png`;
+const LOGO_URL = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/ro-co-logo-v2.png`;
 
 const c = {
   navy: '#1B2A4A',
@@ -77,7 +77,10 @@ function InvoicePDFDocument({ invoice, payments }: { invoice: any; payments: any
             {invoice.milestone_label ? <Text style={{ fontSize: 9, color: c.label, marginTop: 2 }}>{invoice.milestone_label}</Text> : null}
           </View>
           {/* eslint-disable-next-line jsx-a11y/alt-text */}
-          <Image src={LOGO_URL} style={{ width: 130, height: 'auto' }} />
+          <View style={{ backgroundColor: '#0d0d0d', borderRadius: 8, paddingVertical: 7, paddingHorizontal: 12, alignSelf: 'flex-start' }}>
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+            <Image src={LOGO_URL} style={{ width: 118, height: 'auto' }} />
+          </View>
         </View>
 
         {isPaid && (

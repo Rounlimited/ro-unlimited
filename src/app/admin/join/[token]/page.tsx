@@ -284,7 +284,7 @@ export default function JoinPage() {
 
         {/* Title block */}
         <div ref={titleRef} className="text-center mb-7">
-          <img src="/ro-unlimited-logo.svg" alt="RO Unlimited"
+          <img src="/ro-co-logo-v2.png" alt="RO Unlimited"
             className="h-10 w-auto object-contain mx-auto mb-5 opacity-90" />
 
           <div className="flex items-center justify-center gap-1.5 mb-2">

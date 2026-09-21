@@ -57,7 +57,7 @@ export default function Navbar() {
           {/* Logo — flush left */}
           <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
             <img
-              src="/ro-unlimited-logo.svg"
+              src="/ro-co-logo-v2.png"
               alt="RO Unlimited"
               className="h-9 w-auto object-contain"
               style={{ maxWidth: '200px' }}

@@ -192,7 +192,7 @@ export function buildEmailHtml(toName: string, bodyHtml: string, subject: string
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td style="padding:24px 32px 20px;">
-                  <img src="https://rounlimited.com/ro-unlimited-logo-transparent.png" alt="RO Unlimited — Contractor &amp; Developer" width="190" style="display:block;border:0;width:190px;max-width:190px;height:auto;" />
+                  <img src="https://rounlimited.com/ro-co-logo-v2.png" alt="RO Unlimited — Contractor &amp; Developer" width="190" style="display:block;border:0;width:190px;max-width:190px;height:auto;" />
                 </td>
                 <td style="padding:24px 32px 20px;text-align:right;vertical-align:middle;white-space:nowrap;">
                   <span style="display:inline-block;border:1px solid #C9A84C;padding:4px 10px;color:#C9A84C;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Official Message</span>

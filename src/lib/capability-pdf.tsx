@@ -11,7 +11,7 @@ import { COMPANY } from '@/lib/constants';
  * "furnished on request."
  */
 
-const LOGO_URL = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/ro-unlimited-logo.png`;
+const LOGO_URL = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/ro-co-logo-v2.png`;
 const BADGE_URL = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/images/utilities/utility-division-badge.png`;
 
 const c = {
@@ -90,7 +90,10 @@ function CapabilityDoc() {
             <Text style={s.docSub}>{COMPANY.fullName} · Prepared {today}</Text>
           </View>
           {/* eslint-disable-next-line jsx-a11y/alt-text */}
-          <Image src={LOGO_URL} style={{ width: 120, height: 'auto' }} />
+          <View style={{ backgroundColor: '#0d0d0d', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, alignSelf: 'flex-start' }}>
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+            <Image src={LOGO_URL} style={{ width: 108, height: 'auto' }} />
+          </View>
         </View>
 
         {/* Stat strip */}

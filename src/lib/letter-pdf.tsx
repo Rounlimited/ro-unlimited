@@ -7,7 +7,7 @@ import { COMPANY } from '@/lib/letters';
  * the things that make a page read as coming from a real licensed contractor.
  */
 
-const LOGO_URL = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/ro-unlimited-logo.png`;
+const LOGO_URL = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/ro-co-logo-v2.png`;
 
 const c = {
   ink: '#1a1a1a',
@@ -22,7 +22,7 @@ const s = StyleSheet.create({
   page: { paddingTop: 44, paddingBottom: 76, paddingHorizontal: 56, fontSize: 11, color: c.body, lineHeight: 1.55 },
 
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-  logo: { width: 168 },
+  logo: { width: 152 },
   headRight: { alignItems: 'flex-end' },
   headLine: { fontSize: 9, color: c.muted },
   rule: { height: 2, backgroundColor: c.gold, marginBottom: 4 },
@@ -79,7 +79,10 @@ function LetterDocument({ letter }: { letter: LetterDoc }) {
         {/* ── Letterhead ── */}
         <View style={s.head} fixed>
           {/* eslint-disable-next-line jsx-a11y/alt-text */}
-          <Image src={LOGO_URL} style={s.logo} />
+          <View style={{ backgroundColor: '#0d0d0d', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 13, alignSelf: 'flex-start' }}>
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+            <Image src={LOGO_URL} style={s.logo} />
+          </View>
           <View style={s.headRight}>
             {COMPANY.address ? <Text style={s.headLine}>{COMPANY.address}</Text> : null}
             <Text style={s.headLine}>{COMPANY.phone}</Text>

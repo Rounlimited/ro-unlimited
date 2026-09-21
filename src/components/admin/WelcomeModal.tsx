@@ -72,7 +72,7 @@ export default function WelcomeModal({ userId, onComplete }: WelcomeModalProps) 
             {/* Logo */}
             <div className="flex justify-center mb-5">
               <img
-                src="/ro-unlimited-logo-transparent.png"
+                src="/ro-co-logo-v2.png"
                 alt="RO Unlimited"
                 className="h-16 w-auto"
               />

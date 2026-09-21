@@ -37,7 +37,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-10">
           <img
-            src="/ro-unlimited-logo.svg"
+            src="/ro-co-logo-v2.png"
             alt="RO Unlimited"
             className="h-14 w-auto object-contain mx-auto mb-4"
             style={{ maxWidth: '260px' }}

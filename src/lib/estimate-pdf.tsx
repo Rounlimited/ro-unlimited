@@ -9,7 +9,7 @@ import { estimateDisplayDate } from './estimates';
    garbled. Never break inside a word; let lines wrap at spaces only. */
 Font.registerHyphenationCallback((word) => [word]);
 
-const LOGO_URL = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/ro-unlimited-logo.png`;
+const LOGO_URL = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/ro-co-logo-v2.png`;
 
 /* ─── Helpers ────────────────────────────────────────────────── */
 
@@ -462,7 +462,10 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
 
         {/* ═══ FIXED HEADER — Logo only, no competing text (Ref #2) ═══ */}
         <View style={s.pageHeader} fixed>
-          <Image src={LOGO_URL} style={{ width: 140, height: 'auto' }} />
+          <View style={{ backgroundColor: '#0d0d0d', borderRadius: 8, paddingVertical: 7, paddingHorizontal: 12, alignSelf: 'flex-start' }}>
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+            <Image src={LOGO_URL} style={{ width: 128, height: 'auto' }} />
+          </View>
           <View>
             <Text style={s.pageHeaderRight}>{estimate.estimate_number}</Text>
             <Text style={s.pageHeaderRight}>{fmtDate(displayDate || undefined)}</Text>

@@ -74,7 +74,9 @@ export default function ReportPage({ params }: { params: { token: string } }) {
             {error || 'This link may have expired.'} Give us a call at (864) 304-0139 and we'll get you a current update.
           </p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/ro-unlimited-logo.png" alt="RO Unlimited" className="h-9 w-auto mx-auto opacity-60" />
+          <span className="inline-flex items-center rounded-xl px-3 py-2 mx-auto" style={{ background: '#0c0c0c' }}>
+            <img src="/ro-co-logo-v2.png" alt="RO Unlimited Co." className="h-8 w-auto" />
+          </span>
         </div>
       </main>
     );
@@ -91,7 +93,9 @@ export default function ReportPage({ params }: { params: { token: string } }) {
         {/* Brand — visible frame one, never animated */}
         <div className="flex items-center justify-between">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/ro-unlimited-logo.png" alt="RO Unlimited" className="h-10 w-auto" />
+          <span className="inline-flex items-center rounded-xl px-3 py-2" style={{ background: '#0c0c0c' }}>
+            <img src="/ro-co-logo-v2.png" alt="RO Unlimited Co." className="h-8 w-auto" />
+          </span>
           <span className="text-[13px] font-bold uppercase tracking-wide" style={{ color: '#8a6d20' }}>
             Progress Report
           </span>

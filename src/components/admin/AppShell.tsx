@@ -907,7 +907,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             onClick={() => { window.location.href = '/admin'; }}
             className="flex items-center gap-2 bg-transparent border-none cursor-pointer p-0"
           >
-            <img src="/ro-unlimited-logo.svg" alt="RO Unlimited" className="w-48 h-auto object-contain" />
+            <img src="/ro-co-logo-v2.png" alt="RO Unlimited" className="w-48 h-auto object-contain" />
             <span className="text-[11px] text-white/20 uppercase tracking-wider border-l border-white/10 pl-2">Admin</span>
           </button>
         </div>

@@ -38,13 +38,13 @@ export const metadata: Metadata = {
     siteName: COMPANY.name,
     title: `${COMPANY.fullName} | Commercial General Contractor`,
     description: 'Professional full-range commercial construction — including site development and utility services — throughout South Carolina, Georgia, and North Carolina.',
-    images: [{ url: `${SITE_URL}/og-commercial.jpg`, width: 1200, height: 630, alt: `${COMPANY.fullName} — commercial construction` }],
+    images: [{ url: `${SITE_URL}/og-roco.jpg`, width: 1200, height: 630, alt: `${COMPANY.fullName} — commercial construction` }],
   },
   twitter: {
     card: 'summary_large_image',
     title: COMPANY.fullName,
     description: `Full-range commercial construction — including site development and utility services — across SC, GA & NC. ${COMPANY.experience} years.`,
-    images: [`${SITE_URL}/og-commercial.jpg`],
+    images: [`${SITE_URL}/og-roco.jpg`],
   },
   robots: {
     index: true,
@@ -105,7 +105,7 @@ const organizationJsonLd = {
   },
   sameAs: [COMPANY.facebook],
   logo: `${SITE_URL}/icons/icon-512x512.png`,
-  image: `${SITE_URL}/og-commercial.jpg`,
+  image: `${SITE_URL}/og-roco.jpg`,
   // Ordered deliberately: what RO builds first, then how it gets built. Search
   // engines and AI summarisers read this list as what the company IS.
   knowsAbout: [

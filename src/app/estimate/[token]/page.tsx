@@ -484,7 +484,9 @@ export default function PublicEstimatePage() {
         {/* ─── Brand header — same language as the invoice page ── */}
         <div className="flex items-center justify-between">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/ro-unlimited-logo.png" alt="RO Unlimited" className="h-10 w-auto" />
+          <span className="inline-flex items-center rounded-xl px-3 py-2" style={{ background: '#0c0c0c' }}>
+            <img src="/ro-co-logo-v2.png" alt="RO Unlimited Co." className="h-8 w-auto" />
+          </span>
           <button
             onClick={() => document.getElementById('accept-sign')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
             className="inline-flex items-center gap-2 min-h-[48px] px-5 rounded-xl text-[15px] font-bold text-black shadow-sm active:scale-[0.98] transition-transform"
