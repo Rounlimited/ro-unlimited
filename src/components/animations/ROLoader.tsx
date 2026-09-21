@@ -95,18 +95,18 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
           className="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center"
           style={{ zIndex: 200 }}
         >
+          {/* The stacked RO/CO. mark — natural aspect, no stretch (the old
+              icon needed a scaleY to fill; this one is drawn stacked). */}
           <img
             ref={roRef}
-            src="/ro-icon.svg"
+            src="/ro-co-mark-v2.png"
             alt=""
             aria-hidden="true"
             className="pointer-events-none select-none"
             style={{
-              width: '72vw',
-              maxWidth: '360px',
-              objectFit: 'fill',
-              transform: 'scaleY(1.35)',
-              transformOrigin: 'center center',
+              width: '64vw',
+              maxWidth: '320px',
+              height: 'auto',
             }}
           />
         </div>
