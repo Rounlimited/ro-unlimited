@@ -53,7 +53,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
     const supabase = createAdminClient();
-    const { action } = await req.json();
+    const { action, date, days } = await req.json();
     const patch: any = {};
 
     if (action === 'off') {
@@ -73,7 +73,21 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       patch.share_token = null;
       patch.share_token_expires_at = null;
     } else if (action === 'extend') {
-      patch.share_token_expires_at = new Date(Date.now() + 60 * 86400000).toISOString();
+      const n = Math.min(365, Math.max(1, Number(days) || 60));
+      patch.share_token_expires_at = new Date(Date.now() + n * 86400000).toISOString();
+    } else if (action === 'expire_on') {
+      // JR picks the day; the link stays good THROUGH it in Eastern time.
+      // Stored as the following day 04:59Z (= 23:59/22:59 ET around DST).
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) {
+        return NextResponse.json({ error: 'Pick a date' }, { status: 400 });
+      }
+      const day = new Date(date + 'T12:00:00Z');
+      day.setUTCDate(day.getUTCDate() + 1);
+      const iso = day.toISOString().slice(0, 10) + 'T04:59:59.000Z';
+      if (new Date(iso) < new Date()) {
+        return NextResponse.json({ error: 'That date has already passed' }, { status: 400 });
+      }
+      patch.share_token_expires_at = iso;
     } else {
       return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
     }

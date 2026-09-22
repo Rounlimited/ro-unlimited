@@ -1,13 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Link2, X, Pause, Play, RefreshCw, Trash2, Copy, Check, CalendarPlus, Eye } from 'lucide-react';
+import { Loader2, Link2, X, Pause, Play, RefreshCw, Trash2, Copy, Check, Eye, ExternalLink } from 'lucide-react';
 
 /**
- * Link Controls — JR's control panel for one customer link.
- * Pause it for a phone call, resume it after (changes or no changes),
- * issue a fresh one (old dies instantly), kill it outright, or extend it.
- * JR-sized: 17px body, 52px+ targets, states carried by words.
+ * Link Controls — the ONE place for everything about a customer link.
+ * (The page header keeps only Send / PDF / Revise / Delete; open, copy,
+ * pause, replace, expiration and kill all live here.)
+ *
+ * Pause it for a phone call, resume after (changes or no changes), issue a
+ * fresh one (old dies instantly), set exactly when it expires, or kill it.
+ * JR-sized: 16px+ text, 52px+ targets, states carried by words.
  */
 
 interface LinkStatus {
@@ -24,6 +27,8 @@ export default function LinkControlsSheet({ estimateId, onClose }: { estimateId:
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [confirmArm, setConfirmArm] = useState<string | null>(null);
+  const [customDate, setCustomDate] = useState('');
+  const [dateMsg, setDateMsg] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -34,21 +39,28 @@ export default function LinkControlsSheet({ estimateId, onClose }: { estimateId:
 
   useEffect(() => { load(); }, [load]);
 
-  const act = async (action: string) => {
-    // New link and kill are one-way doors — arm on first tap, fire on second.
+  const act = async (action: string, extra: any = {}, busyKey?: string) => {
     if ((action === 'new' || action === 'kill') && confirmArm !== action) {
       setConfirmArm(action);
       return;
     }
     setConfirmArm(null);
-    setBusy(action);
+    setBusy(busyKey || action);
+    setDateMsg('');
     try {
       const d = await fetch('/api/admin/estimates/' + estimateId + '/link', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, ...extra }),
       }).then((r) => r.json());
-      if (!d.error) setS(d);
-    } catch { /* leave */ }
+      if (d.error) setDateMsg(d.error);
+      else {
+        setS(d);
+        if (action === 'extend' || action === 'expire_on') {
+          setDateMsg('Set — good thru ' + fmtDate(d.expires_at));
+          setCustomDate('');
+        }
+      }
+    } catch { setDateMsg('Could not save — try again.'); }
     setBusy(null);
   };
 
@@ -98,41 +110,45 @@ export default function LinkControlsSheet({ estimateId, onClose }: { estimateId:
           <div className="flex items-center gap-3 text-white/40 py-6"><Loader2 size={20} className="animate-spin" /> Checking the link…</div>
         ) : (
           <>
-            {/* Status */}
-            <div className="rounded-xl p-4 mb-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="flex items-center justify-between gap-3 mb-2">
+            {/* ── Status + the two quick reads ── */}
+            <div className="rounded-xl p-4 mb-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="flex items-center justify-between gap-3">
                 <span className="px-3 py-1.5 rounded-full text-[14px] font-bold" style={{ color: pill!.color, background: pill!.bg }}>{pill!.label}</span>
                 {s.has_link && s.expires_at && (
                   <span className="text-[14px] text-white/40">good thru {fmtDate(s.expires_at)}</span>
                 )}
               </div>
               {s.has_link && (
-                <p className="text-[14px] text-white/40 flex items-center gap-1.5">
+                <p className="text-[14px] text-white/40 flex items-center gap-1.5 mt-2">
                   <Eye size={14} /> Opened {s.view_count}{s.view_count === 1 ? ' time' : ' times'}
                   {s.last_viewed_at ? ` · last ${fmtDate(s.last_viewed_at)}` : ''}
                 </p>
               )}
               {!s.enabled && (
                 <p className="text-[15px] mt-2" style={{ color: '#f0a04b' }}>
-                  The customer sees a &ldquo;we&rsquo;re making updates — give us a call&rdquo; page. Nothing on the document works until you turn it back on.
+                  The customer sees a &ldquo;we&rsquo;re making updates — give us a call&rdquo; page until you turn it back on.
                 </p>
               )}
             </div>
 
-            {/* Actions */}
-            <div className="space-y-2">
-              {s.has_link && s.url && (
+            {/* ── Open + Copy, side by side ── */}
+            {s.has_link && s.url && (
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <a href={s.url.replace('https://rounlimited.com', '')} target="_blank" rel="noreferrer"
+                  className="min-h-[52px] rounded-xl flex items-center justify-center gap-2 text-[15px] font-bold active:scale-[0.98]"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)' }}>
+                  <ExternalLink size={17} /> Open It
+                </a>
                 <button onClick={copy}
-                  className="w-full min-h-[56px] rounded-xl px-4 flex items-center gap-3 text-left active:scale-[0.99]"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  {copied ? <Check size={19} className="shrink-0 text-[#35d07f]" /> : <Copy size={19} className="shrink-0 text-white/60" />}
-                  <span className="min-w-0">
-                    <span className="block text-[16px] font-bold text-white/85">{copied ? 'Copied' : 'Copy the Link'}</span>
-                    <span className="block text-[13px] text-white/40 truncate">{s.url.replace('https://', '')}</span>
-                  </span>
+                  className="min-h-[52px] rounded-xl flex items-center justify-center gap-2 text-[15px] font-bold active:scale-[0.98]"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: copied ? '#35d07f' : 'rgba(255,255,255,0.8)' }}>
+                  {copied ? <Check size={17} /> : <Copy size={17} />} {copied ? 'Copied' : 'Copy It'}
                 </button>
-              )}
+              </div>
+            )}
 
+            {/* ── The switch ── */}
+            <div className="space-y-2">
               {s.has_link && s.enabled && (
                 <Btn action="off" icon={Pause} label="Pause the Link" sub="For phone calls and edits — same link comes back when you're done" tone="gold" />
               )}
@@ -142,13 +158,39 @@ export default function LinkControlsSheet({ estimateId, onClose }: { estimateId:
               {!s.has_link && (
                 <Btn action="new" icon={RefreshCw} label="Issue a Link" sub="Creates a fresh link, good for 60 days" tone="gold" />
               )}
-
               {s.has_link && (
                 <Btn action="new" icon={RefreshCw} label="Issue a New Link" sub="Fresh link — the one they have stops working" />
               )}
-              {s.has_link && s.expires_at && (
-                <Btn action="extend" icon={CalendarPlus} label="Extend 60 Days" sub="Pushes the expiration out from today" />
+
+              {/* ── Expiration, one block: quick chips or an exact day ── */}
+              {s.has_link && (
+                <div className="rounded-xl px-4 py-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <p className="text-[16px] font-bold text-white/85 mb-2">Expiration</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {[30, 60, 90].map((n) => (
+                      <button key={n} onClick={() => act('extend', { days: n }, 'extend' + n)} disabled={busy !== null}
+                        className="min-h-[48px] px-4 rounded-xl text-[15px] font-bold active:scale-95 disabled:opacity-50"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)' }}>
+                        {busy === 'extend' + n ? <Loader2 size={15} className="animate-spin" /> : `+${n} days`}
+                      </button>
+                    ))}
+                    <input type="date" value={customDate}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => { setCustomDate(e.target.value); setDateMsg(''); }}
+                      className="flex-1 min-w-[150px] min-h-[48px] px-3 rounded-xl bg-white/5 border border-white/10 text-[15px] text-white focus:outline-none focus:border-[#C9A84C]/50" />
+                    <button
+                      onClick={() => { if (!customDate) { setDateMsg('Pick a day first'); return; } act('expire_on', { date: customDate }); }}
+                      disabled={busy !== null}
+                      className="min-h-[48px] px-5 rounded-xl text-[15px] font-bold text-black active:scale-95 disabled:opacity-50"
+                      style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>
+                      {busy === 'expire_on' ? <Loader2 size={15} className="animate-spin" /> : 'Set Day'}
+                    </button>
+                  </div>
+                  <p className="text-[13px] text-white/35 mt-2">Chips push it out from today; the picker makes it die after the exact day you choose.</p>
+                  {dateMsg && <p className="text-[14px] mt-1.5" style={{ color: dateMsg.startsWith('Set —') ? '#35d07f' : '#f87171' }}>{dateMsg}</p>}
+                </div>
               )}
+
               {s.has_link && (
                 <Btn action="kill" icon={Trash2} label="Kill This Link" sub="Deletes it — nothing works until you issue a new one" tone="danger" />
               )}

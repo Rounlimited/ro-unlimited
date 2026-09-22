@@ -299,8 +299,8 @@ const PROGRESS_TOOLS = [
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, type: { type: 'string' }, text: { type: 'string' }, entry_date: { type: 'string', description: 'YYYY-MM-DD, default today' }, include_in_report: { type: 'boolean' } }, required: ['type'] } },
   { name: 'notify_customer_update', description: 'Email the customer a short branded nudge that their live project page has an update (current percent, latest log line, link). Confirm with the user before calling — this reaches the customer. If it was already sent today it returns a warning instead; only pass force:true after the user confirms sending again.',
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, force: { type: 'boolean' } } } },
-  { name: 'set_link_status', description: "Control a customer document link: action 'off' pauses it (customer sees a friendly we're-making-updates page), 'on' resumes the same link, 'new' issues a fresh link (the old one dies instantly \u2014 confirm with the user first), 'kill' deletes it, 'extend' pushes expiry out 60 days. Use when JR says pause/turn off/kill/reissue a link.",
-    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, action: { type: 'string' } }, required: ['action'] } },
+  { name: 'set_link_status', description: "Control a customer document link: action 'off' pauses it (customer sees a friendly we're-making-updates page), 'on' resumes the same link, 'new' issues a fresh link (the old one dies instantly \u2014 confirm with the user first), 'kill' deletes it, 'extend' pushes expiry out 60 days, 'expire_on' sets a custom expiration (pass date YYYY-MM-DD — the link works through that whole day). Use when JR says pause/turn off/kill/reissue/expire a link.",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, action: { type: 'string' }, date: { type: 'string', description: 'For expire_on: YYYY-MM-DD' } }, required: ['action'] } },
   { name: 'get_schedule', description: "The 3-week look-ahead: what's slipped, today, this week, next week, and the make-ready window — across all jobs or one job. Use for \"what's on the schedule\", \"what's happening this week\", \"anything slipped\".",
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string', description: 'Limit to one job (optional)' }, days: { type: 'number', description: 'How far ahead, default 21' } } } },
   { name: 'add_schedule_item', description: "Put something on the schedule — \"schedule the pour for Friday\", \"county inspection Tuesday on Hartwell\". kind: work|pour|inspection|delivery|meeting|other. Dates are YYYY-MM-DD.",
@@ -955,7 +955,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (!linkEstId) return { result: 'Error: estimate_id or estimate_number required.' };
       const d = await fetch(`${baseL}/api/admin/estimates/${linkEstId}/link`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: input.action }),
+        body: JSON.stringify({ action: input.action, date: input.date }),
       }).then((r) => r.json());
       if (d.error) return { result: `Error: ${d.error}` };
       return { result: JSON.stringify({ enabled: d.enabled, has_link: d.has_link, url: d.url, expires: d.expires_at }) };

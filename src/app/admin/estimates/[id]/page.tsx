@@ -679,31 +679,14 @@ export default function EstimateDetailPage() {
             >
               {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />} PDF Preview
             </button>
-            <button
-              onClick={handlePreviewLink}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-[#C9A84C] bg-[#C9A84C]/10 border border-[#C9A84C]/25 rounded-lg hover:bg-[#C9A84C]/20 transition-all"
-              title="Open the interactive customer link in a new tab"
-            >
-              <ExternalLink size={14} /> Preview Link
-            </button>
-            <button
-              onClick={handleCopyLink}
-              disabled={copyingLink}
-              className={`flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium rounded-lg transition-all disabled:opacity-40 ${
-                detailLinkCopied
-                  ? 'text-green-400 bg-green-500/10 border border-green-500/20'
-                  : 'text-[#D4772C] bg-[#D4772C]/10 border border-[#D4772C]/20 hover:bg-[#D4772C]/20'
-              }`}
-            >
-              {copyingLink ? <Loader2 size={14} className="animate-spin" /> : detailLinkCopied ? <Check size={14} /> : <Link2 size={14} />}
-              {copyingLink ? '...' : detailLinkCopied ? 'Copied!' : 'Copy Link'}
-            </button>
+            {/* One door for everything link-shaped: open, copy, pause,
+                replace, expiration, kill — all inside the sheet. */}
             <button
               onClick={() => setShowLinkControls(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-white/60 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all"
-              title="Pause, resume, replace or kill the customer link"
+              className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-[#C9A84C] bg-[#C9A84C]/10 border border-[#C9A84C]/25 rounded-lg hover:bg-[#C9A84C]/20 transition-all"
+              title="Open, copy, pause, replace, set expiration, or kill the customer link"
             >
-              <Link2 size={14} /> Link Controls
+              <Link2 size={14} /> The Link
             </button>
             <button
               onClick={() => setShowSendModal(true)}
