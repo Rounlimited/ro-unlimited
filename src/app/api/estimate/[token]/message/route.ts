@@ -22,12 +22,15 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     // Verify token is valid
     const { data: estimate, error } = await supabase
       .from('estimates')
-      .select('id, estimate_number, project_name, division, customer_id')
+      .select('id, link_enabled, estimate_number, project_name, division, customer_id')
       .eq('share_token', token)
       .single();
 
     if (error || !estimate) {
       return NextResponse.json({ error: 'Invalid or expired link' }, { status: 404 });
+    }
+    if ((estimate as any).link_enabled === false) {
+      return NextResponse.json({ error: 'This link is paused' }, { status: 423 });
     }
 
     await recordDocumentEvent({ req, docType: 'estimate', doc: estimate as any, event: 'message_sent', meta: { name, length: String(message).length } });

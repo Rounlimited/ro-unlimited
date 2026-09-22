@@ -26,6 +26,11 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'This estimate link has expired' }, { status: 410 });
     }
 
+    // JR's pause switch — the whole document goes quiet until he flips it back.
+    if (estimate.link_enabled === false) {
+      return NextResponse.json({ error: 'This link is paused for updates', paused: true }, { status: 423 });
+    }
+
     // Remap project_description
     estimate.scope_of_work = estimate.project_description;
 

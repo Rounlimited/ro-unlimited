@@ -299,6 +299,8 @@ const PROGRESS_TOOLS = [
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, type: { type: 'string' }, text: { type: 'string' }, entry_date: { type: 'string', description: 'YYYY-MM-DD, default today' }, include_in_report: { type: 'boolean' } }, required: ['type'] } },
   { name: 'notify_customer_update', description: 'Email the customer a short branded nudge that their live project page has an update (current percent, latest log line, link). Confirm with the user before calling — this reaches the customer. If it was already sent today it returns a warning instead; only pass force:true after the user confirms sending again.',
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, force: { type: 'boolean' } } } },
+  { name: 'set_link_status', description: "Control a customer document link: action 'off' pauses it (customer sees a friendly we're-making-updates page), 'on' resumes the same link, 'new' issues a fresh link (the old one dies instantly \u2014 confirm with the user first), 'kill' deletes it, 'extend' pushes expiry out 60 days. Use when JR says pause/turn off/kill/reissue a link.",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, action: { type: 'string' } }, required: ['action'] } },
   { name: 'get_schedule', description: "The 3-week look-ahead: what's slipped, today, this week, next week, and the make-ready window — across all jobs or one job. Use for \"what's on the schedule\", \"what's happening this week\", \"anything slipped\".",
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string', description: 'Limit to one job (optional)' }, days: { type: 'number', description: 'How far ahead, default 21' } } } },
   { name: 'add_schedule_item', description: "Put something on the schedule — \"schedule the pour for Friday\", \"county inspection Tuesday on Hartwell\". kind: work|pour|inspection|delivery|meeting|other. Dates are YYYY-MM-DD.",
@@ -940,6 +942,23 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (!d.configured) return { result: 'Not set up yet — the xAI management key has to be added before the balance can be read.' };
       if (d.error) return { result: `Error: ${d.error}` };
       return { result: JSON.stringify({ provider: d.provider, balance_usd: d.balance_usd, low: d.low }) };
+    }
+
+    case 'set_link_status': {
+      const baseL = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
+      let linkEstId = input.estimate_id || null;
+      if (!linkEstId && input.estimate_number) {
+        const { data: e } = await supabase.from('estimates').select('id').eq('estimate_number', String(input.estimate_number).trim()).single();
+        if (!e) return { result: 'Estimate not found.' };
+        linkEstId = e.id;
+      }
+      if (!linkEstId) return { result: 'Error: estimate_id or estimate_number required.' };
+      const d = await fetch(`${baseL}/api/admin/estimates/${linkEstId}/link`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: input.action }),
+      }).then((r) => r.json());
+      if (d.error) return { result: `Error: ${d.error}` };
+      return { result: JSON.stringify({ enabled: d.enabled, has_link: d.has_link, url: d.url, expires: d.expires_at }) };
     }
 
     case 'get_schedule':
@@ -2624,6 +2643,7 @@ Document lifecycle: every doc is born a Quote, Estimate, or Proposal (its docume
 Progress views: the Progress tab and the Jobs board both have a "Show $" button that flips percent-complete displays to dollars earned (earned of contract value, per phase too). The Progress tab also has "Email Customer This Update" — one tap sends the customer a short branded email (current %, latest log line, link to their live project page); it warns before sending twice in one day. Scheduled progress reports are separate and still go through Reports.
 The Job Room (/admin/jobs/<id>, tap any job on the Jobs board) is JR's behind-the-scenes view of one job — internal only, the customer never sees any of it: money position (contract / earned / SPENT / billed / paid) with a live margin (earned minus spent), tap-in job costs by category (materials, sub, labor, equipment, hauling, fuel, permits), the full job log including internal-only entries, private notes, days-on-job and rain days, how many times the customer has opened their page, a "See What They See" button, and the email-update button. Costs are the new piece: logging spends there is what makes the margin and Over Budget real numbers.
 Building a new estimate:
+Link controls: every customer link can be paused ('off' \u2014 for phone-call edits; same link resumes with 'on'), replaced ('new' \u2014 old dies instantly, CONFIRM with the user first), killed, or extended 60 days \u2014 set_link_status, or the Link Controls button on the estimate page / Job Room.
 FIXED PRICE (how JR usually bids): he names one number and that's the customer's price — no line items, no markups. Do this with update_estimate { total_override: <price> }. Line items are OPTIONAL on a fixed-price job — put the description in scope_of_work instead, and never invent an itemized breakdown he didn't give you. The override now survives every recalculation. To go back to calculated pricing, set total_override to 0.
 1. Gather: customer, type, scope, location
 2. Draft fully in chat — phases, line items (qty × unit_cost = total), subtotals, grand total, payment schedule
@@ -2752,7 +2772,7 @@ const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets'
 
 const INVOICE_TOOL_NAMES = new Set(['search_invoices','get_invoice_details','get_ar_summary','create_invoice','update_invoice','record_invoice_payment','send_invoice']);
 
-const ESTIMATE_TOOL_NAMES = new Set(['create_estimate','get_estimate_details','search_estimates','add_line_items','update_line_items','delete_line_items','update_estimate','update_estimate_status','set_payment_schedule','send_estimate','duplicate_estimate','check_estimate_pricing','search_cost_library','search_templates','search_disclaimers','generate_share_link']);
+const ESTIMATE_TOOL_NAMES = new Set(['create_estimate','get_estimate_details','search_estimates','add_line_items','update_line_items','delete_line_items','update_estimate','update_estimate_status','set_payment_schedule','send_estimate','duplicate_estimate','check_estimate_pricing','set_link_status','search_cost_library','search_templates','search_disclaimers','generate_share_link']);
 const TASK_TOOL_NAMES = new Set(['create_task','list_tasks','complete_task','snooze_task','update_task','delete_task','get_daily_briefing']);
 
 const ANALYTICS_TOOL_NAMES = new Set(['get_customer_activity', 'get_analytics_overview', 'get_website_traffic', 'get_industry_news', 'get_material_prices', 'get_alert_routing', 'refresh_news', 'get_ai_balance']);

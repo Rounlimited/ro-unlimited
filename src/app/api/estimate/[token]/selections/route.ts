@@ -20,10 +20,13 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
     const { data: est } = await supabase
       .from('estimates')
-      .select('id, estimate_number, status, document_mode, project_name, division, total, signed_at, share_token_expires_at, customer:customers(first_name, last_name, company_name)')
+      .select('id, link_enabled, estimate_number, status, document_mode, project_name, division, total, signed_at, share_token_expires_at, customer:customers(first_name, last_name, company_name)')
       .eq('share_token', params.token)
       .single();
     if (!est) return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    if ((est as any).link_enabled === false) {
+      return NextResponse.json({ error: 'This link is paused' }, { status: 423 });
+    }
     if (est.share_token_expires_at && new Date(est.share_token_expires_at) < new Date()) {
       return NextResponse.json({ error: 'This link has expired — call us and we will resend it' }, { status: 410 });
     }

@@ -174,7 +174,7 @@ export default function PublicEstimatePage() {
   const [serverSelections, setServerSelections] = useState<Set<string>>(new Set());
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<{ message: string; expired?: boolean } | null>(null);
+  const [error, setError] = useState<{ message: string; expired?: boolean; paused?: boolean } | null>(null);
 
   // PDF preview
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
@@ -262,6 +262,10 @@ export default function PublicEstimatePage() {
         const res = await fetch(`/api/estimate/${token}`);
         if (res.status === 410) {
           setError({ message: 'This estimate link has expired. Please contact us for an updated link.', expired: true });
+          return;
+        }
+        if (res.status === 423) {
+          setError({ message: 'We\u2019re making some updates to your document right now. Give us a call at (864) 304-0139 \u2014 we\u2019ll have it back shortly.', paused: true });
           return;
         }
         if (!res.ok) {
@@ -378,7 +382,7 @@ export default function PublicEstimatePage() {
             )}
           </div>
           <h1 className="text-[22px] font-bold text-gray-900 mb-2">
-            {error.expired ? 'Link Expired' : 'Estimate Not Found'}
+            {error.paused ? 'Back Shortly' : error.expired ? 'Link Expired' : 'Estimate Not Found'}
           </h1>
           <p className="text-[15px] text-gray-500 mb-6">{error.message}</p>
           <a

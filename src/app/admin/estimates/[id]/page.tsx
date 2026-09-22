@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
+import LinkControlsSheet from '@/components/admin/estimates/LinkControls';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 import { estimateDisplayDate, toDateInputValue } from '@/lib/estimates';
 import { docStage } from '@/lib/doc-stage';
@@ -248,6 +249,7 @@ export default function EstimateDetailPage() {
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [sending, setSending] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
+  const [showLinkControls, setShowLinkControls] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
   // Action states
@@ -695,6 +697,13 @@ export default function EstimateDetailPage() {
             >
               {copyingLink ? <Loader2 size={14} className="animate-spin" /> : detailLinkCopied ? <Check size={14} /> : <Link2 size={14} />}
               {copyingLink ? '...' : detailLinkCopied ? 'Copied!' : 'Copy Link'}
+            </button>
+            <button
+              onClick={() => setShowLinkControls(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-white/60 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all"
+              title="Pause, resume, replace or kill the customer link"
+            >
+              <Link2 size={14} /> Link Controls
             </button>
             <button
               onClick={() => setShowSendModal(true)}
@@ -1302,6 +1311,8 @@ export default function EstimateDetailPage() {
       </div>
 
       {/* ─── SEND MODAL ───────────────────────────────────────── */}
+      {showLinkControls && <LinkControlsSheet estimateId={String(id)} onClose={() => setShowLinkControls(false)} />}
+
       {showSendModal && (
         <ModalBackdrop onClose={() => { setShowSendModal(false); setShareLink(null); setLinkCopied(false); }}>
           <div className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-md p-6">

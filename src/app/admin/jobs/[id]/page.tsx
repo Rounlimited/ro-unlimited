@@ -7,6 +7,8 @@ import {
   CloudRain, CalendarDays, Lock, Mail, Save, TrendingUp, TrendingDown, ExternalLink,
 } from 'lucide-react';
 import AdminHeader from '@/components/admin/AdminHeader';
+import LinkControlsSheet from '@/components/admin/estimates/LinkControls';
+import { Link2 as LinkIcon } from 'lucide-react';
 import AppShell from '@/components/admin/AppShell';
 import { SCHEDULE_META, BUDGET_META, STATUS_REASONS, cadenceLabel, type ScheduleStatus, type BudgetStatus } from '@/lib/reporting';
 import { LOG_TYPES } from '@/lib/progress-reports';
@@ -79,6 +81,7 @@ export default function JobRoomPage() {
 
   // notify
   const [notifying, setNotifying] = useState(false);
+  const [showLinkControls, setShowLinkControls] = useState(false);
   const [notifyMsg, setNotifyMsg] = useState('');
   const [forceNotify, setForceNotify] = useState(false);
 
@@ -479,6 +482,11 @@ export default function JobRoomPage() {
               style={{ background: 'rgba(201,168,76,0.14)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }}>
               {notifying ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />} Email Them an Update
             </button>
+            <button onClick={() => setShowLinkControls(true)}
+              className="min-h-[52px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99]"
+              style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.12)' }}>
+              <LinkIcon size={18} /> Link Controls
+            </button>
           </div>
           {notifyMsg && <p className="text-[14px] mt-2 text-center" style={{ color: notifyMsg.includes('✓') ? '#35d07f' : '#D4B965' }}>{notifyMsg}</p>}
         </div>
@@ -497,6 +505,7 @@ export default function JobRoomPage() {
           </button>
         </div>
       </div>
+      {showLinkControls && <LinkControlsSheet estimateId={String(id)} onClose={() => setShowLinkControls(false)} />}
     </AppShell>
   );
 }

@@ -24,6 +24,9 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     if (error || !estimate) {
       return NextResponse.json({ error: 'Estimate not found or link expired' }, { status: 404 });
     }
+    if ((estimate as any).link_enabled === false) {
+      return NextResponse.json({ error: 'This link is paused' }, { status: 423 });
+    }
     if (estimate.share_token_expires_at && new Date(estimate.share_token_expires_at) < new Date()) {
       return NextResponse.json({ error: 'This estimate link has expired' }, { status: 410 });
     }

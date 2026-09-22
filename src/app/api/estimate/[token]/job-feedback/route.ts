@@ -25,10 +25,13 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
     const { data: est } = await supabase
       .from('estimates')
-      .select('id, estimate_number, project_name, signed_at, feedback_enabled, reviews_enabled, customer:customers(first_name, last_name, company_name)')
+      .select('id, link_enabled, estimate_number, project_name, signed_at, feedback_enabled, reviews_enabled, customer:customers(first_name, last_name, company_name)')
       .eq('share_token', params.token)
       .single();
     if (!est || !est.signed_at) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    if ((est as any).link_enabled === false) {
+      return NextResponse.json({ error: 'This link is paused' }, { status: 423 });
+    }
 
     if (kind === 'review' ? est.reviews_enabled === false : est.feedback_enabled === false) {
       return NextResponse.json({ error: 'Not available on this project' }, { status: 403 });

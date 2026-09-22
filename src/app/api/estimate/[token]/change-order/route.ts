@@ -22,10 +22,13 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
     const { data: est } = await supabase
       .from('estimates')
-      .select('id, estimate_number, project_name, division, total, share_token_expires_at')
+      .select('id, link_enabled, estimate_number, project_name, division, total, share_token_expires_at')
       .eq('share_token', params.token)
       .single();
     if (!est) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    if ((est as any).link_enabled === false) {
+      return NextResponse.json({ error: 'This link is paused' }, { status: 423 });
+    }
     if (est.share_token_expires_at && new Date(est.share_token_expires_at) < new Date()) {
       return NextResponse.json({ error: 'This link has expired' }, { status: 410 });
     }
