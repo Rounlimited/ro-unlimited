@@ -95,11 +95,11 @@ export default function ROLoader({ children }: { children: React.ReactNode }) {
           className="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center"
           style={{ zIndex: 200 }}
         >
-          {/* The stacked RO/CO. mark — natural aspect, no stretch (the old
-              icon needed a scaleY to fill; this one is drawn stacked). */}
+          {/* The RO mark with co. tucked bottom-right under the O — JR's
+              preferred placement, cropped from his lockup art (v3). */}
           <img
             ref={roRef}
-            src="/ro-co-mark-v2.png"
+            src="/ro-co-mark-v3.png"
             alt=""
             aria-hidden="true"
             className="pointer-events-none select-none"
