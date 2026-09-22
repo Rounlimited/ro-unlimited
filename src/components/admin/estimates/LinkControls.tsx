@@ -22,7 +22,8 @@ interface LinkStatus {
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
 
-export default function LinkControlsSheet({ estimateId, onClose }: { estimateId: string; onClose: () => void }) {
+export default function LinkControlsSheet({ estimateId, kind = 'estimate', onClose }: { estimateId: string; kind?: 'estimate' | 'invoice'; onClose: () => void }) {
+  const apiBase = '/api/admin/' + (kind === 'invoice' ? 'invoices' : 'estimates') + '/' + estimateId + '/link';
   const [s, setS] = useState<LinkStatus | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -32,7 +33,7 @@ export default function LinkControlsSheet({ estimateId, onClose }: { estimateId:
 
   const load = useCallback(async () => {
     try {
-      const d = await fetch('/api/admin/estimates/' + estimateId + '/link').then((r) => r.json());
+      const d = await fetch(apiBase).then((r) => r.json());
       if (!d.error) setS(d);
     } catch { /* leave */ }
   }, [estimateId]);
@@ -48,7 +49,7 @@ export default function LinkControlsSheet({ estimateId, onClose }: { estimateId:
     setBusy(busyKey || action);
     setDateMsg('');
     try {
-      const d = await fetch('/api/admin/estimates/' + estimateId + '/link', {
+      const d = await fetch(apiBase, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, ...extra }),
       }).then((r) => r.json());
@@ -186,7 +187,7 @@ export default function LinkControlsSheet({ estimateId, onClose }: { estimateId:
                       {busy === 'expire_on' ? <Loader2 size={15} className="animate-spin" /> : 'Set Day'}
                     </button>
                   </div>
-                  <p className="text-[13px] text-white/35 mt-2">Chips push it out from today; the picker makes it die after the exact day you choose.</p>
+                  <p className="text-[13px] text-white/35 mt-2">Tap +30, +60 or +90 to give the link that many more days. Or pick a date — after that day, the link stops working.</p>
                   {dateMsg && <p className="text-[14px] mt-1.5" style={{ color: dateMsg.startsWith('Set —') ? '#35d07f' : '#f87171' }}>{dateMsg}</p>}
                 </div>
               )}

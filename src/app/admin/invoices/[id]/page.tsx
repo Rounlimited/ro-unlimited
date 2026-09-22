@@ -8,6 +8,7 @@ import {
   PenLine, MessageSquare, Star,
 } from 'lucide-react';
 import CustomerActivity from '@/components/admin/estimates/CustomerActivity';
+import LinkControlsSheet from '@/components/admin/estimates/LinkControls';
 
 /** Invoice detail — status, lines, ledger, record payment. JR-sized. */
 
@@ -36,6 +37,7 @@ export default function InvoiceDetailPage() {
   const [showSend, setShowSend] = useState(false);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [showLinkControls, setShowLinkControls] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -175,14 +177,15 @@ export default function InvoiceDetailPage() {
             </button>
           )}
           {inv.share_token && inv.status !== 'draft' && (
+            /* The old Link On/Off toggle grew up into the full Link Controls
+               sheet — pause, resume, new link, expiration, kill. */
             <button
-              onClick={() => act('link', () => fetch('/api/admin/invoices/' + inv.id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ link_enabled: !inv.link_enabled }) }))}
-              disabled={busy !== null}
+              onClick={() => setShowLinkControls(true)}
               className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
               style={inv.link_enabled
-                ? { background: 'rgba(53,208,127,0.1)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.3)' }
+                ? { background: 'rgba(201,168,76,0.1)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.3)' }
                 : { background: 'rgba(248,113,113,0.1)', color: '#f87171', border: '1px solid rgba(248,113,113,0.25)' }}>
-              <Link2 size={17} /> {inv.link_enabled ? 'Link On' : 'Link Off'}
+              <Link2 size={17} /> {inv.link_enabled ? 'The Link' : 'Link Paused'}
             </button>
           )}
           {inv.status === 'draft' && (
@@ -365,6 +368,10 @@ export default function InvoiceDetailPage() {
           )}
         </div>
       </div>
+
+      {showLinkControls && (
+        <LinkControlsSheet estimateId={String(id)} kind="invoice" onClose={() => { setShowLinkControls(false); load(); }} />
+      )}
 
       {showSend && (
         <SendSheet
