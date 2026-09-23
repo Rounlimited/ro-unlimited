@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Loader2, FileText, Send, Copy, Check, ExternalLink, Trash2, Sparkles, Mail, Eye,
+  Loader2, FileText, Send, Copy, Check, ExternalLink, Trash2, Sparkles, Mail, Eye, Link2,
 } from 'lucide-react';
 import JobLogPanel from '@/components/admin/estimates/JobLogPanel';
+import LinkControlsSheet from '@/components/admin/estimates/LinkControls';
 
 /**
  * Reports — the weekly/monthly update JR used to type up.
@@ -41,6 +42,7 @@ export default function ReportsPanel({ estimateId, cadenceLabel }: { estimateId:
   const [loading, setLoading] = useState(true);
   const [drafting, setDrafting] = useState(false);
   const [editing, setEditing] = useState<Report | null>(null);
+  const [linkFor, setLinkFor] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -138,7 +140,7 @@ export default function ReportsPanel({ estimateId, cadenceLabel }: { estimateId:
 
           {r.summary && <p className="text-[15px] text-white/55 leading-relaxed line-clamp-3 mb-3">{r.summary}</p>}
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className={'grid gap-2 ' + (r.status === 'sent' ? 'grid-cols-3' : 'grid-cols-2')}>
             <button onClick={() => setEditing(r)}
               className="min-h-[48px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-95"
               style={{ background: 'rgba(201,168,76,0.12)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.35)' }}>
@@ -147,11 +149,22 @@ export default function ReportsPanel({ estimateId, cadenceLabel }: { estimateId:
             <button onClick={() => copy(r)} disabled={!r.link || r.status !== 'sent'}
               className="min-h-[48px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-95 disabled:opacity-30"
               style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.12)' }}>
-              {copied === r.id ? <><Check size={16} /> Copied</> : <><Copy size={16} /> Copy Link</>}
+              {copied === r.id ? <><Check size={16} /> Copied</> : <><Copy size={16} /> Copy</>}
             </button>
+            {r.status === 'sent' && (
+              <button onClick={() => setLinkFor(r.id)}
+                className="min-h-[48px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-95"
+                style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                <Link2 size={16} /> Link
+              </button>
+            )}
           </div>
         </div>
       ))}
+
+      {linkFor && (
+        <LinkControlsSheet estimateId={linkFor} kind="report" onClose={() => { setLinkFor(null); load(); }} />
+      )}
 
       {editing && (
         <ReportSheet

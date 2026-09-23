@@ -17,6 +17,14 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     if (report.status !== 'sent') {
       return NextResponse.json({ error: 'This report is not available yet' }, { status: 404 });
     }
+    // JR's pause switch and optional expiration — same controls as the
+    // estimate and invoice links.
+    if (report.link_enabled === false) {
+      return NextResponse.json({ error: 'We’re making some updates to this report right now. Give us a call at (864) 304-0139 — we’ll have it back shortly.' }, { status: 423 });
+    }
+    if (report.share_token_expires_at && new Date(report.share_token_expires_at) < new Date()) {
+      return NextResponse.json({ error: 'This report link has expired — call us at (864) 304-0139 for a fresh one.' }, { status: 410 });
+    }
 
     const { data: estimate } = await supabase
       .from('estimates')

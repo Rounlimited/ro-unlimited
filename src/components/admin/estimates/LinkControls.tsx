@@ -22,8 +22,8 @@ interface LinkStatus {
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
 
-export default function LinkControlsSheet({ estimateId, kind = 'estimate', onClose }: { estimateId: string; kind?: 'estimate' | 'invoice'; onClose: () => void }) {
-  const apiBase = '/api/admin/' + (kind === 'invoice' ? 'invoices' : 'estimates') + '/' + estimateId + '/link';
+export default function LinkControlsSheet({ estimateId, kind = 'estimate', onClose }: { estimateId: string; kind?: 'estimate' | 'invoice' | 'report'; onClose: () => void }) {
+  const apiBase = '/api/admin/' + ({ estimate: 'estimates', invoice: 'invoices', report: 'reports' }[kind]) + '/' + estimateId + '/link';
   const [s, setS] = useState<LinkStatus | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
