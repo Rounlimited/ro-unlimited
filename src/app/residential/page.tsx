@@ -14,7 +14,7 @@ const division = DIVISIONS.find(d => d.id === 'residential')!;
 
 const HERO_STATS = [
   { value: 25, suffix: '+', label: 'Years Building Homes' },
-  { value: 2, suffix: '', label: 'Generations of Craft' },
+  { value: 7, suffix: '', label: 'License Classifications' },
   { value: 3, suffix: '', label: 'States Served' },
   { value: 100, suffix: '%', label: 'Built with Pride' },
 ];
@@ -30,7 +30,7 @@ const PROCESS_STEPS = [
 const DIFFERENTIATORS = [
   { icon: Home, title: 'One Builder, Start to Finish', desc: 'No subcontractor shuffles. One team that knows your project inside and out — from the first conversation to the final walkthrough.' },
   { icon: Hammer, title: 'We Grade Your Land Too', desc: 'Most builders make you hire a separate site prep company. We do it ourselves — one less contract, one less headache.' },
-  { icon: Heart, title: 'Generational Craft', desc: 'JR grew up on job sites watching his father build. This isn\'t a business he started — it\'s a trade he was raised in.' },
+  { icon: Heart, title: 'Learned in the Field', desc: 'JR didn\'t learn this from a textbook — he learned it on job sites, working with his own hands. That\'s still how we build.' },
   { icon: Sparkles, title: 'Your Home, Our Name', desc: 'Every home carries our reputation. We don\'t cut corners because we have to live with what we build.' },
 ];
 
@@ -386,8 +386,8 @@ export default function ResidentialPage() {
 
           <div className="vision-para mb-14">
             <p className="text-ro-gray-300 text-base sm:text-lg leading-[2] text-center">
-              We&apos;ve been building these moments for 25 years — two generations of
-              understanding that a home is where life happens, and it deserves to be
+              We&apos;ve been building these moments for 25 years — long enough to
+              understand that a home is where life happens, and it deserves to be
               built by hands that care about getting it right.
             </p>
           </div>
@@ -547,7 +547,7 @@ export default function ResidentialPage() {
             <blockquote className="text-ro-white font-heading text-2xl sm:text-3xl lg:text-4xl tracking-tight uppercase leading-[1.15] mb-8">
               We build homes the way<br /><span className="gradient-text-gold">we&apos;d build our own.</span>
             </blockquote>
-            <p className="text-ro-gray-500 text-sm font-mono tracking-[0.3em] uppercase mb-4">Two generations of building homes across three states</p>
+            <p className="text-ro-gray-500 text-sm font-mono tracking-[0.3em] uppercase mb-4">25+ years of building across three states</p>
             <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-ro-gold/30 to-transparent mx-auto mb-4" />
             <Link href="/our-story" className="text-ro-gold/50 text-xs font-mono tracking-wider uppercase hover:text-ro-gold transition-colors inline-flex items-center gap-1">
               Read our story <ArrowRight size={10} />

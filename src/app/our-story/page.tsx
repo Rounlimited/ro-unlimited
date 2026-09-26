@@ -18,8 +18,34 @@ const VALUES = [
 const STATS = [
   { value: 25, suffix: '+', label: 'Years in Business' },
   { value: 500, suffix: '+', label: 'Projects Completed' },
-  { value: 2, suffix: '', label: 'Generations Building' },
+  { value: 7, suffix: '', label: 'License Classifications' },
   { value: 3, suffix: '', label: 'States Served' },
+];
+
+// What the company is today. Kept to what RO actually does and actually
+// offers customers — no capability goes here that the site or app doesn't back up.
+const TODAY = [
+  {
+    title: 'Commercial Construction',
+    desc: 'Ground-up commercial buildings, shells, and build-outs — offices, retail, warehouses — managed start to finish as a licensed general contractor.',
+  },
+  {
+    title: 'Site Work & Utilities, Self-Performed',
+    desc: 'Grading, water and sewer, storm drainage, boring, and septic are done by our own crews — so the ground under your building is ready when the building is.',
+  },
+  {
+    title: 'Your Project, Live',
+    desc: 'Every job gets its own private project page: review and sign your agreement, then follow progress by phase, jobsite photos, written progress reports, and invoices — all in one link.',
+  },
+  {
+    title: 'Run Like a Business',
+    desc: 'A rolling three-week schedule, real cost tracking on every job, and written change orders you approve before extra work begins. No surprises.',
+  },
+];
+
+const LICENSES = [
+  'General Contractor — Building', 'Grading', 'Water & Sewer', 'Boring & Tunneling',
+  'Highway — Roads & Bridges', 'Specialty — Concrete', 'Specialty — Masonry',
 ];
 
 export default function OurStoryPage() {
@@ -28,6 +54,7 @@ export default function OurStoryPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLElement>(null);
   const storyRef = useRef<HTMLElement>(null);
+  const todayRef = useRef<HTMLElement>(null);
   const valuesRef = useRef<HTMLElement>(null);
   const proofRef = useRef<HTMLElement>(null);
   const promiseRef = useRef<HTMLElement>(null);
@@ -64,6 +91,15 @@ export default function OurStoryPage() {
         if (goldQuote) gsap.fromTo(goldQuote, { x: -60, opacity: 0 },
           { x: 0, opacity: 1, duration: 1, ease: 'power3.out',
             scrollTrigger: { trigger: goldQuote, start: 'top 85%' } });
+      }
+
+      // Where We Are Today cards
+      if (todayRef.current) {
+        todayRef.current.querySelectorAll('.today-card').forEach((card, i) => {
+          gsap.fromTo(card, { y: 50, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.7, delay: (i % 2) * 0.1, ease: 'power2.out',
+              scrollTrigger: { trigger: card, start: 'top 88%', toggleActions: 'play none none reverse' } });
+        });
       }
 
       // Values cards
@@ -122,7 +158,7 @@ export default function OurStoryPage() {
           </h1>
           <div className="hero-gold-line w-24 h-[2px] bg-gradient-to-r from-transparent via-ro-gold to-transparent mx-auto mb-8" />
           <p className="hero-sub text-ro-gray-400 text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto">
-            Two generations of building. One standard that never changes.
+            Learned in the field. Built by hand. One standard that never changes.
           </p>
         </div>
       </section>
@@ -135,20 +171,19 @@ export default function OurStoryPage() {
           <div className="story-para mb-12">
             <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-6">How It Started</span>
             <p className="text-ro-gray-300 text-base sm:text-lg leading-[1.85]">
-              JR didn&apos;t learn construction from a textbook. He grew up on job sites — watching his father run crews,
-              solve problems on the fly, and build a reputation one handshake at a time. That upbringing became the
-              foundation for what RO Unlimited is today: a company built on the belief that how you do the work matters
-              as much as the work itself.
+              JR didn&apos;t learn construction from a textbook. He learned it out in the field — running equipment,
+              setting forms, laying pipe, and working with his own hands. Every lesson came from a real job site:
+              read the ground before you cut it, fix the problem before it costs anyone money, and finish what you start.
             </p>
           </div>
 
           <div className="story-para mb-12">
             <p className="text-ro-gray-300 text-base sm:text-lg leading-[1.85]">
-              For more than 25 years, RO Unlimited has been built on a simple mission: build different, build better,
-              and build lasting relationships. Throughout the years, we have had the privilege of building homes for families,
-              creating spaces for entrepreneurs to grow their businesses, and developing properties for investors. We have
-              also partnered with fellow builders by providing professional build-outs and construction services to help
-              bring their projects to life.
+              That hands-on foundation is still how RO Unlimited works today. The people planning your project know
+              the work because they&apos;ve done the work — and for more than 25 years, the mission hasn&apos;t changed:
+              build different, build better, and build lasting relationships. Along the way we&apos;ve created spaces for
+              entrepreneurs to grow their businesses, developed properties for investors, and partnered with fellow
+              builders on professional build-outs to help bring their projects to life.
             </p>
           </div>
 
@@ -181,6 +216,47 @@ export default function OurStoryPage() {
             </p>
           </div>
 
+        </div>
+      </section>
+
+      {/* ═══ WHERE WE ARE TODAY ═══ */}
+      <section ref={todayRef} className="py-24 sm:py-32 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-[#0d0d0d] to-ro-black" />
+        <div className="absolute inset-0 blueprint-overlay opacity-10" />
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-4">Where We Are Today</span>
+            <h2 className="text-ro-white font-heading text-4xl sm:text-5xl tracking-tight uppercase">
+              Same Hands. <span className="gradient-text-gold">Bigger Reach.</span>
+            </h2>
+            <div className="w-20 h-[2px] bg-gradient-to-r from-transparent via-ro-gold to-transparent mx-auto mt-6 mb-6" />
+            <p className="text-ro-gray-400 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+              RO Unlimited Construction &amp; Development provides professional full-range commercial construction —
+              including site development and utility services — throughout South Carolina, Georgia, and North Carolina.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-14">
+            {TODAY.map((t) => (
+              <div key={t.title} className="today-card group relative p-6 sm:p-8 border border-ro-gray-800/50 bg-ro-black/40 hover:border-ro-gold/30 transition-all duration-500">
+                <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-ro-gold/30 group-hover:border-ro-gold/60 transition-colors duration-500" />
+                <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-ro-gold/30 group-hover:border-ro-gold/60 transition-colors duration-500" />
+                <h3 className="text-ro-gold font-heading text-xl sm:text-2xl tracking-tight uppercase mb-3">{t.title}</h3>
+                <p className="text-ro-gray-300 text-sm sm:text-base leading-relaxed">{t.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="today-card text-center">
+            <p className="text-ro-gray-500 text-xs font-mono tracking-[0.3em] uppercase mb-5">Licensed In</p>
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3 max-w-4xl mx-auto">
+              {LICENSES.map((l) => (
+                <span key={l} className="px-4 py-2 border border-ro-gold/25 bg-ro-gold/5 text-ro-gray-300 text-xs sm:text-sm font-mono tracking-wide uppercase">
+                  {l}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
