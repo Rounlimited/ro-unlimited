@@ -38,6 +38,8 @@ type Folder = "inbox" | "sent" | "drafts" | "starred" | "trash" | "spam";
 type ComposeMode = "new" | "reply" | "forward" | null;
 type View = "list" | "thread" | "compose" | "accounts";
 
+const ALL_ACCOUNTS = '__all__';
+
 const FOLDERS: { key: Folder; label: string; icon: React.ElementType; neon: string }[] = [
   { key: "inbox",   label: "Inbox",   icon: Inbox,        neon: "neon-cyan"   },
   { key: "starred", label: "Starred", icon: Star,         neon: "neon-gold"   },
@@ -465,14 +467,18 @@ export default function AdminInbox() {
     if (list.length) {
       setAccounts(list);
       if (!activeAccount) {
-        // Always open on ALL accounts. Restoring a remembered single account
-        // hid every other mailbox — customers' replies to build@ sat unseen
-        // while the phone kept reopening jr@, and a push "New Email" tap
-        // landed on a view that didn't contain the email. Picking one account
-        // still filters for this visit; it just never sticks.
+        // Reopen whatever was used last — one account, or All Accounts
+        // (stored as ALL_ACCOUNTS so that choice sticks too).
         const def = list.find((a: EmailAccount) => a.is_default) || list[0];
-        setActiveAccount(null);
-        setFromAccount(def.email);
+        const savedEmail = localStorage.getItem('ro_inbox_account');
+        if (savedEmail === ALL_ACCOUNTS) {
+          setActiveAccount(null);
+          setFromAccount(def.email);
+          return;
+        }
+        const saved = savedEmail ? list.find((a: EmailAccount) => a.email === savedEmail) : null;
+        setActiveAccount(saved || def);
+        setFromAccount((saved || def).email);
       }
     }
   };
@@ -691,7 +697,7 @@ export default function AdminInbox() {
             <span className="text-lg font-semibold text-white">Switch account</span>
             <ChevronDown size={20} className="text-white/40" />
           </div>
-          <button onClick={() => { setActiveAccount(null); localStorage.removeItem('ro_inbox_account'); setView("list"); }}
+          <button onClick={() => { setActiveAccount(null); localStorage.setItem('ro_inbox_account', ALL_ACCOUNTS); setView("list"); }}
             className={`w-full flex items-center gap-4 px-5 py-4 border-t border-white/[0.04] transition-colors hover:bg-white/[0.03] ${!activeAccount ? "bg-[#C9A84C]/5" : ""}`}>
             <div className="w-12 h-12 rounded-full bg-[#1a1a1a] border border-white/10 flex items-center justify-center">
               <Mail size={20} className="text-white/40" />
@@ -1056,7 +1062,7 @@ export default function AdminInbox() {
                   </button>
                   {view === "accounts" && (
                     <div className="absolute right-0 top-full mt-1 w-56 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
-                      <button onClick={() => { setActiveAccount(null); localStorage.removeItem('ro_inbox_account'); setView("list"); }}
+                      <button onClick={() => { setActiveAccount(null); localStorage.setItem('ro_inbox_account', ALL_ACCOUNTS); setView("list"); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 text-[13px] transition-colors ${!activeAccount ? "bg-[#C9A84C]/5 text-[#C9A84C]" : "text-white/50 hover:bg-white/[0.03]"}`}>
                         <Mail size={14} /> All Mail
                       </button>

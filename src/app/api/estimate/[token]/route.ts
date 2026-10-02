@@ -47,6 +47,9 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     // link are recorded as internal and don't count or flip the status.
     const visitor = visitorFromCookies();
     const { internal } = await recordDocumentEvent({ req, docType: 'estimate', doc: estimate, event: 'link_view', visitorId: visitor.id });
+    if (!internal && req.nextUrl.searchParams.get('from') === 'email') {
+      await recordDocumentEvent({ req, docType: 'estimate', doc: estimate, event: 'email_clicked', visitorId: visitor.id });
+    }
 
     // Mark as viewed if currently sent
     if (estimate.status === 'sent' && !internal) {

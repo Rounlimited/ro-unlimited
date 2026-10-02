@@ -259,7 +259,12 @@ export default function PublicEstimatePage() {
 
   const fetchEstimate = useCallback(async () => {
       try {
-        const res = await fetch(`/api/estimate/${token}`);
+        // ?from=email (the button in the estimate email) lets the server
+        // record "Clicked the link in the email" — the attribution Resend
+        // click tracking used to give, without rewriting the link domain.
+        const fromEmail = new URLSearchParams(window.location.search).get('from') === 'email';
+        const res = await fetch(`/api/estimate/${token}${fromEmail ? '?from=email' : ''}`);
+        if (fromEmail) window.history.replaceState(null, '', window.location.pathname);
         if (res.status === 410) {
           setError({ message: 'This estimate link has expired. Please contact us for an updated link.', expired: true });
           return;

@@ -70,7 +70,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0;">
         <tr>
           <td style="background-color:#C9A84C;border-radius:10px;padding:16px 36px;">
-            <a href="${viewLink}" style="color:#000;text-decoration:none;font-size:17px;font-weight:700;display:inline-block;">View &amp; Sign Your Estimate</a>
+            <a href="${viewLink}?from=email" style="color:#000;text-decoration:none;font-size:17px;font-weight:700;display:inline-block;">View &amp; Sign Your Estimate</a>
           </td>
         </tr>
       </table>
