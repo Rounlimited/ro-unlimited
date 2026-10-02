@@ -206,8 +206,11 @@ const s = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 50,
-    paddingTop: 18,
-    paddingBottom: 10,
+    // This header is a fixed overlay; the page's paddingTop (72) is what keeps
+    // content below it. Total height (12 + logo chip ~39 + 8 + 3) must stay
+    // under 72 or the orange rule cuts through the first line of every page.
+    paddingTop: 12,
+    paddingBottom: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -462,9 +465,9 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
 
         {/* ═══ FIXED HEADER — Logo only, no competing text (Ref #2) ═══ */}
         <View style={s.pageHeader} fixed>
-          <View style={{ backgroundColor: '#0d0d0d', borderRadius: 8, paddingVertical: 7, paddingHorizontal: 12, alignSelf: 'flex-start' }}>
+          <View style={{ backgroundColor: '#0d0d0d', borderRadius: 7, paddingVertical: 4, paddingHorizontal: 9 }}>
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
-            <Image src={LOGO_URL} style={{ width: 128, height: 'auto' }} />
+            <Image src={LOGO_URL} style={{ width: 116, height: 'auto' }} />
           </View>
           <View>
             <Text style={s.pageHeaderRight}>{estimate.estimate_number}</Text>
