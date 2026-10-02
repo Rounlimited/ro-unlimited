@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
     let body_text: string | null = null;
     let in_reply_to: string | null = null;
     let attachmentsMeta: { id: string; filename: string; content_type: string; size: number; content_disposition: string }[] = [];
+    let ccList: string[] = [];
 
     try {
       const resp = await fetch(`https://api.resend.com/emails/receiving/${email_id}`, {
@@ -118,23 +119,30 @@ export async function POST(req: NextRequest) {
         attachmentsMeta = (full.attachments || []).filter(
           (a: { content_disposition: string }) => a.content_disposition === 'attachment'
         );
+        ccList = Array.isArray(full.cc) ? full.cc : full.cc ? [full.cc] : [];
       }
     } catch (err) {
       console.error('Failed to fetch full email from Resend:', err);
     }
 
     const from_email = parseEmail(typeof from === 'string' ? from : String(from));
-    const to_email = parseEmail(typeof to === 'string' ? to : Array.isArray(to) ? to[0] : 'build@rounlimited.com');
     const subjectStr = subject || '(no subject)';
 
     const supabase = createAdminClient();
 
-    // Check if to_email matches a configured email account — spam if not
+    // File the email under whichever of OUR addresses it was sent to — any To
+    // or CC position, not just the first. A customer who writes to someone
+    // else and CCs build@ used to be filed as spam: marked read, no push,
+    // auto-deleted at 90 days.
     const { data: knownAccounts } = await supabase
       .from('email_accounts')
       .select('email')
       .eq('active', true);
     const knownEmails = (knownAccounts || []).map(a => a.email.toLowerCase());
+    const recipients = [...(Array.isArray(to) ? to : to ? [to] : []), ...ccList]
+      .map((r) => parseEmail(String(r)))
+      .filter(Boolean);
+    const to_email = recipients.find((r) => knownEmails.includes(r)) || recipients[0] || 'build@rounlimited.com';
     const isKnownRecipient = knownEmails.length === 0 || knownEmails.includes(to_email);
 
     // Auto-purge spam older than 90 days

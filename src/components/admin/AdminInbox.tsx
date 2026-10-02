@@ -465,18 +465,13 @@ export default function AdminInbox() {
     if (list.length) {
       setAccounts(list);
       if (!activeAccount) {
-        // Restore last-used account from localStorage
-        const savedEmail = localStorage.getItem('ro_inbox_account');
-        if (savedEmail) {
-          const saved = list.find((a: EmailAccount) => a.email === savedEmail);
-          if (saved) {
-            setActiveAccount(saved);
-            setFromAccount(saved.email);
-            return;
-          }
-        }
+        // Always open on ALL accounts. Restoring a remembered single account
+        // hid every other mailbox — customers' replies to build@ sat unseen
+        // while the phone kept reopening jr@, and a push "New Email" tap
+        // landed on a view that didn't contain the email. Picking one account
+        // still filters for this visit; it just never sticks.
         const def = list.find((a: EmailAccount) => a.is_default) || list[0];
-        setActiveAccount(def);
+        setActiveAccount(null);
         setFromAccount(def.email);
       }
     }
