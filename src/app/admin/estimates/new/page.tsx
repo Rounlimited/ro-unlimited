@@ -297,6 +297,11 @@ export default function NewEstimateWizard() {
     return subtotal + oh + mu + tax + (financials.permit_fees || 0) + cont;
   }, [subtotal, financials]);
 
+  // What the customer actually pays: the fixed price when one is set,
+  // otherwise the calculated total. Milestones and the summary use THIS —
+  // a lump-sum job with no line items used to show $0 everywhere past step 5.
+  const effectiveTotal = totalOverride && totalOverride > 0 ? totalOverride : grandTotal;
+
   /* ─── API helpers ───────────────────────────────────────────── */
 
   const createEstimate = async (): Promise<string | null> => {
@@ -767,11 +772,11 @@ export default function NewEstimateWizard() {
       setMilestones(prev =>
         prev.map(m => ({
           ...m,
-          amount: (grandTotal * (m.percent || 0)) / 100,
+          amount: (effectiveTotal * (m.percent || 0)) / 100,
         }))
       );
     }
-  }, [grandTotal]);
+  }, [effectiveTotal]);
 
   /* ─── Render ────────────────────────────────────────────────── */
 
@@ -953,7 +958,7 @@ export default function NewEstimateWizard() {
           {currentStep === 6 && (
             <WizardStep6
               milestones={milestones}
-              grandTotal={grandTotal}
+              grandTotal={effectiveTotal}
               onChange={setMilestones}
               timeline={timeline}
               onChangeTimeline={(partial) => setTimeline(prev => ({ ...prev, ...partial }))}
@@ -987,7 +992,7 @@ export default function NewEstimateWizard() {
               recommendations={recommendations}
               onChangeRecommendations={setRecommendations}
               subtotal={subtotal}
-              grandTotal={grandTotal}
+              grandTotal={effectiveTotal}
               templateName={templateName}
               onSaveDraft={handleSaveDraft}
               saving={saving}

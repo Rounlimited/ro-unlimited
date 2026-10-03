@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import LinkControlsSheet from '@/components/admin/estimates/LinkControls';
+import FixedPriceControl from '@/components/admin/estimates/FixedPriceControl';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 import { estimateDisplayDate, toDateInputValue } from '@/lib/estimates';
 import { docStage } from '@/lib/doc-stage';
@@ -627,7 +628,7 @@ export default function EstimateDetailPage() {
             </div>
             <div className="text-right flex-shrink-0">
               <p className="text-[24px] sm:text-[28px] font-bold text-white">{fmtShort(estimate.total || 0)}</p>
-              <p className="text-[12px] text-white/30">Total</p>
+              <p className="text-[12px] text-white/30">{Number((estimate as any).total_override) > 0 ? 'Fixed Price' : 'Total'}</p>
             </div>
           </div>
 
@@ -727,6 +728,15 @@ export default function EstimateDetailPage() {
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-4">
+            {/* The price, where he lands — set or change the fixed price
+                without hunting for the Financials tab. */}
+            {!estimate.signed_at && (
+              <FixedPriceControl
+                estimateId={String(id)}
+                current={(estimate as any).total_override ?? null}
+                onSaved={fetchEstimate}
+              />
+            )}
             {/* Running the job — the two things touched daily, where they
                 cannot be missed. The tab strip scrolls off a phone screen. */}
             <div className="grid grid-cols-2 gap-3">
@@ -1043,6 +1053,11 @@ export default function EstimateDetailPage() {
                 <DollarSign size={16} className="text-[#C9A84C]" />
                 Financial Breakdown
               </h3>
+              <FixedPriceControl
+                estimateId={String(id)}
+                current={(estimate as any).total_override ?? null}
+                onSaved={fetchEstimate}
+              />
               <div className="space-y-3">
                 <FinancialRow
                   label="Subtotal (Line Items)"

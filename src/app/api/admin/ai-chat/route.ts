@@ -409,6 +409,7 @@ const WRITE_TOOLS = [
         tax_percent: { type: 'number', description: 'Tax percentage (default 0)' },
         contingency_percent: { type: 'number', description: 'Contingency percentage (default 0)' },
         permit_fees: { type: 'number', description: 'Permit fees amount (default 0)' },
+        fixed_price: { type: 'number', description: "FIXED PRICE: the one number the customer pays. Sets the total immediately — no line items, no markups needed. This is how JR usually bids." },
       },
       required: ['customer_id'],
     },
@@ -444,6 +445,7 @@ const WRITE_TOOLS = [
         project_start_date: { type: 'string', description: 'Start date ISO string' },
         project_duration_days: { type: 'number', description: 'Project duration in days' },
         schedule_notes: { type: 'string', description: 'Schedule notes' },
+        total_override: { type: 'number', description: 'FIXED PRICE — set the total to exactly this number (the customer price). 0 removes the fixed price and goes back to calculated.' },
       },
       required: ['id'],
     },
@@ -1579,12 +1581,17 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           tax_percent: input.tax_percent ?? 0,
           contingency_percent: input.contingency_percent ?? 0,
           permit_fees: input.permit_fees ?? 0,
+          // A fixed price IS the total from the first second — the customer
+          // sees it, the list shows it, nothing waits on line items.
+          ...(Number(input.fixed_price) > 0
+            ? { total_override: Number(input.fixed_price), total: Number(input.fixed_price), subtotal: 0, contract_type: input.contract_type || 'fixed_price' }
+            : {}),
         })
         .select()
         .single();
       if (error) return { result: `Error creating estimate: ${error.message}` };
       return {
-        result: `Estimate created successfully. ${JSON.stringify({ success: true, id: data.id, estimate_number: data.estimate_number })}`,
+        result: `Estimate created successfully. ${JSON.stringify({ success: true, id: data.id, estimate_number: data.estimate_number, total: data.total, fixed_price: data.total_override || null })}`,
         action: { type: 'navigate', path: `/admin/estimates/${data.id}`, description: `Opening estimate ${estimate_number}` },
       };
     }
@@ -1601,9 +1608,14 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 
       if (Object.keys(fields).length === 0) return { result: 'Error: no fields provided to update.' };
 
-      // Check if financial fields changed — recalculate if so
-      const financialFields = ['overhead_percent', 'markup_percent', 'tax_percent', 'contingency_percent', 'permit_fees'];
+      // Check if financial fields changed — recalculate if so. total_override
+      // is in this list on purpose: recalcEstimateTotals honors a fixed price,
+      // and skipping it here left `total` at $0 after the AI set a price.
+      const financialFields = ['overhead_percent', 'markup_percent', 'tax_percent', 'contingency_percent', 'permit_fees', 'total_override'];
       const financialChanged = financialFields.some((f) => (fields as any)[f] !== undefined);
+      if ((fields as any).total_override !== undefined && !(Number((fields as any).total_override) > 0)) {
+        (fields as any).total_override = null; // 0 / blank = no fixed price
+      }
 
       if (financialChanged) {
         const [{ data: currentEst }, { data: lineItems }] = await Promise.all([
@@ -2651,14 +2663,16 @@ const PROMPT_ESTIMATES = `<estimates>
 Document lifecycle: every doc is born a Quote, Estimate, or Proposal (its document_mode). The moment the customer signs it becomes a CONTRACT everywhere (page header, PDF title); once work is underway its page shows Active Project, and after close-out Completed Project. If someone asks why a signed doc "still says estimate," it doesn't anymore — the label follows the deal's stage automatically.
 Progress views: the Progress tab and the Jobs board both have a "Show $" button that flips percent-complete displays to dollars earned (earned of contract value, per phase too). The Progress tab also has "Email Customer This Update" — one tap sends the customer a short branded email (current %, latest log line, link to their live project page); it warns before sending twice in one day. Scheduled progress reports are separate and still go through Reports.
 The Job Room (/admin/jobs/<id>, tap any job on the Jobs board) is JR's behind-the-scenes view of one job — internal only, the customer never sees any of it: money position (contract / earned / SPENT / billed / paid) with a live margin (earned minus spent), tap-in job costs by category (materials, sub, labor, equipment, hauling, fuel, permits), the full job log including internal-only entries, private notes, days-on-job and rain days, how many times the customer has opened their page, a "See What They See" button, and the email-update button. Costs are the new piece: logging spends there is what makes the margin and Over Budget real numbers.
-Building a new estimate:
 Link controls: every customer link can be paused ('off' \u2014 for phone-call edits; same link resumes with 'on'), replaced ('new' \u2014 old dies instantly, CONFIRM with the user first), killed, or extended 60 days \u2014 set_link_status, or the Link Controls button on the estimate page / Job Room.
-FIXED PRICE (how JR usually bids): he names one number and that's the customer's price — no line items, no markups. Do this with update_estimate { total_override: <price> }. Line items are OPTIONAL on a fixed-price job — put the description in scope_of_work instead, and never invent an itemized breakdown he didn't give you. The override now survives every recalculation. To go back to calculated pricing, set total_override to 0.
-1. Gather: customer, type, scope, location
-2. Draft fully in chat — phases, line items (qty × unit_cost = total), subtotals, grand total, payment schedule
-3. Ask "Ready to commit?" — wait for confirmation
-4. Then: create_estimate → add_line_items → set_payment_schedule → navigate to it
-5. Revisions: update the draft in chat and re-present before committing
+FIXED PRICE — THE FAST PATH (how JR usually bids; default to this):
+When he gives a job and a price in one breath — "estimate for Miller, septic and drive, 42,500" — build it in ONE go with NO follow-up questions:
+  1. search_customers with the name. Exactly one match → use it. Several → pick the obvious one and say which you used. None → ask ONE question only: "I don't have {name} yet — what's their phone or email?" then create_customer and continue.
+  2. create_estimate with customer_id, project_name (short, from his words), scope_of_work (his description, cleaned up — never invent details), division + estimate_type inferred from the job (septic→septic, "grading/pad/driveway"→grading, "water/sewer/storm"→utilities, "building/shell/build-out"→commercial, unsure→commercial + new_construction), contract_type fixed_price, and fixed_price = his number. That one call sets the total.
+  3. Reply in two lines: the number and total ("RO-EST-2026-0251 — Miller Farm Septic & Drive — $42,500, fixed price"), then ONE optional question: "Want me to send it to {customer}, or open it first?" Nothing else. No line items, no markups, no payment schedule, no "ready to commit?" — he already committed when he said the price.
+  4. Changing a price later: update_estimate { id, total_override: <new number> } — one call, done. Say the new total back.
+  5. He asked for a quote/estimate but gave no price → ask ONE question: "What's the price?" — not type, not location, not scope.
+Line items are optional on a fixed-price job and never invented. Only build an itemized estimate when he explicitly asks for line items / a breakdown / itemized — then:
+  gather what's missing in ONE message, draft phases + line items in chat, confirm once, then create_estimate → add_line_items → (set_payment_schedule only if he mentions deposits/draws).
 
 Payment schedules: typical RO pattern is 30% deposit / progress payments at milestones / 10-15% final. Percents must total 100. Use set_payment_schedule (it REPLACES the whole schedule).
 
@@ -2753,6 +2767,7 @@ Customer-selectable options (the configurator on estimate/contract links):
 const PROMPT_PROGRESS = `<progress>
 Job progress and customer progress reports:
 - Phases come from the contract's line items. Overall percent is weighted by each phase's dollar value, so a small phase finishing moves it a little, not a lot.
+- FIXED-PRICE jobs have no line items, so they start at 0% with no phases. The Progress tab offers one-tap phase templates (Simple one phase / Site & utility work / Building / Concrete) — tell JR to tap one, or add phases yourself with set_phase_progress (each new phase name creates it). Once phases exist the percent works; phases count equally unless he gives them a share.
 - schedule_status/budget_status are JR's own internal flags — customers never see them. Set status_reason whenever schedule_status is "behind".
 - draft_progress_report writes the update from the phases, photos and billing. It is a DRAFT: the customer sees nothing until send_progress_report.
 - ALWAYS confirm with the user before send_progress_report — it reaches the customer. Offer skip_email:true when they'd rather text the link.

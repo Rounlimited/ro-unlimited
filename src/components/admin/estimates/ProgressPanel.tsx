@@ -27,6 +27,15 @@ interface Data {
 const fmt$ = (n: number) => '$' + Math.round(n).toLocaleString();
 const STEPS = [0, 25, 50, 75, 100];
 
+// Starter phase sets for lump-sum jobs (no line items to derive phases from).
+// Equal weight each; JR can rename/add/remove and set shares afterward.
+const PHASE_TEMPLATES: { label: string; phases: string[] }[] = [
+  { label: 'Simple — one phase', phases: ['Whole Job'] },
+  { label: 'Site & utility work', phases: ['Mobilization', 'Clearing & Grading', 'Utilities', 'Backfill & Restoration', 'Final Grade & Cleanup'] },
+  { label: 'Building', phases: ['Site Prep', 'Foundation', 'Framing', 'Rough-Ins', 'Finishes', 'Punch List'] },
+  { label: 'Concrete', phases: ['Prep & Forms', 'Pour', 'Finish & Cure', 'Cleanup'] },
+];
+
 export default function ProgressPanel({ estimateId }: { estimateId: string }) {
   const [data, setData] = useState<Data | null>(null);
   const [job, setJob] = useState<{ completed_at: string | null; completion_note: string | null; warranty_months: number | null; warranty_notes: string | null }>(
@@ -113,6 +122,22 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
       sort_order: (data?.phases.length || 0) + 1,
     }, 'add');
     setNewPhase(''); setNewWeight(''); setAdding(false);
+  };
+
+  // One tap gives a lump-sum job its phases — fixed-price estimates have no
+  // line items, so without this the Progress tab sat at 0% with nothing to tap.
+  const applyTemplate = async (names: string[]) => {
+    setSaving('template');
+    try {
+      for (let i = 0; i < names.length; i++) {
+        await fetch('/api/admin/estimates/' + estimateId + '/progress', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phase: names[i], percent_complete: 0, custom: true, sort_order: i + 1 }),
+        });
+      }
+      await load();
+    } catch { /* leave as-is */ }
+    setSaving(null);
   };
 
   const removePhase = async (phase: string) => {
@@ -289,10 +314,24 @@ export default function ProgressPanel({ estimateId }: { estimateId: string }) {
         <p className="text-[14px] text-white/40 mb-4">Straight from the line items on this contract.</p>
 
         {data.phases.length === 0 && (
-          <p className="text-[15px] text-white/40 mb-3">
-            Nothing here yet. On a lump-sum job just add the phases you actually work —
-            Site Prep, Footings, Framing — and tap them along as you go.
-          </p>
+          <div className="mb-4">
+            <p className="text-[16px] font-semibold text-white/85 mb-1">Pick how this job breaks down</p>
+            <p className="text-[14px] text-white/40 mb-3">
+              Fixed-price jobs have no line items, so start with a set of phases. Tap one and the percent starts working — you can rename, add, or remove phases after.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {PHASE_TEMPLATES.map((t) => (
+                <button key={t.label} onClick={() => applyTemplate(t.phases)} disabled={saving !== null}
+                  className="min-h-[56px] rounded-xl px-4 py-2.5 text-left active:scale-[0.99] disabled:opacity-50"
+                  style={{ background: 'rgba(201,168,76,0.10)', border: '1px solid rgba(201,168,76,0.35)' }}>
+                  <span className="block text-[16px] font-bold" style={{ color: '#D4B965' }}>
+                    {saving === 'template' ? 'Setting up…' : t.label}
+                  </span>
+                  <span className="block text-[13px] text-white/45">{t.phases.join(' → ')}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
         <div className="space-y-4">
