@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, Image, StyleSheet, Font, renderToBuffer, Svg, Circle, Line, Rect } from '@react-pdf/renderer';
+import '@/lib/pdf-fonts';
 import { reportingClause } from '@/lib/reporting';
 import { docStage } from './doc-stage';
 import React from 'react';
@@ -83,7 +84,7 @@ function htmlToBlocks(html: string): Block[] {
         break;
       case 'ul': case 'ol':
         flush();
-        if (closing) lists.pop(); else lists.push({ ordered: tag === 'ol', count: 0 });
+        if (closing) lists.pop(); else lists.push({ ordered: tag === 'ol', count: (Number((tok.match(/start="?(\d+)/) || [])[1]) || 1) - 1 });
         break;
       case 'li': {
         if (closing) { flush(); break; }
@@ -114,11 +115,8 @@ function htmlToBlocks(html: string): Block[] {
   return blocks;
 }
 
-function runFont(r: Run): string {
-  if (r.bold && r.italic) return 'Helvetica-BoldOblique';
-  if (r.bold) return 'Helvetica-Bold';
-  if (r.italic) return 'Helvetica-Oblique';
-  return 'Helvetica';
+function runFont(r: Run): { fontFamily: string; fontWeight?: number; fontStyle?: 'italic' } {
+  return { fontFamily: 'Inter', ...(r.bold ? { fontWeight: 700 } : {}), ...(r.italic ? { fontStyle: 'italic' as const } : {}) };
 }
 
 /** Renders editor HTML (or plain text with newlines) as structured PDF blocks. */
@@ -130,12 +128,12 @@ function RichText({ html, fontSize = 10, color = '#333333', lineHeight = 1.6 }: 
   return (
     <View>
       {blocks.map((b, i) => {
-        const runs = b.runs.map((r, j) => <Text key={j} style={{ fontFamily: runFont(r) }}>{r.text}</Text>);
+        const runs = b.runs.map((r, j) => <Text key={j} style={runFont(r)}>{r.text}</Text>);
         // An all-bold short paragraph is how the editor expresses a sub-heading.
         const isHeading = b.type === 'h' || (b.type === 'p' && b.runs.every((r) => r.bold) && b.runs.reduce((n, r) => n + r.text.length, 0) <= 90);
         if (isHeading) {
           return (
-            <Text key={i} minPresenceAhead={36} style={{ fontSize: fontSize + 0.5, fontFamily: 'Helvetica-Bold', color: '#1B2A4A', marginTop: i === 0 ? 0 : 9, marginBottom: 4, lineHeight: 1.4 }}>
+            <Text key={i} minPresenceAhead={36} style={{ fontSize: fontSize + 0.5, fontFamily: 'Inter', fontWeight: 700, color: '#1B2A4A', marginTop: i === 0 ? 0 : 9, marginBottom: 4, lineHeight: 1.4 }}>
               {b.runs.map((r, j) => <Text key={j}>{r.text}</Text>)}
             </Text>
           );
@@ -191,7 +189,7 @@ const c = {
 
 const s = StyleSheet.create({
   page: {
-    fontFamily: 'Helvetica',
+    fontFamily: 'Inter',
     fontSize: 10,
     color: c.text,
     paddingTop: 72,
@@ -243,7 +241,7 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 2,
     color: c.orange,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Inter', fontWeight: 700,
     marginBottom: 8,
     marginTop: 6,
   },
@@ -264,31 +262,31 @@ const s = StyleSheet.create({
   detailRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: c.borderLight },
   detailRowLast: { flexDirection: 'row' },
   detailLabel: { width: 110, padding: '7 14', fontSize: 9, color: c.label, backgroundColor: c.bgSubtle },
-  detailValue: { flex: 1, padding: '7 14', fontSize: 10, color: c.text, fontFamily: 'Helvetica-Bold' },
+  detailValue: { flex: 1, padding: '7 14', fontSize: 10, color: c.text, fontFamily: 'Inter', fontWeight: 700 },
   detailValueNormal: { flex: 1, padding: '7 14', fontSize: 10, color: c.textMed },
 
   /* ── Phase header (Ref #3 — navy, not black) ── */
   phaseHeader: { backgroundColor: c.navy, padding: '6 12', borderTopLeftRadius: 3, borderTopRightRadius: 3 },
-  phaseHeaderText: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: c.white, textTransform: 'uppercase', letterSpacing: 1 },
+  phaseHeaderText: { fontSize: 9, fontFamily: 'Inter', fontWeight: 700, color: c.white, textTransform: 'uppercase', letterSpacing: 1 },
 
   /* ── Table header ── */
   tableHeader: { flexDirection: 'row', backgroundColor: c.bgSubtle, borderBottomWidth: 1, borderBottomColor: c.border },
-  tableHeaderCell: { fontSize: 7, textTransform: 'uppercase', letterSpacing: 0.6, color: c.label, fontFamily: 'Helvetica-Bold', padding: '5 8' },
+  tableHeaderCell: { fontSize: 7, textTransform: 'uppercase', letterSpacing: 0.6, color: c.label, fontFamily: 'Inter', fontWeight: 700, padding: '5 8' },
 
   /* ── Table rows (Ref #1 — more vertical padding) ── */
   tableRow: { flexDirection: 'row' },
   tableRowAlt: { flexDirection: 'row', backgroundColor: c.bgSubtle },
   tableCell: { fontSize: 9, color: c.textLight, padding: '6 8', borderBottomWidth: 0.5, borderBottomColor: c.borderLight },
-  tableCellBold: { fontSize: 9, color: c.text, fontFamily: 'Helvetica-Bold', padding: '6 8', borderBottomWidth: 0.5, borderBottomColor: c.borderLight },
+  tableCellBold: { fontSize: 9, color: c.text, fontFamily: 'Inter', fontWeight: 700, padding: '6 8', borderBottomWidth: 0.5, borderBottomColor: c.borderLight },
 
   /* ── Phase subtotal (Ref #3 — orange accent) ── */
   phaseFooter: { flexDirection: 'row', backgroundColor: c.bgWarm, borderTopWidth: 1.5, borderTopColor: c.orange },
-  phaseFooterLabel: { flex: 1, padding: '6 8', fontSize: 8, color: c.orange, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', textAlign: 'right' },
-  phaseFooterValue: { width: 80, padding: '6 8', fontSize: 10, color: c.text, fontFamily: 'Helvetica-Bold', textAlign: 'right' },
+  phaseFooterLabel: { flex: 1, padding: '6 8', fontSize: 8, color: c.orange, fontFamily: 'Inter', fontWeight: 700, textTransform: 'uppercase', textAlign: 'right' },
+  phaseFooterValue: { width: 80, padding: '6 8', fontSize: 10, color: c.text, fontFamily: 'Inter', fontWeight: 700, textAlign: 'right' },
 
   /* ── Financial summary (Ref #4 — dramatic total) ── */
   summaryBox: { width: 260, borderWidth: 1, borderColor: c.border, borderRadius: 3, overflow: 'hidden' },
-  summaryHeader: { backgroundColor: c.navy, padding: '6 16', fontSize: 8, textTransform: 'uppercase', letterSpacing: 2, fontFamily: 'Helvetica-Bold', color: c.white },
+  summaryHeader: { backgroundColor: c.navy, padding: '6 16', fontSize: 8, textTransform: 'uppercase', letterSpacing: 2, fontFamily: 'Inter', fontWeight: 700, color: c.white },
   summaryBody: { padding: '8 16' },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3.5 },
   summaryLabel: { fontSize: 9.5, color: c.label },
@@ -296,8 +294,8 @@ const s = StyleSheet.create({
 
   /* ── Disclaimers (Ref #6 — scannable blocks) ── */
   disclaimerBlock: { marginBottom: 10, paddingBottom: 8, borderBottomWidth: 0.5, borderBottomColor: c.borderLight },
-  disclaimerNumber: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: c.navy, marginRight: 6 },
-  disclaimerTitle: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: c.navy },
+  disclaimerNumber: { fontSize: 12, fontFamily: 'Inter', fontWeight: 700, color: c.navy, marginRight: 6 },
+  disclaimerTitle: { fontSize: 9.5, fontFamily: 'Inter', fontWeight: 700, color: c.navy },
   disclaimerBody: { fontSize: 8.5, color: c.textLight, lineHeight: 1.6, marginTop: 3, paddingLeft: 20 },
 
   /* ── Exclusions ── */
@@ -310,7 +308,7 @@ const s = StyleSheet.create({
   acceptIntro: { fontSize: 9, color: c.textLight, lineHeight: 1.7, marginBottom: 18 },
   sigRow: { flexDirection: 'row', gap: 24 },
   sigCol: { flex: 1 },
-  sigColLabel: { fontSize: 7.5, textTransform: 'uppercase', letterSpacing: 1.2, color: c.navy, fontFamily: 'Helvetica-Bold', marginBottom: 10 },
+  sigColLabel: { fontSize: 7.5, textTransform: 'uppercase', letterSpacing: 1.2, color: c.navy, fontFamily: 'Inter', fontWeight: 700, marginBottom: 10 },
   sigLine: { borderBottomWidth: 1.5, borderBottomColor: c.text, minHeight: 38, marginBottom: 4 },
   sigLineLight: { borderBottomWidth: 0.5, borderBottomColor: c.border, minHeight: 20, marginTop: 12, marginBottom: 4 },
   sigLabel: { fontSize: 7, color: c.labelLight },
@@ -418,7 +416,14 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
   const selectionsDelta = optionsMaterialized
     ? 0
     : selectedPicks.reduce((sum: number, { choice }: any) => sum + (Number(choice.price_delta) || 0), 0);
-  const grandTotal = subtotal + overheadAmt + markupAmt + taxAmt + (estimate.permit_fees || 0) + contingencyAmt + selectionsDelta;
+  const computedTotal = subtotal + overheadAmt + markupAmt + taxAmt + (estimate.permit_fees || 0) + contingencyAmt + selectionsDelta;
+  // A fixed price IS the price — the line items are reference. Then any
+  // credit/charge JR added. (This used to sum line items only, so a
+  // fixed-price job with no items printed TOTAL $0.00.)
+  const fixedPrice = Number(estimate.total_override) > 0 ? Number(estimate.total_override) : 0;
+  const adjustment = Number(estimate.adjustment_amount) || 0;
+  const adjustmentLabel = (estimate.adjustment_label || '').trim() || (adjustment < 0 ? 'Credit' : 'Additional');
+  const grandTotal = (fixedPrice || computedTotal) + adjustment;
 
   // Exclusions / recommendations may be editor HTML (the customer link renders
   // them as HTML) or plain newline-separated text. Bullet the plain form;
@@ -491,16 +496,16 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: isLight ? 10 : 6, paddingBottom: isLight ? 14 : 10, borderBottomWidth: 2, borderBottomColor: c.navy }}>
             <View style={{ flex: 1, paddingRight: 16 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: 2.5, color: c.orange, fontFamily: 'Helvetica-Bold' }}>{docTitle}</Text>
-                <Text style={{ fontSize: 16, fontFamily: 'Helvetica-Bold', color: c.navy }}>{estimate.estimate_number}</Text>
+                <Text style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: 2.5, color: c.orange, fontFamily: 'Inter', fontWeight: 700 }}>{docTitle}</Text>
+                <Text style={{ fontSize: 16, fontFamily: 'Inter', fontWeight: 700, color: c.navy }}>{estimate.estimate_number}</Text>
               </View>
               {estimate.project_name ? (
                 <Text style={{ fontSize: 11.5, color: c.textMed, marginTop: 4 }}>{String(estimate.project_name).trim()}</Text>
               ) : null}
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 9, color: c.label }}>Date: <Text style={{ color: c.textMed, fontFamily: 'Helvetica-Bold' }}>{fmtDate(displayDate || undefined)}</Text></Text>
-              {estimate.valid_until ? <Text style={{ fontSize: 9, color: c.label, marginTop: 3 }}>Valid Until: <Text style={{ color: c.textMed, fontFamily: 'Helvetica-Bold' }}>{fmtDate(estimate.valid_until)}</Text></Text> : null}
+              <Text style={{ fontSize: 9, color: c.label }}>Date: <Text style={{ color: c.textMed, fontFamily: 'Inter', fontWeight: 700 }}>{fmtDate(displayDate || undefined)}</Text></Text>
+              {estimate.valid_until ? <Text style={{ fontSize: 9, color: c.label, marginTop: 3 }}>Valid Until: <Text style={{ color: c.textMed, fontFamily: 'Inter', fontWeight: 700 }}>{fmtDate(estimate.valid_until)}</Text></Text> : null}
             </View>
           </View>
 
@@ -515,7 +520,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
                 <View style={s.detailRow}>
                   <Text style={s.detailLabel}>Prepared For</Text>
                   <View style={{ flex: 1, padding: '7 14' }}>
-                    <Text style={{ fontSize: 10.5, color: c.text, fontFamily: 'Helvetica-Bold' }}>{[customer.first_name, customer.last_name].filter(Boolean).join(' ')}</Text>
+                    <Text style={{ fontSize: 10.5, color: c.text, fontFamily: 'Inter', fontWeight: 700 }}>{[customer.first_name, customer.last_name].filter(Boolean).join(' ')}</Text>
                     {customer.company_name ? <Text style={{ fontSize: 9, color: c.textLight, marginTop: 1 }}>{customer.company_name}</Text> : null}
                     {(customer.address || customer.city) && (
                       <Text style={{ fontSize: 8.5, color: c.label, marginTop: 2 }}>{[customer.address, customer.city, customer.state, customer.zip].filter(Boolean).join(', ')}</Text>
@@ -613,10 +618,10 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
                     )}
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 8, color: c.label, textTransform: 'uppercase', letterSpacing: 1 }}>{group.label}</Text>
-                      <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: c.text }}>{choice.label}</Text>
+                      <Text style={{ fontSize: 10, fontFamily: 'Inter', fontWeight: 700, color: c.text }}>{choice.label}</Text>
                       {choice.description ? <Text style={{ fontSize: 8.5, color: c.textLight }}>{choice.description}</Text> : null}
                     </View>
-                    <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: d > 0 ? c.orange : d < 0 ? '#1e9e5c' : c.label }}>
+                    <Text style={{ fontSize: 10, fontFamily: 'Inter', fontWeight: 700, color: d > 0 ? c.orange : d < 0 ? '#1e9e5c' : c.label }}>
                       {d === 0 ? 'Included' : (d > 0 ? '+' : '−') + fmt(Math.abs(d))}
                     </Text>
                   </View>
@@ -716,50 +721,63 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           <View style={s.summaryBox}>
             <Text style={s.summaryHeader}>Financial Summary</Text>
             <View style={s.summaryBody}>
+              {fixedPrice > 0 ? (
+                <View style={s.summaryRow}>
+                  <Text style={s.summaryLabel}>Contract Price</Text>
+                  <Text style={s.summaryValue}>{fmt(fixedPrice)}</Text>
+                </View>
+              ) : (
               <View style={s.summaryRow}>
                 <Text style={s.summaryLabel}>Subtotal</Text>
                 <Text style={s.summaryValue}>{fmt(subtotal)}</Text>
               </View>
-              {(estimate.overhead_percent || 0) > 0 && (
+              )}
+              {!fixedPrice && (estimate.overhead_percent || 0) > 0 && (
                 <View style={s.summaryRow}>
                   <Text style={s.summaryLabel}>Overhead ({estimate.overhead_percent}%)</Text>
                   <Text style={s.summaryValue}>{fmt(overheadAmt)}</Text>
                 </View>
               )}
-              {(estimate.markup_percent || 0) > 0 && (
+              {!fixedPrice && (estimate.markup_percent || 0) > 0 && (
                 <View style={s.summaryRow}>
                   <Text style={s.summaryLabel}>Markup ({estimate.markup_percent}%)</Text>
                   <Text style={s.summaryValue}>{fmt(markupAmt)}</Text>
                 </View>
               )}
-              {(estimate.tax_percent || 0) > 0 && (
+              {!fixedPrice && (estimate.tax_percent || 0) > 0 && (
                 <View style={s.summaryRow}>
                   <Text style={s.summaryLabel}>Tax ({estimate.tax_percent}%)</Text>
                   <Text style={s.summaryValue}>{fmt(taxAmt)}</Text>
                 </View>
               )}
-              {(estimate.permit_fees || 0) > 0 && (
+              {!fixedPrice && (estimate.permit_fees || 0) > 0 && (
                 <View style={s.summaryRow}>
                   <Text style={s.summaryLabel}>Permit Fees</Text>
                   <Text style={s.summaryValue}>{fmt(estimate.permit_fees)}</Text>
                 </View>
               )}
-              {(estimate.contingency_percent || 0) > 0 && (
+              {!fixedPrice && (estimate.contingency_percent || 0) > 0 && (
                 <View style={s.summaryRow}>
                   <Text style={s.summaryLabel}>Contingency ({estimate.contingency_percent}%)</Text>
                   <Text style={s.summaryValue}>{fmt(contingencyAmt)}</Text>
                 </View>
               )}
-              {selectionsDelta !== 0 && (
+              {!fixedPrice && selectionsDelta !== 0 && (
                 <View style={s.summaryRow}>
                   <Text style={s.summaryLabel}>Selected Options</Text>
                   <Text style={s.summaryValue}>{(selectionsDelta > 0 ? '+' : '−') + fmt(Math.abs(selectionsDelta))}</Text>
                 </View>
               )}
+              {adjustment !== 0 && (
+                <View style={s.summaryRow}>
+                  <Text style={s.summaryLabel}>{adjustmentLabel}</Text>
+                  <Text style={[s.summaryValue, { color: adjustment < 0 ? '#1a7f4b' : c.text }]}>{(adjustment < 0 ? '−' : '+') + fmt(Math.abs(adjustment))}</Text>
+                </View>
+              )}
               {/* Dramatic total (Ref #4) */}
               <View style={{ backgroundColor: c.navy, marginTop: 8, marginHorizontal: -16, marginBottom: -8, padding: '10 16', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: c.white, textTransform: 'uppercase', letterSpacing: 1.5 }}>Total</Text>
-                <Text style={{ fontSize: 22, fontFamily: 'Helvetica-Bold', color: c.white }}>{fmt(grandTotal)}</Text>
+                <Text style={{ fontSize: 11, fontFamily: 'Inter', fontWeight: 700, color: c.white, textTransform: 'uppercase', letterSpacing: 1.5 }}>Total</Text>
+                <Text style={{ fontSize: 22, fontFamily: 'Inter', fontWeight: 700, color: c.white }}>{fmt(grandTotal)}</Text>
               </View>
             </View>
           </View>
@@ -878,7 +896,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
             {recommendationsHtml ? <RichText html={recommendationsHtml} fontSize={9.5} color={c.textMed} lineHeight={1.6} /> : null}
             {recommendationsList.map((item: string, i: number) => (
               <View key={i} style={{ flexDirection: 'row', marginBottom: 4, paddingLeft: 4 }}>
-                <Text style={{ fontSize: 9, color: c.navy, width: 14, fontFamily: 'Helvetica-Bold' }}>{'\u2713'}</Text>
+                <Text style={{ fontSize: 9, color: c.navy, width: 14, fontFamily: 'Inter', fontWeight: 700 }}>{'\u2713'}</Text>
                 <Text style={{ fontSize: 9.5, color: c.textMed, flex: 1, lineHeight: 1.6 }}>{item}</Text>
               </View>
             ))}
@@ -963,7 +981,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
             <View style={{ textAlign: 'right' }}>
               <Text style={{ fontSize: 7, color: c.labelLight }}>Document ID: {docId}</Text>
               <Text style={{ fontSize: 6.5, color: c.labelLight, marginTop: 1 }}>{verifyUrl}</Text>
-              <Text style={{ fontSize: 8, color: c.label, marginTop: 3 }}>Valid for {validDays} days from date of issue</Text>
+              {!estimate.signed_at && <Text style={{ fontSize: 8, color: c.label, marginTop: 3 }}>Valid for {validDays} days from date of issue</Text>}
             </View>
           </View>
         </View>
@@ -976,7 +994,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
               This quick quote is provided for budgetary reference only and does not constitute a formal bid, proposal, or binding contract. Actual costs may vary based on site conditions, material availability, and scope changes. Contact us for a detailed estimate.
             </Text>
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
-              <Text style={{ fontSize: 8, color: c.label }}>Valid for {validDays} days from date of issue</Text>
+              {!estimate.signed_at && <Text style={{ fontSize: 8, color: c.label }}>Valid for {validDays} days from date of issue</Text>}
             </View>
           </View>
         )}

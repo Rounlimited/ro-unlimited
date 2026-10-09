@@ -599,6 +599,9 @@ export default function NewEstimateWizard() {
             tax_percent: financials.tax_percent,
             permit_fees: financials.permit_fees,
             contingency_percent: financials.contingency_percent,
+            // The fixed price lives on this step too — Next/Save & Exit used
+            // to drop it silently, so "I put it in, it won't update".
+            total_override: totalOverride && totalOverride > 0 ? totalOverride : null,
           });
           break;
         case 6:

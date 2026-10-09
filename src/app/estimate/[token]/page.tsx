@@ -761,38 +761,53 @@ export default function PublicEstimatePage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
           <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-4">Financial Summary</h2>
           <div className="doc-rows space-y-2 text-[14px]">
+            {Number((estimate as any).total_override) > 0 ? (
+              <div className="flex justify-between py-2 border-b border-gray-100">
+                <span className="text-gray-500">Contract Price</span>
+                <span className="text-gray-900 font-medium">{fmt(Number((estimate as any).total_override))}</span>
+              </div>
+            ) : (
             <div className="flex justify-between py-2 border-b border-gray-100">
               <span className="text-gray-500">Subtotal</span>
               <span className="text-gray-900 font-medium">{fmt(estimate.subtotal)}</span>
             </div>
-            {estimate.overhead_amount > 0 && (
+            )}
+            {!(Number((estimate as any).total_override) > 0) && estimate.overhead_amount > 0 && (
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <span className="text-gray-500">Overhead ({estimate.overhead_percent}%)</span>
                 <span className="text-gray-900">{fmt(estimate.overhead_amount)}</span>
               </div>
             )}
-            {estimate.markup_amount > 0 && (
+            {!(Number((estimate as any).total_override) > 0) && estimate.markup_amount > 0 && (
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <span className="text-gray-500">Markup ({estimate.markup_percent}%)</span>
                 <span className="text-gray-900">{fmt(estimate.markup_amount)}</span>
               </div>
             )}
-            {estimate.tax_amount > 0 && (
+            {!(Number((estimate as any).total_override) > 0) && estimate.tax_amount > 0 && (
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <span className="text-gray-500">Tax ({estimate.tax_percent}%)</span>
                 <span className="text-gray-900">{fmt(estimate.tax_amount)}</span>
               </div>
             )}
-            {estimate.contingency_amount > 0 && (
+            {!(Number((estimate as any).total_override) > 0) && estimate.contingency_amount > 0 && (
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <span className="text-gray-500">Contingency ({estimate.contingency_percent}%)</span>
                 <span className="text-gray-900">{fmt(estimate.contingency_amount)}</span>
               </div>
             )}
-            {estimate.permit_fees > 0 && (
+            {!(Number((estimate as any).total_override) > 0) && estimate.permit_fees > 0 && (
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <span className="text-gray-500">Permit Fees</span>
                 <span className="text-gray-900">{fmt(estimate.permit_fees)}</span>
+              </div>
+            )}
+            {Number((estimate as any).adjustment_amount) !== 0 && !isNaN(Number((estimate as any).adjustment_amount)) && (
+              <div className="flex justify-between py-2 border-b border-gray-100">
+                <span className="text-gray-500">{(estimate as any).adjustment_label || (Number((estimate as any).adjustment_amount) < 0 ? 'Credit' : 'Additional')}</span>
+                <span className="font-medium" style={{ color: Number((estimate as any).adjustment_amount) < 0 ? '#187a4b' : '#111827' }}>
+                  {(Number((estimate as any).adjustment_amount) < 0 ? '−' : '+') + fmt(Math.abs(Number((estimate as any).adjustment_amount)))}
+                </span>
               </div>
             )}
             <div className="flex justify-between py-3 mt-2" data-track="total">

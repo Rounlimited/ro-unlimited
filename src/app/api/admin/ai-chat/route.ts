@@ -446,6 +446,8 @@ const WRITE_TOOLS = [
         project_duration_days: { type: 'number', description: 'Project duration in days' },
         schedule_notes: { type: 'string', description: 'Schedule notes' },
         total_override: { type: 'number', description: 'FIXED PRICE — set the total to exactly this number (the customer price). 0 removes the fixed price and goes back to calculated.' },
+        adjustment_amount: { type: 'number', description: 'A CREDIT (negative, e.g. -3300) or extra CHARGE (positive) applied on top of the price. Shows as its own labeled line to the customer. 0 removes it.' },
+        adjustment_label: { type: 'string', description: 'What the credit/charge is for — "Permit fees paid by owner", "Extra rock removal".' },
       },
       required: ['id'],
     },
@@ -1611,7 +1613,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       // Check if financial fields changed — recalculate if so. total_override
       // is in this list on purpose: recalcEstimateTotals honors a fixed price,
       // and skipping it here left `total` at $0 after the AI set a price.
-      const financialFields = ['overhead_percent', 'markup_percent', 'tax_percent', 'contingency_percent', 'permit_fees', 'total_override'];
+      const financialFields = ['overhead_percent', 'markup_percent', 'tax_percent', 'contingency_percent', 'permit_fees', 'total_override', 'adjustment_amount'];
       const financialChanged = financialFields.some((f) => (fields as any)[f] !== undefined);
       if ((fields as any).total_override !== undefined && !(Number((fields as any).total_override) > 0)) {
         (fields as any).total_override = null; // 0 / blank = no fixed price
@@ -2670,6 +2672,7 @@ When he gives a job and a price in one breath — "estimate for Miller, septic a
   2. create_estimate with customer_id, project_name (short, from his words), scope_of_work (his description, cleaned up — never invent details), division + estimate_type inferred from the job (septic→septic, "grading/pad/driveway"→grading, "water/sewer/storm"→utilities, "building/shell/build-out"→commercial, unsure→commercial + new_construction), contract_type fixed_price, and fixed_price = his number. That one call sets the total.
   3. Reply in two lines: the number and total ("RO-EST-2026-0251 — Miller Farm Septic & Drive — $42,500, fixed price"), then ONE optional question: "Want me to send it to {customer}, or open it first?" Nothing else. No line items, no markups, no payment schedule, no "ready to commit?" — he already committed when he said the price.
   4. Changing a price later: update_estimate { id, total_override: <new number> } — one call, done. Say the new total back.
+  4b. A credit or extra: "give Miller a $3,300 credit for the permit fees" → update_estimate { id, adjustment_amount: -3300, adjustment_label: "Permit fees paid by owner" }. Charges are positive. It shows as its own line under the price; the total updates. Never fake a credit by lowering the price or using negative permit fees.
   5. He asked for a quote/estimate but gave no price → ask ONE question: "What's the price?" — not type, not location, not scope.
 Line items are optional on a fixed-price job and never invented. Only build an itemized estimate when he explicitly asks for line items / a breakdown / itemized — then:
   gather what's missing in ONE message, draft phases + line items in chat, confirm once, then create_estimate → add_line_items → (set_payment_schedule only if he mentions deposits/draws).

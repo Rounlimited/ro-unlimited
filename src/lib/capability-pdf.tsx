@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
+import '@/lib/pdf-fonts';
 import { COMPANY } from '@/lib/constants';
 
 /**
@@ -27,24 +28,24 @@ const c = {
 };
 
 const s = StyleSheet.create({
-  page: { fontFamily: 'Helvetica', fontSize: 9.5, color: c.text, paddingTop: 26, paddingBottom: 30, paddingHorizontal: 44 },
+  page: { fontFamily: 'Inter', fontSize: 9.5, color: c.text, paddingTop: 26, paddingBottom: 30, paddingHorizontal: 44 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 3, borderBottomColor: c.orange, paddingBottom: 12, marginBottom: 14 },
-  docTitle: { fontSize: 17, fontFamily: 'Helvetica-Bold', color: c.navy, letterSpacing: 1.5 },
+  docTitle: { fontSize: 17, fontFamily: 'Inter', fontWeight: 700, color: c.navy, letterSpacing: 1.5 },
   docSub: { fontSize: 8, color: c.label, marginTop: 3, letterSpacing: 0.5 },
-  sectionLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: c.orange, textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 6 },
+  sectionLabel: { fontSize: 8, fontFamily: 'Inter', fontWeight: 700, color: c.orange, textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 6 },
   block: { marginBottom: 13 },
   body: { fontSize: 9.5, color: c.textMed, lineHeight: 1.55 },
   twoCol: { flexDirection: 'row', gap: 18 },
   col: { flex: 1 },
   licRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: c.borderLight, paddingVertical: 4.5 },
   licName: { flex: 1, fontSize: 9.5, color: c.textMed },
-  licNum: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: c.navy },
+  licNum: { fontSize: 9.5, fontFamily: 'Inter', fontWeight: 700, color: c.navy },
   bullet: { flexDirection: 'row', marginBottom: 3.5 },
   bulletDot: { width: 10, fontSize: 9.5, color: c.orange },
   bulletText: { flex: 1, fontSize: 9.5, color: c.textMed, lineHeight: 1.45 },
   statStrip: { flexDirection: 'row', backgroundColor: c.navy, borderRadius: 3, paddingVertical: 10, paddingHorizontal: 8, marginBottom: 14 },
   stat: { flex: 1, alignItems: 'center' },
-  statVal: { fontSize: 15, fontFamily: 'Helvetica-Bold', color: c.orange },
+  statVal: { fontSize: 15, fontFamily: 'Inter', fontWeight: 700, color: c.orange },
   statLabel: { fontSize: 6.8, color: '#c9d2e4', letterSpacing: 1, marginTop: 2, textTransform: 'uppercase' },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 44, paddingBottom: 12, paddingTop: 6, borderTopWidth: 1, borderTopColor: c.border, flexDirection: 'row', justifyContent: 'space-between' },
   footerText: { fontSize: 7.2, color: c.label, lineHeight: 1.4 },
@@ -178,7 +179,7 @@ function CapabilityDoc() {
           <Text style={s.sectionLabel}>Contact</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
-              <Text style={[s.body, { fontFamily: 'Helvetica-Bold', color: c.navy }]}>{COMPANY.phone}</Text>
+              <Text style={[s.body, { fontFamily: 'Inter', fontWeight: 700, color: c.navy }]}>{COMPANY.phone}</Text>
               <Text style={s.body}>{COMPANY.email}</Text>
               <Text style={s.body}>rounlimited.com · Easley, SC</Text>
               <Text style={{ fontSize: 8, color: c.label, marginTop: 4 }}>

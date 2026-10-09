@@ -99,7 +99,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     // Check if financial fields changed — if so, recalculate totals
     const financialFields = [
       'overhead_percent', 'markup_percent', 'tax_percent',
-      'contingency_percent', 'permit_fees', 'total_override',
+      'contingency_percent', 'permit_fees', 'total_override', 'adjustment_amount',
     ];
     const financialChanged = financialFields.some((f) => body[f] !== undefined);
 
@@ -117,11 +117,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       }
     }
 
-    // If a real override is in this patch, it is the total. (Zero and null
-    // mean "no override" — recalc above already restored the math total.)
-    if (Number(body.total_override) > 0) {
-      body.total = body.total_override;
-    }
+    // (recalc above owns `total` — fixed price plus any credit/charge.)
 
     const { data, error } = await supabase
       .from('estimates')

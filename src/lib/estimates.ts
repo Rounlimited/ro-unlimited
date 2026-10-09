@@ -50,11 +50,14 @@ export function recalcEstimateTotals(
   // at signing, and later financial tweaks — the override used to be
   // clobbered by any of those.
   const override = Number((estimate as any).total_override);
+  // A credit (negative) or extra charge (positive) rides on top of whichever
+  // base applies — it's the one knob that shows as its own line to the customer.
+  const adjustment = Number((estimate as any).adjustment_amount) || 0;
   if (override > 0) {
-    return { subtotal, overhead_amount, markup_amount, tax_amount, contingency_amount, total: override };
+    return { subtotal, overhead_amount, markup_amount, tax_amount, contingency_amount, total: override + adjustment };
   }
 
-  return { subtotal, overhead_amount, markup_amount, tax_amount, contingency_amount, total };
+  return { subtotal, overhead_amount, markup_amount, tax_amount, contingency_amount, total: total + adjustment };
 }
 
 /* ─── Estimate date ──────────────────────────────────────────

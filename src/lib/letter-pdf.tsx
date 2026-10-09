@@ -1,5 +1,6 @@
 import React from 'react';
 import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
+import '@/lib/pdf-fonts';
 import { COMPANY } from '@/lib/letters';
 
 /**
@@ -19,7 +20,7 @@ const c = {
 };
 
 const s = StyleSheet.create({
-  page: { paddingTop: 44, paddingBottom: 76, paddingHorizontal: 56, fontSize: 11, color: c.body, lineHeight: 1.55 },
+  page: { fontFamily: 'Inter', paddingTop: 44, paddingBottom: 76, paddingHorizontal: 56, fontSize: 11, color: c.body, lineHeight: 1.55 },
 
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
   logo: { width: 152 },

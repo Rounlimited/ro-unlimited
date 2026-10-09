@@ -167,7 +167,10 @@ export async function materializeSelections(estimateId: string): Promise<void> {
     const totals = recalcEstimateTotals(allItems || [], est as any);
     await supabase.from('estimates').update({
       ...totals,
-      ...(est.total_override != null ? { total: Number(est.total_override) + rows.reduce((s, r) => s + r.total, 0), total_override: Number(est.total_override) + rows.reduce((s, r) => s + r.total, 0) } : {}),
+      ...(Number(est.total_override) > 0 ? {
+        total_override: Number(est.total_override) + rows.reduce((s, r) => s + r.total, 0),
+        total: Number(est.total_override) + rows.reduce((s, r) => s + r.total, 0) + (Number((est as any).adjustment_amount) || 0),
+      } : {}),
       selections_total: 0,
       options_materialized_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

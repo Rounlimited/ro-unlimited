@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
+import '@/lib/pdf-fonts';
 
 /**
  * Invoice PDF — same document brand as the estimate PDF and capability
@@ -22,16 +23,16 @@ const c = {
 };
 
 const s = StyleSheet.create({
-  page: { fontFamily: 'Helvetica', fontSize: 10, color: c.text, paddingTop: 30, paddingBottom: 60, paddingHorizontal: 46 },
+  page: { fontFamily: 'Inter', fontSize: 10, color: c.text, paddingTop: 30, paddingBottom: 60, paddingHorizontal: 46 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderBottomWidth: 3, borderBottomColor: c.orange, paddingBottom: 14, marginBottom: 16 },
-  docTitle: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: c.navy, letterSpacing: 2 },
+  docTitle: { fontSize: 20, fontFamily: 'Inter', fontWeight: 700, color: c.navy, letterSpacing: 2 },
   invNum: { fontSize: 11, color: c.textMed, marginTop: 4 },
-  sectionLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: c.orange, textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 5 },
+  sectionLabel: { fontSize: 8, fontFamily: 'Inter', fontWeight: 700, color: c.orange, textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 5 },
   twoCol: { flexDirection: 'row', gap: 24, marginBottom: 16 },
   col: { flex: 1 },
   body: { fontSize: 10, color: c.textMed, lineHeight: 1.5 },
   tableHead: { flexDirection: 'row', backgroundColor: c.navy, paddingVertical: 6, paddingHorizontal: 8, borderRadius: 2 },
-  th: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#ffffff', textTransform: 'uppercase', letterSpacing: 1 },
+  th: { fontSize: 8, fontFamily: 'Inter', fontWeight: 700, color: '#ffffff', textTransform: 'uppercase', letterSpacing: 1 },
   row: { flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: c.borderLight },
   cellDesc: { flex: 1, fontSize: 10, color: c.textMed, paddingRight: 8 },
   cellNum: { width: 70, fontSize: 10, color: c.textMed, textAlign: 'right' },
@@ -39,7 +40,7 @@ const s = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3.5 },
   balanceRow: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: c.navy, borderRadius: 3, paddingVertical: 8, paddingHorizontal: 10, marginTop: 5 },
   stamp: { position: 'absolute', top: 150, right: 60, transform: 'rotate(-18deg)', borderWidth: 3, borderColor: c.green, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 18, opacity: 0.85 },
-  stampText: { fontSize: 26, fontFamily: 'Helvetica-Bold', color: c.green, letterSpacing: 4 },
+  stampText: { fontSize: 26, fontFamily: 'Inter', fontWeight: 700, color: c.green, letterSpacing: 4 },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 46, paddingBottom: 14, paddingTop: 6, borderTopWidth: 1, borderTopColor: c.border, flexDirection: 'row', justifyContent: 'space-between' },
   footerText: { fontSize: 7.2, color: c.label, lineHeight: 1.4 },
 });
@@ -93,7 +94,7 @@ function InvoicePDFDocument({ invoice, payments }: { invoice: any; payments: any
         <View style={s.twoCol}>
           <View style={s.col}>
             <Text style={s.sectionLabel}>Billed To</Text>
-            <Text style={[s.body, { fontFamily: 'Helvetica-Bold' }]}>{who.name}</Text>
+            <Text style={[s.body, { fontFamily: 'Inter', fontWeight: 700 }]}>{who.name}</Text>
             {who.contact ? <Text style={s.body}>{who.contact}</Text> : null}
             {who.address ? <Text style={s.body}>{who.address}</Text> : null}
             {who.email ? <Text style={s.body}>{who.email}</Text> : null}
@@ -104,7 +105,7 @@ function InvoicePDFDocument({ invoice, payments }: { invoice: any; payments: any
             {invoice.project_name ? <Text style={s.body}>Project: {invoice.project_name}</Text> : null}
             {invoice.project_address ? <Text style={s.body}>Site: {invoice.project_address}</Text> : null}
             <Text style={s.body}>Issued: {fmtDate(invoice.issued_date)}</Text>
-            <Text style={[s.body, !isPaid && balance > 0 ? { fontFamily: 'Helvetica-Bold' } : {}]}>
+            <Text style={[s.body, !isPaid && balance > 0 ? { fontFamily: 'Inter', fontWeight: 700 } : {}]}>
               Due: {fmtDate(invoice.due_date)}
             </Text>
           </View>
@@ -141,8 +142,8 @@ function InvoicePDFDocument({ invoice, payments }: { invoice: any; payments: any
             </>
           )}
           <View style={s.totalRow}>
-            <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: c.navy }}>Total</Text>
-            <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: c.navy }}>{fmt$(invoice.total)}</Text>
+            <Text style={{ fontSize: 11, fontFamily: 'Inter', fontWeight: 700, color: c.navy }}>Total</Text>
+            <Text style={{ fontSize: 11, fontFamily: 'Inter', fontWeight: 700, color: c.navy }}>{fmt$(invoice.total)}</Text>
           </View>
           {Number(invoice.amount_paid) > 0 && (
             <View style={s.totalRow}>
@@ -151,10 +152,10 @@ function InvoicePDFDocument({ invoice, payments }: { invoice: any; payments: any
             </View>
           )}
           <View style={s.balanceRow}>
-            <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#fff' }}>
+            <Text style={{ fontSize: 11, fontFamily: 'Inter', fontWeight: 700, color: '#fff' }}>
               {isPaid ? 'Paid in Full' : 'Balance Due'}
             </Text>
-            <Text style={{ fontSize: 13, fontFamily: 'Helvetica-Bold', color: isPaid ? '#7fe0ae' : c.orange }}>
+            <Text style={{ fontSize: 13, fontFamily: 'Inter', fontWeight: 700, color: isPaid ? '#7fe0ae' : c.orange }}>
               {fmt$(isPaid ? 0 : balance)}
             </Text>
           </View>
@@ -194,7 +195,7 @@ function InvoicePDFDocument({ invoice, payments }: { invoice: any; payments: any
               {/* eslint-disable-next-line jsx-a11y/alt-text */}
               <Image src={invoice.signature_data} style={{ width: 160, height: 50, objectFit: 'contain' }} />
               <View>
-                <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: c.navy }}>{invoice.signed_name}</Text>
+                <Text style={{ fontSize: 10, fontFamily: 'Inter', fontWeight: 700, color: c.navy }}>{invoice.signed_name}</Text>
                 <Text style={{ fontSize: 8.5, color: c.label }}>
                   Signed {new Date(invoice.signed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </Text>

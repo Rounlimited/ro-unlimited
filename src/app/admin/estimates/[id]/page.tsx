@@ -730,13 +730,15 @@ export default function EstimateDetailPage() {
           <div className="space-y-4">
             {/* The price, where he lands — set or change the fixed price
                 without hunting for the Financials tab. */}
-            {!estimate.signed_at && (
-              <FixedPriceControl
-                estimateId={String(id)}
-                current={(estimate as any).total_override ?? null}
-                onSaved={fetchEstimate}
-              />
-            )}
+            <FixedPriceControl
+              estimateId={String(id)}
+              current={(estimate as any).total_override ?? null}
+              adjustment={(estimate as any).adjustment_amount ?? 0}
+              adjustmentLabel={(estimate as any).adjustment_label ?? null}
+              total={estimate.total ?? null}
+              signed={!!estimate.signed_at}
+              onSaved={fetchEstimate}
+            />
             {/* Running the job — the two things touched daily, where they
                 cannot be missed. The tab strip scrolls off a phone screen. */}
             <div className="grid grid-cols-2 gap-3">
@@ -1056,6 +1058,10 @@ export default function EstimateDetailPage() {
               <FixedPriceControl
                 estimateId={String(id)}
                 current={(estimate as any).total_override ?? null}
+                adjustment={(estimate as any).adjustment_amount ?? 0}
+                adjustmentLabel={(estimate as any).adjustment_label ?? null}
+                total={estimate.total ?? null}
+                signed={!!estimate.signed_at}
                 onSaved={fetchEstimate}
               />
               <div className="space-y-3">
@@ -1094,6 +1100,12 @@ export default function EstimateDetailPage() {
                   amount={estimate.contingency_amount || 0}
                   sub
                 />
+                {Number((estimate as any).adjustment_amount) !== 0 && (
+                  <FinancialRow
+                    label={(estimate as any).adjustment_label || (Number((estimate as any).adjustment_amount) < 0 ? 'Credit' : 'Additional charge')}
+                    amount={Number((estimate as any).adjustment_amount)}
+                  />
+                )}
                 <div className="border-t border-white/10 pt-4 mt-4">
                   <div className="flex items-center justify-between">
                     <span className="text-[18px] font-bold text-[#C9A84C]">TOTAL</span>
