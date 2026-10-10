@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     const [estRes, itemsRes, progRes] = await Promise.all([
       supabase
         .from('estimates')
-        .select('id, estimate_number, schedule_status, budget_status, status_reason, status_note, status_updated_at, reporting_cadence, reporting_day, reporting_includes')
+        .select('id, estimate_number, total, schedule_status, budget_status, status_reason, status_note, status_updated_at, reporting_cadence, reporting_day, reporting_includes')
         .eq('id', id)
         .single(),
       supabase.from('estimate_line_items').select('phase, total, sort_order').eq('estimate_id', id),
@@ -28,7 +28,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
     }
 
-    const roll = rollUpProgress(itemsRes.data || [], progRes.data || []);
+    const roll = rollUpProgress(itemsRes.data || [], progRes.data || [], Number((estRes.data as any).total || 0));
     const notes = new Map((progRes.data || []).map((p) => [p.phase, p.note]));
     const custom = new Map((progRes.data || []).map((p) => [p.phase, !!p.custom]));
     const weights = new Map((progRes.data || []).map((p) => [p.phase, p.weight]));

@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server';
-import { recalcEstimateTotals } from '@/lib/estimates';
+import { recalcEstimateTotals, syncScheduleAmounts } from '@/lib/estimates';
 
 /**
  * Estimate options — the configurator layer. Option groups ("Roof Color")
@@ -124,7 +124,7 @@ export async function materializeSelections(estimateId: string): Promise<void> {
   const supabase = createAdminClient();
   const { data: est } = await supabase
     .from('estimates')
-    .select('id, options_materialized_at, overhead_percent, markup_percent, tax_percent, contingency_percent, permit_fees, total_override')
+    .select('id, options_materialized_at, overhead_percent, markup_percent, tax_percent, contingency_percent, permit_fees, total_override, adjustment_amount')
     .eq('id', estimateId)
     .single();
   if (!est || est.options_materialized_at) return;
@@ -165,16 +165,18 @@ export async function materializeSelections(estimateId: string): Promise<void> {
     const { data: allItems } = await supabase
       .from('estimate_line_items').select('*').eq('estimate_id', estimateId);
     const totals = recalcEstimateTotals(allItems || [], est as any);
+    const delta = rows.reduce((s, r) => s + r.total, 0);
+    const fixed = Number(est.total_override) > 0
+      ? { total_override: Number(est.total_override) + delta, total: Number(est.total_override) + delta + (Number((est as any).adjustment_amount) || 0) }
+      : {};
     await supabase.from('estimates').update({
       ...totals,
-      ...(Number(est.total_override) > 0 ? {
-        total_override: Number(est.total_override) + rows.reduce((s, r) => s + r.total, 0),
-        total: Number(est.total_override) + rows.reduce((s, r) => s + r.total, 0) + (Number((est as any).adjustment_amount) || 0),
-      } : {}),
+      ...fixed,
       selections_total: 0,
       options_materialized_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq('id', estimateId);
+    await syncScheduleAmounts(supabase, estimateId, Number((fixed as any).total ?? totals.total) || 0);
   } else {
     await supabase.from('estimates').update({
       selections_total: 0,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { notifyTeam } from '@/lib/alerts';
+import { recalcEstimateTotals, syncScheduleAmounts } from '@/lib/estimates';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
     const { data: est } = await supabase
       .from('estimates')
-      .select('id, link_enabled, estimate_number, project_name, division, total, share_token_expires_at')
+      .select('*')
       .eq('share_token', params.token)
       .single();
     if (!est) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
@@ -69,8 +70,24 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
     // Approved extra work is part of the contract, so the total has to follow
     // it — otherwise percent complete and earned-to-date quietly drift.
-    const newTotal = Number(est.total || 0) + Number(co.amount || 0);
-    await supabase.from('estimates').update({ total: newTotal }).eq('id', est.id);
+    // Writing `total` alone got wiped by the next recalc. A fixed price grows
+    // by the change order; an itemized job gets it as a real line item.
+    let newTotal = Number(est.total || 0) + Number(co.amount || 0);
+    if (Number(est.total_override) > 0) {
+      const total_override = Number(est.total_override) + Number(co.amount || 0);
+      newTotal = total_override + (Number(est.adjustment_amount) || 0);
+      await supabase.from('estimates').update({ total_override, total: newTotal, updated_at: new Date().toISOString() }).eq('id', est.id);
+    } else {
+      await supabase.from('estimate_line_items').insert({
+        estimate_id: est.id, phase: 'Change Orders', description: `Change order — ${co.title}`,
+        quantity: 1, unit: 'change order', unit_cost: Number(co.amount || 0), markup_percent: 0, total: Number(co.amount || 0), sort_order: 9000 + Number(co.sort_order || 0),
+      });
+      const { data: items } = await supabase.from('estimate_line_items').select('*').eq('estimate_id', est.id);
+      const totals = recalcEstimateTotals(items || [], est);
+      newTotal = totals.total;
+      await supabase.from('estimates').update({ ...totals, updated_at: new Date().toISOString() }).eq('id', est.id);
+    }
+    await syncScheduleAmounts(supabase, est.id, newTotal);
 
     await notifyTeam({
       type: 'change_order_approved',

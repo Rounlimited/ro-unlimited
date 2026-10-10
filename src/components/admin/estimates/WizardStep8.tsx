@@ -20,6 +20,8 @@ interface Props {
   onChangeRecommendations: (text: string) => void;
   subtotal: number;
   grandTotal: number;
+  totalOverride?: number | null;
+  adjustment?: { amount: number; label: string };
   templateName: string | null;
   onSaveDraft: () => Promise<void> | void;
   saving: boolean;
@@ -44,11 +46,16 @@ export default function WizardStep8({
   onChangeRecommendations,
   subtotal,
   grandTotal,
+  totalOverride,
+  adjustment,
   templateName,
   onSaveDraft,
   saving,
 }: Props) {
   const [showSendModal, setShowSendModal] = useState(false);
+  const [sendError, setSendError] = useState('');
+  const isFixed = !!totalOverride && totalOverride > 0;
+  const adj = Number(adjustment?.amount) || 0;
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [sendForm, setSendForm] = useState({
     to_email: '',
@@ -150,6 +157,7 @@ export default function WizardStep8({
   const handleSend = async () => {
     if (!sendForm.to_email) return;
     setSending(true);
+    setSendError('');
     try {
       const res = await fetch(`/api/admin/estimates/${estimateId}/send`, {
         method: 'POST',
@@ -160,14 +168,19 @@ export default function WizardStep8({
           from_email: sendForm.from_email,
         }),
       });
-      if (res.ok) {
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && !d.error) {
         setSendSuccess(true);
         setTimeout(() => {
           setShowSendModal(false);
           setSendSuccess(false);
         }, 2000);
+      } else {
+        setSendError(d.error || `Could not send (${res.status}). Nothing went out — try again.`);
       }
-    } catch {}
+    } catch {
+      setSendError('Could not reach the server. Nothing went out — check your connection and try again.');
+    }
     setSending(false);
   };
 
@@ -300,38 +313,51 @@ export default function WizardStep8({
       <div className="bg-[#111] border border-white/10 rounded-xl p-5">
         <SectionTitle icon={DollarSign} title="Financial Summary" />
         <div className="space-y-2 text-[14px]">
+          {isFixed ? (
+            <div className="flex justify-between">
+              <span className="text-white/50">Contract Price (fixed)</span>
+              <span className="text-white">{fmt(Number(totalOverride))}</span>
+            </div>
+          ) : (
           <div className="flex justify-between">
             <span className="text-white/50">Subtotal</span>
             <span className="text-white">{fmt(subtotal)}</span>
           </div>
-          {financials.overhead_percent > 0 && (
+          )}
+          {!isFixed && financials.overhead_percent > 0 && (
             <div className="flex justify-between">
               <span className="text-white/50">Overhead ({financials.overhead_percent}%)</span>
               <span className="text-white">{fmt(overheadAmt)}</span>
             </div>
           )}
-          {financials.markup_percent > 0 && (
+          {!isFixed && financials.markup_percent > 0 && (
             <div className="flex justify-between">
               <span className="text-white/50">Markup ({financials.markup_percent}%)</span>
               <span className="text-white">{fmt(markupAmt)}</span>
             </div>
           )}
-          {financials.tax_percent > 0 && (
+          {!isFixed && financials.tax_percent > 0 && (
             <div className="flex justify-between">
               <span className="text-white/50">Tax ({financials.tax_percent}%)</span>
               <span className="text-white">{fmt(taxAmt)}</span>
             </div>
           )}
-          {financials.permit_fees > 0 && (
+          {!isFixed && financials.permit_fees > 0 && (
             <div className="flex justify-between">
               <span className="text-white/50">Permit Fees</span>
               <span className="text-white">{fmt(financials.permit_fees)}</span>
             </div>
           )}
-          {financials.contingency_percent > 0 && (
+          {!isFixed && financials.contingency_percent > 0 && (
             <div className="flex justify-between">
               <span className="text-white/50">Contingency ({financials.contingency_percent}%)</span>
               <span className="text-white">{fmt(contingencyAmt)}</span>
+            </div>
+          )}
+          {adj !== 0 && (
+            <div className="flex justify-between">
+              <span className="text-white/50">{adjustment?.label || (adj < 0 ? 'Credit' : 'Additional')}</span>
+              <span style={{ color: adj < 0 ? '#35d07f' : '#fff' }}>{(adj < 0 ? '−' : '+') + fmt(Math.abs(adj))}</span>
             </div>
           )}
           <div className="flex justify-between pt-3 border-t border-white/10">
@@ -441,6 +467,8 @@ export default function WizardStep8({
                 <X size={18} />
               </button>
             </div>
+
+            {sendError && <p className="text-[15px] mb-3" style={{ color: '#f87171' }}>{sendError}</p>}
 
             {sendSuccess ? (
               <div className="p-8 text-center">

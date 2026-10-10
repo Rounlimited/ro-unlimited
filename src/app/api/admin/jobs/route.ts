@@ -70,6 +70,8 @@ export async function POST(req: NextRequest) {
         division: body.division || null,
         project_address: body.project_address || null,
         total: body.total ? Number(body.total) : 0,
+        total_override: body.total ? Number(body.total) : null,
+        contract_type: 'fixed_price',
         estimate_date: new Date().toISOString().slice(0, 10),
         signed_at: now,
         signed_name: body.signed_name || 'On file',

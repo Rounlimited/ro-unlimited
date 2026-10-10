@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
     const staleCutoff = Date.now() - STALE_DAYS * 86400000;
 
     const rows = (jobs || []).map((j) => {
-      const roll = rollUpProgress((items.get(j.id) || []) as any, (prog.get(j.id) || []) as any);
+      const roll = rollUpProgress((items.get(j.id) || []) as any, (prog.get(j.id) || []) as any, Number(j.total || 0));
       const mine = reports.get(j.id) || [];
       const draftWaiting = mine.some((r: any) => r.status === 'draft');
       const lastSent = mine.filter((r: any) => r.status === 'sent').map((r: any) => r.sent_at).sort().reverse()[0] || null;

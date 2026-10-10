@@ -736,7 +736,7 @@ export default function EstimateDetailPage() {
               adjustment={(estimate as any).adjustment_amount ?? 0}
               adjustmentLabel={(estimate as any).adjustment_label ?? null}
               total={estimate.total ?? null}
-              signed={!!estimate.signed_at}
+              signed={!!(estimate as any).signed_at}
               onSaved={fetchEstimate}
             />
             {/* Running the job — the two things touched daily, where they
@@ -1061,7 +1061,7 @@ export default function EstimateDetailPage() {
                 adjustment={(estimate as any).adjustment_amount ?? 0}
                 adjustmentLabel={(estimate as any).adjustment_label ?? null}
                 total={estimate.total ?? null}
-                signed={!!estimate.signed_at}
+                signed={!!(estimate as any).signed_at}
                 onSaved={fetchEstimate}
               />
               <div className="space-y-3">

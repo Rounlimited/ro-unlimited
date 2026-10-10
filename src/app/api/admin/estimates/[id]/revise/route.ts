@@ -38,7 +38,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const newNumber = `${baseNumber}-R${nextRevision}`;
 
     // Copy estimate (exclude id, timestamps, status fields)
-    const { id: _id, created_at, updated_at, sent_at, viewed_at, accepted_at, declined_at, status, share_token, share_token_expires_at, ...copyFields } = original;
+    const { id: _id, created_at, updated_at, sent_at, viewed_at, accepted_at, declined_at, status, share_token, share_token_expires_at,
+      signed_at, signed_name, client_signature, signer_ip_hash, options_materialized_at, selections_total, selections_confirmed_at, link_enabled, ...copyFields } = original as any;
 
     const { data: newEstimate, error: insertErr } = await supabase
       .from('estimates')

@@ -101,6 +101,7 @@ export interface PhaseRoll {
 export function rollUpProgress(
   lineItems: { phase?: string | null; total?: number | null; sort_order?: number | null }[],
   progress: { phase: string; percent_complete: number; weight?: number | null; sort_order?: number | null; custom?: boolean | null }[],
+  contractTotal?: number,
 ): { phases: PhaseRoll[]; totalValue: number; earned: number; percent: number } {
   const byPhase = new Map<string, number>();
   // Phases come back in WORK order — the sort order of their line items — not
@@ -141,5 +142,18 @@ export function rollUpProgress(
     ? Math.round((earned / totalValue) * 100)
     : phases.length ? Math.round(phases.reduce((s, p) => s + p.percent, 0) / phases.length) : 0;
 
+  // Line items are the WEIGHTS; the contract price is the money. A fixed-price
+  // job with reference items (or markup on top of items) used to report
+  // "earned" on the item scale, so 100% done never equalled the contract.
+  const contract = Number(contractTotal) || 0;
+  if (contract > 0) {
+    const factor = totalValue > 0 ? contract / totalValue : 0;
+    return {
+      phases: phases.map((p) => ({ ...p, value: p.value * factor, earned: p.earned * factor })),
+      totalValue: contract,
+      earned: factor ? earned * factor : contract * (percent / 100),
+      percent,
+    };
+  }
   return { phases, totalValue, earned, percent };
 }

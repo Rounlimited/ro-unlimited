@@ -146,7 +146,7 @@ export async function createInvoice(body: any) {
   if (estimate_id) {
     const { data: est, error } = await supabase
       .from('estimates')
-      .select('id, customer_id, project_name, project_address, project_city, project_state, tax_percent, total, estimate_number, photos')
+      .select('id, customer_id, project_name, project_address, project_city, project_state, tax_percent, total, total_override, adjustment_amount, adjustment_label, overhead_percent, overhead_amount, markup_percent, markup_amount, contingency_percent, contingency_amount, permit_fees, estimate_number, photos')
       .eq('id', estimate_id)
       .single();
     if (error || !est) return { error: 'Estimate not found' };
@@ -168,7 +168,7 @@ export async function createInvoice(body: any) {
       if (ms.invoice_id) return { error: 'That milestone has already been invoiced', invoice_id: ms.invoice_id };
       milestone_label = ms.milestone;
       if (!lineItems.length) {
-        const amt = Number(ms.amount) || Math.round(Number(est.total) * Number(ms.percent)) / 100;
+        const amt = Number(ms.percent) > 0 ? Math.round(Number(est.total) * Number(ms.percent)) / 100 : Number(ms.amount) || 0;
         lineItems = normalizeLineItems([{
           description: `Progress billing — ${ms.milestone} — ${est.project_name || est.estimate_number}`,
           quantity: 1, unit: 'milestone', unit_price: amt, amount: amt,
@@ -176,16 +176,32 @@ export async function createInvoice(body: any) {
         taxPercent = 0; // milestone amounts come off an estimate total that already handled tax
       }
     } else if (!lineItems.length) {
-      // Whole-estimate invoice: pull its line items
-      const { data: estLines } = await supabase
-        .from('estimate_line_items')
-        .select('description, quantity, unit, unit_cost, total')
-        .eq('estimate_id', estimate_id)
-        .order('sort_order');
-      lineItems = normalizeLineItems((estLines || []).map((l) => ({
-        description: l.description, quantity: l.quantity, unit: l.unit,
-        unit_price: l.unit_cost, amount: l.total,
-      })));
+      // Whole-estimate invoice. A fixed price is ONE line (the items are
+      // reference); an itemized job gets its items plus the overhead/markup/
+      // contingency/permit lines so the invoice equals the estimate total.
+      const label = est.project_name || est.estimate_number;
+      const rows: any[] = [];
+      if (Number(est.total_override) > 0) {
+        rows.push({ description: `Contract price — ${label}`, quantity: 1, unit: 'contract', unit_price: Number(est.total_override), amount: Number(est.total_override) });
+        taxPercent = 0; // the fixed price is the price
+      } else {
+        const { data: estLines } = await supabase
+          .from('estimate_line_items')
+          .select('description, quantity, unit, unit_cost, total')
+          .eq('estimate_id', estimate_id)
+          .order('sort_order');
+        for (const l of estLines || []) rows.push({ description: l.description, quantity: l.quantity, unit: l.unit, unit_price: l.unit_cost, amount: l.total });
+        const extras: [string, number][] = [
+          [`Overhead (${est.overhead_percent}%)`, Number(est.overhead_amount) || 0],
+          [`Markup (${est.markup_percent}%)`, Number(est.markup_amount) || 0],
+          [`Contingency (${est.contingency_percent}%)`, Number(est.contingency_amount) || 0],
+          ['Permit fees', Number(est.permit_fees) || 0],
+        ];
+        for (const [description, amount] of extras) if (amount > 0) rows.push({ description, quantity: 1, unit: 'each', unit_price: amount, amount });
+      }
+      const adj = Number(est.adjustment_amount) || 0;
+      if (adj !== 0) rows.push({ description: est.adjustment_label || (adj < 0 ? 'Credit' : 'Additional'), quantity: 1, unit: 'each', unit_price: adj, amount: adj });
+      lineItems = normalizeLineItems(rows);
     }
   }
 

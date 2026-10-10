@@ -11,7 +11,7 @@ import { LETTER_TYPES } from '@/lib/letters';
 import { summarizeVisits, eventSentence, fmtSeconds, timeAgo } from '@/lib/doc-events-summary';
 import { getTraffic } from '@/lib/cloudflare-analytics';
 import { computeInsights } from '@/lib/analytics-insights';
-import { recalcEstimateTotals } from '@/lib/estimates';
+import { recalcEstimateTotals, syncScheduleAmounts } from '@/lib/estimates';
 
 export const dynamic = 'force-dynamic';
 
@@ -561,7 +561,7 @@ const WRITE_TOOLS = [
   },
   {
     name: 'send_estimate',
-    description: 'Send an estimate to a customer via email with PDF attachment. The estimate must exist and have line items. This will also update the status to "sent".',
+    description: 'Send an estimate to a customer via email with PDF attachment. The estimate must exist (a fixed price with no line items is fine). This will also update the status to "sent".',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -787,7 +787,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
     case 'get_estimate_details': {
       let estimateQuery = supabase
         .from('estimates')
-        .select('id, estimate_number, project_name, project_address, project_city, project_state, project_zip, status, document_mode, division, estimate_type, contract_type, subtotal, overhead_percent, overhead_amount, markup_percent, markup_amount, tax_percent, tax_amount, contingency_percent, contingency_amount, permit_fees, total, valid_until, notes, customer:customers(first_name, last_name, company_name, email, phone)');
+        .select('id, estimate_number, project_name, project_address, project_city, project_state, project_zip, status, document_mode, division, estimate_type, contract_type, subtotal, overhead_percent, overhead_amount, markup_percent, markup_amount, tax_percent, tax_amount, contingency_percent, contingency_amount, permit_fees, total_override, adjustment_amount, adjustment_label, selections_total, total, signed_at, valid_until, notes, customer:customers(first_name, last_name, company_name, email, phone)');
       if (input.estimate_id) {
         estimateQuery = estimateQuery.eq('id', input.estimate_id);
       } else if (input.estimate_number) {
@@ -1639,6 +1639,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         .single();
       if (error) return { result: `Error updating estimate: ${error.message}` };
       if (!data) return { result: 'Estimate not found.' };
+      if (financialChanged) await syncScheduleAmounts(supabase, id, Number(data.total) || 0);
       return { result: `Estimate updated successfully. ${JSON.stringify({ success: true, id: data.id, estimate_number: data.estimate_number, subtotal: data.subtotal, total: data.total })}` };
     }
 
@@ -1689,6 +1690,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         const totals = recalcEstimateTotals(allItems || [], est);
         newTotal = totals.total;
         await supabase.from('estimates').update({ ...totals, updated_at: new Date().toISOString() }).eq('id', input.estimate_id);
+        await syncScheduleAmounts(supabase, input.estimate_id, totals.total);
       }
 
       const summary = (inserted || []).map((r: any) => ({ id: r.id, description: r.description, total: r.total }));
@@ -1711,11 +1713,15 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         if (item.unit_cost !== undefined) updates.unit_cost = item.unit_cost;
         if (item.markup_percent !== undefined) updates.markup_percent = item.markup_percent;
         if (item.sort_order !== undefined) updates.sort_order = item.sort_order;
-        // Recalc total
-        const q = updates.quantity ?? item.quantity;
-        const uc = updates.unit_cost ?? item.unit_cost;
-        const mp = updates.markup_percent ?? item.markup_percent ?? 0;
-        if (q !== undefined && uc !== undefined) updates.total = q * uc * (1 + mp / 100);
+        // Recalc the item total from the stored row + this change (changing
+        // just the quantity used to leave the old total in place).
+        if (updates.quantity !== undefined || updates.unit_cost !== undefined || updates.markup_percent !== undefined) {
+          const { data: cur } = await supabase.from('estimate_line_items').select('quantity, unit_cost, markup_percent').eq('id', item.id).single();
+          const q = Number(updates.quantity ?? cur?.quantity ?? 0);
+          const uc = Number(updates.unit_cost ?? cur?.unit_cost ?? 0);
+          const mp = Number(updates.markup_percent ?? cur?.markup_percent ?? 0);
+          updates.total = q * uc * (1 + mp / 100);
+        }
 
         const { data, error } = await supabase.from('estimate_line_items').update(updates).eq('id', item.id).eq('estimate_id', input.estimate_id).select().single();
         return error ? { error: error.message, id: item.id } : data;
@@ -1731,6 +1737,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         const totals = recalcEstimateTotals(allItems2 || [], est2);
         newTotal2 = totals.total;
         await supabase.from('estimates').update({ ...totals, updated_at: new Date().toISOString() }).eq('id', input.estimate_id);
+        await syncScheduleAmounts(supabase, input.estimate_id, totals.total);
       }
 
       const updateSummary = updateResults.map((r: any) => r?.error ? r : { id: r.id, description: r.description, total: r.total });
@@ -1757,6 +1764,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (est3) {
         const totals = recalcEstimateTotals(allItems3 || [], est3);
         await supabase.from('estimates').update({ ...totals, updated_at: new Date().toISOString() }).eq('id', input.estimate_id);
+        await syncScheduleAmounts(supabase, input.estimate_id, totals.total);
       }
 
       return { result: `Deleted ${count || input.item_ids.length} line item(s). Totals recalculated.` };
@@ -2673,6 +2681,9 @@ When he gives a job and a price in one breath — "estimate for Miller, septic a
   3. Reply in two lines: the number and total ("RO-EST-2026-0251 — Miller Farm Septic & Drive — $42,500, fixed price"), then ONE optional question: "Want me to send it to {customer}, or open it first?" Nothing else. No line items, no markups, no payment schedule, no "ready to commit?" — he already committed when he said the price.
   4. Changing a price later: update_estimate { id, total_override: <new number> } — one call, done. Say the new total back.
   4b. A credit or extra: "give Miller a $3,300 credit for the permit fees" → update_estimate { id, adjustment_amount: -3300, adjustment_label: "Permit fees paid by owner" }. Charges are positive. It shows as its own line under the price; the total updates. Never fake a credit by lowering the price or using negative permit fees.
+  4c. Remove a credit: update_estimate { id, adjustment_amount: 0 }. Back to itemized (calculated) pricing: update_estimate { id, total_override: 0 }.
+  4d. "What's the total?" → get_estimate_details. If total_override > 0 say "fixed price $X" (plus the credit/charge line if adjustment_amount ≠ 0, then the total). NEVER add up line items yourself — the "total" field is the number.
+  4e. On a fixed-price job, editing line items does NOT change the price (they're reference). Say so if he edits items and expects the total to move; the price changes with total_override.
   5. He asked for a quote/estimate but gave no price → ask ONE question: "What's the price?" — not type, not location, not scope.
 Line items are optional on a fixed-price job and never invented. Only build an itemized estimate when he explicitly asks for line items / a breakdown / itemized — then:
   gather what's missing in ONE message, draft phases + line items in chat, confirm once, then create_estimate → add_line_items → (set_payment_schedule only if he mentions deposits/draws).

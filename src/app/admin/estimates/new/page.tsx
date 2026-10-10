@@ -155,6 +155,10 @@ export default function NewEstimateWizard() {
   // state would silently WIPE data already in the DB (the iPhone
   // lost-payment-schedule bug).
   const draftReadyRef = useRef(false);
+  // Credit/charge is set from the estimate page or the AI; the wizard only
+  // needs it so the total and milestones it shows match the customer's.
+  const [adjustment, setAdjustment] = useState<{ amount: number; label: string }>({ amount: 0, label: '' });
+  const loadedStatusRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!editId) { draftReadyRef.current = true; return; }
@@ -228,7 +232,9 @@ export default function NewEstimateWizard() {
         }
 
         // Total override
-        if (data.total_override != null) setTotalOverride(data.total_override);
+        if (Number(data.total_override) > 0) setTotalOverride(Number(data.total_override));
+        setAdjustment({ amount: Number(data.adjustment_amount) || 0, label: data.adjustment_label || '' });
+        loadedStatusRef.current = data.status || null;
 
         // Timeline
         if (data.project_start_date || data.project_duration_days) {
@@ -300,7 +306,7 @@ export default function NewEstimateWizard() {
   // What the customer actually pays: the fixed price when one is set,
   // otherwise the calculated total. Milestones and the summary use THIS —
   // a lump-sum job with no line items used to show $0 everywhere past step 5.
-  const effectiveTotal = totalOverride && totalOverride > 0 ? totalOverride : grandTotal;
+  const effectiveTotal = (totalOverride && totalOverride > 0 ? totalOverride : grandTotal) + (adjustment.amount || 0);
 
   /* ─── API helpers ───────────────────────────────────────────── */
 
@@ -532,6 +538,7 @@ export default function NewEstimateWizard() {
             tax_percent: financials.tax_percent,
             permit_fees: financials.permit_fees,
             contingency_percent: financials.contingency_percent,
+            total_override: totalOverride && totalOverride > 0 ? totalOverride : null,
           });
           break;
         }
@@ -665,7 +672,8 @@ export default function NewEstimateWizard() {
         await savePaymentSchedule();
         // Then save all estimate fields (financial recalc will use new line items)
         await patchEstimate({
-          status: 'draft',
+          // Never knock a sent/signed document back to draft just by saving it.
+          ...(loadedStatusRef.current && loadedStatusRef.current !== 'draft' ? {} : { status: 'draft' }),
           customer_id: step1.customer_id,
           project_name: step1.project_name,
           estimate_date: step1.estimate_date || null,
@@ -996,6 +1004,8 @@ export default function NewEstimateWizard() {
               onChangeRecommendations={setRecommendations}
               subtotal={subtotal}
               grandTotal={effectiveTotal}
+              totalOverride={totalOverride}
+              adjustment={adjustment}
               templateName={templateName}
               onSaveDraft={handleSaveDraft}
               saving={saving}

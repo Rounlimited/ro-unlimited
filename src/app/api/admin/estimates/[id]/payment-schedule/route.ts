@@ -34,6 +34,8 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
     }
 
     const supabase = createAdminClient();
+    const { data: est } = await supabase.from('estimates').select('total').eq('id', id).single();
+    const total = Number(est?.total) || 0;
 
     // Delete all existing milestones for this estimate
     await supabase
@@ -47,7 +49,7 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
         estimate_id: id,
         milestone: item.milestone || null,
         due_description: item.description || item.due_description || null,
-        amount: item.amount || 0,
+        amount: Number(item.percent) > 0 && total > 0 ? Math.round(total * Number(item.percent)) / 100 : item.amount || 0,
         percent: item.percent || 0,
         sort_order: item.sort_order ?? idx,
       }));

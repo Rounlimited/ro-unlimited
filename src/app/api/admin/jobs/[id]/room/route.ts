@@ -45,8 +45,8 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     if (estRes.error || !estRes.data) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     const est: any = estRes.data;
 
-    const roll = rollUpProgress(itemsRes.data || [], progRes.data || []);
     const total = Number(est.total || 0);
+    const roll = rollUpProgress(itemsRes.data || [], progRes.data || [], total);
     const earned = roll.totalValue > 0 ? roll.earned : total * (roll.percent / 100);
 
     const costs = costsRes.data || [];

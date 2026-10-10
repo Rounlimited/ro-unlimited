@@ -197,7 +197,7 @@ export async function draftReport(
   const logLines = formatLogLines(logEntries);
   const rainDays = logEntries.filter((e) => e.type === 'rain').length;
 
-  const roll = rollUpProgress(itemsRes.data || [], progRes.data || []);
+  const roll = rollUpProgress(itemsRes.data || [], progRes.data || [], Number(est.total || 0));
   const last = (lastRes.data || [])[0];
   const prevPhases: Record<string, number> = {};
   for (const p of (last?.phases as any[]) || []) prevPhases[p.phase] = Number(p.percent) || 0;

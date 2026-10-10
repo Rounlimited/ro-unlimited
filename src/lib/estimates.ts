@@ -85,3 +85,33 @@ export function toDateInputValue(v: string | null | undefined): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
+
+/**
+ * A milestone's dollar amount is ALWAYS percent × the current total. The
+ * stored `amount` is a cache that went stale every time the price changed
+ * (and sat at $0 when the schedule was built before a price existed).
+ * Invoiced milestones keep their billed amount.
+ */
+export function milestoneAmount(total: number, m: { percent?: number | null; amount?: number | null; invoice_id?: string | null }): number {
+  const pct = Number(m.percent) || 0;
+  if (m.invoice_id || pct <= 0) return Number(m.amount) || 0;
+  return Math.round((Number(total) || 0) * pct) / 100;
+}
+
+export function withLiveAmounts<T extends { percent?: number | null; amount?: number | null; invoice_id?: string | null }>(schedule: T[], total: number): T[] {
+  return (schedule || []).map((m) => ({ ...m, amount: milestoneAmount(total, m) }));
+}
+
+/** Persist the live amounts so anything reading the table raw stays right. */
+export async function syncScheduleAmounts(supabase: any, estimateId: string, total: number): Promise<void> {
+  const { data: rows } = await supabase
+    .from('estimate_payment_schedules')
+    .select('id, percent, amount, invoice_id')
+    .eq('estimate_id', estimateId);
+  for (const m of rows || []) {
+    const amount = milestoneAmount(total, m);
+    if (Math.abs(amount - (Number(m.amount) || 0)) > 0.005) {
+      await supabase.from('estimate_payment_schedules').update({ amount }).eq('id', m.id);
+    }
+  }
+}

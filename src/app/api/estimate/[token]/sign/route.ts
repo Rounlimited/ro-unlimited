@@ -63,6 +63,8 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     // Fold the customer's selected options into real line items — the signed
     // total must equal what they configured. Idempotent; no-op without options.
     try { await materializeSelections(est.id); } catch (e) { console.error('[estimate sign] materialize failed:', e); }
+    const { data: fresh } = await supabase.from('estimates').select('total').eq('id', est.id).single();
+    const finalTotal = Number(fresh?.total ?? est.total) || 0;
 
     if (patch.status === 'accepted') {
       await supabase.from('estimate_status_history').insert({
@@ -74,8 +76,8 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     }
 
     const docWord = est.document_mode === 'contract' ? 'Contract' : 'Estimate';
-    const money = '$' + Math.round(Number(est.total) || 0).toLocaleString();
-    await recordDocumentEvent({ req, docType: 'estimate', doc: est as any, event: 'signed', meta: { signed_name: name, total: est.total } });
+    const money = '$' + Math.round(finalTotal).toLocaleString();
+    await recordDocumentEvent({ req, docType: 'estimate', doc: est as any, event: 'signed', meta: { signed_name: name, total: finalTotal } });
     await notifyTeam({
       type: 'estimate_signed',
       title: `🎉 ${docWord} signed: ${est.estimate_number} (${money})`,

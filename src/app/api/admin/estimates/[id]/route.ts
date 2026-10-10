@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { recalcEstimateTotals } from '@/lib/estimates';
+import { recalcEstimateTotals, syncScheduleAmounts, withLiveAmounts } from '@/lib/estimates';
 
 type RouteContext = { params: { id: string } };
 
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({
       ...estimate,
       line_items: lineItemsRes.data || [],
-      payment_schedule: paymentRes.data || [],
+      payment_schedule: withLiveAmounts(paymentRes.data || [], Number(estimate?.total) || 0),
       status_history: historyRes.data || [],
     });
   } catch (err) {
@@ -128,6 +128,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!data) return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
+    if (financialChanged) await syncScheduleAmounts(supabase, id, Number(data.total) || 0);
 
     // Insert status history if status changed
     if (oldStatusChanged && body.status && body.status !== oldStatus) {

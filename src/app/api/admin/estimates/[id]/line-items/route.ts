@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { recalcEstimateTotals } from '@/lib/estimates';
+import { recalcEstimateTotals, syncScheduleAmounts } from '@/lib/estimates';
 
 type RouteContext = { params: { id: string } };
 
@@ -18,6 +18,7 @@ async function updateEstimateTotals(supabase: any, estimateId: string) {
     .from('estimates')
     .update({ ...totals, updated_at: new Date().toISOString() })
     .eq('id', estimateId);
+  await syncScheduleAmounts(supabase, estimateId, totals.total);
 }
 
 // GET — list line items for an estimate

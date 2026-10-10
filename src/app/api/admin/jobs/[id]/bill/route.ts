@@ -29,8 +29,8 @@ export async function POST(_req: NextRequest, { params }: RouteContext) {
     const est = estRes.data;
     if (!est) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
 
-    const roll = rollUpProgress(itemsRes.data || [], progRes.data || []);
     const total = Number(est.total || 0);
+    const roll = rollUpProgress(itemsRes.data || [], progRes.data || [], total);
     const earned = roll.totalValue > 0 ? roll.earned : total * (roll.percent / 100);
     const billed = (invRes.data || []).reduce((s, i) => s + Number(i.total || 0), 0);
     const unbilled = Math.round((earned - billed) * 100) / 100;

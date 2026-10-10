@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withLiveAmounts } from '@/lib/estimates';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getOptionsWithChoices, selectionsDelta } from '@/lib/estimate-options';
 import { rollUpProgress } from '@/lib/reporting';
@@ -206,7 +207,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     const res = NextResponse.json({
       ...safeEstimate,
       line_items: lineItems || [],
-      payment_schedule: paymentSchedule || [],
+      payment_schedule: withLiveAmounts(paymentSchedule || [], Number(estimate.total) || 0),
       disclaimers: disclaimerResult?.data || [],
       options,
       stage,
