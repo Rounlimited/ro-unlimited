@@ -158,8 +158,8 @@ export default function CustomersPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.first_name || !formData.last_name) {
-      setError('First and last name are required');
+    if (!formData.first_name.trim() && !formData.last_name.trim() && !(formData.company_name || '').trim()) {
+      setError('Enter a name or a company — the rest can wait');
       return;
     }
     setSaving(true);
@@ -385,30 +385,31 @@ export default function CustomersPage() {
               {/* Name row */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[13px] text-white/40 mb-1.5">First Name *</label>
+                  <label className="block text-[14px] text-white/60 mb-1.5">First Name</label>
                   <input
                     type="text"
                     value={formData.first_name}
                     onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-[14px] text-white focus:outline-none focus:border-[#C9A84C]/40"
-                    required
+                    placeholder="Bob"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-[15px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/40"
                   />
                 </div>
                 <div>
-                  <label className="block text-[13px] text-white/40 mb-1.5">Last Name *</label>
+                  <label className="block text-[14px] text-white/60 mb-1.5">Last Name</label>
                   <input
                     type="text"
                     value={formData.last_name}
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-[14px] text-white focus:outline-none focus:border-[#C9A84C]/40"
-                    required
+                    placeholder="Miller"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-[15px] text-white placeholder:text-white/20 focus:outline-none focus:border-[#C9A84C]/40"
                   />
                 </div>
               </div>
 
+              <p className="text-[14px] text-white/60 -mt-1">A name or a company is enough — everything else is optional.</p>
               {/* Company */}
               <div>
-                <label className="block text-[13px] text-white/40 mb-1.5">Company Name</label>
+                <label className="block text-[14px] text-white/60 mb-1.5">Company Name</label>
                 <input
                   type="text"
                   value={formData.company_name}

@@ -60,7 +60,20 @@ const ADMIN_API_PUBLIC: Array<{ path: RegExp; methods: string[] }> = [
   { path: /^\/api\/admin\/access-link$/, methods: ['GET'] },
   // Server-to-server push fan-out from cron/email/intake — x-push-secret.
   { path: /^\/api\/admin\/push-send$/, methods: ['POST'] },
+  // Service images are the public site's hero/gallery overrides — read-only,
+  // nothing private in them, and the marketing pages fetch them anonymously.
+  { path: /^\/api\/admin\/service-images$/, methods: ['GET'] },
+  // The native RO Drive uploader can't send cookies; the handler verifies a
+  // session OR the access token the web page hands it (see drive/route.ts).
+  { path: /^\/api\/admin\/drive$/, methods: ['POST'] },
 ];
+
+/** Our own server calling our own admin API (the AI's tool calls, crons).
+ *  The secret never leaves the server. */
+function hasInternalSecret(req: NextRequest): boolean {
+  const secret = process.env.PUSH_SECRET;
+  return !!secret && req.headers.get('x-push-secret') === secret;
+}
 
 function isPublicAdminApi(pathname: string, method: string): boolean {
   return ADMIN_API_PUBLIC.some((r) => r.path.test(pathname) && r.methods.includes(method.toUpperCase()));
@@ -101,7 +114,7 @@ export async function middleware(req: NextRequest) {
   // Admin API: require a signed-in session (see ADMIN_API_PUBLIC for the
   // handful of token-gated exceptions).
   if (pathname.startsWith('/api/admin')) {
-    if (req.method === 'OPTIONS' || isPublicAdminApi(pathname, req.method)) return NextResponse.next();
+    if (req.method === 'OPTIONS' || isPublicAdminApi(pathname, req.method) || hasInternalSecret(req)) return NextResponse.next();
     if (!(await hasAdminSession(req))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
     }

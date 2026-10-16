@@ -43,9 +43,11 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
-    first_name: '', last_name: '', company_name: '', email: '', phone: '',
+    name: '', company_name: '', email: '', phone: '',
   });
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const canCreate = !!(newCustomer.name.trim() || newCustomer.company_name.trim());
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -110,8 +112,9 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
   };
 
   const createCustomer = async () => {
-    if (!newCustomer.first_name || !newCustomer.last_name) return;
+    if (!canCreate) { setCreateError('Type a name or a company'); return; }
     setCreating(true);
+    setCreateError('');
     try {
       const res = await fetch('/api/admin/customers', {
         method: 'POST',
@@ -119,13 +122,17 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
         body: JSON.stringify(newCustomer),
       });
       const created = await res.json();
-      if (created?.id) {
+      if (res.ok && created?.id) {
         setCustomers(prev => [created, ...prev]);
         selectCustomer(created);
         setShowNewForm(false);
-        setNewCustomer({ first_name: '', last_name: '', company_name: '', email: '', phone: '' });
+        setNewCustomer({ name: '', company_name: '', email: '', phone: '' });
+      } else {
+        setCreateError(created?.error || 'Could not save the customer — try again');
       }
-    } catch {}
+    } catch {
+      setCreateError('Could not reach the server — check your connection and try again');
+    }
     setCreating(false);
   };
 
@@ -258,25 +265,21 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
               <X size={16} />
             </button>
           </div>
+          <p className="text-[14px] text-white/60 -mt-2">A name is all it needs. Phone, email and address can be added later.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>First Name *</label>
+              <label className={labelClass}>Name *</label>
               <input
-                value={newCustomer.first_name}
-                onChange={e => setNewCustomer(p => ({ ...p, first_name: e.target.value }))}
+                value={newCustomer.name}
+                autoFocus
+                onChange={e => setNewCustomer(p => ({ ...p, name: e.target.value }))}
+                onKeyDown={e => { if (e.key === 'Enter') createCustomer(); }}
+                placeholder="Bob Miller"
                 className={inputClass}
               />
             </div>
             <div>
-              <label className={labelClass}>Last Name *</label>
-              <input
-                value={newCustomer.last_name}
-                onChange={e => setNewCustomer(p => ({ ...p, last_name: e.target.value }))}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Company</label>
+              <label className={labelClass}>Company (optional)</label>
               <input
                 value={newCustomer.company_name}
                 onChange={e => setNewCustomer(p => ({ ...p, company_name: e.target.value }))}
@@ -302,19 +305,20 @@ export default function WizardStep1({ data, onChange, preselectedCustomerId }: P
               />
             </div>
           </div>
+          {createError && <p className="text-[15px]" style={{ color: '#f87171' }}>{createError}</p>}
           <div className="flex justify-end gap-2 pt-1">
             <button
               onClick={() => setShowNewForm(false)}
-              className="px-4 py-2 text-[14px] text-white/60 hover:text-white transition-colors"
+              className="min-h-[48px] px-4 py-2 text-[15px] text-white/70 hover:text-white transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={createCustomer}
-              disabled={creating || !newCustomer.first_name || !newCustomer.last_name}
-              className="px-5 py-2 bg-[#3b8dd4] text-white text-[14px] font-medium rounded-lg hover:bg-[#3b8dd4]/80 disabled:opacity-40 transition-all"
+              disabled={creating || !canCreate}
+              className="min-h-[48px] px-6 py-2 bg-[#3b8dd4] text-white text-[16px] font-semibold rounded-lg hover:bg-[#3b8dd4]/80 disabled:opacity-40 transition-all"
             >
-              {creating ? 'Creating...' : 'Create & Select'}
+              {creating ? 'Saving…' : 'Save & Use This Customer'}
             </button>
           </div>
         </div>

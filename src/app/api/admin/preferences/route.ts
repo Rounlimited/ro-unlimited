@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, getServerUser, roleOf } from '@/lib/supabase/server';
+
+// Per-user settings: you may only read/write your own row (owners/devs any).
+async function ownUserOnly(req: NextRequest, userId: string): Promise<NextResponse | null> {
+  const user = await getServerUser(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (user.id !== userId && !['admin', 'super_admin'].includes(roleOf(user))) {
+    return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
+  }
+  return null;
+}
 
 // GET — fetch preferences for a user (auto-create defaults if none exist)
 export async function GET(req: NextRequest) {
@@ -8,6 +18,8 @@ export async function GET(req: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
     }
+    const denied = await ownUserOnly(req, userId);
+    if (denied) return denied;
 
     const supabase = createAdminClient();
 
@@ -51,6 +63,8 @@ export async function PATCH(req: NextRequest) {
     if (!user_id) {
       return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
     }
+    const denied = await ownUserOnly(req, user_id);
+    if (denied) return denied;
 
     if (Object.keys(fields).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });

@@ -12,6 +12,25 @@ import { summarizeVisits, eventSentence, fmtSeconds, timeAgo } from '@/lib/doc-e
 import { getTraffic } from '@/lib/cloudflare-analytics';
 import { computeInsights } from '@/lib/analytics-insights';
 import { recalcEstimateTotals, syncScheduleAmounts } from '@/lib/estimates';
+import { resolveCustomerName } from '@/lib/customers';
+import { headers as nextHeaders } from 'next/headers';
+
+/**
+ * Tool calls that go back through our own admin API must carry the caller's
+ * session — the middleware gate rejects anonymous calls (it did, silently,
+ * for every schedule/report/job-room/link tool since 2026-08-23). The
+ * x-push-secret is the server-to-server fallback the middleware also honors.
+ */
+function internalHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const out: Record<string, string> = { 'x-push-secret': process.env.PUSH_SECRET || '' };
+  try {
+    const h = nextHeaders();
+    const cookie = h.get('cookie'); const authz = h.get('authorization');
+    if (cookie) out.cookie = cookie;
+    if (authz) out.authorization = authz;
+  } catch { /* outside a request context — secret alone */ }
+  return { ...out, ...extra };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -345,12 +364,13 @@ const WRITE_TOOLS = [
   ...INVOICE_WRITE_TOOLS,
   {
     name: 'create_customer',
-    description: 'Create a new customer in the database. Requires first_name and last_name at minimum. Returns the created customer record with its ID.',
+    description: 'Create a new customer. A name is enough — pass `name` exactly as the user said it ("Miller", "Bob Miller", "Hartwell Ridge LLC"); first/last are split server-side. Never ask for phone/email/address first — they can be added later with update_customer. Returns the created customer with its ID.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        first_name: { type: 'string', description: 'Customer first name (required)' },
-        last_name: { type: 'string', description: 'Customer last name (required)' },
+        name: { type: 'string', description: 'The name as given — one word, full name, or a company. Preferred.' },
+        first_name: { type: 'string', description: 'Customer first name (optional if name given)' },
+        last_name: { type: 'string', description: 'Customer last name (optional)' },
         company_name: { type: 'string', description: 'Company name (optional)' },
         email: { type: 'string', description: 'Email address' },
         phone: { type: 'string', description: 'Phone number' },
@@ -361,7 +381,7 @@ const WRITE_TOOLS = [
         type: { type: 'string', description: 'Customer type: residential or commercial (default residential)' },
         source: { type: 'string', description: 'How they found us: referral, website, google, etc.' },
       },
-      required: ['first_name', 'last_name'],
+      required: [],
     },
   },
   {
@@ -906,7 +926,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         estimateId = e?.id || null;
       }
       const res = await fetch(`${base}/api/admin/letters`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: internalHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           prompt: input.prompt, doc_type: input.doc_type,
           recipient_name: input.recipient_name, recipient_company: input.recipient_company,
@@ -941,7 +961,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 
     case 'get_ai_balance': {
       const base0 = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
-      const res = await fetch(`${base0}/api/admin/ai-balance`);
+      const res = await fetch(`${base0}/api/admin/ai-balance`, { headers: internalHeaders() });
       const d = await res.json();
       if (!d.configured) return { result: 'Not set up yet — the xAI management key has to be added before the balance can be read.' };
       if (d.error) return { result: `Error: ${d.error}` };
@@ -967,7 +987,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       }
       if (!linkEstId) return { result: 'Error: estimate_id, estimate_number or invoice_number required.' };
       const d = await fetch(`${baseL}/api/admin/${linkKind}/${linkEstId}/link`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: internalHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ action: input.action, date: input.date }),
       }).then((r) => r.json());
       if (d.error) return { result: `Error: ${d.error}` };
@@ -990,7 +1010,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         const to = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
         const qs = new URLSearchParams({ from, to });
         if (schedEstId) qs.set('estimate_id', schedEstId);
-        const d = await fetch(`${base1}/api/admin/schedule?` + qs).then((r) => r.json());
+        const d = await fetch(`${base1}/api/admin/schedule?` + qs, { headers: internalHeaders() }).then((r) => r.json());
         if (d.error) return { result: `Error: ${d.error}` };
         const names = new Map((d.jobs || []).map((j: any) => [j.id, j.project_name || j.estimate_number]));
         const today0 = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
@@ -1002,7 +1022,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       }
       if (name === 'add_schedule_item') {
         const res = await fetch(`${base1}/api/admin/schedule`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: internalHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ title: input.title, starts_on: input.starts_on, ends_on: input.ends_on, kind: input.kind, estimate_id: schedEstId }),
         });
         const d = await res.json();
@@ -1014,14 +1034,14 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       }
       // set_schedule_done
       if (input.remove) {
-        const d = await fetch(`${base1}/api/admin/schedule/${input.item_id}`, { method: 'DELETE' }).then((r) => r.json());
+        const d = await fetch(`${base1}/api/admin/schedule/${input.item_id}`, { headers: internalHeaders(), method: 'DELETE' }).then((r) => r.json());
         return { result: d.error ? `Error: ${d.error}` : JSON.stringify({ removed: true }) };
       }
       const patch: any = {};
       if (input.done !== undefined) patch.done = !!input.done;
       if (input.starts_on) patch.starts_on = input.starts_on;
       const d = await fetch(`${base1}/api/admin/schedule/${input.item_id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+        method: 'PATCH', headers: internalHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(patch),
       }).then((r) => r.json());
       return { result: d.error ? `Error: ${d.error}` : JSON.stringify({ success: true, item: { title: d.item?.title, date: d.item?.starts_on, done: !!d.item?.done_at } }) };
     }
@@ -1057,7 +1077,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           reportId = draft[0].id;
         }
         const res = await fetch(`${base}/api/admin/reports/${reportId}/send`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: internalHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ skip_email: !!input.skip_email, to_email: input.to_email }),
         });
         const data = await res.json();
@@ -1068,7 +1088,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (!estId) return { result: 'Error: estimate_id or estimate_number required.' };
 
       if (name === 'get_job_room') {
-        const res = await fetch(`${base}/api/admin/jobs/${estId}/room`);
+        const res = await fetch(`${base}/api/admin/jobs/${estId}/room`, { headers: internalHeaders() });
         const d = await res.json();
         if (d.error) return { result: `Error: ${d.error}` };
         const e = d.estimate;
@@ -1090,7 +1110,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 
       if (name === 'add_job_cost') {
         const res = await fetch(`${base}/api/admin/estimates/${estId}/costs`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: internalHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ amount: input.amount, category: input.category, vendor: input.vendor, spent_on: input.spent_on }),
         });
         const d = await res.json();
@@ -1103,7 +1123,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 
       if (name === 'add_log_entry') {
         const res = await fetch(`${base}/api/admin/estimates/${estId}/log`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: internalHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ type: input.type, text: input.text, entry_date: input.entry_date, include_in_report: input.include_in_report }),
         });
         const d = await res.json();
@@ -1113,7 +1133,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 
       if (name === 'notify_customer_update') {
         const res = await fetch(`${base}/api/admin/estimates/${estId}/notify-update`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: internalHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ force: !!input.force }),
         });
         const d = await res.json();
@@ -1123,7 +1143,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       }
 
       if (name === 'get_job_progress') {
-        const res = await fetch(`${base}/api/admin/estimates/${estId}/progress`);
+        const res = await fetch(`${base}/api/admin/estimates/${estId}/progress`, { headers: internalHeaders() });
         const d = await res.json();
         if (d.error) return { result: `Error: ${d.error}` };
         return { result: JSON.stringify({
@@ -1147,7 +1167,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           if (!Object.keys(body).length) return { result: 'Nothing to set — pass schedule_status, budget_status, status_reason or status_note.' };
         }
         const res = await fetch(`${base}/api/admin/estimates/${estId}/progress`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+          method: 'PUT', headers: internalHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body),
         });
         const d = await res.json();
         if (d.error) return { result: `Error: ${d.error}` };
@@ -1158,7 +1178,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       }
 
       if (name === 'list_progress_reports') {
-        const res = await fetch(`${base}/api/admin/estimates/${estId}/reports`);
+        const res = await fetch(`${base}/api/admin/estimates/${estId}/reports`, { headers: internalHeaders() });
         const d = await res.json();
         if (d.error) return { result: `Error: ${d.error}` };
         return { result: JSON.stringify((d.reports || []).slice(0, 12).map((r: any) => ({
@@ -1169,12 +1189,12 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       }
 
       // draft_progress_report
-      const res = await fetch(`${base}/api/admin/estimates/${estId}/reports`, { method: 'POST' });
+      const res = await fetch(`${base}/api/admin/estimates/${estId}/reports`, { headers: internalHeaders(), method: 'POST' });
       const d = await res.json();
       if (d.error || !d.report) return { result: `Error: ${d.error || 'could not draft'}` };
       if (input.summary) {
         await fetch(`${base}/api/admin/reports/${d.report.id}`, {
-          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          method: 'PATCH', headers: internalHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ summary: input.summary }),
         });
       }
@@ -1300,7 +1320,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (!optId) return { result: 'Error: option_id or option_label required.' };
       const base = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/api/admin/estimates/${estId}/options/${optId}`;
       if (name === 'delete_option_group') {
-        const res = await fetch(base, { method: 'DELETE' });
+        const res = await fetch(base, { headers: internalHeaders(), method: 'DELETE' });
         const data = await res.json();
         if (!res.ok) return { result: `Error: ${data.error || 'delete failed'}` };
         return { result: JSON.stringify({ success: true, remaining_groups: data.options?.length }) };
@@ -1311,7 +1331,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         ...ch, image_url: ch.image_url || imageForKey(ch.image_key) || null,
       }));
       if (!Object.keys(fields).length) return { result: 'No fields to update.' };
-      const res = await fetch(base, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields) });
+      const res = await fetch(base, { method: 'PUT', headers: internalHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(fields) });
       const data = await res.json();
       if (!res.ok) return { result: `Error: ${data.error || 'update failed'}` };
       return { result: JSON.stringify({ success: true, groups: data.options?.map((g: any) => g.label) }) };
@@ -1491,15 +1511,12 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
     }
 
     case 'create_customer': {
-      if (!input.first_name || !input.last_name) {
-        return { result: 'Error: first_name and last_name are required to create a customer.' };
-      }
+      const named = resolveCustomerName(input);
+      if (!named) return { result: 'Error: give me a name (or a company) for the customer.' };
       const { data, error } = await supabase
         .from('customers')
         .insert({
-          first_name: input.first_name,
-          last_name: input.last_name,
-          company_name: input.company_name || null,
+          ...named,
           email: input.email || null,
           phone: input.phone || null,
           address: input.address || null,
@@ -1870,7 +1887,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       try {
         const res = await fetch(`${baseUrl}/api/admin/estimates/${input.id}/send`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: internalHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
             to_email: input.to_email,
             to_name: input.to_name || '',
@@ -1928,7 +1945,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       try {
         const res = await fetch(`${baseUrl}/api/admin/estimates/${input.id}/revise`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: internalHeaders({ 'Content-Type': 'application/json' }),
           body: '{}',
         });
         if (!res.ok) {
@@ -1950,7 +1967,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
       try {
-        const res = await fetch(`${baseUrl}/api/admin/estimates/${input.id}/pricing-check`);
+        const res = await fetch(`${baseUrl}/api/admin/estimates/${input.id}/pricing-check`, { headers: internalHeaders() });
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: 'Unknown error' }));
           return { result: `Error checking pricing: ${err.error || res.statusText}` };
@@ -1971,7 +1988,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       try {
         const res = await fetch(`${baseUrl}/api/email/compose`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: internalHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
             to_email: input.to_email,
             to_name: input.to_name || '',
@@ -2156,7 +2173,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (input.limit) params.set('limit', String(input.limit));
       try {
         const res = await fetch(`${siteUrl}/api/admin/tasks?${params}`, {
-          headers: { 'x-push-secret': process.env.PUSH_SECRET || '' },
+          headers: internalHeaders({ 'x-push-secret': process.env.PUSH_SECRET || '' }),
         });
         if (!res.ok) return { result: 'Failed to fetch tasks.' };
         const data = await res.json();
@@ -2676,7 +2693,7 @@ The Job Room (/admin/jobs/<id>, tap any job on the Jobs board) is JR's behind-th
 Link controls: every customer link can be paused ('off' \u2014 for phone-call edits; same link resumes with 'on'), replaced ('new' \u2014 old dies instantly, CONFIRM with the user first), killed, or extended 60 days \u2014 set_link_status, or the Link Controls button on the estimate page / Job Room.
 FIXED PRICE — THE FAST PATH (how JR usually bids; default to this):
 When he gives a job and a price in one breath — "estimate for Miller, septic and drive, 42,500" — build it in ONE go with NO follow-up questions:
-  1. search_customers with the name. Exactly one match → use it. Several → pick the obvious one and say which you used. None → ask ONE question only: "I don't have {name} yet — what's their phone or email?" then create_customer and continue.
+  1. search_customers with the name. Exactly one match → use it. Several → pick the obvious one and say which you used. None → create_customer { name } with the name exactly as he said it and continue — NO questions. Mention it in the reply ("new customer — add their phone/email whenever") and move on.
   2. create_estimate with customer_id, project_name (short, from his words), scope_of_work (his description, cleaned up — never invent details), division + estimate_type inferred from the job (septic→septic, "grading/pad/driveway"→grading, "water/sewer/storm"→utilities, "building/shell/build-out"→commercial, unsure→commercial + new_construction), contract_type fixed_price, and fixed_price = his number. That one call sets the total.
   3. Reply in two lines: the number and total ("RO-EST-2026-0251 — Miller Farm Septic & Drive — $42,500, fixed price"), then ONE optional question: "Want me to send it to {customer}, or open it first?" Nothing else. No line items, no markups, no payment schedule, no "ready to commit?" — he already committed when he said the price.
   4. Changing a price later: update_estimate { id, total_override: <new number> } — one call, done. Say the new total back.

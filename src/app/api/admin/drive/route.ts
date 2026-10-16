@@ -1,5 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, getServerUser } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
+
+/**
+ * Who is uploading. The dashboard has a cookie session. The native RO Drive
+ * uploader (UploadActivity) sends neither cookies nor headers — only the
+ * `user_email` form field — so the web page hands it "email#access_token"
+ * and we verify the token here. Either way the email comes from the
+ * verified user, never from the caller's say-so.
+ */
+async function driveUser(req: NextRequest, formEmail?: string | null): Promise<{ email: string } | null> {
+  const user = await getServerUser(req);
+  if (user?.email) return { email: user.email };
+  const token = String(formEmail || '').split('#')[1] || '';
+  if (!token) return null;
+  try {
+    const { data: { user: tokenUser } } = await createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!).auth.getUser(token);
+    return tokenUser?.email ? { email: tokenUser.email } : null;
+  } catch { return null; }
+}
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 // Self-hosted server for both upload (2GB) and download (no 20MB limit)
@@ -102,6 +121,9 @@ export async function POST(req: NextRequest) {
   // Handle JSON actions
   if (contentType.includes('application/json')) {
     const body = await req.json();
+    const me = await driveUser(req);
+    if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    body.user_email = me.email; // "me" is always the signed-in user
 
     // Save metadata only (file already uploaded directly to Telegram from client)
     if (body.action === 'save_metadata') {
@@ -464,7 +486,9 @@ export async function POST(req: NextRequest) {
   // Handle multipart file upload
   const formData = await req.formData();
   const file = formData.get('file') as File;
-  const userEmail = formData.get('user_email') as string;
+  const me = await driveUser(req, formData.get('user_email') as string);
+  if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userEmail = me.email;
   const folder = (formData.get('folder') as string) || 'general';
   const entityType = formData.get('entity_type') as string || null;
   const entityId = formData.get('entity_id') as string || null;

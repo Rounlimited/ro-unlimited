@@ -1344,10 +1344,13 @@ export default function DrivePage() {
                     className="flex items-center gap-2 px-3 h-9 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-lg text-white/50 text-[13px] font-medium hover:bg-white/5 transition-colors">
                     <FolderPlus size={15} className="text-[#3b8dd4]" /> New Folder
                   </button>
-                  <button onClick={() => {
+                  <button onClick={async () => {
                     setFabOpen(false);
                     if ((window as any).RONative?.isNativeApp?.()) {
-                      (window as any).RONative.openUploader(userEmail, currentPath);
+                      // The native uploader has no cookies — ride the access
+                      // token along in the email field (the API splits it).
+                      const { data: { session } } = await supabase.auth.getSession();
+                      (window as any).RONative.openUploader(`${userEmail}#${session?.access_token || ''}`, currentPath);
                     } else {
                       const params = new URLSearchParams({ user: userEmail, folder: currentPath });
                       const a = document.createElement('a');

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { resolveCustomerName } from '@/lib/customers';
 
 // GET — list all customers, with optional type and search filters
 export async function GET(req: NextRequest) {
@@ -37,10 +38,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { first_name, last_name } = body;
-
-    if (!first_name || !last_name) {
-      return NextResponse.json({ error: 'first_name and last_name are required' }, { status: 400 });
+    const named = resolveCustomerName(body);
+    if (!named) {
+      return NextResponse.json({ error: 'Enter a name or a company' }, { status: 400 });
     }
 
     const supabase = createAdminClient();
@@ -48,9 +48,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase
       .from('customers')
       .insert({
-        first_name,
-        last_name,
-        company_name: body.company_name || null,
+        ...named,
         email: body.email || null,
         phone: body.phone || null,
         address: body.address || null,

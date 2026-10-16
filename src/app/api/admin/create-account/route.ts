@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, getServerUser, roleOf } from '@/lib/supabase/server';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,7 +10,15 @@ const supabaseAdmin = createClient(
 // POST — create a Supabase auth account for an employee
 export async function POST(req: NextRequest) {
   try {
+    const actor = await getServerUser(req);
+    if (!actor || !['admin', 'super_admin'].includes(roleOf(actor))) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { email, password, role, intake_id, employee_id } = await req.json();
+    // Nobody mints a developer account through this route.
+    if (role === 'super_admin' && roleOf(actor) !== 'super_admin') {
+      return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
+    }
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
