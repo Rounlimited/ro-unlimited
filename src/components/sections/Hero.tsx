@@ -3,6 +3,7 @@
 import { useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { COMPANY, TRUST_STATS } from '@/lib/constants';
+import { LICENSE_CLASSIFICATION_COUNT, STATES_LINE } from '@/lib/licenses';
 import { ArrowRight, Phone } from 'lucide-react';
 import { gsap, SplitText, useGSAP, MEDIA_QUERIES } from '@/components/animations/GSAPProvider';
 import BlueprintGrid from '@/components/animations/BlueprintGrid';
@@ -407,6 +408,13 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
                 <Phone size={16} />{COMPANY.phone}
               </a>
             </div>
+
+            {/* License chip — the number people verify before they call */}
+            <Link href="/licenses" className="group inline-flex items-center gap-3 -mt-8 mb-12 px-4 py-2.5 border border-ro-gold/30 bg-ro-black/50 backdrop-blur-sm hover:border-ro-gold/60 transition-colors sm:mx-auto">
+              <span className="text-ro-gold font-heading text-xl leading-none">{LICENSE_CLASSIFICATION_COUNT}</span>
+              <span className="text-ro-white/90 text-[13px] sm:text-sm font-body tracking-wide">SC license classifications &middot; Group 4 General Contractor &middot; Licensed {STATES_LINE}</span>
+              <ArrowRight size={14} className="text-ro-gold group-hover:translate-x-1 transition-transform" />
+            </Link>
 
             {/* Trust Stats */}
             <div ref={statsRef} className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl sm:mx-auto">

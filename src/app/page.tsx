@@ -2,6 +2,7 @@ import Hero from '@/components/sections/Hero';
 import DivisionCards from '@/components/sections/DivisionCards';
 import WhyRO from '@/components/sections/WhyRO';
 import ConstructionCTA from '@/components/sections/ConstructionCTA';
+import LicenseBand from '@/components/sections/LicenseBand';
 import SectionTransition from '@/components/animations/SectionTransition';
 import { getHeroVideo } from '@/lib/sanity/queries';
 
@@ -34,6 +35,7 @@ export default async function HomePage() {
       )}
 
       <Hero heroVideoUrl={heroVideoUrl} />
+      <LicenseBand />
       <SectionTransition label="FLOOR 01" sparks />
       <DivisionCards />
       <SectionTransition label="FLOOR 02" sparks />

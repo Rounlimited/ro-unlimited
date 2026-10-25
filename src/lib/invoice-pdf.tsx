@@ -240,7 +240,7 @@ function InvoicePDFDocument({ invoice, payments }: { invoice: any; payments: any
           <Text style={s.footerText}>
             RO Unlimited Construction & Development · (864) 304-0139 · rounlimited.com · Easley, SC
           </Text>
-          <Text style={s.footerText}>{LICENSE_NUMBERS_LINE} · Licensed SC · NC · GA</Text>
+          <Text style={s.footerText}>{LICENSE_NUMBERS_LINE} · Licensed SC · GA</Text>
         </View>
       </Page>
     </Document>

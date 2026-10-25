@@ -1,7 +1,8 @@
 ﻿'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+
+import LicenseRail from '@/components/sections/LicenseRail';import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone, Droplets, ShieldCheck, ChevronDown, Waves, Layers, Building2, Drill, Route, BrickWall, Cuboid } from 'lucide-react';
@@ -88,7 +89,7 @@ const FAQS = [
   { q: 'Can you tap into a live water main?', a: 'Yes \u2014 that\u2019s exactly what our water & sewer license covers. We perform hot taps on live mains with tapping sleeves and valves, so the surrounding system stays in service while your property gets connected.' },
   { q: 'Do you sub out the utility work?', a: 'No. Underground utilities are self-performed \u2014 our crews, our equipment, our licenses. That\u2019s the point: when the same contractor controls the sitework and the underground package, the critical path doesn\u2019t slip waiting on someone else\u2019s schedule.' },
   { q: 'What does a Tier 2 septic license cover?', a: 'South Carolina is specific about this. A Tier 1 installer may install gravity-fed residential systems only, and is not authorized to conduct repairs on existing systems at all. Tier 2 adds pumps, grease traps, curtain drains, elevated and mounded systems, and every commercial, large, and community onsite wastewater system \u2014 plus repairs. That is the South Carolina license line commercial work sits on, and most residential installers don\u2019t hold it. Tier 1, 2, and 3 are a South Carolina classification, so on a job across the line we work under that state\u2019s onsite program instead \u2014 we hold licensing in all three.' },
-  { q: 'How far will you travel for a job?', a: 'We run out of Easley, so the Greenville area is home ground and most weeks our iron never leaves it. Past that we work the whole tri-state \u2014 upstate South Carolina, western North Carolina, and northeast Georgia \u2014 and we are licensed in all three, which matters because the permitting path changes the moment you cross a line. For a job worth mobilizing for, distance is a scheduling conversation, not a no.' },
+  { q: 'How far will you travel for a job?', a: 'We run out of Easley, so the Greenville area is home ground and most weeks our iron never leaves it. Past that we work the whole tri-state \u2014 upstate South Carolina, western North Carolina, and northeast Georgia \u2014 and we are licensed in South Carolina and Georgia, which matters because the permitting path changes the moment you cross a line. For a job worth mobilizing for, distance is a scheduling conversation, not a no.' },
   { q: 'Can you handle the full site, not just utilities?', a: 'That\u2019s our model. We clear it, grade it, pipe it, and build on it \u2014 site development, underground utilities, and vertical construction under one contract with one accountable contractor.' },
 ];
 
@@ -220,7 +221,7 @@ export default function UtilitiesPage() {
           <div className="hero-gold-line w-10 h-[2px] mb-6" style={{ background: `linear-gradient(to right, ${UD.orange}cc, transparent)` }} />
 
           <p className="hero-desc text-sm sm:text-base leading-relaxed mb-8 max-w-sm text-ro-gray-200 border-l-2 bg-ro-black/50 backdrop-blur-md pl-4 pr-4 py-3.5" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.6)', borderLeftColor: UD.blue + 'b3' }}>
-            Water mains. Sewer taps. Storm drainage. Tier 2 septic. Nobody sees it when it&apos;s done &mdash; but every building on the site stands on it. Run out of our Easley shop, licensed in South Carolina, North Carolina, and Georgia, and photographed before backfill.
+            Water mains. Sewer taps. Storm drainage. Tier 2 septic. Nobody sees it when it&apos;s done &mdash; but every building on the site stands on it. Run out of our Easley shop, licensed in South Carolina and Georgia, and photographed before backfill.
           </p>
 
           <div className="hero-btns flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3">
@@ -304,7 +305,7 @@ export default function UtilitiesPage() {
               <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase mb-6 leading-[0.95]">Most Contractors<br /><span style={{ background: `linear-gradient(135deg, ${UD.orange}, #FF8A50)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Can&apos;t Legally Touch This</span></h2>
               <LocateMarks className="mb-6" />
               <p className="text-ro-gray-400 leading-relaxed mb-4">Tapping a live water main. Boring under a road that can&apos;t be cut. Running ductile iron beneath a parking lot. This work takes state license classifications most general contractors don&apos;t hold &mdash; so it gets subbed out, and schedules slip.</p>
-              <p className="text-ro-gray-400 leading-relaxed">We hold nine general-contractor classifications plus a mechanical license and a Tier 2 septic installer license &mdash; <a href="/licenses" className="underline underline-offset-4" style={{ color: UD.orange }}>every number is public record</a> &mdash; across South Carolina, North Carolina, and Georgia, and we run our own crews and equipment out of Easley. When RO Unlimited does your sitework, the underground package stays in-house &mdash; <span style={{ color: UD.orange }}>one contractor controlling the critical path from first cut to final tap.</span></p>
+              <p className="text-ro-gray-400 leading-relaxed">We hold nine general-contractor classifications plus a mechanical license and a Tier 2 septic installer license &mdash; <a href="/licenses" className="underline underline-offset-4" style={{ color: UD.orange }}>every number is public record</a> &mdash; across South Carolina and Georgia, and we run our own crews and equipment out of Easley. When RO Unlimited does your sitework, the underground package stays in-house &mdash; <span style={{ color: UD.orange }}>one contractor controlling the critical path from first cut to final tap.</span></p>
               {/* Utility Division seal — JR's badge, license numbers printed on
                   it (GC CLG.127704 · OSWWI0837 · Mech CLM.119115). Rendered as a
                   credential stamp, not decoration: modest size, no effects. */}
@@ -392,6 +393,8 @@ export default function UtilitiesPage() {
       </section>
 
       {/* â•â•â• FAQ â•â•â• */}
+      <LicenseRail codes={['WL4', 'BT4', '2U4', 'TIER 2', 'GD4']} accent={UD.orange} title="Licensed for the underground" intro="Water and sewer lines, boring under what can't be cut, public power distribution and commercial septic — the classifications that let one contractor keep the whole underground package in-house." />
+
       <section ref={faqRef} className="py-24 sm:py-28 relative border-t border-ro-gray-800">
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">

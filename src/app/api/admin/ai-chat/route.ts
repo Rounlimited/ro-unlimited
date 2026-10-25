@@ -13,6 +13,7 @@ import { getTraffic } from '@/lib/cloudflare-analytics';
 import { computeInsights } from '@/lib/analytics-insights';
 import { recalcEstimateTotals, syncScheduleAmounts } from '@/lib/estimates';
 import { resolveCustomerName } from '@/lib/customers';
+import { LICENSES, STATES_LICENSED, LICENSE_CLASSIFICATION_COUNT } from '@/lib/licenses';
 import { headers as nextHeaders } from 'next/headers';
 
 /**
@@ -2835,6 +2836,12 @@ const PROMPT_ANALYTICS = `<analytics_and_news>
 The app tracks what customers do with estimate/invoice links: opens, PDF views vs downloads, device, city, reading time, whether they scrolled to the price, signatures, messages, email opens (staff previews never count). Use get_customer_activity for one document, get_analytics_overview for the big picture + follow-up list + plain-English insights, get_website_traffic for the public site. The Analytics page (/admin/analytics) has the charts and PostHog visitor behaviour (session replays); the dashboard ticker + /admin/news carry curated industry news with a Tricks-of-the-Trade lane — get_industry_news reads it, get_material_prices gives BLS price moves for bids. Alerts (push + bell) go out on first open / PDF download / signature, routed per app_settings (get_alert_routing to see who). Estimates have an estimate_date (the date shown on the document when it differs from entry day) — set via update_estimate. Users can change Text Size and Ticker Speed per login in Settings.
 </analytics_and_news>`;
 
+const PROMPT_LICENSES = `<company_licenses>
+RO Unlimited's state licenses (source of truth: the public page rounlimited.com/licenses — quote these exactly, never invent numbers):
+${LICENSES.map((l) => `- ${l.title}${l.number ? ` — ${l.number}` : ' — number on request'}${l.group ? ` (Group ${l.group}, ${l.limit})` : ''}, ${l.issuerShort}${l.classifications.length ? ': ' + l.classifications.map((c) => `${c.name} ${c.code}`).join(', ') : ''}`).join('\n')}
+Licensed in ${STATES_LICENSED.join(' and ')}. ${LICENSE_CLASSIFICATION_COUNT} SC classifications total. Verify at verify.llronline.com. When a letter, proposal, bid or email should cite credentials, use these. Do NOT claim North Carolina licensing.
+</company_licenses>`;
+
 function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: string): string {
   const names = selectedTools.map(t => t.name);
   const hasEstimates = names.some(n => ESTIMATE_TOOL_NAMES.has(n));
@@ -2842,7 +2849,7 @@ function buildSystemPrompt(selectedTools: typeof ALL_TOOLS, dynamicContext: stri
   const hasProperty = names.includes('property_lookup');
   const hasAnalytics = names.some(n => ANALYTICS_TOOL_NAMES.has(n));
 
-  const blocks = [PROMPT_CORE];
+  const blocks = [PROMPT_CORE, PROMPT_LICENSES];
   if (hasEstimates) blocks.push(PROMPT_ESTIMATES);
   if (names.some(n => INVOICE_TOOL_NAMES.has(n))) blocks.push(PROMPT_INVOICES);
   if (names.some(n => OPTIONS_TOOL_NAMES.has(n))) blocks.push(PROMPT_OPTIONS);

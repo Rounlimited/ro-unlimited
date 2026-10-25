@@ -184,7 +184,7 @@ export default function Footer() {
             this into vendor packets; it's prequal data, not decoration. */}
         <div className="mt-16 pt-8 border-t border-ro-gray-800">
           <p className="text-ro-gray-500 text-xs tracking-wide leading-relaxed text-center sm:text-left">
-            <span className="text-ro-gold/70 font-mono uppercase tracking-wider">Licensed in SC &middot; NC &middot; GA</span>
+            <span className="text-ro-gold/70 font-mono uppercase tracking-wider">Licensed in SC &middot; GA</span>
             <span className="text-ro-gray-700"> — </span>
             {CLASSIFICATIONS_LINE}. Fully insured. License documentation available for prequalification.
           </p>

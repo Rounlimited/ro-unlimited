@@ -39,13 +39,13 @@ export const metadata: Metadata = {
     siteName: COMPANY.name,
     title: `${COMPANY.fullName} | Commercial General Contractor`,
     description: 'Professional full-range commercial construction — including site development and utility services — throughout South Carolina, Georgia, and North Carolina.',
-    images: [{ url: `${SITE_URL}/og-roco.jpg`, width: 1200, height: 630, alt: `${COMPANY.fullName} — commercial construction` }],
+    images: [{ url: `${SITE_URL}/og-licenses.png`, width: 1200, height: 630, alt: `${COMPANY.fullName} — 13 South Carolina license classifications, one contractor` }],
   },
   twitter: {
     card: 'summary_large_image',
     title: COMPANY.fullName,
     description: `Full-range commercial construction — including site development and utility services — across SC, GA & NC. ${COMPANY.experience} years.`,
-    images: [`${SITE_URL}/og-roco.jpg`],
+    images: [`${SITE_URL}/og-licenses.png`],
   },
   robots: {
     index: true,

@@ -248,7 +248,7 @@ export default function PublicInvoicePage() {
         )}
 
         <p className="text-center text-[13px] text-gray-400 pt-2 pb-6">
-          RO Unlimited Construction &amp; Development · Easley, SC · Licensed in SC, NC &amp; GA
+          RO Unlimited Construction &amp; Development · Easley, SC · Licensed in SC &amp; GA
         </p>
       </div>
     </div>

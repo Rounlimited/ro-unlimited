@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server';
 
+import { LICENSE_CLASSIFICATION_COUNT } from '@/lib/licenses';
 export type EmailFolder = 'inbox' | 'sent' | 'drafts' | 'trash' | 'spam';
 
 export interface EmailMessage {
@@ -249,7 +250,7 @@ export function buildEmailHtml(toName: string, bodyHtml: string, subject: string
               </tr>
               <tr>
                 <td align="center">
-                  <p style="margin:0;color:rgba(255,255,255,0.3);font-size:11px;">RO Unlimited Contractor &amp; Developer &nbsp;&middot;&nbsp; SC &nbsp;&middot;&nbsp; GA &nbsp;&middot;&nbsp; NC</p>
+                  <p style="margin:0;color:rgba(255,255,255,0.45);font-size:11px;">Licensed &amp; Insured &nbsp;&middot;&nbsp; SC &nbsp;&middot;&nbsp; GA &nbsp;&middot;&nbsp; ${LICENSE_CLASSIFICATION_COUNT} state license classifications &nbsp;&middot;&nbsp; <a href="https://rounlimited.com/licenses" style="color:#C9A84C;text-decoration:none;">rounlimited.com/licenses</a></p>
                 </td>
               </tr>
             </table>

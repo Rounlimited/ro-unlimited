@@ -1,5 +1,6 @@
 import { Document, Page, Text, View, Image, StyleSheet, Font, renderToBuffer, Svg, Circle, Line, Rect } from '@react-pdf/renderer';
 import '@/lib/pdf-fonts';
+import { STATES_LINE, LICENSE_NUMBERS_LINE } from '@/lib/licenses';
 import { reportingClause } from '@/lib/reporting';
 import { docStage } from './doc-stage';
 import React from 'react';
@@ -485,7 +486,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
           <View>
             <Text style={s.pageFooterLeft}>RO Unlimited Construction & Development</Text>
             <Text style={s.pageFooterLeft}>(864) 304-0139 | build@rounlimited.com | rounlimited.com</Text>
-            <Text style={[s.pageFooterLeft, { fontSize: 6, marginTop: 1 }]}>Licensed & Insured | Greenville, SC | Serving GA, SC, NC</Text>
+            <Text style={[s.pageFooterLeft, { fontSize: 6, marginTop: 1 }]}>Licensed & Insured · {STATES_LINE} · {LICENSE_NUMBERS_LINE} · rounlimited.com/licenses</Text>
           </View>
           <Text style={s.pageFooterRight} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>

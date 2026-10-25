@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { DIVISIONS, COMPANY } from '@/lib/constants';
+
+import LicenseRail from '@/components/sections/LicenseRail';import { DIVISIONS, COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone, Mountain } from 'lucide-react';
 import SubPageAnimator from '@/components/animations/SubPageAnimator';
 
@@ -50,6 +51,8 @@ export default function GradingPage() {
           </div>
         </div>
       </section>
+      <LicenseRail codes={['GD4', 'HY4', 'CT4', 'WL4', 'BT4']} title="Licensed from raw land to pad" intro="Grading, roads and parking, concrete, and the water and sewer that go in before the pad is finished — all under our own classifications, on our own iron." />
+
       <section className="py-16 border-t border-ro-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-ro-gray-500 mb-6">Every great build starts with the ground. We&apos;ve been preparing sites across three states for 25 years. Once the ground is ready, we build on it too.</p>

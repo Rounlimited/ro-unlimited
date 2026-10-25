@@ -6,11 +6,11 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://rounlimited.com/licenses' },
   openGraph: {
     title: 'Licenses & Classifications — RO Unlimited',
-    description: 'Thirteen South Carolina license classifications under one roof. Numbers, scopes and where to verify them.',
+    description: 'Thirteen South Carolina license classifications plus a Georgia general contractor license, under one roof. Numbers, scopes and where to verify them.',
     url: 'https://rounlimited.com/licenses',
     siteName: 'RO Unlimited',
     type: 'website',
-    images: [{ url: 'https://rounlimited.com/ro-licenses-card.png', width: 1080, height: 1350, alt: 'RO Unlimited South Carolina license classifications' }],
+    images: [{ url: 'https://rounlimited.com/ro-licenses-card.png', width: 1080, height: 1920, alt: 'RO Unlimited South Carolina license classifications' }],
   },
 };
 

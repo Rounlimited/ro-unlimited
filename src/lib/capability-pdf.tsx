@@ -114,8 +114,8 @@ function CapabilityDoc() {
             contractor based in Easley, South Carolina. Our crews and equipment handle the full
             path from first cut to finished build — land development, underground utilities, and
             vertical construction — under one contract with one accountable contractor. Licensed in
-            South Carolina, North Carolina, and Georgia; the Greenville–Easley market is home
-            ground and we mobilize across all three states.
+            South Carolina and Georgia; the Greenville–Easley market is home ground and we
+            mobilize across the Upstate and north Georgia.
           </Text>
         </View>
 
@@ -130,7 +130,7 @@ function CapabilityDoc() {
               </View>
             ))}
             <Text style={{ fontSize: 8, color: c.label, marginTop: 6, lineHeight: 1.5 }}>
-              Licensed in SC, NC & GA. Fully insured — certificates of insurance and license
+              Licensed in SC & GA. Fully insured — certificates of insurance and license
               documentation furnished on request for prequalification and lender packages.
             </Text>
           </View>

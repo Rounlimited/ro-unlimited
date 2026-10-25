@@ -16,7 +16,7 @@ export type Classification = {
 };
 
 export type License = {
-  id: 'gc' | 'mech' | 'osww';
+  id: 'gc' | 'mech' | 'osww' | 'ga';
   title: string;
   number: string;
   issuer: string;
@@ -30,6 +30,11 @@ export type License = {
 
 export const LLR_LOOKUP_URL = 'https://verify.llronline.com/LicLookup/Contractors/Contractor.aspx?div=69';
 export const SCDES_SEPTIC_URL = 'https://des.sc.gov/permits-regulations/septic-tanks/licensing-septic-system-installers';
+export const GA_LOOKUP_URL = 'https://verify.sos.ga.gov/verification/';
+
+/** States RO is licensed in. (NC removed 2026-10-24 per owner — "for now".) */
+export const STATES_LICENSED = ['South Carolina', 'Georgia'] as const;
+export const STATES_LINE = 'SC · GA';
 
 export const LICENSES: License[] = [
   {
@@ -79,21 +84,36 @@ export const LICENSES: License[] = [
       { code: 'TIER 2', name: 'Septic & Commercial Systems', covers: 'Conventional systems plus pump systems, grease traps, curtain drains, elevated and mounded systems, and all commercial onsite systems.' },
     ],
   },
+  {
+    id: 'ga',
+    title: 'General Contractor — Georgia',
+    number: '',            // owner to supply; shown as "furnished on request" until then
+    issuer: 'Georgia State Licensing Board for Residential & General Contractors',
+    issuerShort: 'GA SLB',
+    verifyUrl: GA_LOOKUP_URL,
+    classifications: [],
+    note: 'License number furnished with any bid or prequalification package.',
+  },
 ];
 
 /** "CLG.127704 · CLM.119115 · OSWWI0837" */
-export const LICENSE_NUMBERS_LINE = LICENSES.map((l) => `${l.issuerShort === 'SCDES' ? 'Septic' : l.id === 'gc' ? 'GC' : 'Mech'} #${l.number}`).join(' · ');
+export const LICENSE_CLASSIFICATION_COUNT = LICENSES.reduce((n, l) => n + l.classifications.length, 0);
+
+export const LICENSE_NUMBERS_LINE = LICENSES.filter((l) => l.number)
+  .map((l) => `${l.id === 'osww' ? 'Septic' : l.id === 'gc' ? 'SC GC' : 'Mech'} #${l.number}`).join(' · ') + ' · GA GC';
 
 /** One-line classification roll-up for footers and PDFs. */
 export const CLASSIFICATIONS_LINE = LICENSES.flatMap((l) => l.classifications.map((c) => c.code === 'TIER 2' ? 'Tier 2 Septic' : c.name)).join(' · ');
 
 /** Flat list for places that show a simple list of what RO is licensed for. */
 export const LICENSE_LABELS: string[] = LICENSES.flatMap((l) =>
-  l.classifications.map((c) => (c.code === 'TIER 2' ? 'Tier 2 Septic Installer' : `${c.name} (${c.code})`)),
+  l.classifications.length
+    ? l.classifications.map((c) => (c.code === 'TIER 2' ? 'Tier 2 Septic Installer' : `${c.name} (${c.code})`))
+    : [l.title],
 );
 
 /** For schema.org hasCredential. */
-export const LICENSE_CREDENTIALS = LICENSES.flatMap((l) => [
-  { name: `${l.title} License`, id: l.number },
+export const LICENSE_CREDENTIALS: Array<{ name: string; id?: string }> = LICENSES.flatMap((l) => [
+  { name: `${l.title} License`, ...(l.number ? { id: l.number } : {}) },
   ...l.classifications.filter((c) => c.code !== 'TIER 2').map((c) => ({ name: `${c.name} Classification (${c.code})`, id: l.number })),
 ]);

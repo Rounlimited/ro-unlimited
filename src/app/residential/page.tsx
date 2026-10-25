@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { DIVISIONS, COMPANY } from '@/lib/constants';
+
+import LicenseRail from '@/components/sections/LicenseRail';import { DIVISIONS, COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone, Home, ChevronDown, CheckCircle2, Heart, Hammer, Ruler, Sparkles } from 'lucide-react';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { gsap, ScrollTrigger } from '@/components/animations/GSAPProvider';
@@ -584,6 +585,8 @@ export default function ResidentialPage() {
       </section>
 
       {/* ═══ SECTION 9 — THE CLOSE (warm CTA) ═══ */}
+      <LicenseRail codes={['BD4', 'GD4', 'PB4', 'EL4', 'AC4', 'TIER 2']} title="Licensed for the whole house" intro="The pad, the septic, the plumbing, the wiring, the HVAC and the house itself — one licensed contractor from the driveway in." />
+
       <section ref={ctaRef} className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 warm-gradient-deep" />
         <div className="absolute inset-0 blueprint-overlay-warm opacity-6" />

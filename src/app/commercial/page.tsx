@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { DIVISIONS, COMPANY } from '@/lib/constants';
+
+import LicenseRail from '@/components/sections/LicenseRail';import { DIVISIONS, COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone, Building2, Shield, Layers, MapPin, Clock, CheckCircle2, ChevronRight, ChevronDown, Award, UserCheck, Handshake, Eye, Hammer } from 'lucide-react';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { gsap, ScrollTrigger } from '@/components/animations/GSAPProvider';
@@ -627,6 +628,8 @@ export default function CommercialPage() {
       </section>
 
       {/* ═══ SECTION 9 — THE CLOSE ═══ */}
+      <LicenseRail codes={['BD4', 'CT4', 'MS4', 'GD4', 'PB4', 'EL4', 'AC4']} title="A GC that self-performs the MEP" intro="Building, concrete, masonry and the site — plus plumbing, electrical and HVAC under our own mechanical license. On a commercial job that means fewer subs, fewer handoffs and a schedule we control." />
+
       <section ref={ctaRef} className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-[#111] to-ro-black" />
         <div className="absolute inset-0 blueprint-overlay opacity-10" />
