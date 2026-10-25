@@ -79,21 +79,35 @@ function isPublicAdminApi(pathname: string, method: string): boolean {
   return ADMIN_API_PUBLIC.some((r) => r.path.test(pathname) && r.methods.includes(method.toUpperCase()));
 }
 
-async function hasAdminSession(req: NextRequest): Promise<boolean> {
+/**
+ * Session check that PERSISTS a refresh. `auth.getUser()` silently refreshes
+ * an expired access token, and refresh tokens rotate (the old one dies 10s
+ * later). Throwing the rotated cookies away — which this used to do — left the
+ * browser holding a dead refresh token, so the next client-side refresh failed
+ * and the dashboard "randomly" logged out about an hour after the phone slept.
+ * Now the new cookies ride out on the response AND on the forwarded request,
+ * so the route handler sees the fresh token too (no second refresh).
+ */
+async function hasAdminSession(req: NextRequest): Promise<{ ok: boolean; res: NextResponse }> {
+  let res = NextResponse.next({ request: req });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anon) return false; // fail CLOSED — this is auth
+  if (!url || !anon) return { ok: false, res }; // fail CLOSED — this is auth
 
   // 1) Cookie session
   try {
     const supabase = createServerClient(url, anon, {
       cookies: {
         getAll: () => req.cookies.getAll(),
-        setAll: () => { /* read-only here; the route handlers refresh cookies */ },
+        setAll: (toSet) => {
+          toSet.forEach(({ name, value }) => req.cookies.set(name, value));
+          res = NextResponse.next({ request: req });
+          toSet.forEach(({ name, value, options }) => res.cookies.set(name, value, options));
+        },
       },
     });
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) return true;
+    if (user) return { ok: true, res };
   } catch { /* fall through */ }
 
   // 2) Bearer token
@@ -102,10 +116,10 @@ async function hasAdminSession(req: NextRequest): Promise<boolean> {
   if (token) {
     try {
       const { data: { user } } = await createClient(url, anon).auth.getUser(token);
-      if (user) return true;
+      if (user) return { ok: true, res };
     } catch { /* invalid token */ }
   }
-  return false;
+  return { ok: false, res };
 }
 
 export async function middleware(req: NextRequest) {
@@ -115,10 +129,19 @@ export async function middleware(req: NextRequest) {
   // handful of token-gated exceptions).
   if (pathname.startsWith('/api/admin')) {
     if (req.method === 'OPTIONS' || isPublicAdminApi(pathname, req.method) || hasInternalSecret(req)) return NextResponse.next();
-    if (!(await hasAdminSession(req))) {
+    const session = await hasAdminSession(req);
+    if (!session.ok) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
     }
-    return NextResponse.next();
+    return session.res; // carries any refreshed auth cookies
+  }
+
+  // Admin inbox API lives outside /api/admin but is just as session-bound.
+  // Run the same persisted refresh so a stale token there can't strand the
+  // browser either; the routes keep their own role check and 401/403.
+  if (pathname.startsWith('/api/email/') && !pathname.startsWith('/api/email/inbound')) {
+    const session = await hasAdminSession(req);
+    return session.res;
   }
 
   // Never gate the admin portal, API, the maintenance page, or Next internals.
