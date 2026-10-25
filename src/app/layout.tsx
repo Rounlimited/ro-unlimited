@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { LICENSE_CREDENTIALS } from '@/lib/licenses';
 import { Oswald, Barlow, JetBrains_Mono } from 'next/font/google';
 import { COMPANY } from '@/lib/constants';
 import GSAPProvider from '@/components/animations/GSAPProvider';
@@ -119,20 +120,9 @@ const organizationJsonLd = {
     'Roofing', 'Electrical Services', 'Plumbing',
     'Septic Systems', 'Drywall Repair', 'Deck Building', 'Fence Installation', 'Concrete Work',
   ],
-  // The seven state license classifications RO holds (owner-confirmed 2026-08).
-  // E-E-A-T: license specifics are prequalification data for GCs, not wallpaper.
-  hasCredential: [
-    // License numbers as printed on the Utility Division seal (owner's badge)
-    { name: 'General Contractor — Building License', id: 'CLG 127704' },
-    { name: 'Onsite Wastewater License', id: 'OSWW10837' },
-    { name: 'Mechanical License', id: 'CLM119115' },
-    { name: 'Boring & Tunneling License' },
-    { name: 'Water & Sewer Lines License' },
-    { name: 'Highway — Roads & Bridges License' },
-    { name: 'Grading License' },
-    { name: 'Specialty Concrete License' },
-    { name: 'Specialty Masonry License' },
-  ].map(({ name, id }: { name: string; id?: string }) => ({
+  // Every state license classification RO holds — src/lib/licenses.ts is the
+  // source of truth. E-E-A-T: prequalification data for GCs, not wallpaper.
+  hasCredential: LICENSE_CREDENTIALS.map(({ name, id }: { name: string; id?: string }) => ({
     '@type': 'EducationalOccupationalCredential',
     credentialCategory: 'license',
     name,

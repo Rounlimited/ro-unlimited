@@ -304,14 +304,14 @@ export default function UtilitiesPage() {
               <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase mb-6 leading-[0.95]">Most Contractors<br /><span style={{ background: `linear-gradient(135deg, ${UD.orange}, #FF8A50)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Can&apos;t Legally Touch This</span></h2>
               <LocateMarks className="mb-6" />
               <p className="text-ro-gray-400 leading-relaxed mb-4">Tapping a live water main. Boring under a road that can&apos;t be cut. Running ductile iron beneath a parking lot. This work takes state license classifications most general contractors don&apos;t hold &mdash; so it gets subbed out, and schedules slip.</p>
-              <p className="text-ro-gray-400 leading-relaxed">We hold seven of them, in all three states we work &mdash; South Carolina, North Carolina, and Georgia &mdash; and we run our own crews and equipment out of Easley. When RO Unlimited does your sitework, the underground package stays in-house &mdash; <span style={{ color: UD.orange }}>one contractor controlling the critical path from first cut to final tap.</span></p>
+              <p className="text-ro-gray-400 leading-relaxed">We hold nine general-contractor classifications plus a mechanical license and a Tier 2 septic installer license &mdash; <a href="/licenses" className="underline underline-offset-4" style={{ color: UD.orange }}>every number is public record</a> &mdash; across South Carolina, North Carolina, and Georgia, and we run our own crews and equipment out of Easley. When RO Unlimited does your sitework, the underground package stays in-house &mdash; <span style={{ color: UD.orange }}>one contractor controlling the critical path from first cut to final tap.</span></p>
               {/* Utility Division seal — JR's badge, license numbers printed on
-                  it (GC CLG 127704 · OSWW10837 · Mech CLM119115). Rendered as a
+                  it (GC CLG.127704 · OSWWI0837 · Mech CLM.119115). Rendered as a
                   credential stamp, not decoration: modest size, no effects. */}
               <div className="mt-8 flex justify-center lg:justify-start">
                 <Image
                   src="/images/utilities/utility-division-badge.png"
-                  alt="RO Unlimited Utility Division seal — GC License CLG 127704, Onsite Wastewater License OSWW10837, Mechanical License CLM119115"
+                  alt="RO Unlimited Utility Division seal — GC License CLG.127704, Onsite Wastewater License OSWWI0837, Mechanical License CLM.119115"
                   width={260}
                   height={259}
                   className="w-52 sm:w-60 h-auto drop-shadow-[0_8px_24px_rgba(0,0,0,0.6)]"

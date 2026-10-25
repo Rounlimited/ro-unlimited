@@ -1,5 +1,6 @@
 import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
 import '@/lib/pdf-fonts';
+import { LICENSE_NUMBERS_LINE } from '@/lib/licenses';
 
 /**
  * Invoice PDF — same document brand as the estimate PDF and capability
@@ -239,7 +240,7 @@ function InvoicePDFDocument({ invoice, payments }: { invoice: any; payments: any
           <Text style={s.footerText}>
             RO Unlimited Construction & Development · (864) 304-0139 · rounlimited.com · Easley, SC
           </Text>
-          <Text style={s.footerText}>GC #CLG 127704 · Licensed SC · NC · GA</Text>
+          <Text style={s.footerText}>{LICENSE_NUMBERS_LINE} · Licensed SC · NC · GA</Text>
         </View>
       </Page>
     </Document>

@@ -1,3 +1,4 @@
+import { LICENSE_NUMBERS_LINE } from '@/lib/licenses';
 /**
  * Company letters — "draw up whatever I ask, on letterhead, looks official."
  *
@@ -15,15 +16,7 @@ export const COMPANY = {
   // Settings later) and it appears under the logo on every letter.
   address: '',
   area: 'Serving the Upstate — Greenville, Easley, Anderson, Seneca & Pickens',
-  licenses: [
-    'General Contractor — Building',
-    'Boring & Tunneling',
-    'Water & Sewer',
-    'Specialty — Masonry',
-    'Specialty — Concrete',
-    'Highway — Roads & Bridges',
-    'Grading',
-  ],
+  licenses: [LICENSE_NUMBERS_LINE],
   signer: 'JR Osborne',
   signerTitle: 'Owner',
 };

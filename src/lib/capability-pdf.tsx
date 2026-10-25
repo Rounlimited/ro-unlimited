@@ -1,5 +1,6 @@
 import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
 import '@/lib/pdf-fonts';
+import { LICENSES as STATE_LICENSES, LICENSE_NUMBERS_LINE } from '@/lib/licenses';
 import { COMPANY } from '@/lib/constants';
 
 /**
@@ -51,17 +52,10 @@ const s = StyleSheet.create({
   footerText: { fontSize: 7.2, color: c.label, lineHeight: 1.4 },
 });
 
-const LICENSES: Array<{ name: string; num?: string }> = [
-  { name: 'General Contractor — Building', num: 'CLG 127704' },
-  { name: 'Onsite Wastewater (Septic)', num: 'OSWW10837' },
-  { name: 'Mechanical', num: 'CLM119115' },
-  { name: 'Water & Sewer Lines' },
-  { name: 'Boring & Tunneling' },
-  { name: 'Highway — Roads & Bridges' },
-  { name: 'Grading' },
-  { name: 'Specialty Concrete' },
-  { name: 'Specialty Masonry' },
-];
+const LICENSES: Array<{ name: string; num?: string }> = STATE_LICENSES.flatMap((l) => [
+  { name: `${l.title}${l.group ? ` — Group ${l.group} (${l.limit})` : ''}`, num: l.number },
+  ...l.classifications.filter((c) => c.code !== 'TIER 2').map((c) => ({ name: `   ${c.name} · ${c.code}` })),
+]);
 
 const UTILITIES_CAPS = [
   'Water main taps & hot taps on live mains',
@@ -194,7 +188,7 @@ function CapabilityDoc() {
         {/* Footer */}
         <View style={s.footer} fixed>
           <Text style={s.footerText}>{COMPANY.fullName} — Capability Statement</Text>
-          <Text style={s.footerText}>GC #CLG 127704 · OSWW #OSWW10837 · Mech #CLM119115</Text>
+          <Text style={s.footerText}>{LICENSE_NUMBERS_LINE}</Text>
         </View>
       </Page>
     </Document>

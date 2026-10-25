@@ -99,7 +99,7 @@ const FEATURES: Feature[] = [
   {
     icon: PenTool, color: '#e8734a', tag: 'New in the menu',
     title: 'Letters on Company Letterhead',
-    body: "Tell it what you need in plain words — \"letter to the county asking them to release the trench\" — and it writes it. Prints with your logo, contact details and all seven licenses.",
+    body: "Tell it what you need in plain words — \"letter to the county asking them to release the trench\" — and it writes it. Prints with your logo, contact details and license numbers.",
     points: [
       'Notices of delay, change order requests, warranties, completion letters',
       'It never invents a date or an amount — it leaves [BRACKETS] to fill in',

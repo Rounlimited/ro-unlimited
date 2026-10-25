@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import Link from 'next/link';
 import { COMPANY, DIVISIONS } from '@/lib/constants';
+import { CLASSIFICATIONS_LINE, LICENSE_NUMBERS_LINE } from '@/lib/licenses';
 import { Phone, Mail, MapPin, Clock, Facebook, ArrowUp } from 'lucide-react';
 import { gsap, useGSAP } from '@/components/animations/GSAPProvider';
 
@@ -185,10 +186,14 @@ export default function Footer() {
           <p className="text-ro-gray-500 text-xs tracking-wide leading-relaxed text-center sm:text-left">
             <span className="text-ro-gold/70 font-mono uppercase tracking-wider">Licensed in SC &middot; NC &middot; GA</span>
             <span className="text-ro-gray-700"> — </span>
-            General Contractor (Building) &middot; Boring &amp; Tunneling &middot; Water &amp; Sewer &middot; Highway, Roads &amp; Bridges &middot; Grading &middot; Specialty Concrete &middot; Specialty Masonry. Fully insured. License documentation available for prequalification.
+            {CLASSIFICATIONS_LINE}. Fully insured. License documentation available for prequalification.
           </p>
           <p className="text-ro-gray-600 text-xs tracking-wide mt-1.5 text-center sm:text-left font-mono">
-            GC Lic #CLG 127704 &middot; Onsite Wastewater Lic #OSWW10837 &middot; Mechanical Lic #CLM119115
+            {LICENSE_NUMBERS_LINE}
+            <span className="text-ro-gray-700"> &middot; </span>
+            <Link href="/licenses" className="text-ro-gold/70 hover:text-ro-gold underline underline-offset-2 transition-colors">
+              All classifications &amp; verification
+            </Link>
             <span className="text-ro-gray-700"> &middot; </span>
             <a href="/api/capability-statement" target="_blank" rel="noopener" className="text-ro-gold/70 hover:text-ro-gold underline underline-offset-2 transition-colors">
               Download Capability Statement (PDF)

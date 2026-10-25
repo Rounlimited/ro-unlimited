@@ -41,9 +41,9 @@ export function starterContent(): ProposalContent {
         ],
         footnote: '**Your licenses go on the site \u2014 visibly.** Banks and developers verify them before they call. It\u2019s free credibility sitting in your wallet.',
         licenses: [
-          { label: 'Grading License', num: '\u2116 pending from JR' },
-          { label: 'Water & Sewer License', num: '\u2116 pending from JR' },
-          { label: 'Tier 2 Septic / Grease Trap', num: '\u2116 pending from JR' },
+          { label: 'General Contractor \u2014 9 classifications (BD, GD, WL, CT, BT, HY, MS, MR, 2U), Group 4', num: 'CLG.127704' },
+          { label: 'Mechanical Contractor \u2014 Plumbing, Electrical, Air Conditioning, Group 4', num: 'CLM.119115' },
+          { label: 'Onsite Wastewater \u2014 Tier 2 Installer', num: 'OSWWI0837' },
         ],
       },
       {

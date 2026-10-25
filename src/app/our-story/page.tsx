@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { COMPANY } from '@/lib/constants';
+import { LICENSE_LABELS } from '@/lib/licenses';
 import { ArrowRight, Phone } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { gsap, ScrollTrigger } from '@/components/animations/GSAPProvider';
@@ -43,10 +44,7 @@ const TODAY = [
   },
 ];
 
-const LICENSES = [
-  'General Contractor — Building', 'Grading', 'Water & Sewer', 'Boring & Tunneling',
-  'Highway — Roads & Bridges', 'Specialty — Concrete', 'Specialty — Masonry',
-];
+const LICENSES = LICENSE_LABELS;
 
 export default function OurStoryPage() {
   const [mounted, setMounted] = useState(false);
@@ -256,6 +254,9 @@ export default function OurStoryPage() {
                 </span>
               ))}
             </div>
+            <Link href="/licenses" className="inline-block mt-6 text-ro-gold text-sm underline underline-offset-4 hover:text-ro-gold-light">
+              License numbers, scopes &amp; state verification &rarr;
+            </Link>
           </div>
         </div>
       </section>
