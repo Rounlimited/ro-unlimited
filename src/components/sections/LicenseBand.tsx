@@ -9,14 +9,15 @@ import { LICENSES, LLR_LOOKUP_URL, STATES_LINE } from '@/lib/licenses';
 
 /**
  * Homepage "license plate" band — the proof behind the pitch. Most
- * contractors hold one or two classifications; RO holds thirteen, and that is
- * exactly why "one contractor, no handoffs" is true. Engraved-plate tiles
- * reveal left to right; every number links to the state lookup.
+ * contractors hold one or two classifications; RO holds thirteen, so one
+ * license holder can be accountable for the whole job. Credentials only —
+ * no promises about who swings the shovel or who owns a delay (owner, 2026-10).
+ * Engraved-plate tiles reveal left to right; every number links to the lookup.
  */
 const WHY = [
-  { k: 'No stacked markups', v: 'Underground, concrete and the mechanicals are self-performed — no subcontractor layer billing on top of ours.' },
-  { k: 'One permit holder', v: 'One license on the permits, one insurance certificate, one warranty. One name to call.' },
-  { k: 'The schedule is ours', v: 'The building never waits on another company. The same crews run the critical path from first cut to final tap.' },
+  { k: 'Licensed for all of it', v: 'Building, grading, water and sewer, boring, highway, concrete, masonry, marine, public power, plumbing, electrical, HVAC and septic — permits pulled under RO\u2019s own numbers.' },
+  { k: 'One contractor accountable', v: 'One license holder on the permits and the inspections, one insurance certificate, one point of responsibility for the finished job.' },
+  { k: 'Verified, not claimed', v: 'Every number is public record on the SC LLR lookup. Bonded and insured for the job at hand — certificates on request.' },
 ];
 
 export default function LicenseBand() {
@@ -55,11 +56,12 @@ export default function LicenseBand() {
               </span>
             </div>
             <h2 className="text-ro-white font-heading text-3xl sm:text-4xl uppercase tracking-tight leading-[0.95] mt-6">
-              One contractor.<br /><span className="gradient-text-gold">No handoffs.</span>
+              One license holder.<br /><span className="gradient-text-gold">Accountable for all of it.</span>
             </h2>
             <p className="text-ro-gray-300 text-base sm:text-lg leading-relaxed mt-5 max-w-xl">
-              Most contractors hold one or two. RO Unlimited self-performs the building, the dirt, the pipe,
-              the power, the concrete, the mechanicals and the septic &mdash; under its own licenses, with its own crews.
+              Most contractors hold one or two. RO Unlimited is licensed for the building, the dirt, the pipe,
+              the power, the concrete, the mechanicals and the septic &mdash; one license holder accountable for the
+              whole job, with trade crews scaled to the project.
             </p>
             <ul className="mt-7 space-y-4">
               {WHY.map((w) => (

@@ -145,7 +145,7 @@ export default function UtilityPlanBackdrop() {
             <line x1="200" y1="56" x2="200" y2="86" stroke="rgba(255,255,255,0.09)" strokeWidth="1" />
             <g fontSize="10.5" letterSpacing="2">
               <text x="12" y="19" fill="rgba(248,75,12,0.30)">RO UNLIMITED — UTILITY DIVISION</text>
-              <text x="12" y="47" fill="rgba(255,255,255,0.16)">UTILITY PLAN — SELF-PERFORMED</text>
+              <text x="12" y="47" fill="rgba(255,255,255,0.16)">UTILITY PLAN — LICENSED SC · GA</text>
               <text x="12" y="75" fill="rgba(255,255,255,0.13)">SHEET C-401 · SCALE 1:200</text>
               <text x="212" y="75" fill="rgba(1,75,230,0.35)">REV C — 2026.08</text>
             </g>

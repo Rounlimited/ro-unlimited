@@ -30,7 +30,7 @@ export const RESIDENTIAL_SERVICE_DETAILS: Record<string, ServiceDetail> = {
     overview: 'From a vacant lot to the day you turn the key — RO handles every phase of your new home construction. Site grading, foundation, framing, roofing, mechanicals, finishes, and final walkthrough. One builder, one contract, one team that knows your project inside and out. No subcontractor shuffles. No miscommunication between trades.',
     includes: [
       'Complete design-build coordination from concept to move-in',
-      'Site grading and foundation by RO\'s in-house crews',
+      'Site grading and foundation under RO\'s own license',
       'Full structural framing, roofing, and exterior enclosure',
       'Mechanical rough-in coordination — plumbing, electrical, HVAC',
       'Interior finishing — drywall, flooring, cabinetry, paint, trim',
@@ -143,7 +143,7 @@ export const RESIDENTIAL_PROCESS: Record<string, ProcessDetail> = {
   'Construction': {
     title: 'Construction',
     bullets: [
-      'Site grading and foundation work by our in-house crews',
+      'Site grading and foundation work under our own license',
       'Framing, roofing, and exterior enclosure',
       'Mechanical rough-in — plumbing, electrical, HVAC, insulation',
       'Weekly photo updates so you can watch your home come to life',

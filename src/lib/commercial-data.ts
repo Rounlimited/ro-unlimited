@@ -35,7 +35,7 @@ export const COMMERCIAL_SERVICE_DETAILS: Record<string, ServiceDetail> = {
   'Commercial Building Development': {
     id: 'commercial-building-dev',
     title: 'Commercial Building Development',
-    overview: 'From vacant land to occupied building — RO manages the full development lifecycle. We coordinate site selection advisory, feasibility analysis, zoning research, architectural design-build, and ground-up construction under one contract. No middlemen, no coordination gaps, no finger-pointing.',
+    overview: 'From vacant land to occupied building — RO manages the full development lifecycle. We coordinate site selection advisory, feasibility analysis, zoning research, architectural design-build, and ground-up construction under one contract, with one license holder accountable.',
     includes: [
       'Site selection and feasibility advisory across GA, SC, and NC',
       'Zoning research, variance applications, and municipal compliance',
@@ -51,7 +51,7 @@ export const COMMERCIAL_SERVICE_DETAILS: Record<string, ServiceDetail> = {
   'Steel & Mixed-Material Construction': {
     id: 'steel-mixed-material',
     title: 'Steel & Mixed-Material Construction',
-    overview: 'Steel is the backbone of commercial construction — and RO self-performs structural steel work rather than subbing it out. We build with pre-engineered metal buildings, structural steel frames, and hybrid steel-wood-concrete systems. The result is faster erection timelines, clear-span interiors, superior fire resistance, and predictable costs.',
+    overview: 'Steel is the backbone of commercial construction, and RO builds with it as a core capability. We build with pre-engineered metal buildings, structural steel frames, and hybrid steel-wood-concrete systems. The result is faster erection timelines, clear-span interiors, superior fire resistance, and predictable costs.',
     includes: [
       'Pre-engineered metal building (PEMB) erection and finishing',
       'Structural steel framing for multi-story commercial builds',
@@ -83,7 +83,7 @@ export const COMMERCIAL_SERVICE_DETAILS: Record<string, ServiceDetail> = {
   'Problem Solving for Complex Sites': {
     id: 'complex-sites',
     title: 'Problem Solving for Complex Sites',
-    overview: 'Not every site is flat, clear, and ready to build. RO specializes in the projects other contractors walk away from — difficult terrain, limited access, wetlands, unusual soil conditions, existing structure demolition, and environmental restrictions. With an in-house land grading division and 25+ years of tri-state experience, we solve site problems before they become schedule killers.',
+    overview: 'Not every site is flat, clear, and ready to build. RO specializes in the projects other contractors walk away from — difficult terrain, limited access, wetlands, unusual soil conditions, existing structure demolition, and environmental restrictions. With our own grading license classification and 25+ years of tri-state experience, we solve site problems before they become schedule killers.',
     includes: [
       'Difficult terrain grading — slopes, rock, poor drainage',
       'Wetland mitigation and environmental compliance coordination',
@@ -167,7 +167,7 @@ export const PROCESS_DETAILS: Record<string, ProcessDetail> = {
   'Ground-Up Construction': {
     title: 'Ground-Up Construction',
     bullets: [
-      'Site grading and foundation work by RO\'s in-house grading division',
+      'Site grading and foundation work under RO\'s own grading license',
       'Structural erection — steel, concrete, wood framing, or hybrid',
       'MEP rough-in coordination with vetted trade partners',
       'Weekly progress updates with photos and milestone tracking',

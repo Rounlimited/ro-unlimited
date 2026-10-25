@@ -14,7 +14,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     slug: 'shingle-roofing',
     title: 'Shingle Roofing',
     tagline: 'Proven Protection Built for Foothills Weather',
-    heroDescription: 'From basic 3-tab to premium designer styles that replicate natural slate and cedar shake, we install shingle systems built to handle the heat, humidity, and storm seasons this part of the country runs on. Our crews work out of Easley, just west of Greenville, and we roof across South Carolina, North Carolina, and Georgia. After 25-plus years on these roofs we know which products perform and which ones just look good in a brochure.',
+    heroDescription: 'From basic 3-tab to premium designer styles that replicate natural slate and cedar shake, we install shingle systems built to handle the heat, humidity, and storm seasons this part of the country runs on. We work out of Easley, just west of Greenville, and we roof across South Carolina, North Carolina, and Georgia. After 25-plus years on these roofs we know which products perform and which ones just look good in a brochure.',
     heroImage: '/images/services/roofing/subs/shingle-hero.jpg',
     cardImage: '/images/services/roofing/subs/shingle-card.jpg',
     galleryImages: [

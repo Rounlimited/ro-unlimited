@@ -339,7 +339,7 @@ export const SEPTIC_SUB_SERVICES: SepticSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Piedmont clay is marginal for drain fields even when the design is perfect, and it\'s what our crews dig in on nearly every job — the same red clay whether the address is in Pickens County, across the Georgia line, or up in the Carolina foothills. Once it\'s compacted by construction traffic, landscaping equipment, or vehicles, clay loses most of its absorption capacity. We see fields written off as "failed" when the real problem was a clogged effluent filter upstream or a cracked D-box. Fixing the actual cause is a service call and a part. Replacing the field is a permit, a soil retest, and heavy equipment across your yard for a week — so it\'s worth finding out which one you have.',
+        content: 'Piedmont clay is marginal for drain fields even when the design is perfect, and it\'s what we dig in on nearly every job — the same red clay whether the address is in Pickens County, across the Georgia line, or up in the Carolina foothills. Once it\'s compacted by construction traffic, landscaping equipment, or vehicles, clay loses most of its absorption capacity. We see fields written off as "failed" when the real problem was a clogged effluent filter upstream or a cracked D-box. Fixing the actual cause is a service call and a part. Replacing the field is a permit, a soil retest, and heavy equipment across your yard for a week — so it\'s worth finding out which one you have.',
       },
     ],
     warningSigns: [

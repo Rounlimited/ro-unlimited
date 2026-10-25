@@ -20,7 +20,7 @@ const HERO_STATS = [
   { value: '3', label: 'State Licenses Held' },
   { value: '25+', label: 'Years In The Dirt' },
   { value: '3', label: 'States Served' },
-  { value: '100%', label: 'Self-Performed' },
+  { value: '13', label: 'License Classifications' },
 ];
 
 const TICKER = 'WATER MAIN TAPS \u2022 DUCTILE IRON \u2022 C900 PVC \u2022 SANITARY SEWER \u2022 STORM DRAINAGE \u2022 TIER 2 SEPTIC \u2022 COMMERCIAL GREASE TRAPS \u2022 HOT TAPS \u2022 FIRE LINES \u2022 ';
@@ -44,7 +44,7 @@ const CAPABILITIES = [
 
 const PROCESS = [
   { num: '01', title: 'Locate & Design', desc: 'Utility locates, soil review, and a run plan that matches the civil drawings \u2014 before a bucket touches dirt.' },
-  { num: '02', title: 'Cut & Install', desc: 'Open the trench, bed the pipe, set the structures. Our crews, our iron \u2014 no waiting on a sub.' },
+  { num: '02', title: 'Cut & Install', desc: 'Open the trench, bed the pipe, set the structures \u2014 under our own license, with the inspector on our calendar.' },
   { num: '03', title: 'Test & Inspect', desc: 'Pressure tests, mandrel and vacuum tests, municipal inspections \u2014 documented and passed before anything closes.' },
   { num: '04', title: 'Backfill & Document', desc: 'Every run photographed before backfill. You get proof of what\u2019s under your site \u2014 forever.' },
 ];
@@ -87,10 +87,10 @@ function LocateMarks({ className = '' }: { className?: string }) {
 
 const FAQS = [
   { q: 'Can you tap into a live water main?', a: 'Yes \u2014 that\u2019s exactly what our water & sewer license covers. We perform hot taps on live mains with tapping sleeves and valves, so the surrounding system stays in service while your property gets connected.' },
-  { q: 'Do you sub out the utility work?', a: 'No. Underground utilities are self-performed \u2014 our crews, our equipment, our licenses. That\u2019s the point: when the same contractor controls the sitework and the underground package, the critical path doesn\u2019t slip waiting on someone else\u2019s schedule.' },
+  { q: 'Who is responsible for the utility work?', a: 'RO Unlimited is. Underground utilities are permitted, inspected and warranted under our own license classifications \u2014 the ones most general contractors don\u2019t hold. Crews are scaled to the job; the contractor accountable for the result is RO.' },
   { q: 'What does a Tier 2 septic license cover?', a: 'South Carolina is specific about this. A Tier 1 installer may install gravity-fed residential systems only, and is not authorized to conduct repairs on existing systems at all. Tier 2 adds pumps, grease traps, curtain drains, elevated and mounded systems, and every commercial, large, and community onsite wastewater system \u2014 plus repairs. That is the South Carolina license line commercial work sits on, and most residential installers don\u2019t hold it. Tier 1, 2, and 3 are a South Carolina classification, so on a job across the line we work under that state\u2019s onsite program instead \u2014 we hold licensing in all three.' },
   { q: 'How far will you travel for a job?', a: 'We run out of Easley, so the Greenville area is home ground and most weeks our iron never leaves it. Past that we work the whole tri-state \u2014 upstate South Carolina, western North Carolina, and northeast Georgia \u2014 and we are licensed in South Carolina and Georgia, which matters because the permitting path changes the moment you cross a line. For a job worth mobilizing for, distance is a scheduling conversation, not a no.' },
-  { q: 'Can you handle the full site, not just utilities?', a: 'That\u2019s our model. We clear it, grade it, pipe it, and build on it \u2014 site development, underground utilities, and vertical construction under one contract with one accountable contractor.' },
+  { q: 'Can you handle the full site, not just utilities?', a: 'Yes. Site development, underground utilities, and vertical construction can run under one contract with one license holder accountable for all of it.' },
 ];
 
 /* â”€â”€â”€ Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -301,11 +301,11 @@ export default function UtilitiesPage() {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="moat-copy">
-              <span className="text-xs font-mono tracking-[0.3em] uppercase mb-4 block" style={{ color: UD.orange }}>Licensed &amp; Self-Performed</span>
+              <span className="text-xs font-mono tracking-[0.3em] uppercase mb-4 block" style={{ color: UD.orange }}>Licensed for the Underground</span>
               <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase mb-6 leading-[0.95]">Most Contractors<br /><span style={{ background: `linear-gradient(135deg, ${UD.orange}, #FF8A50)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Can&apos;t Legally Touch This</span></h2>
               <LocateMarks className="mb-6" />
-              <p className="text-ro-gray-400 leading-relaxed mb-4">Tapping a live water main. Boring under a road that can&apos;t be cut. Running ductile iron beneath a parking lot. This work takes state license classifications most general contractors don&apos;t hold &mdash; so it gets subbed out, and schedules slip.</p>
-              <p className="text-ro-gray-400 leading-relaxed">We hold nine general-contractor classifications plus a mechanical license and a Tier 2 septic installer license &mdash; <a href="/licenses" className="underline underline-offset-4" style={{ color: UD.orange }}>every number is public record</a> &mdash; across South Carolina and Georgia, and we run our own crews and equipment out of Easley. When RO Unlimited does your sitework, the underground package stays in-house &mdash; <span style={{ color: UD.orange }}>one contractor controlling the critical path from first cut to final tap.</span></p>
+              <p className="text-ro-gray-400 leading-relaxed mb-4">Tapping a live water main. Boring under a road that can&apos;t be cut. Running ductile iron beneath a parking lot. This work takes state license classifications most general contractors don&apos;t hold &mdash; so most can&apos;t pull the permit for it.</p>
+              <p className="text-ro-gray-400 leading-relaxed">We hold nine general-contractor classifications plus a mechanical license and a Tier 2 septic installer license &mdash; <a href="/licenses" className="underline underline-offset-4" style={{ color: UD.orange }}>every number is public record</a> &mdash; across South Carolina and Georgia, based in Easley. When RO Unlimited does your sitework, the underground package is permitted and delivered under one license holder &mdash; <span style={{ color: UD.orange }}>one contractor accountable from first cut to final tap.</span></p>
               {/* Utility Division seal — JR's badge, license numbers printed on
                   it (GC CLG.127704 · OSWWI0837 · Mech CLM.119115). Rendered as a
                   credential stamp, not decoration: modest size, no effects. */}
@@ -393,7 +393,7 @@ export default function UtilitiesPage() {
       </section>
 
       {/* â•â•â• FAQ â•â•â• */}
-      <LicenseRail codes={['WL4', 'BT4', '2U4', 'TIER 2', 'GD4']} accent={UD.orange} title="Licensed for the underground" intro="Water and sewer lines, boring under what can't be cut, public power distribution and commercial septic — the classifications that let one contractor keep the whole underground package in-house." />
+      <LicenseRail codes={['WL4', 'BT4', '2U4', 'TIER 2', 'GD4']} accent={UD.orange} title="Licensed for the underground" intro="Water and sewer lines, boring under what can't be cut, public power distribution and commercial septic — the classifications that put the whole underground package under one license holder." />
 
       <section ref={faqRef} className="py-24 sm:py-28 relative border-t border-ro-gray-800">
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">

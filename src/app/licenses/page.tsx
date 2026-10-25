@@ -15,8 +15,8 @@ export default function LicensesPage() {
 
   const faq = [
     { q: 'What license classifications does RO Unlimited hold?', a: `${total} South Carolina classifications: General Contractor CLG.127704 (Building, Grading, Water & Sewer Lines, Concrete, Boring & Tunneling, Highway, Masonry, Marine, Public Electrical Utility), Mechanical Contractor CLM.119115 (Plumbing, Electrical, Air Conditioning) and Tier 2 Onsite Wastewater Installer OSWWI0837, plus a Georgia general contractor license.` },
-    { q: 'What does a Group 4 South Carolina contractor license mean?', a: 'Group 4 is the per-job limit tier set by the SC Contractor\u2019s Licensing Board: up to $3,000,000 per job on the general contractor license and up to $400,000 per job on the mechanical license (limits raised by H.4115 in 2023).' },
-    { q: 'Does RO Unlimited subcontract plumbing, electrical and HVAC?', a: 'No. Plumbing, electrical and air conditioning are self-performed under RO\u2019s own mechanical contractor license (CLM.119115), alongside the site, utility and building work under CLG.127704.' },
+    { q: 'Is RO Unlimited bonded and insured?', a: 'Yes. General liability, auto and workers\u2019 compensation certificates and bonding documentation are furnished with any bid or prequalification package \u2014 sized to the job at hand.' },
+    { q: 'Who is responsible for the plumbing, electrical and HVAC on an RO job?', a: 'RO Unlimited is. That work is permitted, inspected and warranted under RO\u2019s own mechanical contractor license (CLM.119115), alongside the site, utility and building work under CLG.127704. Trade crews are scaled to each job; the license holder accountable for the result is RO.' },
     { q: 'How do I verify the licenses?', a: 'Search the license numbers on the SC LLR Licensee Lookup at verify.llronline.com; the Georgia license can be checked through the Georgia Secretary of State verification site.' },
   ];
   const faqJsonLd = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) };
@@ -35,8 +35,8 @@ export default function LicensesPage() {
           </h1>
           <div className="w-20 h-[2px] bg-gradient-to-r from-transparent via-ro-gold to-transparent mx-auto mt-7" />
           <p className="text-ro-gray-300 text-lg sm:text-xl leading-relaxed max-w-3xl mx-auto mt-7">
-            {total} state license classifications under one contractor &mdash; the dirt, the pipe, the power,
-            the building and the septic, self-performed under our own licenses. Every number below is
+            {total} state license classifications under one license holder &mdash; the dirt, the pipe, the power,
+            the building and the septic, permitted and delivered under our own numbers. Every number below is
             public record; verify it on the state site before you call.
           </p>
           <div className="flex flex-wrap justify-center gap-3 mt-9">
@@ -145,7 +145,7 @@ export default function LicensesPage() {
           </div>
 
           <p className="text-ro-gray-600 text-xs text-center font-mono tracking-wide pt-4">
-            Classification display &middot; Refer to issued licenses for terms and limitations &middot; Group limits per SC LLR (H.4115, 2023)
+            Classification display &middot; Refer to issued licenses for terms and limitations
           </p>
         </div>
       </section>

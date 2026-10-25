@@ -7,7 +7,7 @@ import SubPageAnimator from '@/components/animations/SubPageAnimator';
 
 const PHASES = [
   { phase: '01', title: 'Consultation & Design', description: 'We start with your vision. Site evaluation, architectural planning, 3D modeling, and project scoping.' },
-  { phase: '02', title: 'Site Preparation', description: 'Land grading, excavation, foundation work, and all site prep handled by our own crews.' },
+  { phase: '02', title: 'Site Preparation', description: 'Land grading, excavation, foundation work, and all site prep handled under our own license classifications.' },
   { phase: '03', title: 'Structural Build', description: 'Framing, steel, structural shells - the backbone of every project built to code and beyond.' },
   { phase: '04', title: 'Systems & Enclosure', description: 'Roofing, exterior finishes, mechanical systems, electrical, and plumbing integration.' },
   { phase: '05', title: 'Interior & Finishes', description: 'From luxury interior buildouts to modern industrial design details - we finish what we start.' },

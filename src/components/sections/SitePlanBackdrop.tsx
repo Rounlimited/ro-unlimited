@@ -132,7 +132,7 @@ export default function SitePlanBackdrop({ className = '' }: { className?: strin
             <line x1="200" y1="56" x2="200" y2="86" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
             <g fontSize="10.5" letterSpacing="2">
               <text x="12" y="19" fill="rgba(201,168,76,0.28)">RO UNLIMITED — CONSTRUCTION &amp; DEVELOPMENT</text>
-              <text x="12" y="47" fill="rgba(255,255,255,0.15)">STRUCTURAL PLAN — SELF-PERFORMED</text>
+              <text x="12" y="47" fill="rgba(255,255,255,0.15)">STRUCTURAL PLAN — LICENSED SC · GA</text>
               <text x="12" y="75" fill="rgba(255,255,255,0.12)">SHEET S-201 · SCALE 1:100</text>
               <text x="212" y="75" fill="rgba(201,168,76,0.24)">REV B — 2026.08</text>
             </g>

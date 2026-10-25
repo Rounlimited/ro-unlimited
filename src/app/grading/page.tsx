@@ -51,7 +51,7 @@ export default function GradingPage() {
           </div>
         </div>
       </section>
-      <LicenseRail codes={['GD4', 'HY4', 'CT4', 'WL4', 'BT4']} title="Licensed from raw land to pad" intro="Grading, roads and parking, concrete, and the water and sewer that go in before the pad is finished — all under our own classifications, on our own iron." />
+      <LicenseRail codes={['GD4', 'HY4', 'CT4', 'WL4', 'BT4']} title="Licensed from raw land to pad" intro="Grading, roads and parking, concrete, and the water and sewer that go in before the pad is finished — all under our own license classifications." />
 
       <section className="py-16 border-t border-ro-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">

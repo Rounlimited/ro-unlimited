@@ -5,8 +5,9 @@
  * renewal or a new classification is a one-line change.
  *
  * Owner-confirmed 2026-10-24 (JR's classification sheet, the version that
- * includes Public Electrical Utility). Group limits per SC LLR after H.4115
- * (2023): GC Group 4 = $3,000,000 per job, Mechanical Group 4 = $400,000.
+ * includes Public Electrical Utility). Per owner, NO group / dollar-limit
+ * display anywhere — the per-job figure reads like a ceiling and he bonds
+ * above it. The `group`/`limit` fields stay optional and unused.
  */
 
 export type Classification = {
@@ -43,8 +44,6 @@ export const LICENSES: License[] = [
     number: 'CLG.127704',
     issuer: 'South Carolina Contractor’s Licensing Board (LLR)',
     issuerShort: 'SC LLR',
-    group: 4,
-    limit: '$3,000,000 per job',
     verifyUrl: LLR_LOOKUP_URL,
     classifications: [
       { code: 'BD4', name: 'Building', covers: 'Commercial, industrial, institutional and multi-family buildings — ground-up, shells, build-outs and additions.' },
@@ -64,8 +63,6 @@ export const LICENSES: License[] = [
     number: 'CLM.119115',
     issuer: 'South Carolina Contractor’s Licensing Board (LLR)',
     issuerShort: 'SC LLR',
-    group: 4,
-    limit: '$400,000 per job',
     verifyUrl: LLR_LOOKUP_URL,
     classifications: [
       { code: 'PB4', name: 'Plumbing', covers: 'Water, drain, waste, vent and gas piping — under-slab rough-in through finish, commercial and residential.' },

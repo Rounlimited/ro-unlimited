@@ -1,6 +1,6 @@
 import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from '@react-pdf/renderer';
 import '@/lib/pdf-fonts';
-import { LICENSES as STATE_LICENSES, LICENSE_NUMBERS_LINE } from '@/lib/licenses';
+import { LICENSES as STATE_LICENSES, LICENSE_NUMBERS_LINE, LICENSE_CLASSIFICATION_COUNT } from '@/lib/licenses';
 import { COMPANY } from '@/lib/constants';
 
 /**
@@ -53,7 +53,7 @@ const s = StyleSheet.create({
 });
 
 const LICENSES: Array<{ name: string; num?: string }> = STATE_LICENSES.flatMap((l) => [
-  { name: `${l.title}${l.group ? ` — Group ${l.group} (${l.limit})` : ''}`, num: l.number },
+  { name: l.title, num: l.number },
   ...l.classifications.filter((c) => c.code !== 'TIER 2').map((c) => ({ name: `   ${c.name} · ${c.code}` })),
 ]);
 
@@ -95,9 +95,9 @@ function CapabilityDoc() {
         <View style={s.statStrip}>
           {[
             ['25+', 'Years Building'],
-            ['9', 'State Licenses Held'],
-            ['3', 'States Licensed'],
-            ['100%', 'Utilities Self-Performed'],
+            [String(LICENSE_CLASSIFICATION_COUNT), 'SC License Classifications'],
+            ['2', 'States Licensed'],
+            ['Bonded', 'Certificates on Request'],
           ].map(([v, l]) => (
             <View key={l} style={s.stat}>
               <Text style={s.statVal}>{v}</Text>
@@ -110,10 +110,10 @@ function CapabilityDoc() {
         <View style={s.block}>
           <Text style={s.sectionLabel}>Company</Text>
           <Text style={s.body}>
-            {COMPANY.fullName} is a self-performing sitework, underground utility, and construction
-            contractor based in Easley, South Carolina. Our crews and equipment handle the full
-            path from first cut to finished build — land development, underground utilities, and
-            vertical construction — under one contract with one accountable contractor. Licensed in
+            {COMPANY.fullName} is a licensed sitework, underground utility, and construction
+            contractor based in Easley, South Carolina — licensed for the full path from first cut
+            to finished build: land development, underground utilities, and vertical construction,
+            under one contract with one license holder accountable for all of it. Licensed in
             South Carolina and Georgia; the Greenville–Easley market is home ground and we
             mobilize across the Upstate and north Georgia.
           </Text>
@@ -136,7 +136,7 @@ function CapabilityDoc() {
           </View>
 
           <View style={s.col}>
-            <Text style={s.sectionLabel}>Self-Performed Utilities</Text>
+            <Text style={s.sectionLabel}>Underground Utilities</Text>
             {UTILITIES_CAPS.map((t) => (
               <View key={t} style={s.bullet}>
                 <Text style={s.bulletDot}>•</Text>
@@ -158,7 +158,7 @@ function CapabilityDoc() {
           <Text style={s.sectionLabel}>Why GCs & Developers Use RO</Text>
           <View style={s.twoCol}>
             <View style={s.col}>
-              <View style={s.bullet}><Text style={s.bulletDot}>•</Text><Text style={s.bulletText}>Sitework and the underground package under one contractor — the critical path never waits on a sub</Text></View>
+              <View style={s.bullet}><Text style={s.bulletDot}>•</Text><Text style={s.bulletText}>Sitework and the underground package under one license holder — one contractor accountable for permits, inspections and the finished job</Text></View>
               <View style={s.bullet}><Text style={s.bulletDot}>•</Text><Text style={s.bulletText}>Every utility run photographed before backfill — permanent as-built documentation</Text></View>
             </View>
             <View style={s.col}>

@@ -27,7 +27,7 @@ export default function LicenseOgPage() {
             <div className="text-[200px] font-black leading-[0.8]" style={{ color: gold }}>{codes.length}</div>
             <div className="pb-3">
               <div className="text-[44px] font-black uppercase leading-[0.95] tracking-tight">State license<br />classifications.</div>
-              <div className="text-[30px] font-bold uppercase leading-tight tracking-tight text-white/85 mt-3">One contractor. No handoffs.</div>
+              <div className="text-[30px] font-bold uppercase leading-tight tracking-tight text-white/85 mt-3">One license holder. Accountable for all of it.</div>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">

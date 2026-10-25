@@ -31,7 +31,7 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     title: 'Water Main Taps & Hot Taps',
     tagline: 'Connecting to a Live Main Without Shutting Anybody Off',
     heroDescription:
-      'A water main tap is the connection where your building’s water branches off the public main in the street. It can be made with the main shut down — a dry tap — or while the main is still full and under pressure, which is called a wet tap or hot tap. RO Unlimited self-performs both, so an occupied building, a shopping center, or a plant next door never loses water while you get your service.',
+      'A water main tap is the connection where your building’s water branches off the public main in the street. It can be made with the main shut down — a dry tap — or while the main is still full and under pressure, which is called a wet tap or hot tap. RO Unlimited is licensed for both, so an occupied building, a shopping center, or a plant next door never loses water while you get your service.',
     heroImage: `${IMG}/jr-hot-tap.jpg`,
     cardImage: `${IMG}/jr-tapping-sleeve.jpg`,
     galleryImages: [
@@ -61,7 +61,7 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       {
         heading: 'Why It Matters Here',
         content:
-          'Our crews run out of Easley, and everything within reach of that shop sits in the Piedmont — red clay that drains slowly and is prone to shrink and swell, the same from the Greenville suburbs out to the Georgia and North Carolina lines. A trench wall that stood up fine on a dry Tuesday can slough after Thursday’s rain, so shoring is a live safety decision on every tap pit, not a box to check. Closer to the Blue Ridge foothills, granite and gneiss bedrock sit near the surface, which turns a routine trench into hammer work. What changes most from job to job is who owns the main. Greenville Water, Easley Combined Utilities, Anderson Regional, Seneca Light & Water, and the small districts on either side of the state line each run their own application, approved-materials list, inspector, and fee schedule — and crossing into North Carolina or Georgia changes the permitting path, not just the letterhead. We are licensed in all three states, so the first move on any tap is establishing whose rulebook you are actually building to. Knowing that before design is worth more than any trick in the field.',
+          'We run out of Easley, and everything within reach of that shop sits in the Piedmont — red clay that drains slowly and is prone to shrink and swell, the same from the Greenville suburbs out to the Georgia and North Carolina lines. A trench wall that stood up fine on a dry Tuesday can slough after Thursday’s rain, so shoring is a live safety decision on every tap pit, not a box to check. Closer to the Blue Ridge foothills, granite and gneiss bedrock sit near the surface, which turns a routine trench into hammer work. What changes most from job to job is who owns the main. Greenville Water, Easley Combined Utilities, Anderson Regional, Seneca Light & Water, and the small districts on either side of the state line each run their own application, approved-materials list, inspector, and fee schedule — and crossing into North Carolina or Georgia changes the permitting path, not just the letterhead. We are licensed in South Carolina and Georgia, so the first move on any tap is establishing whose rulebook you are actually building to. Knowing that before design is worth more than any trick in the field.',
       },
     ],
     warningSigns: [

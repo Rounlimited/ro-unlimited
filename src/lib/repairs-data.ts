@@ -40,7 +40,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       },
       {
         heading: 'Why It Matters Here',
-        content: 'Humidity across the Carolinas and north Georgia makes drywall mud dry slower than it does in a dry climate — push through with too-thin coats and you get shrinkage and visible patches months later. Our crews run out of Easley, so most drywall calls are a short drive around Greenville and we can schedule around real dry time instead of rushing coats. Multiple thin coats, each one fully cured before the next, is what keeps a patch flat while the house moves through seasonal humidity swings. Bad patches announce themselves the first hot summer, when the air changes and the compound pulls tight.',
+        content: 'Humidity across the Carolinas and north Georgia makes drywall mud dry slower than it does in a dry climate — push through with too-thin coats and you get shrinkage and visible patches months later. We run out of Easley, so most drywall calls are a short drive around Greenville and we can schedule around real dry time instead of rushing coats. Multiple thin coats, each one fully cured before the next, is what keeps a patch flat while the house moves through seasonal humidity swings. Bad patches announce themselves the first hot summer, when the air changes and the compound pulls tight.',
       },
     ],
     warningSigns: [
@@ -284,7 +284,7 @@ export const REPAIRS_SUB_SERVICES: RepairsSubService[] = [
       { tip: 'Keep gutters clear above the deck', detail: 'Overflow gutters dump water onto the deck, accelerating wear. Maintaining roof gutters protects the deck below.' },
     ],
     processSteps: [
-      { num: '01', title: 'Design & Permit', description: 'For new builds, we design to your space and needs, calculate load requirements, and pull the required building permits. In South Carolina, any deck attached to the house needs a permit; North Carolina and Georgia set their own thresholds county by county. We are licensed in all three states and deal with whichever building department the job falls under.' },
+      { num: '01', title: 'Design & Permit', description: 'For new builds, we design to your space and needs, calculate load requirements, and pull the required building permits. In South Carolina, any deck attached to the house needs a permit; North Carolina and Georgia set their own thresholds county by county. We are licensed in South Carolina and Georgia and deal with whichever building department the job falls under.' },
       { num: '02', title: 'Footings & Framing', description: 'Footings dug to frost depth and inspected before pour. Posts set, beams sized to span, joists installed with proper hangers, ledger lag-bolted to house with flashing to prevent water infiltration.' },
       { num: '03', title: 'Decking Installation', description: 'Boards installed with proper gapping for expansion (especially composite), hidden fasteners or stainless screws to prevent rust streaks. Rim board finished cleanly. Stairs framed with proper rise/run code.' },
       { num: '04', title: 'Railings & Finish', description: 'Railings installed with code-compliant height (36–42") and baluster spacing (less than 4" gap). Posts notched into framing for strength, not just surface-mounted. Stain or sealer applied to wood decks.' },

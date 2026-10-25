@@ -38,7 +38,7 @@ export default function LicenseCardPage() {
             </div>
           </div>
           <div className="mt-5 text-[26px] leading-snug text-white/85">
-            One contractor. No handoffs. Self-performed under our own licenses.
+            One license holder. Accountable for all of it.
           </div>
         </div>
 
@@ -49,7 +49,7 @@ export default function LicenseCardPage() {
               {/* Plate header */}
               <div className="flex items-end justify-between gap-6 border-b-2 pb-3" style={{ borderColor: gold }}>
                 <div className="min-w-0">
-                  <div className="text-[18px] tracking-[0.3em] uppercase text-white/60">{lic.issuerShort}{lic.group ? ` · Group ${lic.group} · ${lic.limit}` : ' · Tier 2 Installer'}</div>
+                  <div className="text-[18px] tracking-[0.3em] uppercase text-white/60">{lic.id === 'osww' ? 'SCDES · Tier 2 Installer' : 'SC LLR · Contractor’s Licensing Board'}</div>
                   <div className="text-[40px] font-black uppercase tracking-tight leading-none mt-1">{lic.id === 'osww' ? 'Onsite Wastewater' : lic.title}</div>
                 </div>
                 <div className="shrink-0 font-mono font-bold text-[44px] tracking-wide leading-none" style={{ color: gold }}>{lic.number}</div>

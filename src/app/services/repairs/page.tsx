@@ -14,7 +14,7 @@ const category = SERVICE_CATEGORIES.find(c => c.id === 'repairs')!;
 const HERO_STATS = [
   { value: 'Any', label: 'Job Size Welcome' },
   { value: '1-Day', label: 'Fast Turnaround' },
-  { value: 'In-House', label: 'Drywall, Paint, Decks' },
+  { value: 'One Call', label: 'Drywall, Paint, Decks' },
   { value: '8', label: 'Specialties' },
 ];
 

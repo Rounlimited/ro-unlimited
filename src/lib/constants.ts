@@ -21,7 +21,7 @@ export const COMPANY = {
 export const DIVISIONS = [
   {
     id: 'commercial', name: 'Commercial Division', shortName: 'Commercial', href: '/commercial',
-    description: 'Ground-up commercial buildings \u2014 offices, retail, warehouses and shells, built complete. We develop the site and run the utilities ourselves, so the building never waits on another contractor.',
+    description: 'Ground-up commercial buildings \u2014 offices, retail, warehouses and shells, built complete. We\u2019re licensed for the site and the utilities too, so one contractor is accountable from the dirt up.',
     services: ['Ground-Up Commercial Builds','QSR & Franchise Buildouts','Retail & Strip Centers','Steel & Mixed-Material Construction','Light Multi-Family Development','Development Consulting'],
     icon: 'building', targetAudience: 'Commercial developers, project managers, general contractors',
     featured: true,
@@ -29,7 +29,7 @@ export const DIVISIONS = [
   
   {
     id: 'grading', name: 'Site Development & Grading', shortName: 'Site Development', href: '/grading',
-    description: 'From raw land to pad-ready \u2014 clearing, mass grading, stormwater, and complete commercial site development, self-performed on our own iron.',
+    description: 'From raw land to pad-ready \u2014 clearing, mass grading, stormwater, and complete commercial site development under our own grading license.',
     services: ['Clearing & Mass Grading','Building Pads & Site Balancing','Stormwater Management','Erosion & Sediment Control','Complete Site Preparation','Foundation & Drainage Work'],
     icon: 'mountain', targetAudience: 'Commercial developers, land owners, project managers',
     featured: true,

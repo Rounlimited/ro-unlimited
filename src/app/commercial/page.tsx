@@ -30,7 +30,7 @@ const PROCESS_STEPS = [
 
 const DIFFERENTIATORS = [
   { icon: Shield, title: 'Single Point of Accountability', desc: 'One company from land grading through final walkthrough. No finger-pointing between subs.' },
-  { icon: Layers, title: 'Ground-Up Capability', desc: 'We grade the dirt, pour the foundation, raise the steel, and finish the interior. All in-house.' },
+  { icon: Layers, title: 'Ground-Up Capability', desc: 'We grade the dirt, pour the foundation, raise the steel, and finish the interior. All under one license holder.' },
   { icon: Clock, title: '25+ Years of Problem Solving', desc: 'Complex sites, tight timelines, impossible specs — we\'ve built through all of it.' },
   { icon: MapPin, title: 'Tri-State Knowledge', desc: 'Georgia, South Carolina, North Carolina — soil conditions, permitting, inspectors, and suppliers across all three states.' },
 ];
@@ -628,7 +628,7 @@ export default function CommercialPage() {
       </section>
 
       {/* ═══ SECTION 9 — THE CLOSE ═══ */}
-      <LicenseRail codes={['BD4', 'CT4', 'MS4', 'GD4', 'PB4', 'EL4', 'AC4']} title="A GC that self-performs the MEP" intro="Building, concrete, masonry and the site — plus plumbing, electrical and HVAC under our own mechanical license. On a commercial job that means fewer subs, fewer handoffs and a schedule we control." />
+      <LicenseRail codes={['BD4', 'CT4', 'MS4', 'GD4', 'PB4', 'EL4', 'AC4']} title="A GC licensed for the MEP too" intro="Building, concrete, masonry and the site — plus plumbing, electrical and HVAC under our own mechanical license. One license holder accountable for the permits and the finished building, with trade crews scaled to the job." />
 
       <section ref={ctaRef} className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-[#111] to-ro-black" />

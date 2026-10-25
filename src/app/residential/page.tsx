@@ -585,7 +585,7 @@ export default function ResidentialPage() {
       </section>
 
       {/* ═══ SECTION 9 — THE CLOSE (warm CTA) ═══ */}
-      <LicenseRail codes={['BD4', 'GD4', 'PB4', 'EL4', 'AC4', 'TIER 2']} title="Licensed for the whole house" intro="The pad, the septic, the plumbing, the wiring, the HVAC and the house itself — one licensed contractor from the driveway in." />
+      <LicenseRail codes={['BD4', 'GD4', 'PB4', 'EL4', 'AC4', 'TIER 2']} title="Licensed for the whole house" intro="The pad, the septic, the plumbing, the wiring, the HVAC and the house itself — one licensed contractor accountable from the driveway in." />
 
       <section ref={ctaRef} className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 warm-gradient-deep" />

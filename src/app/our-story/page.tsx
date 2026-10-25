@@ -31,8 +31,8 @@ const TODAY = [
     desc: 'Ground-up commercial buildings, shells, and build-outs — offices, retail, warehouses — managed start to finish as a licensed general contractor.',
   },
   {
-    title: 'Site Work & Utilities, Self-Performed',
-    desc: 'Grading, water and sewer, storm drainage, boring, and septic are done by our own crews — so the ground under your building is ready when the building is.',
+    title: 'Site Work & Utilities, Licensed',
+    desc: 'Grading, water and sewer, storm drainage, boring, and septic are permitted and delivered under our own license classifications — so the ground under your building is ready when the building is.',
   },
   {
     title: 'Your Project, Live',
