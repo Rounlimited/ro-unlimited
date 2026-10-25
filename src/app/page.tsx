@@ -2,7 +2,6 @@ import Hero from '@/components/sections/Hero';
 import DivisionCards from '@/components/sections/DivisionCards';
 import WhyRO from '@/components/sections/WhyRO';
 import ConstructionCTA from '@/components/sections/ConstructionCTA';
-import LicenseBand from '@/components/sections/LicenseBand';
 import SectionTransition from '@/components/animations/SectionTransition';
 import { getHeroVideo } from '@/lib/sanity/queries';
 
@@ -35,7 +34,9 @@ export default async function HomePage() {
       )}
 
       <Hero heroVideoUrl={heroVideoUrl} />
-      <LicenseBand />
+      {/* LicenseBand pulled off the homepage 2026-10-24 (owner: "too much
+          tech info, it won't keep customers on the site"). It lives on
+          /licenses; the hero chip is the only homepage pointer. */}
       <SectionTransition label="FLOOR 01" sparks />
       <DivisionCards />
       <SectionTransition label="FLOOR 02" sparks />
