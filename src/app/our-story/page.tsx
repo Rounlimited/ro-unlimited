@@ -169,7 +169,7 @@ export default function OurStoryPage() {
           <div className="story-para mb-12">
             <span className="text-ro-gold text-xs font-mono tracking-[0.4em] uppercase block mb-6">How It Started</span>
             <p className="text-ro-gray-300 text-base sm:text-lg leading-[1.85]">
-              JR didn&apos;t learn construction from a textbook. He learned it out in the field — running equipment,
+              RO&apos;s founder didn&apos;t learn construction from a textbook. He learned it out in the field — running equipment,
               setting forms, laying pipe, and working with his own hands. Every lesson came from a real job site:
               read the ground before you cut it, fix the problem before it costs anyone money, and finish what you start.
             </p>

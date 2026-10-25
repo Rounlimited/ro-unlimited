@@ -31,7 +31,7 @@ const PROCESS_STEPS = [
 const DIFFERENTIATORS = [
   { icon: Home, title: 'One Builder, Start to Finish', desc: 'No subcontractor shuffles. One team that knows your project inside and out — from the first conversation to the final walkthrough.' },
   { icon: Hammer, title: 'We Grade Your Land Too', desc: 'Most builders make you hire a separate site prep company. We do it ourselves — one less contract, one less headache.' },
-  { icon: Heart, title: 'Learned in the Field', desc: 'JR didn\'t learn this from a textbook — he learned it on job sites, working with his own hands. That\'s still how we build.' },
+  { icon: Heart, title: 'Learned in the Field', desc: 'Our founder didn\'t learn this from a textbook — he learned it on job sites, working with his own hands. That\'s still how RO builds.' },
   { icon: Sparkles, title: 'Your Home, Our Name', desc: 'Every home carries our reputation. We don\'t cut corners because we have to live with what we build.' },
 ];
 

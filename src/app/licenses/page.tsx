@@ -123,7 +123,7 @@ export default function LicensesPage() {
             </div>
             <div className="border border-ro-gray-800 p-6">
               <p className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-2">Prequalification</p>
-              <p className="text-ro-white font-heading text-xl uppercase tracking-tight">Talk to JR Directly</p>
+              <p className="text-ro-white font-heading text-xl uppercase tracking-tight">Talk to RO Directly</p>
               <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="inline-flex items-center gap-2 text-ro-gold text-lg mt-2 hover:text-ro-gold-light">
                 <Phone size={18} /> {COMPANY.phone}
               </a>

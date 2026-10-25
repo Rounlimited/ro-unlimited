@@ -91,7 +91,7 @@ export const RESIDENTIAL_SERVICE_DETAILS: Record<string, ServiceDetail> = {
   'Vaulted Ceilings & Complex Gables': {
     id: 'vaulted-gables',
     title: 'Vaulted Ceilings & Complex Gables',
-    overview: 'This is where RO\'s craftsmanship shows up in ways most builders can\'t match. Multi-pitch rooflines, cathedral ceilings, dormers, and complex intersecting gables require a level of framing precision that separates custom builders from production builders. JR grew up framing these — it\'s in the DNA of how RO builds.',
+    overview: 'This is where RO\'s craftsmanship shows up in ways most builders can\'t match. Multi-pitch rooflines, cathedral ceilings, dormers, and complex intersecting gables require a level of framing precision that separates custom builders from production builders. RO\'s founder grew up framing these — it\'s in the DNA of how RO builds.',
     includes: [
       'Cathedral and vaulted ceiling framing with exposed ridge beams',
       'Multi-pitch and intersecting roof system engineering',
