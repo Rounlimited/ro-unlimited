@@ -134,6 +134,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${oswald.variable} ${barlow.variable} ${jetbrainsMono.variable}`}>
       <head>
+        {/* First thing the browser runs: report the FIRST script error to
+            /api/client-error before React or any bundle executes. ES5 only —
+            this must run on browsers too old for the rest of the site, which
+            is exactly when it matters. */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var sent=0;function send(kind,msg,src,line,col,stack){if(sent++>2)return;try{var b=JSON.stringify({kind:kind,message:String(msg).slice(0,500),stack:String(stack||'').slice(0,1500),src:String(src||'').slice(0,200),line:line,col:col,url:location.href,ua:navigator.userAgent,at:new Date().toISOString()});if(navigator.sendBeacon){navigator.sendBeacon('/api/client-error',new Blob([b],{type:'application/json'}))}else{var x=new XMLHttpRequest();x.open('POST','/api/client-error',true);x.setRequestHeader('Content-Type','application/json');x.send(b)}}catch(e){}}window.addEventListener('error',function(e){send('early-error',e.message,e.filename,e.lineno,e.colno,e.error&&e.error.stack)},true);window.addEventListener('unhandledrejection',function(e){var r=e.reason;send('early-rejection',r&&r.message||r,'',0,0,r&&r.stack)})}catch(e){}})();` }} />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#1B2A4A" />
