@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail } from '@/lib/email';
+import { shouldEmailCustomer } from '@/lib/customer-auth';
 import { rollUpProgress } from '@/lib/reporting';
 import { Resend } from 'resend';
 
@@ -31,6 +32,10 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const to_email = body.to_email || customer?.email || null;
     if (!to_email) {
       return NextResponse.json({ emailed: false, error: 'No customer email on file — text them their project link instead.' });
+    }
+
+    if (!body.force && !(await shouldEmailCustomer(to_email, 'update'))) {
+      return NextResponse.json({ warning: 'They asked for fewer emails (weekly report or only-when-needed). It is on their page — tap again to email anyway.' });
     }
 
     // One nudge a day unless JR insists.

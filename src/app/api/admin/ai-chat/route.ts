@@ -14,6 +14,8 @@ import { computeInsights } from '@/lib/analytics-insights';
 import { recalcEstimateTotals, syncScheduleAmounts } from '@/lib/estimates';
 import { resolveCustomerName } from '@/lib/customers';
 import { listQuestions, replyToQuestion } from '@/lib/questions';
+import { sendUpdate } from '@/lib/customer-updates';
+import { createRequest, listRequests, setRequestStatus } from '@/lib/customer-requests';
 import { LICENSES, STATES_LICENSED, LICENSE_CLASSIFICATION_COUNT } from '@/lib/licenses';
 import { headers as nextHeaders } from 'next/headers';
 
@@ -312,6 +314,12 @@ const PROGRESS_TOOLS = [
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, summary: { type: 'string', description: 'Optional: replace the auto-written summary' } } } },
   { name: 'send_progress_report', description: 'Send a drafted progress report to the customer. skip_email:true just activates the link for texting instead of emailing. Confirm with the user before calling — this reaches the customer.',
     input_schema: { type: 'object' as const, properties: { report_id: { type: 'string' }, estimate_number: { type: 'string' }, skip_email: { type: 'boolean' }, to_email: { type: 'string' } } } },
+  { name: 'send_customer_update', description: "Post a short progress update (and optional photo URLs) on the customer's project page and email it to them — \"tell the Hartwells the water line is in and backfill starts Monday\". Becomes a customer-visible log entry. Confirm the wording with the user first unless he dictated it. Dates must read as estimates; never promise crews or schedules.",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, body: { type: 'string' }, photo_urls: { type: 'array', items: { type: 'string' } }, notify: { type: 'boolean', description: 'default true — email them' } }, required: ['body'] } },
+  { name: 'request_from_customer', description: "Ask the customer for something — a document (HOA letter, survey, deed), a selection, a signature, a payment, or an answer. kind: document|selection|signature|payment|answer|other. It lands under \"Needs you\" on their page with an upload button and emails them; the team is alerted when it comes back. Use for \"ask Greg for the HOA letter by Friday\".",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, kind: { type: 'string' }, title: { type: 'string' }, details: { type: 'string' }, due_on: { type: 'string', description: 'YYYY-MM-DD' } }, required: ['title'] } },
+  { name: 'list_customer_requests', description: "What RO has asked a customer for and what has come back (status open|submitted|done, with any uploaded file links). Pass close_request_id with status 'done' to close one after reviewing it.",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, close_request_id: { type: 'string' }, status: { type: 'string' } } } },
   { name: 'list_open_questions', description: "Customer questions waiting for an answer (asked on their project page), newest first, across all jobs or one job. Use for \"any questions waiting\", \"what did Greg ask\".",
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' } } } },
   { name: 'answer_customer_question', description: "Answer a customer's question from their project page: posts the reply in their thread and emails them that it's there. Confirm the wording with the user first unless he dictated it (\"answer Greg: yes, until backfill\"). Pass question_id from list_open_questions when there are several.",
@@ -1052,6 +1060,32 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       return { result: d.error ? `Error: ${d.error}` : JSON.stringify({ success: true, item: { title: d.item?.title, date: d.item?.starts_on, done: !!d.item?.done_at } }) };
     }
 
+    case 'send_customer_update':
+    case 'request_from_customer':
+    case 'list_customer_requests': {
+      let estId: string | undefined = input.estimate_id;
+      if (!estId && input.estimate_number) {
+        const { data: e } = await supabase.from('estimates').select('id').ilike('estimate_number', `%${input.estimate_number}%`).limit(1).maybeSingle();
+        estId = e?.id;
+      }
+      if (!estId) return { result: 'Error: which job? Give estimate_number or estimate_id.' };
+      if (name === 'send_customer_update') {
+        const out = await sendUpdate({ estimateId: estId, body: String(input.body || ''), photos: (input.photo_urls || []).map((u: string) => ({ url: u })), sentBy: 'JR', notify: input.notify !== false });
+        if (!out.entry) return { result: 'Error: ' + out.error };
+        return { result: JSON.stringify({ posted: true, emailed: out.emailed, to: out.to, note: out.skipped }) };
+      }
+      if (name === 'request_from_customer') {
+        const out = await createRequest({ estimateId: estId, kind: input.kind || 'other', title: String(input.title || ''), details: input.details || null, due_on: input.due_on || null, createdBy: 'JR', notify: true });
+        if (!out.request) return { result: 'Error: ' + out.error };
+        return { result: JSON.stringify({ created: true, request_id: out.request.id, emailed: out.emailed, on_their_page: true }) };
+      }
+      if (input.close_request_id && input.status) {
+        const out = await setRequestStatus(estId, input.close_request_id, input.status);
+        if (!out.request) return { result: 'Error: ' + out.error };
+      }
+      const rows = await listRequests(estId);
+      return { result: JSON.stringify(rows.map((r: any) => ({ request_id: r.id, kind: r.kind, title: r.title, status: r.status, due_on: r.due_on, response: r.response_text, files: (r.files || []).map((f: any) => f.url), submitted_at: r.submitted_at }))) };
+    }
     case 'list_open_questions': {
       let estId: string | undefined = input.estimate_id;
       if (!estId && input.estimate_number) {
@@ -2841,6 +2875,7 @@ Job progress and customer progress reports:
 - notify_customer_update emails the customer a short "your page has an update" nudge with their link. Confirm with the user first; if it returns a warning (already sent today), ask before retrying with force:true.
 - The Schedule (/admin/schedule) is a rolling 3-week look-ahead: Slipped, Today, This Week (commitment), Next Week, Week 3 (make-ready — order materials, book inspections while problems are cheap), plus a 6-week Timeline of jobs as bars. get_schedule reads it, add_schedule_item books things ("pour Friday on Hartwell"), set_schedule_done checks them off, moves or removes them. Jobs board cards show each job's next scheduled item; the Job Room's Coming Up card shows that job's next few.
 - Customer feedback: their project page has a one-tap pulse ("how's this feeling?"), section notes, and an optional any-time star rating. It all lands in the Job Room (get_job_room returns feedback_recent/feedback_unseen) and notifies JR; a pulse answer of "I have a concern" flags the job on the Jobs board. Two per-job switches control what the customer sees (feedback_enabled = notes+pulse, reviews_enabled = stars) — JR flips them in the Job Room; to change them from chat, PATCH via update_estimate is NOT available, tell the user to use the Job Room toggles.
+Customer portal: every customer also has rounlimited.com/my (sign-in by email link) showing all their projects, what needs them, the latest update and what's next. send_customer_update posts a short update + photos on their page and emails it (\"tell the Hartwells the line is in\") — use it instead of notify_customer_update when he has something to say. request_from_customer puts \"we need X from you\" under Needs You on their page with an upload button and emails them (\"ask Greg for the HOA letter by Friday\"); list_customer_requests shows what came back, with file links.
 Customer questions: anything a customer types in the Questions box on their project page lands in /admin/questions (and in the Job Room). list_open_questions shows what's waiting; answer_customer_question posts the reply on their page and emails them — the customer never needs a text back. If he says "answer Greg: yes, until backfill" that IS the wording: send it. If he just asks "what did they want", list and read it back; offer to answer. Never invent dates or results in an answer; "JR will confirm" is fine.
 </progress>`;
 
@@ -2854,7 +2889,7 @@ Letters and notices on company letterhead:
 
 const LETTER_TOOL_NAMES = new Set(['write_letter','list_letters']);
 
-const PROGRESS_TOOL_NAMES = new Set(['list_open_questions','answer_customer_question','get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report','get_job_room','add_job_cost','add_log_entry','notify_customer_update','get_schedule','add_schedule_item','set_schedule_done']);
+const PROGRESS_TOOL_NAMES = new Set(['send_customer_update','request_from_customer','list_customer_requests','list_open_questions','answer_customer_question','get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report','get_job_room','add_job_cost','add_log_entry','notify_customer_update','get_schedule','add_schedule_item','set_schedule_done']);
 
 const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets','list_line_presets','search_option_images','add_option_group','update_option_group','delete_option_group']);
 

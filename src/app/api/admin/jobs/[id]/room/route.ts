@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     const supabase = createAdminClient();
     const { id } = params;
 
-    const [estRes, itemsRes, progRes, costsRes, invRes, logRes, fbRes, schedRes, msgRes] = await Promise.all([
+    const [estRes, itemsRes, progRes, costsRes, invRes, logRes, fbRes, schedRes, msgRes, reqRes] = await Promise.all([
       supabase
         .from('estimates')
         .select(`id, estimate_number, project_name, total, division, share_token,
@@ -33,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       supabase.from('job_costs').select('id, spent_on, category, amount, vendor, note').eq('estimate_id', id)
         .order('spent_on', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('invoices').select('id, invoice_number, total, amount_paid, status, due_date').eq('estimate_id', id),
-      supabase.from('job_log_entries').select('id, entry_date, type, text, reason, include_in_report, created_at')
+      supabase.from('job_log_entries').select('id, entry_date, type, text, reason, include_in_report, created_at, photos')
         .eq('estimate_id', id).order('entry_date', { ascending: false }).order('created_at', { ascending: false }).limit(60),
       supabase.from('job_feedback').select('id, kind, section, question, answer, rating, body, created_at, seen_at')
         .eq('estimate_id', id).order('created_at', { ascending: false }).limit(30),
@@ -42,6 +42,8 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
         .order('starts_on', { ascending: true }).limit(8),
       supabase.from('project_messages').select('id, author, author_name, body, created_at, answered_at')
         .eq('estimate_id', id).order('created_at', { ascending: true }).limit(40),
+      supabase.from('customer_requests').select('id, kind, title, details, due_on, status, response_text, files, created_at, notified_at, submitted_at, done_at')
+        .eq('estimate_id', id).order('created_at', { ascending: false }).limit(30),
     ]);
 
     if (estRes.error || !estRes.data) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -72,6 +74,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       estimate: est,
       messages,
       open_questions: messages.filter((m) => m.author === 'customer' && !m.answered_at).length,
+      requests: reqRes.data || [],
       progress: {
         percent: roll.percent,
         phases: roll.phases,

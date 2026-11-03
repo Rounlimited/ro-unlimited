@@ -7,7 +7,7 @@ import CustomerFeedbackCard from '@/components/public/CustomerFeedbackCard';
 import {
   useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp, ShineStyles,
   ProgressSection, StorySection, SitePhotos, DocumentsSection,
-  ChangeOrders, AskSection, BalanceDue, CompletionCard, WarrantyCard, FeedbackCard,
+  ChangeOrders, AskSection, BalanceDue, CompletionCard, WarrantyCard, FeedbackCard, RequestsSection, NextUpCard,
   type PublicOptionGroup,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
@@ -66,7 +66,9 @@ interface EstimateData {
   photos: { url: string; caption?: string }[] | null;
   signed_at?: string | null;
   stage?: 'proposal' | 'signed' | 'in_progress' | 'complete';
-  story?: { entry_date: string; type: string; text: string | null }[];
+  story?: { entry_date: string; type: string; text: string | null; photos?: { url: string; caption?: string | null }[] }[];
+  requests?: { id: string; kind: string; title: string; details: string | null; due_on: string | null; status: string; response_text: string | null; files: { name: string; url: string }[]; created_at: string; submitted_at: string | null; done_at: string | null }[];
+  next_up?: { title: string; kind: string; starts_on: string } | null;
   site_photos?: { url: string; caption?: string | null }[];
   documents?: { kind: string; title: string; date: string | null; detail: string; href: string | null; paid?: boolean }[];
   change_orders?: {
@@ -532,6 +534,9 @@ export default function PublicEstimatePage() {
           const items: { label: string; detail?: string; onClick?: () => void; href?: string }[] = [];
           const go = (sel: string) => () => document.getElementById(sel)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           if (!estimate.signed_at) items.push({ label: `Review and sign your ${estimate.document_mode === 'contract' ? 'contract' : 'estimate'}`, detail: fmt(estimate.total), onClick: go('accept-sign') });
+          for (const rq of estimate.requests || []) {
+            if (rq.status === 'open') items.push({ label: rq.title, detail: rq.due_on ? 'Needed by ' + new Date(rq.due_on + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : (rq.kind === 'document' ? 'Upload it below' : 'Answer below'), onClick: go('requests') });
+          }
           for (const co of estimate.change_orders || []) {
             if (!['approved', 'declined', 'draft'].includes(co.status)) items.push({ label: `Approve or decline: ${co.title}`, detail: `${co.amount >= 0 ? '+' : '−'}${fmt(Math.abs(co.amount))}${co.days_added ? ` · ${co.days_added} day${co.days_added === 1 ? '' : 's'} added` : ' · no schedule change'}`, onClick: go('change-orders') });
           }
@@ -580,6 +585,14 @@ export default function PublicEstimatePage() {
             notes={estimate.warranty_notes || null}
             completedAt={estimate.completed_at}
           />
+        )}
+
+        {!!estimate.signed_at && !estimate.completed_at && estimate.next_up && (
+          <NextUpCard item={estimate.next_up} />
+        )}
+
+        {estimate.requests && estimate.requests.length > 0 && (
+          <RequestsSection token={token} requests={estimate.requests} onDone={reload} />
         )}
 
         {/* ─── Anything waiting on them comes first ─── */}
@@ -997,6 +1010,7 @@ export default function PublicEstimatePage() {
             <span>|</span>
             <a href="https://rounlimited.com" className="hover:text-[#C9A84C] transition-colors">rounlimited.com</a>
           </div>
+          <a href="/my" className="inline-flex items-center justify-center min-h-[48px] mt-4 px-5 rounded-xl text-[16px] font-bold" style={{ background: '#fdf6e7', color: '#8a6d20', border: '1px solid #ead9ac' }}>See all your projects with RO</a>
         </div>
       </footer>
 

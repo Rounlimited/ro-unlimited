@@ -84,6 +84,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     let documents: any[] = [];
     let changeOrders: any[] = [];
     let messages: any[] = [];
+    let requests: any[] = [];
+    let nextUp: any = null;
     let balanceDue = 0;
     let payHref: string | null = null;
     let feedbackRating: number | null = null;
@@ -129,7 +131,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       // the ON/OFF on each log entry is exactly this decision.
       const { data: logRows } = await supabase
         .from('job_log_entries')
-        .select('entry_date, type, text')
+        .select('entry_date, type, text, photos')
         .eq('estimate_id', estimate.id)
         .eq('include_in_report', true)
         .order('entry_date', { ascending: false })
@@ -138,6 +140,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
         entry_date: e.entry_date,
         type: e.type,
         text: e.text || (e.type === 'rain' ? null : ''),
+        photos: Array.isArray((e as any).photos) ? (e as any).photos.filter((p: any) => p && p.url).map((p: any) => ({ url: p.url, caption: p.caption || null })) : [],
       }));
 
       // Jobsite photos already attached to the job.
@@ -160,6 +163,21 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       ]);
       changeOrders = coRes.data || [];
       messages = msgRes.data || [];
+
+      // Things RO has asked them for (documents, choices, answers) and the
+      // next thing on the calendar — the two lines a customer actually wants.
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const [reqRes, nextRes] = await Promise.all([
+        supabase.from('customer_requests')
+          .select('id, kind, title, details, due_on, status, response_text, files, created_at, submitted_at, done_at')
+          .eq('estimate_id', estimate.id).neq('status', 'cancelled')
+          .order('created_at', { ascending: false }).limit(20),
+        supabase.from('job_schedule_items').select('title, kind, starts_on')
+          .eq('estimate_id', estimate.id).gte('starts_on', today).is('done_at', null)
+          .order('starts_on', { ascending: true }).limit(1).maybeSingle(),
+      ]);
+      requests = (reqRes.data || []).map((r) => ({ ...r, files: Array.isArray(r.files) ? r.files.map((f: any) => ({ name: f.name, url: f.url })) : [] }));
+      nextUp = nextRes.data ? { title: nextRes.data.title, kind: nextRes.data.kind, starts_on: nextRes.data.starts_on } : null;
 
       // Their paperwork, in one place: every report sent, every invoice raised.
       const [reportsRes, invoicesRes] = await Promise.all([
@@ -217,6 +235,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       documents,
       change_orders: changeOrders,
       messages,
+      requests,
+      next_up: nextUp,
       balance_due: Math.round(balanceDue),
       pay_href: payHref,
       completed_at: estimate.completed_at || null,

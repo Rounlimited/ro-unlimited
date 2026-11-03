@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail } from '@/lib/email';
 import { Resend } from 'resend';
+import { shouldEmailCustomer } from '@/lib/customer-auth';
 
 type RouteContext = { params: { id: string } };
 
@@ -37,10 +38,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       .update({ status: 'sent', sent_at: new Date().toISOString(), sent_to: to_email })
       .eq('id', params.id);
 
-    if (body.skip_email || !to_email) {
+    const wantsReports = to_email ? await shouldEmailCustomer(to_email, 'weekly') : false;
+    if (body.skip_email || !to_email || !wantsReports) {
       return NextResponse.json({
         sent: true, link, emailed: false,
-        note: to_email ? 'Link is live — text it to them.' : 'No customer email on file; link is live to text.',
+        note: !to_email ? 'No customer email on file; link is live to text.'
+          : !wantsReports && !body.skip_email ? 'They chose "only when you need me" — the report is live on their page, not emailed.'
+          : 'Link is live — text it to them.',
       });
     }
 

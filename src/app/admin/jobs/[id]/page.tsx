@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Loader2, Eye, FileText, ClipboardList, Wallet, Plus, Trash2, CheckCircle2,
-  CloudRain, CalendarDays, Lock, Mail, Save, TrendingUp, TrendingDown, ExternalLink, MessagesSquare, Send, Sparkles,
+  CloudRain, CalendarDays, Lock, Mail, Save, TrendingUp, TrendingDown, ExternalLink, MessagesSquare, Send, Sparkles, Camera, Inbox, Paperclip,
 } from 'lucide-react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import LinkControlsSheet from '@/components/admin/estimates/LinkControls';
@@ -12,6 +12,7 @@ import { Link2 as LinkIcon } from 'lucide-react';
 import AppShell from '@/components/admin/AppShell';
 import { SCHEDULE_META, BUDGET_META, STATUS_REASONS, cadenceLabel, type ScheduleStatus, type BudgetStatus } from '@/lib/reporting';
 import { LOG_TYPES } from '@/lib/progress-reports';
+import { REQUEST_KINDS } from '@/lib/customer-request-kinds';
 
 /**
  * The Job Room — JR's behind-the-scenes view of one job. Everything the
@@ -40,6 +41,7 @@ interface Room {
   estimate: any;
   messages: { id: string; author: string; author_name: string | null; body: string; created_at: string; answered_at: string | null }[];
   open_questions: number;
+  requests: { id: string; kind: string; title: string; details: string | null; due_on: string | null; status: string; response_text: string | null; files: { name: string; url: string }[]; created_at: string; notified_at: string | null; submitted_at: string | null; done_at: string | null }[];
   feedback: FeedbackRow[];
   feedback_unseen: number;
   upcoming: { id: string; title: string; kind: string; starts_on: string; ends_on: string | null }[];
@@ -114,6 +116,70 @@ export default function JobRoomPage() {
   const [notifying, setNotifying] = useState(false);
   const [showLinkControls, setShowLinkControls] = useState(false);
   const [notifyMsg, setNotifyMsg] = useState('');
+  // Quick update to the customer: a couple of lines and some photos.
+  const [upText, setUpText] = useState('');
+  const [upPhotos, setUpPhotos] = useState<{ url: string; caption: string | null }[]>([]);
+  const [upBusy, setUpBusy] = useState<'draft' | 'photo' | 'send' | null>(null);
+  const [upNotice, setUpNotice] = useState('');
+  const [upOpen, setUpOpen] = useState(false);
+  const draftUpdate = async () => {
+    setUpBusy('draft'); setUpNotice('');
+    try {
+      const d = await fetch('/api/admin/estimates/' + id + '/update/draft', { method: 'POST' }).then((r) => r.json());
+      if (d.draft) setUpText(d.draft); else setUpNotice(d.error || 'Could not draft — write it yourself.');
+    } catch { setUpNotice('Could not draft — write it yourself.'); }
+    setUpBusy(null);
+  };
+  const addUpdatePhotos = async (list: FileList | null) => {
+    if (!list || !list.length) return;
+    setUpBusy('photo'); setUpNotice('');
+    try {
+      for (const f of Array.from(list).slice(0, 8)) {
+        const fd = new FormData(); fd.append('file', f); fd.append('type', 'jobPhoto');
+        const d = await fetch('/api/admin/upload', { method: 'POST', body: fd }).then((r) => r.json());
+        if (d.url) setUpPhotos((p) => [...p, { url: d.url, caption: null }]); else setUpNotice(d.error || 'A photo failed to upload.');
+      }
+    } catch { setUpNotice('Photo upload failed — try again.'); }
+    setUpBusy(null);
+  };
+  const sendUpdate = async () => {
+    if (!upText.trim()) { setUpNotice('Write the update first.'); return; }
+    setUpBusy('send'); setUpNotice('');
+    try {
+      const d = await fetch('/api/admin/estimates/' + id + '/update', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: upText.trim(), photos: upPhotos }),
+      }).then((r) => r.json());
+      if (d.ok) { setUpNotice(d.emailed ? 'Posted on their page and emailed ' + d.to + ' ✓' : 'Posted on their page ✓' + (d.warning ? ' — ' + d.warning : '')); setUpText(''); setUpPhotos([]); setUpOpen(false); await load(); }
+      else setUpNotice(d.error || 'Could not send.');
+    } catch { setUpNotice('Could not send — try again.'); }
+    setUpBusy(null);
+  };
+  // Ask the customer for something (document, choice, answer).
+  const [rqOpen, setRqOpen] = useState(false);
+  const [rqKind, setRqKind] = useState<string>('document');
+  const [rqTitle, setRqTitle] = useState('');
+  const [rqDetails, setRqDetails] = useState('');
+  const [rqDue, setRqDue] = useState('');
+  const [rqBusy, setRqBusy] = useState(false);
+  const [rqNotice, setRqNotice] = useState('');
+  const sendRequest = async () => {
+    if (!rqTitle.trim()) { setRqNotice('Say what you need from them.'); return; }
+    setRqBusy(true); setRqNotice('');
+    try {
+      const d = await fetch('/api/admin/estimates/' + id + '/requests', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: rqKind, title: rqTitle.trim(), details: rqDetails.trim() || null, due_on: rqDue || null }),
+      }).then((r) => r.json());
+      if (d.ok) { setRqNotice(d.emailed ? 'On their page and emailed ✓' : 'On their page ✓ (no email on file — text them their link)'); setRqTitle(''); setRqDetails(''); setRqDue(''); setRqOpen(false); await load(); }
+      else setRqNotice(d.error || 'Could not send.');
+    } catch { setRqNotice('Could not send — try again.'); }
+    setRqBusy(false);
+  };
+  const closeRequest = async (requestId: string, status: 'done' | 'open' | 'cancelled') => {
+    await fetch('/api/admin/estimates/' + id + '/requests', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ request_id: requestId, status }) });
+    await load();
+  };
   const [forceNotify, setForceNotify] = useState(false);
 
   const load = useCallback(async () => {
@@ -532,6 +598,126 @@ export default function JobRoomPage() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* ── Send them an update: two lines + photos, straight to their page ── */}
+        <div className="rounded-2xl border p-5" style={{ background: '#111', borderColor: 'rgba(201,168,76,0.3)' }}>
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <p className="text-[17px] font-bold flex items-center gap-2"><Send size={18} style={{ color: '#D4B965' }} /> Send Them an Update</p>
+          </div>
+          <p className="text-[15px] text-white/50 mb-3">Lands on their project page under &ldquo;What&rsquo;s Been Happening&rdquo;, goes in the next report, and emails them if they want emails. No texting back and forth.</p>
+          {!upOpen ? (
+            <button onClick={() => { setUpOpen(true); if (!upText) draftUpdate(); }}
+              className="w-full min-h-[52px] rounded-xl text-[16px] font-bold text-black flex items-center justify-center gap-2 active:scale-[0.99]"
+              style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>
+              <Sparkles size={18} /> Write an Update
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <textarea value={upText} onChange={(e) => setUpText(e.target.value)} rows={4} placeholder={upBusy === 'draft' ? 'Drafting from the log…' : 'What happened, what\u2019s next…'}
+                className="w-full rounded-xl px-4 py-3 text-[17px] text-white bg-white/5 border border-white/10 outline-none focus:border-[#D4B965]/60" />
+              {upPhotos.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {upPhotos.map((p, i) => (
+                    <div key={i} className="relative shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.url.includes('cdn.sanity.io') ? p.url + '?w=240&auto=format' : p.url} alt="" className="w-24 h-20 object-cover rounded-lg" />
+                      <button onClick={() => setUpPhotos((a) => a.filter((_, j) => j !== i))} aria-label="Remove photo" className="absolute -top-2 -right-2 w-8 h-8 rounded-full text-white text-[15px] font-bold" style={{ background: '#333', border: '1px solid rgba(255,255,255,0.2)' }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <label className="min-h-[52px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                  {upBusy === 'photo' ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />} Add Photos
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => addUpdatePhotos(e.target.files)} />
+                </label>
+                <button onClick={draftUpdate} disabled={upBusy !== null}
+                  className="min-h-[52px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50"
+                  style={{ background: 'rgba(201,168,76,0.14)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }}>
+                  {upBusy === 'draft' ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />} Draft It for Me
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => { setUpOpen(false); setUpNotice(''); }} disabled={upBusy !== null} className="min-h-[52px] rounded-xl text-[16px] font-bold text-white/70" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }}>Cancel</button>
+                <button onClick={sendUpdate} disabled={upBusy !== null || !upText.trim()}
+                  className="min-h-[52px] rounded-xl text-[16px] font-bold text-black flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>
+                  {upBusy === 'send' ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />} Send to Customer
+                </button>
+              </div>
+            </div>
+          )}
+          {upNotice && <p className="text-[15px] mt-2" style={{ color: upNotice.includes('✓') ? '#35d07f' : '#D4B965' }}>{upNotice}</p>}
+        </div>
+
+        {/* ── Ask them for something: the county-portal "corrections" list ── */}
+        <div className="rounded-2xl border p-5" style={{ background: '#111', borderColor: room.requests.some((r) => r.status === 'submitted') ? 'rgba(53,208,127,0.45)' : 'rgba(255,255,255,0.08)' }}>
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <p className="text-[17px] font-bold flex items-center gap-2"><Inbox size={18} style={{ color: '#D4B965' }} /> Need Something From Them?</p>
+            {room.requests.some((r) => r.status === 'submitted') && (
+              <span className="px-3 py-1 rounded-full text-[13px] font-bold" style={{ background: 'rgba(53,208,127,0.15)', color: '#35d07f' }}>{room.requests.filter((r) => r.status === 'submitted').length} came back</span>
+            )}
+          </div>
+          <p className="text-[15px] text-white/50 mb-3">HOA letter, survey, a color choice, a yes or no. It goes under &ldquo;Needs you&rdquo; on their page with an upload button, and you get told when it comes back.</p>
+          {room.requests.filter((r) => r.status !== 'cancelled').length > 0 && (
+            <div className="space-y-2 mb-3">
+              {room.requests.filter((r) => r.status !== 'cancelled').slice(0, 8).map((r) => (
+                <div key={r.id} className="rounded-xl px-3 py-2.5" style={{ background: r.status === 'submitted' ? 'rgba(53,208,127,0.08)' : 'rgba(255,255,255,0.03)', border: '1px solid ' + (r.status === 'submitted' ? 'rgba(53,208,127,0.3)' : 'rgba(255,255,255,0.06)') }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[16px] font-semibold text-white/90">{r.title}</p>
+                      <p className="text-[14px] text-white/45">
+                        {r.status === 'open' ? 'Waiting on them' + (r.due_on ? ' · by ' + fmtDay(r.due_on) : '') + (r.notified_at ? ' · emailed' : '')
+                          : r.status === 'submitted' ? 'Came back ' + (r.submitted_at ? timeAgo(r.submitted_at) : '')
+                          : 'Done' + (r.done_at ? ' ' + timeAgo(r.done_at) : '')}
+                      </p>
+                      {r.response_text && <p className="text-[16px] text-white/75 mt-1 whitespace-pre-line">{r.response_text}</p>}
+                      {Array.isArray(r.files) && r.files.length > 0 && (
+                        <ul className="mt-1 space-y-0.5">{r.files.map((f, i) => <li key={i}><a href={f.url} target="_blank" rel="noreferrer" className="text-[15px] inline-flex items-center gap-1.5 underline" style={{ color: '#D4B965' }}><Paperclip size={14} /> {f.name}</a></li>)}</ul>
+                      )}
+                    </div>
+                    {r.status !== 'done' && (
+                      <button onClick={() => closeRequest(r.id, 'done')} className="shrink-0 min-h-[40px] px-3 rounded-lg text-[14px] font-bold" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.12)' }}>{r.status === 'submitted' ? 'Got it' : 'Cancel'}</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {!rqOpen ? (
+            <button onClick={() => setRqOpen(true)}
+              className="w-full min-h-[52px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99]"
+              style={{ background: 'rgba(201,168,76,0.14)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }}>
+              <Plus size={18} /> Ask Them for Something
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {REQUEST_KINDS.map((k) => (
+                  <button key={k.id} onClick={() => setRqKind(k.id)} className="min-h-[44px] px-4 rounded-full text-[15px] font-bold"
+                    style={{ background: rqKind === k.id ? 'rgba(201,168,76,0.22)' : 'rgba(255,255,255,0.05)', color: rqKind === k.id ? '#D4B965' : 'rgba(255,255,255,0.7)', border: '1px solid ' + (rqKind === k.id ? 'rgba(201,168,76,0.6)' : 'rgba(255,255,255,0.12)') }}>{k.label}</button>
+                ))}
+              </div>
+              <input value={rqTitle} onChange={(e) => setRqTitle(e.target.value)} placeholder={rqKind === 'document' ? 'e.g. HOA approval letter' : rqKind === 'selection' ? 'e.g. Pick the pipe color' : 'What do you need from them?'}
+                className="w-full min-h-[52px] rounded-xl px-4 text-[17px] text-white bg-white/5 border border-white/10 outline-none focus:border-[#D4B965]/60" />
+              <textarea value={rqDetails} onChange={(e) => setRqDetails(e.target.value)} rows={2} placeholder="Any details for them (optional)"
+                className="w-full rounded-xl px-4 py-3 text-[16px] text-white bg-white/5 border border-white/10 outline-none focus:border-[#D4B965]/60" />
+              <label className="block">
+                <span className="text-[14px] text-white/50">Needed by (optional)</span>
+                <input type="date" value={rqDue} onChange={(e) => setRqDue(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl px-4 text-[16px] text-white bg-white/5 border border-white/10 outline-none" style={{ colorScheme: 'dark' }} />
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => { setRqOpen(false); setRqNotice(''); }} disabled={rqBusy} className="min-h-[52px] rounded-xl text-[16px] font-bold text-white/70" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }}>Cancel</button>
+                <button onClick={sendRequest} disabled={rqBusy || !rqTitle.trim()}
+                  className="min-h-[52px] rounded-xl text-[16px] font-bold text-black flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>
+                  {rqBusy ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />} Send Request
+                </button>
+              </div>
+            </div>
+          )}
+          {rqNotice && <p className="text-[15px] mt-2" style={{ color: rqNotice.includes('✓') ? '#35d07f' : '#D4B965' }}>{rqNotice}</p>}
         </div>
 
         {/* ── The customer's side of the glass ── */}

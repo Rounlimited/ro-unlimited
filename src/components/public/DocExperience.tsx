@@ -5,7 +5,7 @@ import NumberFlow from '@number-flow/react';
 import {
   CheckCircle2, Check, Loader2, PenLine, CloudRain, Hammer, Flag, ClipboardCheck,
   AlertTriangle, Camera, X, FileText, Receipt, ChevronRight,
-  FilePlus2, MessageCircle, Send, CreditCard, ShieldCheck, Star, PartyPopper,
+  FilePlus2, MessageCircle, Send, CreditCard, ShieldCheck, Star, PartyPopper, Upload, Paperclip, CalendarDays, Inbox,
 } from 'lucide-react';
 
 /**
@@ -586,9 +586,11 @@ export function ProgressSection({ progress, docWord }: {
 /* ── The living project: what happened, in order ──────────────────
    Straight from JR's job log — only the entries he's left switched on. */
 export function StorySection({ story }: {
-  story: { entry_date: string; type: string; text: string | null }[];
+  story: { entry_date: string; type: string; text: string | null; photos?: { url: string; caption?: string | null }[] }[];
 }) {
   const [showAll, setShowAll] = useState(false);
+  const [openPhoto, setOpenPhoto] = useState<{ url: string; caption?: string | null } | null>(null);
+  const thumb = (u: string, w: number) => (u.includes('cdn.sanity.io') ? `${u}?w=${w}&auto=format` : u);
   if (!story.length) return null;
 
   const shown = showAll ? story : story.slice(0, 6);
@@ -625,6 +627,16 @@ export function StorySection({ story }: {
                 <p className="text-[17px] text-[#2a2a2a] leading-snug">
                   {e.text || (e.type === 'rain' ? 'Rained out — no work on site.' : '')}
                 </p>
+                {Array.isArray(e.photos) && e.photos.length > 0 && (
+                  <div className="flex gap-2 mt-2 overflow-x-auto pb-1 -mr-5 pr-5">
+                    {e.photos.map((p, j) => (
+                      <button key={j} type="button" onClick={() => setOpenPhoto(p)} className="shrink-0 rounded-lg overflow-hidden active:scale-[0.98]" style={{ width: 112, height: 84, background: '#f0ece2' }} aria-label={p.caption || 'Site photo'}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={thumb(p.url, 300)} alt={p.caption || 'Site photo'} className="w-full h-full object-cover" loading="lazy" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -638,6 +650,124 @@ export function StorySection({ story }: {
           {showAll ? 'Show less' : `Show all ${story.length} days`}
         </button>
       )}
+      {openPhoto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.9)' }} onClick={() => setOpenPhoto(null)}>
+          <button type="button" aria-label="Close" className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center text-white" style={{ background: 'rgba(255,255,255,0.15)' }}><X size={22} /></button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={thumb(openPhoto.url, 1600)} alt={openPhoto.caption || 'Site photo'} className="max-w-full max-h-[85vh] rounded-xl object-contain" />
+          {openPhoto.caption && <p className="absolute bottom-6 left-0 right-0 text-center text-white text-[16px] px-6">{openPhoto.caption}</p>}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ── What's next on the calendar — one line, always "estimated" ──────── */
+export function NextUpCard({ item }: { item: { title: string; kind: string; starts_on: string } }) {
+  const when = new Date(item.starts_on + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const days = Math.round((new Date(item.starts_on + 'T12:00:00').getTime() - Date.now()) / 86400000);
+  return (
+    <section className="rounded-2xl border bg-white p-5 flex items-start gap-3" style={{ borderColor: '#f0ece2' }}>
+      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: '#fdf6e7', border: '1px solid #ead9ac' }}><CalendarDays size={18} style={{ color: '#8a6d20' }} /></div>
+      <div className="min-w-0">
+        <p className="text-[13px] font-bold uppercase tracking-wide" style={{ color: '#8a6d20' }}>What&rsquo;s next</p>
+        <p className="text-[18px] font-semibold text-[#2a2a2a] leading-snug">{item.title}</p>
+        <p className="text-[15px] text-gray-500">{days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : `In ${days} days`} &mdash; {when} <span className="text-gray-400">(estimated; weather and inspections move dates)</span></p>
+      </div>
+    </section>
+  );
+}
+
+/* ── Requests from RO: "we need the HOA letter" with an upload button ──── */
+type CustomerRequest = { id: string; kind: string; title: string; details: string | null; due_on: string | null; status: string; response_text: string | null; files: { name: string; url: string }[]; created_at: string; submitted_at: string | null; done_at: string | null };
+export function RequestsSection({ token, requests, onDone }: { token: string; requests: CustomerRequest[]; onDone: () => void }) {
+  const [active, setActive] = useState<string | null>(null);
+  const [text, setText] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [busy, setBusy] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [showDone, setShowDone] = useState(false);
+  const open = requests.filter((r) => r.status === 'open');
+  const submitted = requests.filter((r) => r.status === 'submitted');
+  const done = requests.filter((r) => r.status === 'done');
+  if (!requests.length) return null;
+  const due = (d: string | null) => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : null;
+  const when = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  const send = async (r: CustomerRequest) => {
+    if (!text.trim() && !files.length) { setError(r.kind === 'document' ? 'Add the file (or a photo of it) first.' : 'Write your answer first.'); return; }
+    setError(null);
+    try {
+      const uploaded: any[] = [];
+      for (let i = 0; i < files.length; i++) {
+        setBusy(`Sending file ${i + 1} of ${files.length}…`);
+        const fd = new FormData(); fd.append('request_id', r.id); fd.append('file', files[i]);
+        const res = await fetch('/api/estimate/' + token + '/requests', { method: 'PUT', body: fd });
+        const d = await res.json();
+        if (!res.ok || d.error) throw new Error(d.error || 'Upload failed');
+        uploaded.push(d);
+      }
+      setBusy('Sending…');
+      const res = await fetch('/api/estimate/' + token + '/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ request_id: r.id, text: text.trim(), files: uploaded }) });
+      const d = await res.json();
+      if (!res.ok || d.error) throw new Error(d.error || 'Could not send');
+      setText(''); setFiles([]); setActive(null); onDone();
+    } catch (e: any) { setError(e?.message || 'Could not send that — please call us.'); }
+    setBusy('');
+  };
+
+  return (
+    <section id="requests" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: open.length ? '#ead9ac' : '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-1" style={{ color: '#8a6d20' }}>Requests from RO</p>
+      <p className="text-[16px] text-[#4b5563] mb-4">{open.length ? 'Send these right from your phone — a clear photo of a document works fine.' : 'Nothing open right now. Everything you\u2019ve sent is below.'}</p>
+      <div className="space-y-3">
+        {open.map((r) => (
+          <div key={r.id} className="rounded-xl p-4" style={{ background: '#fdf6e7', border: '1px solid #ead9ac' }}>
+            <p className="text-[18px] font-bold text-[#2a2a2a] leading-snug">{r.title}</p>
+            {r.due_on && <p className="text-[15px] font-semibold mt-0.5" style={{ color: '#8a6d20' }}>Needed by {due(r.due_on)}</p>}
+            {r.details && <p className="text-[16px] text-[#4b5563] mt-2 whitespace-pre-line">{r.details}</p>}
+            {active === r.id ? (
+              <div className="mt-3 space-y-3">
+                <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder={r.kind === 'document' ? 'Anything we should know about it (optional)' : 'Your answer'}
+                  className="w-full rounded-xl border px-4 py-3 text-[17px] text-[#1a1a1a] bg-white outline-none focus:border-[#C9A84C]" style={{ borderColor: '#e5e0d2' }} />
+                <label className="flex items-center gap-3 min-h-[52px] rounded-xl px-4 cursor-pointer" style={{ background: '#fff', border: '1px dashed #C9A84C' }}>
+                  <Upload size={20} style={{ color: '#8a6d20' }} />
+                  <span className="text-[16px] font-semibold text-[#2a2a2a]">{files.length ? `${files.length} file${files.length === 1 ? '' : 's'} ready` : 'Add a photo or PDF'}</span>
+                  <input type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={(e) => setFiles(Array.from(e.target.files || []).slice(0, 6))} />
+                </label>
+                {files.length > 0 && <ul className="text-[15px] text-gray-600 space-y-0.5">{files.map((f, i) => <li key={i} className="flex items-center gap-1.5"><Paperclip size={14} /> {f.name}</li>)}</ul>}
+                {error && <p className="text-[16px] font-semibold" style={{ color: '#b45309' }}>{error}</p>}
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => { setActive(null); setFiles([]); setText(''); setError(null); }} disabled={!!busy} className="min-h-[52px] rounded-xl text-[16px] font-bold" style={{ background: '#fff', color: '#4b5563', border: '1px solid #e5e0d2' }}>Cancel</button>
+                  <button type="button" onClick={() => send(r)} disabled={!!busy} className="min-h-[52px] rounded-xl text-[16px] font-bold text-black flex items-center justify-center gap-2 disabled:opacity-60" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>
+                    {busy ? <><Loader2 size={18} className="animate-spin" /> {busy}</> : <><Send size={18} /> Send to RO</>}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" onClick={() => { setActive(r.id); setError(null); }} className="mt-3 w-full min-h-[52px] rounded-xl text-[16px] font-bold text-black flex items-center justify-center gap-2 active:scale-[0.99]" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>
+                {r.kind === 'document' ? <><Upload size={18} /> Upload it</> : <><Send size={18} /> Answer</>}
+              </button>
+            )}
+          </div>
+        ))}
+        {submitted.map((r) => (
+          <div key={r.id} className="rounded-xl p-4" style={{ background: '#e9f7ef', border: '1px solid #bfe6cf' }}>
+            <p className="text-[17px] font-bold text-[#2a2a2a] leading-snug">{r.title}</p>
+            <p className="text-[15px] font-semibold mt-0.5" style={{ color: '#187a4b' }}>Received {r.submitted_at ? when(r.submitted_at) : ''} &mdash; thank you. RO will take it from here.</p>
+            {r.response_text && <p className="text-[16px] text-[#4b5563] mt-1 whitespace-pre-line">{r.response_text}</p>}
+            {r.files.length > 0 && <ul className="mt-1 text-[15px] text-gray-600 space-y-0.5">{r.files.map((f, i) => <li key={i} className="flex items-center gap-1.5"><Paperclip size={14} /> {f.name}</li>)}</ul>}
+          </div>
+        ))}
+        {done.length > 0 && (
+          <button type="button" onClick={() => setShowDone((v) => !v)} className="min-h-[44px] text-[15px] font-semibold text-gray-500 inline-flex items-center gap-1.5"><Inbox size={15} /> {showDone ? 'Hide' : 'Show'} {done.length} completed</button>
+        )}
+        {showDone && done.map((r) => (
+          <div key={r.id} className="rounded-xl p-3" style={{ background: '#f7f7f5', border: '1px solid #e8e4da' }}>
+            <p className="text-[16px] font-semibold text-gray-600">{r.title} <span className="font-normal text-gray-400">&mdash; done {r.done_at ? when(r.done_at) : ''}</span></p>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
