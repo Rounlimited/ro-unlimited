@@ -13,6 +13,7 @@ import { getTraffic } from '@/lib/cloudflare-analytics';
 import { computeInsights } from '@/lib/analytics-insights';
 import { recalcEstimateTotals, syncScheduleAmounts } from '@/lib/estimates';
 import { resolveCustomerName } from '@/lib/customers';
+import { listQuestions, replyToQuestion } from '@/lib/questions';
 import { LICENSES, STATES_LICENSED, LICENSE_CLASSIFICATION_COUNT } from '@/lib/licenses';
 import { headers as nextHeaders } from 'next/headers';
 
@@ -311,6 +312,10 @@ const PROGRESS_TOOLS = [
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, summary: { type: 'string', description: 'Optional: replace the auto-written summary' } } } },
   { name: 'send_progress_report', description: 'Send a drafted progress report to the customer. skip_email:true just activates the link for texting instead of emailing. Confirm with the user before calling — this reaches the customer.',
     input_schema: { type: 'object' as const, properties: { report_id: { type: 'string' }, estimate_number: { type: 'string' }, skip_email: { type: 'boolean' }, to_email: { type: 'string' } } } },
+  { name: 'list_open_questions', description: "Customer questions waiting for an answer (asked on their project page), newest first, across all jobs or one job. Use for \"any questions waiting\", \"what did Greg ask\".",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' } } } },
+  { name: 'answer_customer_question', description: "Answer a customer's question from their project page: posts the reply in their thread and emails them that it's there. Confirm the wording with the user first unless he dictated it (\"answer Greg: yes, until backfill\"). Pass question_id from list_open_questions when there are several.",
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, question_id: { type: 'string' }, answer: { type: 'string' } }, required: ['answer'] } },
   { name: 'get_job_room', description: "The Job Room — the internal-only picture of one job: money (contract/earned/SPENT/billed/paid), live margin (earned minus spent), job costs by category, recent log entries (including internal-only ones), rain days, days on job, and how many times the customer has opened their page. Use for \"what's my margin\", \"what have I spent\", \"how's the Hartwell job really doing\".",
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' } } } },
   { name: 'add_job_cost', description: "Record money actually spent on a job — \"add $500 fuel to Hartwell\", \"$2,400 pipe from Ferguson\". category: materials|subcontractor|labor|equipment|hauling|fuel|permits|other. This is what makes the job's margin real.",
@@ -1047,6 +1052,32 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       return { result: d.error ? `Error: ${d.error}` : JSON.stringify({ success: true, item: { title: d.item?.title, date: d.item?.starts_on, done: !!d.item?.done_at } }) };
     }
 
+    case 'list_open_questions': {
+      let estId: string | undefined = input.estimate_id;
+      if (!estId && input.estimate_number) {
+        const { data: e } = await supabase.from('estimates').select('id').ilike('estimate_number', `%${input.estimate_number}%`).limit(1).maybeSingle();
+        estId = e?.id;
+      }
+      const q = await listQuestions(supabase, { estimateId: estId, limit: 30 });
+      const fmtQ = (x: any) => ({ question_id: x.id, estimate_id: x.estimate_id, job: x.estimate?.project_name || x.estimate?.estimate_number, customer: x.author_name || x.estimate?.customer?.first_name || x.estimate?.customer?.company_name, asked: x.created_at, question: x.body });
+      return { result: JSON.stringify({ waiting: q.open.map(fmtQ), recently_answered: q.answered.slice(0, 5).map((x: any) => ({ ...fmtQ(x), answer: x.answer?.body })), typical_answer_hours: q.avg_answer_hours }) };
+    }
+    case 'answer_customer_question': {
+      let estId: string | undefined = input.estimate_id;
+      let qid: string | undefined = input.question_id;
+      if (qid && !estId) {
+        const { data: m } = await supabase.from('project_messages').select('estimate_id').eq('id', qid).maybeSingle();
+        estId = m?.estimate_id;
+      }
+      if (!estId && input.estimate_number) {
+        const { data: e } = await supabase.from('estimates').select('id').ilike('estimate_number', `%${input.estimate_number}%`).limit(1).maybeSingle();
+        estId = e?.id;
+      }
+      if (!estId) return { result: 'Error: which job? Give estimate_number or a question_id from list_open_questions.' };
+      const out = await replyToQuestion({ estimateId: estId, body: String(input.answer || ''), answeredBy: 'JR', questionId: qid || null, notify: true });
+      if (!out.message) return { result: `Error: ${out.error}` };
+      return { result: `Answer posted on the customer's page${out.emailed ? ` and emailed to ${out.to}` : out.to ? ` (email failed: ${out.error})` : ' (no email on file — tell him to call them)'}.` };
+    }
     case 'get_job_progress':
     case 'set_phase_progress':
     case 'set_job_status':
@@ -2810,6 +2841,7 @@ Job progress and customer progress reports:
 - notify_customer_update emails the customer a short "your page has an update" nudge with their link. Confirm with the user first; if it returns a warning (already sent today), ask before retrying with force:true.
 - The Schedule (/admin/schedule) is a rolling 3-week look-ahead: Slipped, Today, This Week (commitment), Next Week, Week 3 (make-ready — order materials, book inspections while problems are cheap), plus a 6-week Timeline of jobs as bars. get_schedule reads it, add_schedule_item books things ("pour Friday on Hartwell"), set_schedule_done checks them off, moves or removes them. Jobs board cards show each job's next scheduled item; the Job Room's Coming Up card shows that job's next few.
 - Customer feedback: their project page has a one-tap pulse ("how's this feeling?"), section notes, and an optional any-time star rating. It all lands in the Job Room (get_job_room returns feedback_recent/feedback_unseen) and notifies JR; a pulse answer of "I have a concern" flags the job on the Jobs board. Two per-job switches control what the customer sees (feedback_enabled = notes+pulse, reviews_enabled = stars) — JR flips them in the Job Room; to change them from chat, PATCH via update_estimate is NOT available, tell the user to use the Job Room toggles.
+Customer questions: anything a customer types in the Questions box on their project page lands in /admin/questions (and in the Job Room). list_open_questions shows what's waiting; answer_customer_question posts the reply on their page and emails them — the customer never needs a text back. If he says "answer Greg: yes, until backfill" that IS the wording: send it. If he just asks "what did they want", list and read it back; offer to answer. Never invent dates or results in an answer; "JR will confirm" is fine.
 </progress>`;
 
 const PROMPT_LETTERS = `<letters>
@@ -2822,7 +2854,7 @@ Letters and notices on company letterhead:
 
 const LETTER_TOOL_NAMES = new Set(['write_letter','list_letters']);
 
-const PROGRESS_TOOL_NAMES = new Set(['get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report','get_job_room','add_job_cost','add_log_entry','notify_customer_update','get_schedule','add_schedule_item','set_schedule_done']);
+const PROGRESS_TOOL_NAMES = new Set(['list_open_questions','answer_customer_question','get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report','get_job_room','add_job_cost','add_log_entry','notify_customer_update','get_schedule','add_schedule_item','set_schedule_done']);
 
 const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets','list_line_presets','search_option_images','add_option_group','update_option_group','delete_option_group']);
 

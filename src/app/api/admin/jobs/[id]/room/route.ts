@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     const supabase = createAdminClient();
     const { id } = params;
 
-    const [estRes, itemsRes, progRes, costsRes, invRes, logRes, fbRes, schedRes] = await Promise.all([
+    const [estRes, itemsRes, progRes, costsRes, invRes, logRes, fbRes, schedRes, msgRes] = await Promise.all([
       supabase
         .from('estimates')
         .select(`id, estimate_number, project_name, total, division, share_token,
@@ -40,6 +40,8 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       supabase.from('job_schedule_items').select('id, title, kind, starts_on, ends_on, done_at')
         .eq('estimate_id', id).is('done_at', null).gte('starts_on', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10))
         .order('starts_on', { ascending: true }).limit(8),
+      supabase.from('project_messages').select('id, author, author_name, body, created_at, answered_at')
+        .eq('estimate_id', id).order('created_at', { ascending: true }).limit(40),
     ]);
 
     if (estRes.error || !estRes.data) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -65,8 +67,11 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       ? Math.max(0, Math.floor((Date.now() - new Date(est.signed_at).getTime()) / 86400000))
       : 0;
 
+    const messages = (msgRes.data || []) as any[];
     return NextResponse.json({
       estimate: est,
+      messages,
+      open_questions: messages.filter((m) => m.author === 'customer' && !m.answered_at).length,
       progress: {
         percent: roll.percent,
         phases: roll.phases,

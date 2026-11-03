@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Loader2, Eye, FileText, ClipboardList, Wallet, Plus, Trash2, CheckCircle2,
-  CloudRain, CalendarDays, Lock, Mail, Save, TrendingUp, TrendingDown, ExternalLink,
+  CloudRain, CalendarDays, Lock, Mail, Save, TrendingUp, TrendingDown, ExternalLink, MessagesSquare, Send, Sparkles,
 } from 'lucide-react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import LinkControlsSheet from '@/components/admin/estimates/LinkControls';
@@ -38,6 +38,8 @@ interface FeedbackRow { id: string; kind: string; section: string | null; questi
 
 interface Room {
   estimate: any;
+  messages: { id: string; author: string; author_name: string | null; body: string; created_at: string; answered_at: string | null }[];
+  open_questions: number;
   feedback: FeedbackRow[];
   feedback_unseen: number;
   upcoming: { id: string; title: string; kind: string; starts_on: string; ends_on: string | null }[];
@@ -66,6 +68,35 @@ export default function JobRoomPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [room, setRoom] = useState<Room | null>(null);
+  // Questions from the customer's page — answer right here.
+  const [answer, setAnswer] = useState('');
+  const [qBusy, setQBusy] = useState<'draft' | 'send' | null>(null);
+  const [qNotice, setQNotice] = useState('');
+  const draftAnswer = async () => {
+    const open = (room?.messages || []).filter((m) => m.author === 'customer' && !m.answered_at);
+    const last = open[open.length - 1];
+    if (!last) return;
+    setQBusy('draft'); setQNotice('');
+    try {
+      const d = await fetch('/api/admin/questions/' + last.id + '/draft', { method: 'POST' }).then((r) => r.json());
+      if (d.draft) setAnswer(d.draft); else setQNotice(d.error || 'Could not draft — write it yourself.');
+    } catch { setQNotice('Could not draft — write it yourself.'); }
+    setQBusy(null);
+  };
+  const sendAnswer = async () => {
+    if (!answer.trim()) { setQNotice('Write the answer first.'); return; }
+    const open = (room?.messages || []).filter((m) => m.author === 'customer' && !m.answered_at);
+    setQBusy('send'); setQNotice('');
+    try {
+      const d = await fetch('/api/admin/estimates/' + id + '/messages', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: answer.trim(), question_id: open[open.length - 1]?.id || null }),
+      }).then((r) => r.json());
+      if (d.ok) { setQNotice(d.emailed ? 'Posted and emailed ' + d.to : (d.warning || 'Posted on their page')); setAnswer(''); await load(); }
+      else setQNotice(d.error || 'Could not send.');
+    } catch { setQNotice('Could not send — try again.'); }
+    setQBusy(null);
+  };
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -410,6 +441,47 @@ export default function JobRoomPage() {
               })}
             </div>
           )}
+        </div>
+
+        {/* ── Questions from their page — answered here, emailed to them ── */}
+        <div className="rounded-2xl border p-5" style={{ background: '#111', borderColor: room.open_questions > 0 ? 'rgba(201,168,76,0.45)' : 'rgba(255,255,255,0.08)' }}>
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <p className="text-[17px] font-bold flex items-center gap-2"><MessagesSquare size={18} style={{ color: '#6db3f2' }} /> Questions</p>
+            {room.open_questions > 0 && (
+              <span className="px-3 py-1 rounded-full text-[13px] font-bold" style={{ background: 'rgba(201,168,76,0.18)', color: '#D4B965' }}>{room.open_questions} waiting</span>
+            )}
+          </div>
+          <p className="text-[14px] text-white/40 mb-3">What they asked on their project page. Your answer posts there and emails them.</p>
+          {room.messages.length === 0 ? (
+            <p className="text-[15px] text-white/35">No questions yet.</p>
+          ) : (
+            <div className="space-y-2 mb-3">
+              {room.messages.slice(-8).map((m) => (
+                <div key={m.id} className="rounded-xl px-3.5 py-2.5" style={m.author === 'ro'
+                  ? { background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.25)', marginLeft: 16 }
+                  : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <p className="text-[13px] text-white/40">{m.author === 'ro' ? (m.author_name || 'RO') : (m.author_name || 'Customer')} · {timeAgo(m.created_at)}{m.author === 'customer' && !m.answered_at && <span className="ml-2 font-semibold" style={{ color: '#f0a04b' }}>waiting</span>}</p>
+                  <p className="text-[16px] text-white/85 mt-0.5 whitespace-pre-line">{m.body}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {room.open_questions > 0 && (
+            <>
+              <textarea id="job-room-answer" value={answer} onChange={(e) => setAnswer(e.target.value)} rows={3} placeholder="Type the answer, or tap Draft…"
+                className="w-full px-4 py-3 rounded-xl bg-[#1a1a1a] border border-white/10 text-white text-[17px] leading-relaxed placeholder:text-white/25 focus:outline-none focus:border-[#C9A84C]/50" />
+              {qNotice && <p className="text-[15px] mt-2" style={{ color: /Posted/.test(qNotice) ? '#35d07f' : '#f87171' }}>{qNotice}</p>}
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <button onClick={draftAnswer} disabled={qBusy !== null} className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50" style={{ background: 'rgba(59,141,212,0.14)', color: '#6db3f2', border: '1px solid rgba(59,141,212,0.4)' }}>
+                  {qBusy === 'draft' ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} Draft an answer
+                </button>
+                <button onClick={sendAnswer} disabled={qBusy !== null || !answer.trim()} className="min-h-[52px] rounded-xl text-[16px] font-bold text-black flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>
+                  {qBusy === 'send' ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Send answer
+                </button>
+              </div>
+            </>
+          )}
+          {room.open_questions === 0 && room.messages.length > 0 && qNotice && <p className="text-[15px] mt-1" style={{ color: '#35d07f' }}>{qNotice}</p>}
         </div>
 
         {/* ── What the customer had to say ── */}

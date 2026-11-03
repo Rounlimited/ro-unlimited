@@ -74,7 +74,7 @@ interface EstimateData {
     amount: number; days_added: number; status: string;
     approved_at: string | null; approved_name: string | null;
   }[];
-  messages?: { author: string; author_name: string | null; body: string; created_at: string }[];
+  messages?: { id?: string; author: string; author_name: string | null; body: string; created_at: string; answered_at?: string | null }[];
   balance_due?: number;
   pay_href?: string | null;
   completed_at?: string | null;
@@ -527,6 +527,36 @@ export default function PublicEstimatePage() {
           );
         })()}
 
+        {/* ─── Needs you — the one list a customer actually checks ─── */}
+        {!['declined', 'expired'].includes(estimate.status) && (() => {
+          const items: { label: string; detail?: string; onClick?: () => void; href?: string }[] = [];
+          const go = (sel: string) => () => document.getElementById(sel)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (!estimate.signed_at) items.push({ label: `Review and sign your ${estimate.document_mode === 'contract' ? 'contract' : 'estimate'}`, detail: fmt(estimate.total), onClick: go('accept-sign') });
+          for (const co of estimate.change_orders || []) {
+            if (!['approved', 'declined', 'draft'].includes(co.status)) items.push({ label: `Approve or decline: ${co.title}`, detail: `${co.amount >= 0 ? '+' : '−'}${fmt(Math.abs(co.amount))}${co.days_added ? ` · ${co.days_added} day${co.days_added === 1 ? '' : 's'} added` : ' · no schedule change'}`, onClick: go('change-orders') });
+          }
+          if ((estimate.balance_due || 0) > 0) items.push({ label: 'Balance due', detail: fmt(estimate.balance_due || 0), onClick: go('balance') });
+          const running = !!estimate.signed_at && !estimate.completed_at;
+          if (!items.length && !running) return null;
+          return (
+            <section id="needs-you" className="rounded-2xl border p-5" style={{ background: items.length ? '#fdf6e7' : '#f7f7f5', borderColor: items.length ? '#ead9ac' : '#e8e4da' }}>
+              <p className="text-[13px] font-bold uppercase tracking-wide mb-2" style={{ color: items.length ? '#8a6d20' : '#6b7280' }}>Needs you</p>
+              {items.length === 0 ? (
+                <p className="text-[17px] text-[#2a2a2a]">Nothing needed from you right now. We&rsquo;ll post here the moment something is.</p>
+              ) : (
+                <div className="space-y-2">
+                  {items.map((it, i) => (
+                    <button key={i} onClick={it.onClick} className="w-full text-left rounded-xl px-4 py-3 min-h-[56px] flex flex-col gap-0.5 active:scale-[0.99]" style={{ background: '#fff', border: '1px solid #ead9ac' }}>
+                      <span className="text-[17px] font-semibold text-[#2a2a2a]">{it.label}</span>
+                      {it.detail && <span className="text-[15px] font-semibold" style={{ color: '#8a6d20' }}>{it.detail} →</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })()}
+
         {/* ─── Live progress (signed jobs JR has started updating) ─── */}
         {estimate.progress && estimate.progress.phases.length > 0 && (
           <ProgressSection
@@ -554,11 +584,11 @@ export default function PublicEstimatePage() {
 
         {/* ─── Anything waiting on them comes first ─── */}
         {estimate.change_orders && estimate.change_orders.length > 0 && (
-          <ChangeOrders token={token} orders={estimate.change_orders} onDone={reload} />
+          <div id="change-orders"><ChangeOrders token={token} orders={estimate.change_orders} onDone={reload} /></div>
         )}
 
         {!!estimate.balance_due && (
-          <BalanceDue amount={estimate.balance_due} href={estimate.pay_href || null} />
+          <div id="balance"><BalanceDue amount={estimate.balance_due} href={estimate.pay_href || null} /></div>
         )}
 
         {/* ─── The living project: the story, the site, the paperwork ─── */}

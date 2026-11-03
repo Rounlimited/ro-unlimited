@@ -154,7 +154,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
           .eq('estimate_id', estimate.id).neq('status', 'draft')
           .order('created_at', { ascending: false }),
         supabase.from('project_messages')
-          .select('author, author_name, body, created_at')
+          .select('id, author, author_name, body, created_at, answered_at')
           .eq('estimate_id', estimate.id)
           .order('created_at', { ascending: true }).limit(60),
       ]);

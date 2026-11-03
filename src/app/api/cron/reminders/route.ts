@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { notifyTeam } from '@/lib/alerts';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,31 @@ export async function GET(req: NextRequest) {
 
   const supabase = createAdminClient();
   const now = new Date();
+
+  // Customer questions waiting more than 4 hours: push JR (again every 4h).
+  let nudged = 0;
+  try {
+    const cutoff = new Date(now.getTime() - 4 * 3600000).toISOString();
+    const { data: stale } = await supabase
+      .from('project_messages')
+      .select('id, body, created_at, nudged_at, estimate:estimates(id, estimate_number, project_name, division, customer:customers(first_name, company_name))')
+      .eq('author', 'customer').is('answered_at', null).lte('created_at', cutoff)
+      .or(`nudged_at.is.null,nudged_at.lte.${cutoff}`)
+      .limit(20);
+    for (const q of (stale || []) as any[]) {
+      const e = q.estimate; const c = e?.customer;
+      const hrs = Math.round((now.getTime() - new Date(q.created_at).getTime()) / 3600000);
+      await notifyTeam({
+        type: 'question_waiting',
+        title: `${c?.first_name || c?.company_name || 'A customer'} is still waiting — ${e?.project_name || e?.estimate_number}`,
+        body: `${hrs}h with no answer: "${String(q.body).slice(0, 110)}"`,
+        url: '/admin/questions', reference_id: e?.id || null, division: e?.division || null, tag: `question-waiting-${q.id}`,
+      } as any);
+      await supabase.from('project_messages').update({ nudged_at: now.toISOString() }).eq('id', q.id);
+      nudged++;
+    }
+  } catch (e) { console.error('[cron/reminders] question nudge failed', e); }
+
   // Look back 65 min to catch anything from last cron run (with overlap buffer)
   const windowStart = new Date(now.getTime() - 65 * 60 * 1000).toISOString();
 
@@ -26,7 +52,7 @@ export async function GET(req: NextRequest) {
     .gte('remind_at', windowStart)
     .not('status', 'in', '("done","cancelled")');
 
-  if (!dueTasks?.length) return NextResponse.json({ fired: 0 });
+  if (!dueTasks?.length) return NextResponse.json({ fired: 0, nudged });
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
   let fired = 0;
@@ -68,7 +94,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ fired, checked: dueTasks.length });
+  return NextResponse.json({ fired, checked: dueTasks.length, nudged });
 }
 
 function formatTime(t: string) {

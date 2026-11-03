@@ -856,7 +856,7 @@ export function ChangeOrders({ token, orders, onDone }: {
 /* ── Ask us something ─────────────────────────────────────────── */
 export function AskSection({ token, messages, onSent }: {
   token: string;
-  messages: { author: string; author_name: string | null; body: string; created_at: string }[];
+  messages: { id?: string; author: string; author_name: string | null; body: string; created_at: string; answered_at?: string | null }[];
   onSent: () => void;
 }) {
   const [text, setText] = useState('');
@@ -884,10 +884,11 @@ export function AskSection({ token, messages, onSent }: {
     new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
-    <section className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
-      <p className="text-[13px] font-bold uppercase tracking-wide mb-3 flex items-center gap-1.5" style={{ color: '#8a6d20' }}>
+    <section id="questions" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-1 flex items-center gap-1.5" style={{ color: '#8a6d20' }}>
         <MessageCircle size={14} /> Questions
       </p>
+      <p className="text-[15px] text-[#6b7280] mb-3">Ask here and the answer stays on this page. You&rsquo;ll get an email when it&rsquo;s posted — typically the same business day.</p>
 
       {messages.length > 0 && (
         <div className="doc-rows space-y-2.5 mb-4">
@@ -896,8 +897,13 @@ export function AskSection({ token, messages, onSent }: {
               style={m.author === 'ro'
                 ? { background: '#fdf6e7', border: '1px solid #ead9ac' }
                 : { background: '#f7f7f5', border: '1px solid #f0ece2' }}>
-              <p className="text-[13px] font-bold mb-1" style={{ color: m.author === 'ro' ? '#8a6d20' : '#6b7280' }}>
-                {m.author === 'ro' ? 'RO Unlimited' : m.author_name || 'You'} · {when(m.created_at)}
+              <p className="text-[13px] font-bold mb-1 flex items-center gap-2 flex-wrap" style={{ color: m.author === 'ro' ? '#8a6d20' : '#6b7280' }}>
+                <span>{m.author === 'ro' ? 'RO Unlimited' : m.author_name || 'You'} · {when(m.created_at)}</span>
+                {m.author === 'customer' && (
+                  m.answered_at
+                    ? <span className="px-2 py-0.5 rounded-full text-[12px] font-bold" style={{ background: '#e8f8f0', color: '#187a4b' }}>Answered</span>
+                    : <span className="px-2 py-0.5 rounded-full text-[12px] font-bold" style={{ background: '#fdf6e7', color: '#8a6d20' }}>Received — we&rsquo;ll answer here</span>
+                )}
               </p>
               <p className="text-[16px] text-[#2a2a2a] leading-relaxed whitespace-pre-line">{m.body}</p>
             </div>
