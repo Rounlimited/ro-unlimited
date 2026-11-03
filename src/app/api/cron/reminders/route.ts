@@ -4,8 +4,9 @@ import { notifyTeam } from '@/lib/alerts';
 
 export const dynamic = 'force-dynamic';
 
-// Vercel cron: runs every hour — sends push notifications for tasks that are due
-// vercel.json: { "path": "/api/cron/reminders", "schedule": "0 * * * *" }
+// Vercel cron: once a day at 11:00 UTC (7am ET) — Hobby plan allows daily crons only.
+// Task reminders due in the last hour + customer questions waiting > 4h.
+// vercel.json: { "path": "/api/cron/reminders", "schedule": "0 11 * * *" }
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET || process.env.PUSH_SECRET;
