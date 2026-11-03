@@ -85,7 +85,7 @@ export default function QuestionsPage() {
   return (
     <AppShell>
       <AdminHeader title="Questions" subtitle="From customers' project pages" backHref="/admin" />
-      <div className="px-4 pb-28 max-w-3xl mx-auto space-y-4">
+      <div className="px-4 pb-28 max-w-3xl mx-auto w-full min-w-0 overflow-x-hidden space-y-4">
 
         {/* The numbers that matter */}
         <div className="grid grid-cols-3 gap-2 mt-2">

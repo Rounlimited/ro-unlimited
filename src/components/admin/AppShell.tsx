@@ -14,8 +14,7 @@ import {
   Users, FileText, Clock, Wrench, Package, TrendingUp,
   Settings, LifeBuoy, Lock, Search, X, ChevronDown, ChevronLeft,
   Briefcase, Shield, UserPlus, Truck, FileCheck, Target,
-  Megaphone, CreditCard, PieChart, Building2, Bell, Sparkles, Zap, LogOut, HardDrive, CheckSquare, Newspaper
-} from 'lucide-react';
+  Megaphone, CreditCard, PieChart, Building2, Bell, Sparkles, Zap, LogOut, HardDrive, CheckSquare, Newspaper, DoorOpen } from 'lucide-react';
 
 interface AppIcon {
   id: string;
@@ -238,6 +237,7 @@ const APP_ICONS: AppIcon[] = [
   { id: 'pipeline', label: 'Pipeline', icon: TrendingUp, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'jobs', label: 'Jobs', icon: HardHat, href: '/admin/jobs', active: true, color: '#f0a04b', bg: 'rgba(240,160,75,0.15)', badge: 'NEW' },
   { id: 'questions', label: 'Questions', icon: MessagesSquare, href: '/admin/questions', active: true, color: '#6db3f2', bg: 'rgba(59,141,212,0.15)', badge: 'NEW' },
+  { id: 'portal', label: 'Customer Portal', icon: DoorOpen, href: '/admin/portal', active: true, color: '#D4B965', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'dailylogs', label: 'Daily Logs', icon: FileCheck, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'documents', label: 'Letters', icon: FileText, href: '/admin/letters', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'invoicing', label: 'Invoices', icon: Receipt, href: '/admin/invoices', active: true, color: '#35d07f', bg: 'rgba(53,208,127,0.15)', badge: 'NEW' },

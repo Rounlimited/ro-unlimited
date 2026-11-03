@@ -82,6 +82,9 @@ export default function Navbar() {
               className="flex items-center gap-2 text-ro-gray-400 hover:text-ro-gold transition-colors text-sm">
               <Phone size={14} /><span className="font-mono text-xs">{COMPANY.phone}</span>
             </a>
+            <Link href="/my" className="text-ro-gray-400 hover:text-ro-gold transition-colors text-xs tracking-wider uppercase font-heading">
+              Customer Login
+            </Link>
             <Link href="/contact"
               className="relative px-6 py-2.5 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-colors duration-300">
               Get a Quote
@@ -131,6 +134,9 @@ export default function Navbar() {
           </div>
 
           <div className="pt-4 border-t border-ro-gray-800 mt-4">
+            <Link href="/my" onClick={() => setIsOpen(false)} className="block px-4 py-3 text-sm tracking-wider uppercase font-body text-ro-gold border-l-2 border-ro-gold/40">
+              Customer Login
+            </Link>
             <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="flex items-center gap-2 text-ro-gold px-4 py-2">
               <Phone size={16} /><span className="font-mono">{COMPANY.phone}</span>
             </a>

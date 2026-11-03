@@ -47,15 +47,66 @@ export async function requestLoginLink(emailRaw: string, next?: string | null): 
   return { ok: true, known: true };
 }
 
+async function createSession(email: string, ua?: string | null): Promise<string> {
+  const session = crypto.randomBytes(32).toString('hex');
+  await createAdminClient().from('customer_sessions').insert({ token: session, email: norm(email), expires_at: new Date(Date.now() + 90 * 86400000).toISOString(), last_seen_at: new Date().toISOString(), ua: (ua || '').slice(0, 300) });
+  return session;
+}
+
 /** Turn a one-time link into a session. Returns the session token or null. */
 export async function redeemLogin(token: string, ua?: string | null): Promise<{ session: string; email: string } | null> {
   const supabase = createAdminClient();
   const { data: row } = await supabase.from('customer_logins').select('id, email, expires_at, used_at').eq('token', token).maybeSingle();
   if (!row || row.used_at || new Date(row.expires_at) < new Date()) return null;
   await supabase.from('customer_logins').update({ used_at: new Date().toISOString() }).eq('id', row.id);
-  const session = crypto.randomBytes(32).toString('hex');
-  await supabase.from('customer_sessions').insert({ token: session, email: row.email, expires_at: new Date(Date.now() + 90 * 86400000).toISOString(), last_seen_at: new Date().toISOString(), ua: (ua || '').slice(0, 300) });
-  return { session, email: row.email };
+  return { session: await createSession(row.email, ua), email: row.email };
+}
+
+/* ── Password sign-in: so a customer can log in on the site without opening email ──
+   scrypt (Node built-in), per-user salt. The email link stays as the first-time
+   door and the "forgot password" path. 8 wrong tries locks the account 15 min. */
+const SCRYPT = { N: 16384, r: 8, p: 1, keylen: 64 };
+export function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, SCRYPT.keylen, { N: SCRYPT.N, r: SCRYPT.r, p: SCRYPT.p }).toString('hex');
+  return `scrypt$${salt}$${hash}`;
+}
+function verifyPassword(password: string, stored: string): boolean {
+  const [algo, salt, hash] = String(stored || '').split('$');
+  if (algo !== 'scrypt' || !salt || !hash) return false;
+  const test = crypto.scryptSync(password, salt, SCRYPT.keylen, { N: SCRYPT.N, r: SCRYPT.r, p: SCRYPT.p });
+  const want = Buffer.from(hash, 'hex');
+  return test.length === want.length && crypto.timingSafeEqual(test, want);
+}
+export function passwordProblem(pw: string): string | null {
+  if (!pw || pw.length < 8) return 'Use at least 8 characters.';
+  if (pw.length > 200) return 'That is too long.';
+  return null;
+}
+export async function hasPassword(email: string): Promise<boolean> {
+  const { data } = await createAdminClient().from('customer_accounts').select('email').eq('email', norm(email)).maybeSingle();
+  return !!data;
+}
+export async function setPassword(email: string, password: string): Promise<{ ok: true } | { error: string }> {
+  const bad = passwordProblem(password); if (bad) return { error: bad };
+  await createAdminClient().from('customer_accounts').upsert({ email: norm(email), password_hash: hashPassword(password), password_set_at: new Date().toISOString(), failed_attempts: 0, locked_until: null }, { onConflict: 'email' });
+  return { ok: true };
+}
+export async function loginWithPassword(emailRaw: string, password: string, ua?: string | null): Promise<{ session: string; email: string } | { error: string }> {
+  const email = norm(emailRaw);
+  const generic = { error: 'Wrong email or password. You can also have a sign-in link emailed to you.' };
+  if (!email || !password) return generic;
+  const supabase = createAdminClient();
+  const { data: acct } = await supabase.from('customer_accounts').select('password_hash, failed_attempts, locked_until').eq('email', email).maybeSingle();
+  if (!acct) return generic;
+  if (acct.locked_until && new Date(acct.locked_until) > new Date()) return { error: 'Too many tries. Wait 15 minutes, or have a sign-in link emailed to you.' };
+  if (!verifyPassword(password, acct.password_hash)) {
+    const n = (acct.failed_attempts || 0) + 1;
+    await supabase.from('customer_accounts').update({ failed_attempts: n, locked_until: n >= 8 ? new Date(Date.now() + 15 * 60000).toISOString() : null }).eq('email', email);
+    return generic;
+  }
+  if (acct.failed_attempts) await supabase.from('customer_accounts').update({ failed_attempts: 0, locked_until: null }).eq('email', email);
+  return { session: await createSession(email, ua), email };
 }
 
 export function sessionCookie(token: string | null): string {

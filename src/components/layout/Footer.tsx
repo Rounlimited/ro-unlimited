@@ -148,6 +148,7 @@ export default function Footer() {
               <li><a href={`mailto:${COMPANY.email}`} className="flex items-center gap-3 text-ro-gray-400 hover:text-ro-gold transition-colors text-sm"><Mail size={14} className="text-ro-gold/60" />{COMPANY.email}</a></li>
               <li className="flex items-center gap-3 text-ro-gray-400 text-sm"><MapPin size={14} className="text-ro-gold/60" />{COMPANY.serviceArea}</li>
               <li className="flex items-center gap-3 text-ro-gray-400 text-sm"><Clock size={14} className="text-ro-gold/60" />{COMPANY.hours}</li>
+              <li><Link href="/my" className="inline-flex items-center gap-3 text-ro-gold hover:text-ro-gold-light transition-colors text-sm font-semibold">Customer Login →</Link></li>
             </ul>
           </div>
 
