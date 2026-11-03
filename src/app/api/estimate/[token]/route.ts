@@ -96,7 +96,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     if (estimate.signed_at) {
       const { data: progressRows } = await supabase
         .from('estimate_phase_progress')
-        .select('phase, percent_complete, updated_at')
+        .select('phase, percent_complete, weight, sort_order, custom, updated_at')
         .eq('estimate_id', estimate.id);
       if (progressRows && progressRows.length) {
         const roll = rollUpProgress(lineItems || [], progressRows);
