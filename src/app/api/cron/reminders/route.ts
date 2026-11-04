@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { notifyTeam } from '@/lib/alerts';
 import { runPortalReminders } from '@/lib/portal-reminders';
+import { runServiceReminders } from '@/lib/handover';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
   // Portal: customer reminders (change orders, requests, unopened updates) + JR nudges (stale job, quiet customer).
   let portal: any = null;
   try { portal = await runPortalReminders(); } catch (e) { console.error('[cron/reminders] portal reminders failed', e); }
+  try { portal = { ...(portal || {}), service: await runServiceReminders() }; } catch (e) { console.error('[cron/reminders] service reminders failed', e); }
 
   // Look back 65 min to catch anything from last cron run (with overlap buffer)
   const windowStart = new Date(now.getTime() - 65 * 60 * 1000).toISOString();

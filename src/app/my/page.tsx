@@ -13,7 +13,7 @@ type Project = {
   stage: 'proposal' | 'signed' | 'in_progress' | 'complete' | 'closed'; percent: number; total: number;
   href: string | null;
   latest: { date: string; text: string; photos: number } | null;
-  needs: string[]; next: { date: string; title: string } | null; questions_waiting: number;
+  needs: string[]; next: { date: string; title: string } | null; questions_waiting: number; next_service?: { title: string; date: string } | null;
 };
 const STAGE: Record<Project['stage'], { label: string; color: string; bg: string }> = {
   in_progress: { label: 'In progress', color: '#8a6d20', bg: '#fdf6e7' },
@@ -93,6 +93,7 @@ export default function PortalHome() {
             )}
             {p.next && <p className="mt-3 text-[16px] text-[#4b5563] inline-flex items-center gap-2"><CalendarDays size={16} className="text-gray-400" /> Next up: {p.next.title} &mdash; {day(p.next.date)} (estimated)</p>}
             {p.questions_waiting > 0 && <p className="mt-2 text-[15px] font-semibold inline-flex items-center gap-2" style={{ color: '#8a6d20' }}><MessageCircle size={15} /> Your question is with RO &mdash; the answer will post on the project.</p>}
+            {p.stage === 'complete' && <p className="mt-3 text-[16px] text-[#4b5563]">Your binder is here: contract, invoices, inspections, photos and warranty.{p.next_service ? <> Next maintenance: {p.next_service.title} &mdash; {day(p.next_service.date)}.</> : null}</p>}
           </a>
         );
       })}

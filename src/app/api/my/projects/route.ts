@@ -28,7 +28,7 @@ export async function GET() {
     const estIds = list.map((e) => e.id);
     const today = new Date().toISOString().slice(0, 10);
 
-    const [itemsRes, progRes, logRes, coRes, invRes, reqRes, schedRes, msgRes] = await Promise.all([
+    const [itemsRes, progRes, logRes, coRes, invRes, reqRes, schedRes, msgRes, svcRes] = await Promise.all([
       supabase.from('estimate_line_items').select('estimate_id, phase, total, sort_order').in('estimate_id', estIds),
       supabase.from('estimate_phase_progress').select('estimate_id, phase, percent_complete, weight, sort_order, custom').in('estimate_id', estIds),
       supabase.from('job_log_entries').select('estimate_id, entry_date, type, text, photos, created_at').in('estimate_id', estIds).eq('include_in_report', true).order('entry_date', { ascending: false }).order('created_at', { ascending: false }).limit(200),
@@ -37,13 +37,14 @@ export async function GET() {
       supabase.from('customer_requests').select('estimate_id, status, title, due_on').in('estimate_id', estIds).eq('status', 'open'),
       supabase.from('job_schedule_items').select('estimate_id, title, starts_on').in('estimate_id', estIds).gte('starts_on', today).is('done_at', null).order('starts_on', { ascending: true }),
       supabase.from('project_messages').select('estimate_id, author, answered_at').in('estimate_id', estIds).eq('author', 'customer'),
+      supabase.from('service_reminders').select('estimate_id, title, next_due').in('estimate_id', estIds).eq('active', true).order('next_due', { ascending: true }),
     ]);
     const by = <T extends { estimate_id: string }>(rows: T[] | null) => {
       const m = new Map<string, T[]>();
       for (const r of rows || []) { const a = m.get(r.estimate_id) || []; a.push(r); m.set(r.estimate_id, a); }
       return m;
     };
-    const items = by(itemsRes.data), prog = by(progRes.data), logs = by(logRes.data), cos = by(coRes.data), invs = by(invRes.data), reqs = by(reqRes.data), sched = by(schedRes.data), msgs = by(msgRes.data);
+    const items = by(itemsRes.data), prog = by(progRes.data), logs = by(logRes.data), cos = by(coRes.data), invs = by(invRes.data), reqs = by(reqRes.data), sched = by(schedRes.data), msgs = by(msgRes.data), svcs = by(svcRes.data);
 
     const projects = list.map((e) => {
       const p = prog.get(e.id) || [];
@@ -69,6 +70,7 @@ export async function GET() {
         latest: latest ? { date: latest.entry_date, text: latest.text || (latest.type === 'rain' ? 'Rained out — no work on site.' : ''), photos: Array.isArray(latest.photos) ? latest.photos.length : 0 } : null,
         needs, next: next ? { date: next.starts_on, title: next.title } : null,
         questions_waiting: waiting,
+        next_service: (svcs.get(e.id) || [])[0] ? { title: (svcs.get(e.id) || [])[0].title, date: (svcs.get(e.id) || [])[0].next_due } : null,
         signed_at: e.signed_at, completed_at: e.completed_at,
       };
     });

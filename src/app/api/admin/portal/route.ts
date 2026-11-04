@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createAdminClient } from '@/lib/supabase/server';
 import { requestLoginLink, setPassword } from '@/lib/customer-auth';
+import { listServiceDue, getSetting, setSetting } from '@/lib/handover';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,7 +87,8 @@ export async function GET() {
       questions_waiting: customers.reduce((n: number, c: any) => n + c.questions_waiting, 0),
     };
     void answeredQs;
-    return NextResponse.json({ stats, customers, misses, faq: faqRes.data || [] });
+    const [serviceDue, reviewUrl] = await Promise.all([listServiceDue(60), getSetting('google_review_url')]);
+    return NextResponse.json({ stats, customers, misses, faq: faqRes.data || [], service_due: serviceDue, review_url: reviewUrl });
   } catch (err) {
     console.error('[admin/portal] GET', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
@@ -98,6 +100,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const supabase = createAdminClient();
+    if (body.action === 'set_review_url') {
+      const v = String(body.url || '').trim();
+      if (v && !/^https?:\/\//.test(v)) return NextResponse.json({ error: 'Paste the full link, starting with https://' }, { status: 400 });
+      await setSetting('google_review_url', v || null);
+      return NextResponse.json({ ok: true, review_url: v || null });
+    }
     const { data: c } = await supabase.from('customers').select('id, email, first_name, company_name').eq('id', body.customer_id).maybeSingle();
     if (!c) return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     if (body.action === 'set_email') {

@@ -14,6 +14,7 @@ import { SCHEDULE_META, BUDGET_META, STATUS_REASONS, cadenceLabel, type Schedule
 import { LOG_TYPES } from '@/lib/progress-reports';
 import { REQUEST_KINDS } from '@/lib/customer-request-kinds';
 import { INSPECTION_STATUS, PERMIT_STATUS } from '@/lib/inspection-status';
+import { SERVICE_SYSTEMS } from '@/lib/service-systems';
 
 /**
  * The Job Room — JR's behind-the-scenes view of one job. Everything the
@@ -225,6 +226,46 @@ export default function JobRoomPage() {
       else setInspNote(d.error || 'Could not record that.');
     } catch { setInspNote('Could not record that — try again.'); }
     setInspBusy(null);
+  };
+  // Handover: the checklist that fills itself, the binder documents, the maintenance schedule, one button to send it all.
+  const [handover, setHandover] = useState<{ binder: any; checklist: { items: { key: string; label: string; ok: boolean; detail: string; action?: string }[]; done: number; total: number } } | null>(null);
+  const [hoBusy, setHoBusy] = useState<string | null>(null);
+  const [hoNote, setHoNote] = useState('');
+  const [hoItemKind, setHoItemKind] = useState('warranty');
+  const [hoItemTitle, setHoItemTitle] = useState('');
+  const [hoSvcSystem, setHoSvcSystem] = useState('septic');
+  const [hoSvcDate, setHoSvcDate] = useState('');
+  const [hoSvcOpen, setHoSvcOpen] = useState(false);
+  const loadHandover = useCallback(async () => {
+    try { const d = await fetch('/api/admin/jobs/' + id + '/room', { cache: 'no-store' }); void d; const h = await (await fetch('/api/admin/estimates/' + id + '/handover', { cache: 'no-store' })).json(); if (h.binder) setHandover(h); } catch {}
+  }, [id]);
+  useEffect(() => { loadHandover(); }, [loadHandover]);
+  const hoAddItem = async (list: FileList | null) => {
+    if (!list || !list.length) return;
+    if (!hoItemTitle.trim()) { setHoNote('Name the document first (e.g. "Pump warranty").'); return; }
+    setHoBusy('item'); setHoNote('');
+    try {
+      const fd = new FormData(); fd.append('file', list[0]); fd.append('type', 'binder');
+      const up = await fetch('/api/admin/upload', { method: 'POST', body: fd }).then((r) => r.json());
+      if (!up.url) throw new Error(up.error || 'Upload failed');
+      const d = await fetch('/api/admin/estimates/' + id + '/handover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'add_item', kind: hoItemKind, title: hoItemTitle.trim(), url: up.url }) }).then((r) => r.json());
+      if (d.ok) { setHoNote('Added to their binder ✓'); setHoItemTitle(''); await loadHandover(); } else setHoNote(d.error || 'Could not add it.');
+    } catch (e: any) { setHoNote(e?.message || 'Could not add it.'); }
+    setHoBusy(null);
+  };
+  const hoRemoveItem = async (itemId: string) => { await fetch('/api/admin/estimates/' + id + '/handover?item_id=' + itemId, { method: 'DELETE' }); await loadHandover(); };
+  const hoAddService = async () => {
+    if (!hoSvcDate) { setHoNote('Pick the first due date.'); return; }
+    setHoBusy('svc'); setHoNote('');
+    const d = await fetch('/api/admin/estimates/' + id + '/handover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'add_service', system: hoSvcSystem, next_due: hoSvcDate }) }).then((r) => r.json()).catch(() => null);
+    if (d?.ok) { setHoNote('On their maintenance schedule ✓ — they get an email 30 days before.'); setHoSvcDate(''); setHoSvcOpen(false); await loadHandover(); } else setHoNote(d?.error || 'Could not add it.');
+    setHoBusy(null);
+  };
+  const hoSend = async () => {
+    setHoBusy('send'); setHoNote('');
+    const d = await fetch('/api/admin/estimates/' + id + '/handover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'send' }) }).then((r) => r.json()).catch(() => null);
+    if (d?.ok) { setHoNote(d.emailed ? 'Handover package emailed to ' + d.to + ' ✓' : 'Marked sent ✓' + (d.skipped ? ' (' + d.skipped + ')' : '')); await loadHandover(); await load(); } else setHoNote(d?.error || 'Could not send.');
+    setHoBusy(null);
   };
   const closeRequest = async (requestId: string, status: 'done' | 'open' | 'cancelled') => {
     await fetch('/api/admin/estimates/' + id + '/requests', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ request_id: requestId, status }) });
@@ -855,6 +896,77 @@ export default function JobRoomPage() {
           )}
           {rqNotice && <p className="text-[15px] mt-2" style={{ color: rqNotice.includes('✓') ? '#35d07f' : '#D4B965' }}>{rqNotice}</p>}
         </div>
+
+        {/* ── Handover: the binder a customer keeps, and the checklist that builds it ── */}
+        {handover && (e.completed_at || room.progress.percent >= 80) && (() => {
+          const ck = handover.checklist; const b = handover.binder;
+          return (
+            <div className="rounded-2xl border p-5" style={{ background: '#111', borderColor: e.completed_at && !b.completion.handover_sent_at ? 'rgba(201,168,76,0.45)' : 'rgba(255,255,255,0.08)' }}>
+              <div className="flex items-center justify-between gap-3 mb-1">
+                <p className="text-[17px] font-bold">Handover</p>
+                <span className="px-3 py-1 rounded-full text-[13px] font-bold" style={{ background: ck.done === ck.total ? 'rgba(53,208,127,0.15)' : 'rgba(201,168,76,0.18)', color: ck.done === ck.total ? '#35d07f' : '#D4B965' }}>{ck.done} of {ck.total} ready</span>
+              </div>
+              <p className="text-[15px] text-white/50 mb-3">Their page becomes the binder they keep: contract, invoices, inspections, photos, warranty, manuals, maintenance schedule &mdash; and the review ask. This list fills itself from the job.</p>
+              <div className="space-y-1.5 mb-3">
+                {ck.items.map((it) => (
+                  <div key={it.key} className="flex items-start gap-3 rounded-xl px-3 py-2" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <span className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[13px] font-bold mt-0.5" style={it.ok ? { background: 'rgba(53,208,127,0.18)', color: '#35d07f' } : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>{it.ok ? '✓' : '–'}</span>
+                    <div className="min-w-0"><p className="text-[16px] font-semibold text-white/90">{it.label}</p><p className="text-[14px] text-white/50">{it.detail}</p></div>
+                  </div>
+                ))}
+              </div>
+              {b.items.length > 0 && (
+                <div className="mb-3 space-y-1">
+                  {b.items.map((it: any) => (
+                    <div key={it.id} className="flex items-center justify-between gap-2 rounded-xl px-3 py-2" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                      <a href={it.url} target="_blank" rel="noreferrer" className="min-w-0 text-[15px] text-white/85 truncate underline">{it.title} <span className="text-white/40 no-underline">· {it.kind}</span></a>
+                      <button onClick={() => hoRemoveItem(it.id)} className="shrink-0 min-h-[36px] px-2 text-[13px] text-white/50">Remove</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <p className="text-[14px] font-bold text-white/70">Add a warranty or manual (PDF or photo)</p>
+                  <div className="flex gap-2">
+                    <select value={hoItemKind} onChange={(ev) => setHoItemKind(ev.target.value)} className="min-h-[44px] rounded-lg px-2 text-[15px] text-white bg-white/5 border border-white/10" style={{ colorScheme: 'dark' }}>
+                      {[['warranty', 'Warranty'], ['manual', 'Manual'], ['permit', 'Permit'], ['asbuilt', 'As-built'], ['other', 'Other']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                    <input value={hoItemTitle} onChange={(ev) => setHoItemTitle(ev.target.value)} placeholder="e.g. Pump warranty" className="flex-1 min-w-0 min-h-[44px] rounded-lg px-3 text-[15px] text-white bg-white/5 border border-white/10 outline-none" />
+                  </div>
+                  <label className="min-h-[44px] rounded-lg text-[15px] font-bold flex items-center justify-center gap-2 cursor-pointer" style={{ background: 'rgba(201,168,76,0.14)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }}>
+                    {hoBusy === 'item' ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />} Choose file &amp; add
+                    <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(ev) => hoAddItem(ev.target.files)} />
+                  </label>
+                </div>
+                <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <p className="text-[14px] font-bold text-white/70">Maintenance schedule</p>
+                  {b.services.length > 0 && <p className="text-[14px] text-white/55">{b.services.map((s: any) => `${s.title} — ${fmtDay(s.next_due)}`).join(' · ')}</p>}
+                  {!hoSvcOpen ? (
+                    <button onClick={() => setHoSvcOpen(true)} className="w-full min-h-[44px] rounded-lg text-[15px] font-bold" style={{ background: 'rgba(201,168,76,0.14)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }}><Plus size={15} className="inline -mt-0.5" /> Add a reminder</button>
+                  ) : (
+                    <div className="space-y-2">
+                      <select value={hoSvcSystem} onChange={(ev) => setHoSvcSystem(ev.target.value)} className="w-full min-h-[44px] rounded-lg px-2 text-[15px] text-white bg-white/5 border border-white/10" style={{ colorScheme: 'dark' }}>
+                        {SERVICE_SYSTEMS.map((s) => <option key={s.id} value={s.id}>{s.label} — every {s.interval} mo</option>)}
+                      </select>
+                      <div className="flex gap-2">
+                        <input type="date" value={hoSvcDate} onChange={(ev) => setHoSvcDate(ev.target.value)} className="flex-1 min-h-[44px] rounded-lg px-3 text-[15px] text-white bg-white/5 border border-white/10 outline-none" style={{ colorScheme: 'dark' }} />
+                        <button onClick={hoAddService} disabled={hoBusy !== null} className="min-h-[44px] px-4 rounded-lg text-[15px] font-bold text-black disabled:opacity-50" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>Add</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button onClick={hoSend} disabled={hoBusy !== null || !e.completed_at}
+                className="w-full mt-3 min-h-[54px] rounded-xl text-[16px] font-bold text-black flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-40"
+                style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>
+                {hoBusy === 'send' ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />} {b.completion.handover_sent_at ? 'Send the handover package again' : 'Send the handover package'}
+              </button>
+              {!e.completed_at && <p className="text-[14px] text-white/45 mt-2 text-center">Mark the job complete (Contract &amp; Tabs) to send it — that starts the warranty clock.</p>}
+              {hoNote && <p className="text-[15px] mt-2" style={{ color: hoNote.includes('✓') ? '#35d07f' : '#D4B965' }}>{hoNote}</p>}
+            </div>
+          );
+        })()}
 
         {/* ── Portal pulse: are they looking, what do they read, is the assistant helping ── */}
         {room.portal && (() => {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, Mail, KeyRound, LogOut, Search, ExternalLink, Inbox, MessageCircle, DoorOpen, Copy, Check, Sparkles, BookOpen, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Mail, KeyRound, LogOut, Search, ExternalLink, Inbox, MessageCircle, DoorOpen, Copy, Check, Sparkles, BookOpen, Plus, Trash2, Wrench, Star } from 'lucide-react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import AppShell from '@/components/admin/AppShell';
 
@@ -16,7 +16,8 @@ type Project = { id: string; name: string; number: string; stage: string; share_
 type Customer = { id: string; name: string; company: string | null; email: string | null; phone: string | null; access: 'no_email' | 'password' | 'link' | 'never'; locked: boolean; last_seen: string | null; first_seen: string | null; sessions: number; frequency: string; projects: Project[]; waiting: number; came_back: number; questions_waiting: number };
 type Miss = { id: string; question: string; job: string | null; estimate_id: string; when: string; why: string };
 type Faq = { id: string; term: string; answer: string; active: boolean; source: string | null };
-type Data = { stats: Record<string, number>; customers: Customer[]; misses: Miss[]; faq: Faq[] };
+type Service = { id: string; system_label: string; title: string; next_due: string; overdue: boolean; interval_months: number; estimate: { id: string; project_name: string | null; estimate_number: string } | null; customer: { id: string; first_name: string | null; last_name: string | null; company_name: string | null; email: string | null; phone: string | null } | null };
+type Data = { stats: Record<string, number>; customers: Customer[]; misses: Miss[]; faq: Faq[]; service_due: Service[]; review_url: string | null };
 
 const ago = (iso: string | null) => {
   if (!iso) return 'never';
@@ -54,11 +55,16 @@ export default function AdminPortalPage() {
     if (d?.ok) { setFaqNote('Added — the assistant uses it on every job from now on ✓'); setFaqTerm(''); setFaqAnswer(''); setFaqOpen(false); await load(); } else setFaqNote(d?.error || 'Could not add it.');
     setFaqBusy(false);
   };
+  const [reviewUrl, setReviewUrl] = useState<string>('');
+  const [reviewNote, setReviewNote] = useState('');
+  const saveReviewUrl = async () => { const d = await fetch('/api/admin/portal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'set_review_url', url: reviewUrl }) }).then((r) => r.json()).catch(() => null); setReviewNote(d?.ok ? 'Saved ✓ — completed jobs now show the Google review button.' : d?.error || 'Could not save.'); };
+  const serviceDone = async (id: string) => { await fetch('/api/admin/service', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, done: true }) }); await load(); };
+  const serviceOff = async (id: string) => { await fetch('/api/admin/service', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, active: false }) }); await load(); };
   const toggleFaq = async (f: Faq) => { await fetch('/api/admin/faq', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: f.id, active: !f.active }) }); await load(); };
   const deleteFaq = async (f: Faq) => { await fetch('/api/admin/faq?id=' + f.id, { method: 'DELETE' }); await load(); };
 
   const load = useCallback(async () => {
-    try { setData(await (await fetch('/api/admin/portal', { cache: 'no-store' })).json()); } catch {}
+    try { const d = await (await fetch('/api/admin/portal', { cache: 'no-store' })).json(); setData(d); setReviewUrl(d.review_url || ''); } catch {}
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -185,6 +191,43 @@ export default function AdminPortalPage() {
             </div>
           );
         })}
+        {/* ── After the job: service due across customers, and the review link ── */}
+        <div className="rounded-2xl border p-5 mt-6" style={{ background: '#111', borderColor: (data.service_due || []).some((s) => s.overdue) ? 'rgba(201,168,76,0.45)' : 'rgba(255,255,255,0.08)' }}>
+          <p className="text-[17px] font-bold flex items-center gap-2"><Wrench size={18} style={{ color: '#D4B965' }} /> Service due — next 60 days</p>
+          <p className="text-[15px] text-white/50 mt-1 mb-3">Maintenance schedules from finished jobs&rsquo; binders. Customers get an email 30 days out; this is your list to quote.</p>
+          {(data.service_due || []).length === 0 ? <p className="text-[15px] text-white/35">Nothing due. Add maintenance reminders from a job&rsquo;s Handover panel.</p> : (
+            <div className="space-y-2">
+              {data.service_due.map((s) => {
+                const name = s.customer ? ([s.customer.first_name, s.customer.last_name].filter(Boolean).join(' ') || s.customer.company_name || 'Customer') : 'Customer';
+                return (
+                  <div key={s.id} className="rounded-xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid ' + (s.overdue ? 'rgba(201,168,76,0.4)' : 'rgba(255,255,255,0.06)') }}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[16px] font-semibold text-white/90">{s.title} <span className="text-white/40 font-normal">· {name}</span></p>
+                        <p className="text-[14px]" style={{ color: s.overdue ? '#D4B965' : 'rgba(255,255,255,0.5)' }}>{s.overdue ? 'Overdue — was due ' : 'Due '}{new Date(s.next_due + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}{s.estimate ? ' · ' + (s.estimate.project_name || s.estimate.estimate_number) : ''}{s.customer?.phone ? ' · ' + s.customer.phone : ''}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {s.customer && <Link href={'/admin/estimates/new?customer=' + s.customer.id} className="min-h-[40px] px-3 rounded-lg text-[14px] font-bold inline-flex items-center text-black" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>Quote it</Link>}
+                      <button onClick={() => serviceDone(s.id)} className="min-h-[40px] px-3 rounded-lg text-[14px] font-bold text-white/80" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}>Done — next in {s.interval_months} mo</button>
+                      <button onClick={() => serviceOff(s.id)} className="min-h-[40px] px-3 rounded-lg text-[14px] font-bold text-white/50" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>Stop reminding</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <p className="text-[15px] font-bold text-white/85 inline-flex items-center gap-2"><Star size={16} style={{ color: '#D4B965' }} /> Google review link</p>
+            <p className="text-[14px] text-white/45 mb-2">Paste your Google &ldquo;write a review&rdquo; link once. Every completed job&rsquo;s page and handover email then asks for the review with a button.</p>
+            <div className="flex gap-2">
+              <input value={reviewUrl} onChange={(e) => setReviewUrl(e.target.value)} placeholder="https://g.page/r/…/review" className="flex-1 min-w-0 min-h-[48px] rounded-xl px-3 text-[15px] text-white bg-white/5 border border-white/10 outline-none" />
+              <button onClick={saveReviewUrl} className="min-h-[48px] px-4 rounded-xl text-[15px] font-bold text-black" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>Save</button>
+            </div>
+            {reviewNote && <p className="text-[14px] mt-2" style={{ color: reviewNote.includes('✓') ? '#35d07f' : '#f87171' }}>{reviewNote}</p>}
+          </div>
+        </div>
+
         {/* ── Intelligence: the assistant's record and the FAQ it learns from ── */}
         <div className="rounded-2xl border border-white/8 bg-[#111] p-5 mt-6">
           <p className="text-[17px] font-bold flex items-center gap-2"><Sparkles size={18} style={{ color: '#D4B965' }} /> Project Assistant — last 30 days</p>

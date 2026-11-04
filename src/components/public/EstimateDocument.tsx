@@ -6,7 +6,7 @@ import CustomerFeedbackCard from '@/components/public/CustomerFeedbackCard';
 import {
   useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp, ShineStyles,
   ProgressSection, StorySection, SitePhotos, DocumentsSection,
-  ChangeOrders, AskSection, BalanceDue, CompletionCard, WarrantyCard, FeedbackCard, RequestsSection, NextUpCard, ScheduleSection, InspectionsSection, TeamCard, AssistantSection, GlossarySection,
+  ChangeOrders, AskSection, BalanceDue, CompletionCard, WarrantyCard, FeedbackCard, RequestsSection, NextUpCard, ScheduleSection, InspectionsSection, TeamCard, AssistantSection, GlossarySection, BinderSection, ReferCard,
   type PublicOptionGroup,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
@@ -73,6 +73,7 @@ interface EstimateData {
   rain_days?: number;
   glossary?: { term: string; answer: string }[];
   assistant_enabled?: boolean;
+  binder?: any;
   site_photos?: { url: string; caption?: string | null }[];
   documents?: { kind: string; title: string; date: string | null; detail: string; href: string | null; paid?: boolean }[];
   change_orders?: {
@@ -587,7 +588,10 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
           />
         )}
 
-        {estimate.completed_at && (
+        {estimate.completed_at && estimate.binder && (
+          <BinderSection binder={estimate.binder} projectName={estimate.project_name || estimate.estimate_number} />
+        )}
+        {estimate.completed_at && !estimate.binder && (
           <WarrantyCard
             months={estimate.warranty_months ?? null}
             notes={estimate.warranty_notes || null}
@@ -648,8 +652,10 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
         )}
 
         {estimate.completed_at && (
-          <FeedbackCard token={token} existingRating={estimate.feedback_rating ?? null} />
+          <FeedbackCard token={token} existingRating={estimate.feedback_rating ?? null} reviewUrl={estimate.binder?.review_url || undefined} />
         )}
+
+        {estimate.completed_at && <ReferCard projectNumber={estimate.estimate_number} />}
 
         {/* Once work is running, the contract itself is reference material —
             say so, rather than leaving them scrolling a proposal. */}

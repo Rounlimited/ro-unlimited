@@ -5,7 +5,7 @@ import NumberFlow from '@number-flow/react';
 import {
   CheckCircle2, Check, Loader2, PenLine, CloudRain, Hammer, Flag, ClipboardCheck,
   AlertTriangle, Camera, X, FileText, Receipt, ChevronRight,
-  FilePlus2, MessageCircle, Send, CreditCard, ShieldCheck, Star, PartyPopper, Upload, Paperclip, CalendarDays, Inbox, Sparkles, ThumbsUp, ThumbsDown, BookOpen, ChevronDown,
+  FilePlus2, MessageCircle, Send, CreditCard, ShieldCheck, Star, PartyPopper, Upload, Paperclip, CalendarDays, Inbox, Sparkles, ThumbsUp, ThumbsDown, BookOpen, ChevronDown, Download, FolderOpen, Wrench, Share2, Copy,
 } from 'lucide-react';
 
 /**
@@ -938,6 +938,128 @@ export function GlossarySection({ terms }: { terms: { term: string; answer: stri
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+/* ── The binder: everything about a finished job, kept in one place ──── */
+type BinderData = {
+  contract: { signed_at: string | null; signed_name: string | null; pdf_href: string | null; total: number };
+  invoices: { number: string; total: number; paid: number; status: string; paid_at: string | null; href: string | null }[]; balance: number;
+  records: { id: string; record_type: string; title: string; agency: string | null; reference: string | null; scheduled_on: string | null; status: string; status_word: string; result_on: string | null; notes: string | null }[];
+  photos: { url: string; caption: string | null; date: string | null }[];
+  warranty: { months: number | null; notes: string | null; until: string | null };
+  items: { id: string; kind: string; title: string; url: string; note: string | null }[];
+  services: { id: string; system: string; system_label: string; title: string; interval_months: number; next_due: string; last_done: string | null; note: string | null }[];
+  completion: { completed_at: string | null; note: string | null };
+  review_url: string | null;
+};
+export function BinderSection({ binder, projectName }: { binder: BinderData; projectName: string }) {
+  const [openPhoto, setOpenPhoto] = useState<{ url: string; caption: string | null } | null>(null);
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const money = (n: number) => '$' + Math.round(n).toLocaleString();
+  const day = (d: string | null) => d ? new Date((d.length === 10 ? d + 'T12:00:00' : d)).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+  const thumb = (u: string, w: number) => (u.includes('cdn.sanity.io') ? `${u}?w=${w}&auto=format` : u);
+  const KIND: Record<string, string> = { warranty: 'Warranty', manual: 'Manual', permit: 'Permit / approval', asbuilt: 'As-built drawing', other: 'Document' };
+  const photos = showAllPhotos ? binder.photos : binder.photos.slice(0, 9);
+  const Card = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
+    <div className="rounded-xl p-4" style={{ background: '#faf9f6', border: '1px solid #f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-2 inline-flex items-center gap-2" style={{ color: '#8a6d20' }}>{icon} {title}</p>
+      {children}
+    </div>
+  );
+  const Row = ({ label, detail, href }: { label: string; detail?: string | null; href?: string | null }) => {
+    const inner = (<><span className="text-[17px] font-semibold text-[#2a2a2a]">{label}</span>{detail && <span className="block text-[15px] text-gray-500">{detail}</span>}</>);
+    return href ? <a href={href} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-3 min-h-[52px] py-2 active:opacity-70"><span className="min-w-0">{inner}</span><Download size={18} className="shrink-0" style={{ color: '#8a6d20' }} /></a> : <div className="min-h-[44px] py-2">{inner}</div>;
+  };
+  return (
+    <section id="binder" data-track="binder" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: '#ead9ac' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-1 inline-flex items-center gap-2" style={{ color: '#8a6d20' }}><FolderOpen size={14} /> Your Project Binder</p>
+      <p className="text-[16px] text-[#4b5563] mb-4">Everything about {projectName}, kept here for as long as you want it: the paperwork, the county record, what&rsquo;s in the ground, and what we stand behind.</p>
+      <div className="space-y-3">
+        <Card title="Contract" icon={<FileText size={14} />}>
+          <Row label={`Signed contract — ${money(binder.contract.total)}`} detail={binder.contract.signed_at ? `Signed by ${binder.contract.signed_name || 'you'} on ${day(binder.contract.signed_at)}` : 'Not signed'} href={binder.contract.pdf_href} />
+        </Card>
+        {binder.invoices.length > 0 && (
+          <Card title="Invoices" icon={<Receipt size={14} />}>
+            <div className="divide-y" style={{ borderColor: '#f0ece2' }}>
+              {binder.invoices.map((i) => <Row key={i.number} label={`Invoice ${i.number} — ${money(i.total)}`} detail={i.status === 'paid' ? `Paid in full${i.paid_at ? ' ' + day(i.paid_at) : ''}` : i.total - i.paid > 0 ? `${money(i.total - i.paid)} due` : i.status} href={i.href} />)}
+            </div>
+            {binder.balance === 0 && <p className="text-[15px] font-semibold mt-2" style={{ color: '#187a4b' }}>Paid in full — thank you.</p>}
+          </Card>
+        )}
+        {binder.records.length > 0 && (
+          <Card title="Permits & inspections" icon={<ClipboardCheck size={14} />}>
+            <div className="divide-y" style={{ borderColor: '#f0ece2' }}>
+              {binder.records.map((r) => <Row key={r.id} label={r.title} detail={[r.status_word, r.result_on || r.scheduled_on ? day(r.result_on || r.scheduled_on) : null, r.agency, r.reference ? '#' + r.reference : null].filter(Boolean).join(' · ') + (r.notes ? ' — ' + r.notes : '')} />)}
+            </div>
+          </Card>
+        )}
+        {binder.photos.length > 0 && (
+          <Card title={`Photos of the work (${binder.photos.length})`} icon={<Camera size={14} />}>
+            <p className="text-[15px] text-gray-500 mb-2">Taken as the work went in — including what&rsquo;s under the ground now. Tap to view, press and hold to save.</p>
+            <div className="grid grid-cols-3 gap-2">
+              {photos.map((p, i) => (
+                <button key={i} type="button" onClick={() => setOpenPhoto(p)} className="aspect-square rounded-lg overflow-hidden active:scale-[0.98]" style={{ background: '#f0ece2' }} aria-label={p.caption || 'Photo'}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={thumb(p.url, 400)} alt={p.caption || 'Photo'} className="w-full h-full object-cover" loading="lazy" />
+                </button>
+              ))}
+            </div>
+            {binder.photos.length > 9 && <button type="button" onClick={() => setShowAllPhotos((v) => !v)} className="mt-3 min-h-[48px] px-4 rounded-xl text-[15px] font-bold" style={{ background: '#fdf6e7', color: '#8a6d20', border: '1px solid #ead9ac' }}>{showAllPhotos ? 'Show fewer' : `Show all ${binder.photos.length} photos`}</button>}
+          </Card>
+        )}
+        {(binder.warranty.months || binder.warranty.notes) && (
+          <Card title="Warranty" icon={<ShieldCheck size={14} />}>
+            <p className="text-[17px] font-semibold text-[#2a2a2a]">{binder.warranty.months ? `${binder.warranty.months}-month workmanship warranty${binder.warranty.until ? ` — through ${day(binder.warranty.until)}` : ''}` : 'Warranty'}</p>
+            {binder.warranty.notes && <p className="text-[16px] text-[#4b5563] mt-1 whitespace-pre-line">{binder.warranty.notes}</p>}
+            <p className="text-[15px] text-gray-500 mt-2">Something not right? Ask on this page or call (864) 304-0139 and it goes on record.</p>
+          </Card>
+        )}
+        {binder.items.length > 0 && (
+          <Card title="Warranties & manuals" icon={<FileText size={14} />}>
+            <div className="divide-y" style={{ borderColor: '#f0ece2' }}>
+              {binder.items.map((it) => <Row key={it.id} label={it.title} detail={[KIND[it.kind] || 'Document', it.note].filter(Boolean).join(' · ')} href={it.url} />)}
+            </div>
+          </Card>
+        )}
+        {binder.services.length > 0 && (
+          <Card title="Maintenance schedule" icon={<Wrench size={14} />}>
+            <p className="text-[15px] text-gray-500 mb-2">We email you about 30 days before each one is due. Want RO to handle it? Just ask on this page.</p>
+            <div className="divide-y" style={{ borderColor: '#f0ece2' }}>
+              {binder.services.map((s) => <Row key={s.id} label={s.title} detail={`Next due ${day(s.next_due)} · every ${s.interval_months} months${s.last_done ? ` · last done ${day(s.last_done)}` : ''}${s.note ? ' · ' + s.note : ''}`} />)}
+            </div>
+          </Card>
+        )}
+      </div>
+      {openPhoto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.9)' }} onClick={() => setOpenPhoto(null)}>
+          <button type="button" aria-label="Close" className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center text-white" style={{ background: 'rgba(255,255,255,0.15)' }}><X size={22} /></button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={thumb(openPhoto.url, 1600)} alt={openPhoto.caption || 'Photo'} className="max-w-full max-h-[85vh] rounded-xl object-contain" />
+          {openPhoto.caption && <p className="absolute bottom-6 left-0 right-0 text-center text-white text-[16px] px-6">{openPhoto.caption}</p>}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ── Refer a friend, start another project ─────────────────────────── */
+export function ReferCard({ projectNumber }: { projectNumber: string }) {
+  const [copied, setCopied] = useState(false);
+  const link = `https://rounlimited.com/contact?ref=${encodeURIComponent(projectNumber)}`;
+  const text = `RO Unlimited did our ${'project'} right — licensed for the whole thing, kept us posted on a project page the whole way. If you need site, utility or building work: ${link}`;
+  const copy = async () => { try { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {} };
+  return (
+    <section className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-1 inline-flex items-center gap-2" style={{ color: '#8a6d20' }}><Share2 size={14} /> Know someone who needs this done right?</p>
+      <p className="text-[16px] text-[#4b5563] mb-3">Most of our work comes from people like you telling a neighbor. Send them our way &mdash; they get the same project page you had.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <a href={`sms:?&body=${encodeURIComponent(text)}`} className="min-h-[52px] rounded-xl text-[16px] font-bold text-black flex items-center justify-center gap-2" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>Text a friend</a>
+        <a href={`mailto:?subject=${encodeURIComponent('A contractor worth calling')}&body=${encodeURIComponent(text)}`} className="min-h-[52px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2" style={{ background: '#fdf6e7', color: '#8a6d20', border: '1px solid #ead9ac' }}>Email a friend</a>
+        <button type="button" onClick={copy} className="min-h-[52px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2" style={{ background: '#fff', color: '#4b5563', border: '1px solid #e5e0d2' }}>{copied ? <Check size={18} /> : <Copy size={18} />} {copied ? 'Copied' : 'Copy the link'}</button>
+      </div>
+      <a href="/contact?from=portal" className="mt-3 inline-flex items-center gap-2 min-h-[48px] text-[16px] font-bold" style={{ color: '#8a6d20' }}>Have another project in mind? Start it here <ChevronRight size={18} /></a>
     </section>
   );
 }
