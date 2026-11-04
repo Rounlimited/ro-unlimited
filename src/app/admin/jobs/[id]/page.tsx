@@ -47,6 +47,7 @@ interface Room {
   feedback_unseen: number;
   upcoming: { id: string; title: string; kind: string; starts_on: string; ends_on: string | null }[];
   inspections: { id: string; record_type: string; title: string; agency: string | null; reference: string | null; scheduled_on: string | null; time_window: string | null; status: string; result_on: string | null; notes: string | null; internal_notes: string | null }[];
+  portal: { opens_7d: number; opens_30d: number; last_viewed_at: string | null; avg_seconds: number | null; sections: Record<string, number>; questions: { asked: number; answered: number; open: number; avg_answer_hours: number | null }; assistant: { asks_30d: number; answered_30d: number; handoffs_30d: number; helpful_yes: number; helpful_no: number; recent: { question: string; handoff: boolean; helpful: boolean | null }[] }; last_visible_entry: string | null; days_since_update: number | null };
   progress: { percent: number; phases: { phase: string; percent: number; value: number; earned: number }[]; total_value: number };
   money: { contract: number; earned: number; spent: number; margin: number; billed: number; paid: number; unbilled: number; by_category: Record<string, number> };
   costs: { id: string; spent_on: string; category: string; amount: number; vendor: string | null; note: string | null }[];
@@ -244,7 +245,7 @@ export default function JobRoomPage() {
   }, [id]);
 
   const [togglingFlag, setTogglingFlag] = useState<string | null>(null);
-  const setFlag = async (field: 'feedback_enabled' | 'reviews_enabled' | 'show_schedule' | 'show_inspections' | 'show_photos', value: boolean) => {
+  const setFlag = async (field: 'feedback_enabled' | 'reviews_enabled' | 'show_schedule' | 'show_inspections' | 'show_photos' | 'show_assistant', value: boolean) => {
     setTogglingFlag(field);
     try {
       await fetch('/api/admin/estimates/' + id, {
@@ -855,6 +856,37 @@ export default function JobRoomPage() {
           {rqNotice && <p className="text-[15px] mt-2" style={{ color: rqNotice.includes('✓') ? '#35d07f' : '#D4B965' }}>{rqNotice}</p>}
         </div>
 
+        {/* ── Portal pulse: are they looking, what do they read, is the assistant helping ── */}
+        {room.portal && (() => {
+          const pp = room.portal;
+          const SEC: Record<string, string> = { 'needs-you': 'Needs you', story: 'Timeline', schedule: 'Schedule', inspections: 'Inspections', requests: 'Requests', questions: 'Questions', assistant: 'Assistant', glossary: 'Glossary', scope: 'Scope', total: 'Price', sign: 'Signature' };
+          const secs = Object.entries(pp.sections).sort((a, b) => b[1] - a[1]).slice(0, 6);
+          const stale = pp.days_since_update != null && pp.days_since_update >= 7;
+          return (
+            <div className="rounded-2xl border p-5" style={{ background: '#111', borderColor: stale ? 'rgba(248,113,113,0.35)' : 'rgba(255,255,255,0.08)' }}>
+              <p className="text-[17px] font-bold mb-1">Portal Pulse</p>
+              <p className="text-[15px] text-white/50 mb-3">
+                Opened <strong className="text-white/85">{pp.opens_7d}×</strong> this week, {pp.opens_30d}× in 30 days{pp.avg_seconds ? <> · about {pp.avg_seconds >= 90 ? Math.round(pp.avg_seconds / 60) + ' min' : pp.avg_seconds + ' sec'} a visit</> : null}.
+                {pp.days_since_update != null && <> Last visible update <strong style={{ color: stale ? '#f87171' : 'rgba(255,255,255,0.85)' }}>{pp.days_since_update === 0 ? 'today' : pp.days_since_update + ' days ago'}</strong>{stale ? ' — silence reads as trouble; post two lines.' : '.'}</>}
+              </p>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)' }}><p className="text-[24px] font-bold leading-none" style={{ color: pp.questions.open ? '#D4B965' : '#fff' }}>{pp.questions.answered}/{pp.questions.asked}</p><p className="text-[13px] text-white/50 mt-1">Questions answered{pp.questions.avg_answer_hours != null ? ` · ${pp.questions.avg_answer_hours}h avg` : ''}</p></div>
+                <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)' }}><p className="text-[24px] font-bold leading-none text-white">{pp.assistant.answered_30d}/{pp.assistant.asks_30d}</p><p className="text-[13px] text-white/50 mt-1">Assistant answered · {pp.assistant.handoffs_30d} to you</p></div>
+                <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)' }}><p className="text-[24px] font-bold leading-none" style={{ color: pp.assistant.helpful_no ? '#f87171' : '#35d07f' }}>{pp.assistant.helpful_yes}👍 {pp.assistant.helpful_no}👎</p><p className="text-[13px] text-white/50 mt-1">Rated by the customer</p></div>
+              </div>
+              {secs.length > 0 && (
+                <p className="text-[14px] text-white/50">What they read most: {secs.map(([k, v]) => `${SEC[k] || k} (${v})`).join(' · ')}</p>
+              )}
+              {pp.assistant.recent.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-[13px] font-bold uppercase tracking-wide text-white/40">They asked the assistant</p>
+                  {pp.assistant.recent.map((a, i) => <p key={i} className="text-[15px] text-white/75">&ldquo;{a.question}&rdquo; <span className="text-white/40">— {a.handoff ? 'handed to you' : a.helpful === false ? 'answered, not helpful → handed to you' : a.helpful ? 'answered, helpful' : 'answered'}</span></p>)}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* ── The customer's side of the glass ── */}
         <div className="rounded-2xl border border-white/8 bg-[#111] p-5">
           <p className="text-[17px] font-bold mb-1">The Customer&rsquo;s View</p>
@@ -865,8 +897,8 @@ export default function JobRoomPage() {
             {cadence ? <> Reporting: {cadence}.</> : null}
           </p>
           <p className="text-[14px] text-white/40 mb-2">What they can see on their page:</p>
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            {([['show_schedule', 'Schedule'], ['show_inspections', 'Inspections'], ['show_photos', 'Photos']] as const).map(([field, label]) => {
+          <div className="grid grid-cols-4 gap-2 mb-3">
+            {([['show_schedule', 'Schedule'], ['show_inspections', 'Inspections'], ['show_photos', 'Photos'], ['show_assistant', 'Assistant']] as const).map(([field, label]) => {
               const on = (e as any)[field] !== false;
               return (
                 <button key={field} onClick={() => setFlag(field, !on)} disabled={togglingFlag !== null}

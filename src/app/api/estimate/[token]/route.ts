@@ -88,6 +88,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     let nextUp: any = null;
     let schedule: any[] = [];
     let inspections: any[] = [];
+    let glossary: any[] = [];
     let rainDays = 0;
     let balanceDue = 0;
     let payHref: string | null = null;
@@ -205,6 +206,15 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       for (const r of requests) if (r.submitted_at) extras.push({ entry_date: String(r.submitted_at).slice(0, 10), type: 'request', text: `You sent: ${r.title}`, photos: [] });
       if (extras.length) story = [...story, ...extras].sort((a, b) => (a.entry_date < b.entry_date ? 1 : a.entry_date > b.entry_date ? -1 : 0)).slice(0, 60);
 
+      // Plain-language explainers for the words that actually appear on this page.
+      const { data: faq } = await supabase.from('portal_faq').select('term, answer').eq('active', true);
+      const pageText = [estimate.project_description, ...story.map((s: any) => s.text), ...inspections.map((r: any) => `${r.title} ${r.notes || ''} ${r.status}`), ...schedule.map((s: any) => s.title)].join(' ').toLowerCase();
+      glossary = (faq || []).filter((f) => {
+        const t = f.term.toLowerCase();
+        const stem = t.replace(/\s*\(.*\)$/, '').replace(/s$/, '');
+        return pageText.includes(t) || pageText.includes(stem) || (t === 'estimated date' && schedule.length > 0) || (t === 'change order' && changeOrders.length > 0) || (t === 'inspection corrections' && inspections.some((r: any) => r.status === 'corrections'));
+      }).slice(0, 6);
+
       // Their paperwork, in one place: every report sent, every invoice raised.
       const [reportsRes, invoicesRes] = await Promise.all([
         supabase.from('progress_reports')
@@ -266,6 +276,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       schedule,
       inspections,
       rain_days: rainDays,
+      glossary,
+      assistant_enabled: estimate.show_assistant !== false,
       show: { schedule: estimate.show_schedule !== false, inspections: estimate.show_inspections !== false, photos: estimate.show_photos !== false },
       balance_due: Math.round(balanceDue),
       pay_href: payHref,

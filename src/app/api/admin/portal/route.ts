@@ -63,7 +63,19 @@ export async function GET() {
         questions_waiting: projects.reduce((n: number, p: any) => n + p.questions_waiting, 0),
       };
     }).filter((c: any) => c.projects.length > 0 || c.email);
+    // Intelligence: what the assistant handled, what it handed off, and the misses that should become FAQ.
+    const d30 = new Date(Date.now() - 30 * 86400000).toISOString();
+    const [asstRes, faqRes] = await Promise.all([
+      supabase.from('assistant_logs').select('id, estimate_id, question, answer, handoff, helpful, created_at').gte('created_at', d30).order('created_at', { ascending: false }).limit(300),
+      supabase.from('portal_faq').select('id, term, answer, active, source, created_at').order('term'),
+    ]);
+    const asst = (asstRes.data || []) as any[];
+    const estName = new Map((estRes.data || []).map((e: any) => [e.id, e.project_name || e.estimate_number]));
+    const misses = asst.filter((a) => a.handoff || a.helpful === false).slice(0, 40).map((a) => ({ id: a.id, question: a.question, job: estName.get(a.estimate_id) || null, estimate_id: a.estimate_id, when: a.created_at, why: a.handoff ? 'handed off' : 'not helpful' }));
+    const answeredQs = (msgRes.data || []); // open questions only — answer time comes from the questions inbox
     const stats = {
+      assistant_asks_30d: asst.length, assistant_answered_30d: asst.filter((a) => !a.handoff).length, assistant_handoffs_30d: asst.filter((a) => a.handoff).length,
+      assistant_helpful_yes: asst.filter((a) => a.helpful === true).length, assistant_helpful_no: asst.filter((a) => a.helpful === false).length,
       customers: customers.length,
       can_sign_in: customers.filter((c: any) => c.access !== 'no_email').length,
       no_email: customers.filter((c: any) => c.access === 'no_email').length,
@@ -73,7 +85,8 @@ export async function GET() {
       came_back: customers.reduce((n: number, c: any) => n + c.came_back, 0),
       questions_waiting: customers.reduce((n: number, c: any) => n + c.questions_waiting, 0),
     };
-    return NextResponse.json({ stats, customers });
+    void answeredQs;
+    return NextResponse.json({ stats, customers, misses, faq: faqRes.data || [] });
   } catch (err) {
     console.error('[admin/portal] GET', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

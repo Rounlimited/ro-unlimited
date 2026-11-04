@@ -5,7 +5,7 @@ import NumberFlow from '@number-flow/react';
 import {
   CheckCircle2, Check, Loader2, PenLine, CloudRain, Hammer, Flag, ClipboardCheck,
   AlertTriangle, Camera, X, FileText, Receipt, ChevronRight,
-  FilePlus2, MessageCircle, Send, CreditCard, ShieldCheck, Star, PartyPopper, Upload, Paperclip, CalendarDays, Inbox,
+  FilePlus2, MessageCircle, Send, CreditCard, ShieldCheck, Star, PartyPopper, Upload, Paperclip, CalendarDays, Inbox, Sparkles, ThumbsUp, ThumbsDown, BookOpen, ChevronDown,
 } from 'lucide-react';
 
 /**
@@ -606,7 +606,7 @@ export function StorySection({ story }: {
     new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
-    <section className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
+    <section id="story" data-track="story" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: '#f0ece2' }}>
       <p className="text-[13px] font-bold uppercase tracking-wide mb-4" style={{ color: '#8a6d20' }}>
         What&rsquo;s Been Happening
       </p>
@@ -718,7 +718,7 @@ export function RequestsSection({ token, requests, onDone }: { token: string; re
   };
 
   return (
-    <section id="requests" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: open.length ? '#ead9ac' : '#f0ece2' }}>
+    <section id="requests" data-track="requests" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: open.length ? '#ead9ac' : '#f0ece2' }}>
       <p className="text-[13px] font-bold uppercase tracking-wide mb-1" style={{ color: '#8a6d20' }}>Requests from RO</p>
       <p className="text-[16px] text-[#4b5563] mb-4">{open.length ? 'Send these right from your phone — a clear photo of a document works fine.' : 'Nothing open right now. Everything you\u2019ve sent is below.'}</p>
       <div className="space-y-3">
@@ -784,7 +784,7 @@ export function ScheduleSection({ items, rainDays }: { items: { id: string; titl
   };
   const kindWord: Record<string, string> = { work: 'Work on site', pour: 'Concrete pour', inspection: 'Inspection', delivery: 'Delivery', meeting: 'Meeting', other: '' };
   return (
-    <section id="schedule" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: '#f0ece2' }}>
+    <section id="schedule" data-track="schedule" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: '#f0ece2' }}>
       <p className="text-[13px] font-bold uppercase tracking-wide mb-1" style={{ color: '#8a6d20' }}>Coming Up — next two weeks</p>
       <p className="text-[15px] text-gray-500 mb-4">Every date is estimated. Weather, inspectors and material deliveries move things; when a date moves we post it here and let you know.</p>
       <div className="doc-rows space-y-3">
@@ -828,7 +828,7 @@ export function InspectionsSection({ records }: { records: { id: string; record_
     );
   };
   return (
-    <section id="inspections" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: '#f0ece2' }}>
+    <section id="inspections" data-track="inspections" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: '#f0ece2' }}>
       <p className="text-[13px] font-bold uppercase tracking-wide mb-1" style={{ color: '#8a6d20' }}>Permits &amp; Inspections</p>
       <p className="text-[15px] text-gray-500 mb-4">The county&rsquo;s record on your job. RO schedules the inspections and handles any corrections; you only need to act if it shows under Needs You.</p>
       <div className="space-y-2">
@@ -854,6 +854,90 @@ export function TeamCard() {
         </div>
       </div>
       <p className="text-[15px] text-gray-500 mt-3">After hours, ask your question right here on this page &mdash; it&rsquo;s answered the next business morning and stays on record. If something on site can&rsquo;t wait, call the number above.</p>
+    </section>
+  );
+}
+
+/* ── The project assistant: answers from this job's records, hands off to RO ── */
+export function AssistantSection({ token, onHandoff }: { token: string; onHandoff: () => void }) {
+  const [q, setQ] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [turns, setTurns] = useState<{ q: string; log_id: string; answer: string | null; sources: string[]; handoff: boolean; rated?: boolean }[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const chips = ["What's happening next?", 'Is anything needed from me?', 'When is the next inspection?', "What's my balance?", 'What does "pressure test" mean?'];
+  const ask = async (text: string) => {
+    const question = text.trim(); if (!question || busy) return;
+    setBusy(true); setError(null); setQ('');
+    try {
+      const r = await fetch('/api/estimate/' + token + '/assistant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }) });
+      const d = await r.json();
+      if (!r.ok || d.error) { setError(d.error || 'Could not answer that right now.'); }
+      else { setTurns((t) => [{ q: question, log_id: d.log_id, answer: d.answer, sources: d.sources || [], handoff: d.handoff }, ...t]); if (d.handoff) onHandoff(); }
+    } catch { setError('Connection problem — try again, or ask RO below.'); }
+    setBusy(false);
+  };
+  const rate = async (log_id: string, helpful: boolean) => {
+    setTurns((t) => t.map((x) => (x.log_id === log_id ? { ...x, rated: true, handoff: x.handoff || !helpful } : x)));
+    try { await fetch('/api/estimate/' + token + '/assistant', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ log_id, helpful }) }); if (!helpful) onHandoff(); } catch {}
+  };
+  const src = (s: string) => s.replace(/^log /, 'update ').replace(/^glossary$/, 'our glossary').replace(/^change order$/, 'your change orders');
+  return (
+    <section id="assistant" data-track="assistant" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-1 inline-flex items-center gap-2" style={{ color: '#8a6d20' }}><Sparkles size={14} /> Ask about your project</p>
+      <p className="text-[16px] text-[#4b5563] mb-3">Instant answers from your project&rsquo;s own records &mdash; what&rsquo;s posted, scheduled, inspected and billed. Anything it isn&rsquo;t sure of goes straight to RO as a question.</p>
+      <div className="flex gap-2">
+        <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && ask(q)} placeholder="Type a question" className="flex-1 min-w-0 min-h-[52px] rounded-xl border px-4 text-[17px] text-[#1a1a1a] bg-white outline-none focus:border-[#C9A84C]" style={{ borderColor: '#e5e0d2' }} />
+        <button type="button" onClick={() => ask(q)} disabled={busy || !q.trim()} className="min-h-[52px] px-5 rounded-xl text-[16px] font-bold text-black flex items-center gap-2 disabled:opacity-50" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>{busy ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}<span className="hidden sm:inline">Ask</span></button>
+      </div>
+      <div className="flex gap-2 overflow-x-auto pt-3 pb-1 -mx-5 px-5 sm:mx-0 sm:px-0">
+        {chips.map((c) => <button key={c} type="button" onClick={() => ask(c)} disabled={busy} className="shrink-0 min-h-[44px] px-4 rounded-full text-[15px] font-semibold" style={{ background: '#fdf6e7', color: '#8a6d20', border: '1px solid #ead9ac' }}>{c}</button>)}
+      </div>
+      {error && <p className="text-[16px] font-semibold mt-3" style={{ color: '#b45309' }}>{error}</p>}
+      {busy && <p className="text-[15px] text-gray-500 mt-3 inline-flex items-center gap-2"><Loader2 size={15} className="animate-spin" /> Checking your project records&hellip;</p>}
+      <div className="space-y-3 mt-3">
+        {turns.map((t) => (
+          <div key={t.log_id} className="rounded-xl p-4" style={{ background: t.handoff ? '#fdf6e7' : '#faf9f6', border: '1px solid ' + (t.handoff ? '#ead9ac' : '#f0ece2') }}>
+            <p className="text-[15px] text-gray-500">You asked: <span className="text-[#2a2a2a] font-semibold">{t.q}</span></p>
+            {t.answer && !t.handoff ? (
+              <>
+                <p className="text-[17px] text-[#2a2a2a] mt-2 leading-snug whitespace-pre-line">{t.answer}</p>
+                {t.sources.length > 0 && <p className="text-[14px] text-gray-400 mt-2">From: {t.sources.map(src).join(' · ')}</p>}
+                {!t.rated ? (
+                  <div className="flex items-center gap-2 mt-3">
+                    <span className="text-[15px] text-gray-500">Did that answer it?</span>
+                    <button type="button" onClick={() => rate(t.log_id, true)} className="min-h-[44px] px-4 rounded-full text-[15px] font-bold inline-flex items-center gap-1.5" style={{ background: '#e9f7ef', color: '#187a4b', border: '1px solid #bfe6cf' }}><ThumbsUp size={15} /> Yes</button>
+                    <button type="button" onClick={() => rate(t.log_id, false)} className="min-h-[44px] px-4 rounded-full text-[15px] font-bold inline-flex items-center gap-1.5" style={{ background: '#fff', color: '#4b5563', border: '1px solid #e5e0d2' }}><ThumbsDown size={15} /> No, ask RO</button>
+                  </div>
+                ) : <p className="text-[15px] mt-2 font-semibold" style={{ color: t.handoff ? '#8a6d20' : '#187a4b' }}>{t.handoff ? 'Sent to RO — the answer will post under Questions and you\u2019ll get an email.' : 'Thanks.'}</p>}
+              </>
+            ) : (
+              <p className="text-[17px] text-[#2a2a2a] mt-2 leading-snug">I&rsquo;d rather RO answer that one than guess. It&rsquo;s been sent as a question &mdash; the answer will post under Questions and you&rsquo;ll get an email, usually the same business day.</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ── Words you'll see on this page ─────────────────────────────────── */
+export function GlossarySection({ terms }: { terms: { term: string; answer: string }[] }) {
+  const [open, setOpen] = useState<string | null>(null);
+  if (!terms.length) return null;
+  return (
+    <section id="glossary" data-track="glossary" className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-3 inline-flex items-center gap-2" style={{ color: '#8a6d20' }}><BookOpen size={14} /> Words you&rsquo;ll see on this page</p>
+      <div className="divide-y" style={{ borderColor: '#f0ece2' }}>
+        {terms.map((t) => (
+          <div key={t.term}>
+            <button type="button" onClick={() => setOpen(open === t.term ? null : t.term)} className="w-full min-h-[52px] flex items-center justify-between gap-3 text-left py-2">
+              <span className="text-[17px] font-semibold text-[#2a2a2a]">{t.term}</span>
+              <ChevronDown size={20} className="shrink-0 text-gray-400 transition-transform" style={{ transform: open === t.term ? 'rotate(180deg)' : 'none' }} />
+            </button>
+            {open === t.term && <p className="text-[16px] text-[#4b5563] pb-3 leading-snug">{t.answer}</p>}
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -1100,7 +1184,7 @@ export function AskSection({ token, messages, onSent }: {
     new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
-    <section id="questions" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: '#f0ece2' }}>
+    <section id="questions" data-track="questions" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: '#f0ece2' }}>
       <p className="text-[13px] font-bold uppercase tracking-wide mb-1 flex items-center gap-1.5" style={{ color: '#8a6d20' }}>
         <MessageCircle size={14} /> Questions
       </p>

@@ -341,6 +341,10 @@ const PROGRESS_TOOLS = [
     input_schema: { type: 'object' as const, properties: { title: { type: 'string' }, starts_on: { type: 'string' }, ends_on: { type: 'string' }, kind: { type: 'string' }, estimate_id: { type: 'string' }, estimate_number: { type: 'string' } }, required: ['title', 'starts_on'] } },
   { name: 'set_schedule_done', description: 'Mark a schedule item done (or not done), move its date, or remove it. Find the item_id with get_schedule first.',
     input_schema: { type: 'object' as const, properties: { item_id: { type: 'string' }, done: { type: 'boolean' }, starts_on: { type: 'string', description: 'Move it to this day' }, reason: { type: 'string', description: 'Why it moved — the customer reads this on their page and in the email' }, remove: { type: 'boolean' } }, required: ['item_id'] } },
+  { name: 'add_faq_entry', description: 'Teach the customer-facing project assistant and the page glossary a plain-language answer, reused on every job — "add to the FAQ: a tapping sleeve is…". No promises, no crew talk, dates are estimates.',
+    input_schema: { type: 'object' as const, properties: { term: { type: 'string' }, answer: { type: 'string' } }, required: ['term', 'answer'] } },
+  { name: 'assistant_misses', description: "Questions the customer-facing assistant could not answer (handed to JR) or that customers rated unhelpful, last 30 days — the FAQ writes itself from these. Use for \"what are customers asking that we can't answer\".",
+    input_schema: { type: 'object' as const, properties: { estimate_number: { type: 'string' } } } },
   { name: 'list_inspections', description: 'Permits and inspections on a job with status (scheduled|passed|corrections|failed|reinspection; permits applied|issued|closed), dates, agency and reference numbers. Use for "did the tap inspection pass", "what permits are on Hartwell".',
     input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' } } } },
   { name: 'add_inspection', description: 'Put a permit or inspection on a job — "county inspection on the water tap Friday 8 to 12", "grading permit #G-2241 issued". record_type: inspection|permit. It shows on the customer\'s page (if their Inspections switch is on) and writes the timeline line.',
@@ -1069,6 +1073,19 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       return { result: d.error ? `Error: ${d.error}` : JSON.stringify({ success: true, item: { title: d.item?.title, date: d.item?.starts_on, done: !!d.item?.done_at } }) };
     }
 
+    case 'add_faq_entry': {
+      const term = String(input.term || '').trim(), answer = String(input.answer || '').trim();
+      if (!term || !answer) return { result: 'Error: need term and answer.' };
+      if (/our crew|in-house|self-perform|guarantee/i.test(answer)) return { result: 'Error: that answer breaks the copy rules (no crew/in-house/guarantee language). Reword it.' };
+      const { data, error } = await supabase.from('portal_faq').insert({ term, answer, source: 'ai-chat' }).select('id').single();
+      return { result: error ? 'Error: ' + error.message : JSON.stringify({ added: true, id: data.id, used_by: 'assistant + page glossary on every job' }) };
+    }
+    case 'assistant_misses': {
+      let qb = supabase.from('assistant_logs').select('question, handoff, helpful, created_at, estimate:estimates(estimate_number, project_name)').gte('created_at', new Date(Date.now() - 30 * 86400000).toISOString()).or('handoff.eq.true,helpful.eq.false').order('created_at', { ascending: false }).limit(40);
+      const { data } = await qb;
+      const rows = (data || []).filter((r: any) => !input.estimate_number || String(r.estimate?.estimate_number || '').includes(input.estimate_number));
+      return { result: JSON.stringify(rows.map((r: any) => ({ question: r.question, job: r.estimate?.project_name || r.estimate?.estimate_number, why: r.handoff ? 'handed off' : 'not helpful', when: r.created_at }))) };
+    }
     case 'list_inspections':
     case 'add_inspection':
     case 'set_inspection_result': {
@@ -2912,7 +2929,7 @@ Job progress and customer progress reports:
 - notify_customer_update emails the customer a short "your page has an update" nudge with their link. Confirm with the user first; if it returns a warning (already sent today), ask before retrying with force:true.
 - The Schedule (/admin/schedule) is a rolling 3-week look-ahead: Slipped, Today, This Week (commitment), Next Week, Week 3 (make-ready — order materials, book inspections while problems are cheap), plus a 6-week Timeline of jobs as bars. get_schedule reads it, add_schedule_item books things ("pour Friday on Hartwell"), set_schedule_done checks them off, moves or removes them. Jobs board cards show each job's next scheduled item; the Job Room's Coming Up card shows that job's next few.
 - Customer feedback: their project page has a one-tap pulse ("how's this feeling?"), section notes, and an optional any-time star rating. It all lands in the Job Room (get_job_room returns feedback_recent/feedback_unseen) and notifies JR; a pulse answer of "I have a concern" flags the job on the Jobs board. Two per-job switches control what the customer sees (feedback_enabled = notes+pulse, reviews_enabled = stars) — JR flips them in the Job Room; to change them from chat, PATCH via update_estimate is NOT available, tell the user to use the Job Room toggles.
-Permits & inspections: add_inspection puts the county record on the job (and the customer's page); set_inspection_result records passed/corrections/failed with the inspector's notes — it posts to their timeline and emails them the fact. Moving a schedule item with set_schedule_done + reason also posts and emails the customer (\"moved to Monday — rain\"). Per-job switches show_schedule / show_inspections / show_photos control what the customer sees (Job Room → The Customer's View).
+Project assistant: the customer's page has an assistant that answers from that job's visible records (timeline, schedule, inspections, change orders, invoices, glossary) and hands anything unsure to JR as a normal question — assistant_misses lists what it couldn't answer; add_faq_entry teaches it (and the page glossary) a plain-language answer for every job. Switch per job: show_assistant.\nPermits & inspections: add_inspection puts the county record on the job (and the customer's page); set_inspection_result records passed/corrections/failed with the inspector's notes — it posts to their timeline and emails them the fact. Moving a schedule item with set_schedule_done + reason also posts and emails the customer (\"moved to Monday — rain\"). Per-job switches show_schedule / show_inspections / show_photos control what the customer sees (Job Room → The Customer's View).
 Customer portal: every customer also has rounlimited.com/my (sign-in by email link) showing all their projects, what needs them, the latest update and what's next. send_customer_update posts a short update + photos on their page and emails it (\"tell the Hartwells the line is in\") — use it instead of notify_customer_update when he has something to say. request_from_customer puts \"we need X from you\" under Needs You on their page with an upload button and emails them (\"ask Greg for the HOA letter by Friday\"); list_customer_requests shows what came back, with file links.
 Customer questions: anything a customer types in the Questions box on their project page lands in /admin/questions (and in the Job Room). list_open_questions shows what's waiting; answer_customer_question posts the reply on their page and emails them — the customer never needs a text back. If he says "answer Greg: yes, until backfill" that IS the wording: send it. If he just asks "what did they want", list and read it back; offer to answer. Never invent dates or results in an answer; "JR will confirm" is fine.
 </progress>`;
@@ -2927,7 +2944,7 @@ Letters and notices on company letterhead:
 
 const LETTER_TOOL_NAMES = new Set(['write_letter','list_letters']);
 
-const PROGRESS_TOOL_NAMES = new Set(['list_inspections','add_inspection','set_inspection_result','send_customer_update','request_from_customer','list_customer_requests','list_open_questions','answer_customer_question','get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report','get_job_room','add_job_cost','add_log_entry','notify_customer_update','get_schedule','add_schedule_item','set_schedule_done']);
+const PROGRESS_TOOL_NAMES = new Set(['add_faq_entry','assistant_misses','list_inspections','add_inspection','set_inspection_result','send_customer_update','request_from_customer','list_customer_requests','list_open_questions','answer_customer_question','get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report','get_job_room','add_job_cost','add_log_entry','notify_customer_update','get_schedule','add_schedule_item','set_schedule_done']);
 
 const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets','list_line_presets','search_option_images','add_option_group','update_option_group','delete_option_group']);
 

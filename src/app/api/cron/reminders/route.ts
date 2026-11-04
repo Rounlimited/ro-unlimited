@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { notifyTeam } from '@/lib/alerts';
+import { runPortalReminders } from '@/lib/portal-reminders';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,10 @@ export async function GET(req: NextRequest) {
     }
   } catch (e) { console.error('[cron/reminders] question nudge failed', e); }
 
+  // Portal: customer reminders (change orders, requests, unopened updates) + JR nudges (stale job, quiet customer).
+  let portal: any = null;
+  try { portal = await runPortalReminders(); } catch (e) { console.error('[cron/reminders] portal reminders failed', e); }
+
   // Look back 65 min to catch anything from last cron run (with overlap buffer)
   const windowStart = new Date(now.getTime() - 65 * 60 * 1000).toISOString();
 
@@ -53,7 +58,7 @@ export async function GET(req: NextRequest) {
     .gte('remind_at', windowStart)
     .not('status', 'in', '("done","cancelled")');
 
-  if (!dueTasks?.length) return NextResponse.json({ fired: 0, nudged });
+  if (!dueTasks?.length) return NextResponse.json({ fired: 0, nudged, portal });
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
   let fired = 0;
@@ -95,7 +100,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ fired, checked: dueTasks.length, nudged });
+  return NextResponse.json({ fired, checked: dueTasks.length, nudged, portal });
 }
 
 function formatTime(t: string) {

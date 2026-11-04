@@ -6,7 +6,7 @@ import CustomerFeedbackCard from '@/components/public/CustomerFeedbackCard';
 import {
   useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp, ShineStyles,
   ProgressSection, StorySection, SitePhotos, DocumentsSection,
-  ChangeOrders, AskSection, BalanceDue, CompletionCard, WarrantyCard, FeedbackCard, RequestsSection, NextUpCard, ScheduleSection, InspectionsSection, TeamCard,
+  ChangeOrders, AskSection, BalanceDue, CompletionCard, WarrantyCard, FeedbackCard, RequestsSection, NextUpCard, ScheduleSection, InspectionsSection, TeamCard, AssistantSection, GlossarySection,
   type PublicOptionGroup,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
@@ -71,6 +71,8 @@ interface EstimateData {
   schedule?: { id: string; title: string; kind: string; starts_on: string; ends_on: string | null }[];
   inspections?: { id: string; record_type: string; title: string; agency: string | null; reference: string | null; scheduled_on: string | null; time_window: string | null; status: string; result_on: string | null; notes: string | null }[];
   rain_days?: number;
+  glossary?: { term: string; answer: string }[];
+  assistant_enabled?: boolean;
   site_photos?: { url: string; caption?: string | null }[];
   documents?: { kind: string; title: string; date: string | null; detail: string; href: string | null; paid?: boolean }[];
   change_orders?: {
@@ -550,7 +552,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
           const running = !!estimate.signed_at && !estimate.completed_at;
           if (!items.length && !running) return null;
           return (
-            <section id="needs-you" className="rounded-2xl border p-5" style={{ background: items.length ? '#fdf6e7' : '#f7f7f5', borderColor: items.length ? '#ead9ac' : '#e8e4da' }}>
+            <section id="needs-you" data-track="needs-you" className="rounded-2xl border p-5" style={{ background: items.length ? '#fdf6e7' : '#f7f7f5', borderColor: items.length ? '#ead9ac' : '#e8e4da' }}>
               <p className="text-[13px] font-bold uppercase tracking-wide mb-2" style={{ color: items.length ? '#8a6d20' : '#6b7280' }}>Needs you</p>
               {items.length === 0 ? (
                 <p className="text-[17px] text-[#2a2a2a]">Nothing needed from you right now. We&rsquo;ll post here the moment something is.</p>
@@ -626,6 +628,12 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
         {estimate.documents && estimate.documents.length > 0 && (
           <DocumentsSection documents={estimate.documents} />
         )}
+
+        {(estimate.stage === 'in_progress' || estimate.stage === 'signed' || estimate.stage === 'complete') && estimate.assistant_enabled !== false && (
+          <AssistantSection token={token} onHandoff={reload} />
+        )}
+
+        {estimate.glossary && estimate.glossary.length > 0 && <GlossarySection terms={estimate.glossary} />}
 
         {(estimate.stage === 'in_progress' || estimate.stage === 'signed') && <TeamCard />}
 
