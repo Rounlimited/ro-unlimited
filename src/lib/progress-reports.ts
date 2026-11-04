@@ -55,6 +55,8 @@ export const LOG_TYPES: { id: string; label: string; hint: string }[] = [
   { id: 'milestone',  label: 'Milestone',   hint: 'A phase finished, a big pour, a set' },
   { id: 'inspection', label: 'Inspection',  hint: 'Passed, failed, or scheduled' },
   { id: 'note',       label: 'Note',        hint: 'Anything else worth recording' },
+  { id: 'schedule',   label: 'Schedule Change', hint: 'A date moved — say why' },
+  { id: 'update',     label: 'Update Sent', hint: 'Posted to the customer from the Job Room' },
 ];
 
 export interface LogEntry {

@@ -6,7 +6,7 @@ import CustomerFeedbackCard from '@/components/public/CustomerFeedbackCard';
 import {
   useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp, ShineStyles,
   ProgressSection, StorySection, SitePhotos, DocumentsSection,
-  ChangeOrders, AskSection, BalanceDue, CompletionCard, WarrantyCard, FeedbackCard, RequestsSection, NextUpCard,
+  ChangeOrders, AskSection, BalanceDue, CompletionCard, WarrantyCard, FeedbackCard, RequestsSection, NextUpCard, ScheduleSection, InspectionsSection, TeamCard,
   type PublicOptionGroup,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
@@ -68,6 +68,9 @@ interface EstimateData {
   story?: { entry_date: string; type: string; text: string | null; photos?: { url: string; caption?: string | null }[] }[];
   requests?: { id: string; kind: string; title: string; details: string | null; due_on: string | null; status: string; response_text: string | null; files: { name: string; url: string }[]; created_at: string; submitted_at: string | null; done_at: string | null }[];
   next_up?: { title: string; kind: string; starts_on: string } | null;
+  schedule?: { id: string; title: string; kind: string; starts_on: string; ends_on: string | null }[];
+  inspections?: { id: string; record_type: string; title: string; agency: string | null; reference: string | null; scheduled_on: string | null; time_window: string | null; status: string; result_on: string | null; notes: string | null }[];
+  rain_days?: number;
   site_photos?: { url: string; caption?: string | null }[];
   documents?: { kind: string; title: string; date: string | null; detail: string; href: string | null; paid?: boolean }[];
   change_orders?: {
@@ -590,8 +593,12 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
           />
         )}
 
-        {!!estimate.signed_at && !estimate.completed_at && estimate.next_up && (
-          <NextUpCard item={estimate.next_up} />
+        {!!estimate.signed_at && !estimate.completed_at && (estimate.schedule && estimate.schedule.length > 0
+          ? <ScheduleSection items={estimate.schedule} rainDays={estimate.rain_days || 0} />
+          : estimate.next_up ? <NextUpCard item={estimate.next_up} /> : null)}
+
+        {!!estimate.signed_at && estimate.inspections && estimate.inspections.length > 0 && (
+          <InspectionsSection records={estimate.inspections} />
         )}
 
         {estimate.requests && estimate.requests.length > 0 && (
@@ -619,6 +626,8 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
         {estimate.documents && estimate.documents.length > 0 && (
           <DocumentsSection documents={estimate.documents} />
         )}
+
+        {(estimate.stage === 'in_progress' || estimate.stage === 'signed') && <TeamCard />}
 
         {(estimate.stage === 'in_progress' || estimate.stage === 'complete' || estimate.stage === 'signed') && (
           <AskSection token={token} messages={estimate.messages || []} onSent={reload} />

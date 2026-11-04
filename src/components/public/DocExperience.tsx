@@ -596,10 +596,11 @@ export function StorySection({ story }: {
   const shown = showAll ? story : story.slice(0, 6);
   const icon = (t: string) =>
     t === 'rain' ? CloudRain : t === 'milestone' ? Flag : t === 'inspection' ? ClipboardCheck
-      : t === 'delay' ? AlertTriangle : Hammer;
+      : t === 'delay' ? AlertTriangle : t === 'schedule' ? CalendarDays : t === 'approval' ? CheckCircle2
+      : t === 'payment' ? CreditCard : t === 'request' ? Upload : t === 'update' ? MessageCircle : Hammer;
   const color = (t: string) =>
     t === 'rain' ? '#5ba3dc' : t === 'milestone' ? '#187a4b' : t === 'inspection' ? '#7c5cd6'
-      : t === 'delay' ? '#c2410c' : '#8a6d20';
+      : t === 'delay' ? '#c2410c' : t === 'approval' || t === 'payment' ? '#187a4b' : t === 'request' ? '#5ba3dc' : '#8a6d20';
 
   const day = (d: string) =>
     new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -768,6 +769,91 @@ export function RequestsSection({ token, requests, onDone }: { token: string; re
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+/* ── Coming up: the two-week look-ahead, every date "estimated" ────── */
+export function ScheduleSection({ items, rainDays }: { items: { id: string; title: string; kind: string; starts_on: string; ends_on: string | null }[]; rainDays: number }) {
+  if (!items.length) return null;
+  const today = new Date().toLocaleDateString('en-CA');
+  const label = (d: string) => {
+    const days = Math.round((new Date(d + 'T12:00:00').getTime() - new Date(today + 'T12:00:00').getTime()) / 86400000);
+    const when = new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    return days <= 0 ? `Today — ${when}` : days === 1 ? `Tomorrow — ${when}` : when;
+  };
+  const kindWord: Record<string, string> = { work: 'Work on site', pour: 'Concrete pour', inspection: 'Inspection', delivery: 'Delivery', meeting: 'Meeting', other: '' };
+  return (
+    <section id="schedule" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-1" style={{ color: '#8a6d20' }}>Coming Up — next two weeks</p>
+      <p className="text-[15px] text-gray-500 mb-4">Every date is estimated. Weather, inspectors and material deliveries move things; when a date moves we post it here and let you know.</p>
+      <div className="doc-rows space-y-3">
+        {items.map((it) => (
+          <div key={it.id} className="flex gap-3 items-start">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: '#fdf6e7', border: '1px solid #ead9ac' }}><CalendarDays size={16} style={{ color: '#8a6d20' }} /></div>
+            <div className="min-w-0">
+              <p className="text-[14px] text-[#9ca3af]">{label(it.starts_on)}{it.ends_on && it.ends_on > it.starts_on ? ` through ${new Date(it.ends_on + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}` : ''}</p>
+              <p className="text-[17px] text-[#2a2a2a] leading-snug font-semibold">{it.title}{kindWord[it.kind] ? <span className="font-normal text-gray-500"> · {kindWord[it.kind]}</span> : null}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      {rainDays > 0 && <p className="text-[15px] text-gray-500 mt-4">Rain days on this job so far: {rainDays}. They don&rsquo;t count against the schedule.</p>}
+    </section>
+  );
+}
+
+/* ── Permits & inspections: the county record, in words ────────────── */
+export function InspectionsSection({ records }: { records: { id: string; record_type: string; title: string; agency: string | null; reference: string | null; scheduled_on: string | null; time_window: string | null; status: string; result_on: string | null; notes: string | null }[] }) {
+  if (!records.length) return null;
+  const WORD: Record<string, string> = { scheduled: 'Scheduled', passed: 'Passed', corrections: 'Corrections needed', failed: 'Did not pass', reinspection: 'Re-inspection scheduled', cancelled: 'Cancelled', applied: 'Applied for', issued: 'Issued', closed: 'Closed out', expired: 'Expired' };
+  const tone = (s: string) => s === 'passed' || s === 'issued' || s === 'closed' ? { bg: '#e9f7ef', color: '#187a4b' } : s === 'corrections' || s === 'failed' ? { bg: '#fdf1e7', color: '#b45309' } : { bg: '#fdf6e7', color: '#8a6d20' };
+  const day = (d: string | null) => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : null;
+  const permits = records.filter((r) => r.record_type === 'permit'), insp = records.filter((r) => r.record_type !== 'permit');
+  const Row = ({ r }: { r: typeof records[number] }) => {
+    const t = tone(r.status);
+    return (
+      <div className="rounded-xl px-4 py-3" style={{ background: '#faf9f6', border: '1px solid #f0ece2' }}>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <p className="text-[17px] font-semibold text-[#2a2a2a] leading-snug">{r.title}</p>
+          <span className="px-3 py-1 rounded-full text-[14px] font-bold shrink-0" style={{ background: t.bg, color: t.color }}>{WORD[r.status] || r.status}</span>
+        </div>
+        <p className="text-[15px] text-gray-500 mt-1">
+          {r.record_type === 'permit'
+            ? [r.agency, r.reference ? `Permit #${r.reference}` : null, r.result_on ? `${WORD[r.status] || ''} ${day(r.result_on)}` : null].filter(Boolean).join(' · ')
+            : [r.scheduled_on ? `${r.status === 'passed' || r.status === 'failed' || r.status === 'corrections' ? 'Inspected' : 'Estimated'} ${day(r.result_on || r.scheduled_on)}` : 'Date to be set', r.time_window, r.agency, r.reference ? `Ref #${r.reference}` : null].filter(Boolean).join(' · ')}
+        </p>
+        {r.notes && <p className="text-[16px] text-[#4b5563] mt-1.5 whitespace-pre-line">{r.notes}</p>}
+      </div>
+    );
+  };
+  return (
+    <section id="inspections" className="rounded-2xl border bg-white p-5 sm:p-6 scroll-mt-24" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-1" style={{ color: '#8a6d20' }}>Permits &amp; Inspections</p>
+      <p className="text-[15px] text-gray-500 mb-4">The county&rsquo;s record on your job. RO schedules the inspections and handles any corrections; you only need to act if it shows under Needs You.</p>
+      <div className="space-y-2">
+        {permits.map((r) => <Row key={r.id} r={r} />)}
+        {insp.map((r) => <Row key={r.id} r={r} />)}
+      </div>
+    </section>
+  );
+}
+
+/* ── Who to reach, and when ────────────────────────────────────────── */
+export function TeamCard() {
+  return (
+    <section className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-2" style={{ color: '#8a6d20' }}>Your RO Team</p>
+      <p className="text-[17px] text-[#2a2a2a] leading-snug">RO Unlimited is the licensed contractor on this job and the one accountable for it. One number reaches us.</p>
+      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <a href="tel:+18643040139" className="min-h-[52px] rounded-xl px-4 flex items-center gap-3 active:scale-[0.99]" style={{ background: '#fdf6e7', border: '1px solid #ead9ac' }}>
+          <span className="text-[17px] font-bold" style={{ color: '#8a6d20' }}>(864) 304-0139</span><span className="text-[15px] text-gray-500">Call or text</span>
+        </a>
+        <div className="min-h-[52px] rounded-xl px-4 flex items-center" style={{ background: '#faf9f6', border: '1px solid #f0ece2' }}>
+          <span className="text-[16px] text-[#2a2a2a]"><strong>Office hours</strong> Mon&ndash;Sat 7am&ndash;6pm</span>
+        </div>
+      </div>
+      <p className="text-[15px] text-gray-500 mt-3">After hours, ask your question right here on this page &mdash; it&rsquo;s answered the next business morning and stays on record. If something on site can&rsquo;t wait, call the number above.</p>
     </section>
   );
 }

@@ -16,6 +16,7 @@ import { resolveCustomerName } from '@/lib/customers';
 import { listQuestions, replyToQuestion } from '@/lib/questions';
 import { sendUpdate } from '@/lib/customer-updates';
 import { createRequest, listRequests, setRequestStatus } from '@/lib/customer-requests';
+import { listInspections, createInspection, updateInspection } from '@/lib/inspections';
 import { LICENSES, STATES_LICENSED, LICENSE_CLASSIFICATION_COUNT } from '@/lib/licenses';
 import { headers as nextHeaders } from 'next/headers';
 
@@ -339,7 +340,13 @@ const PROGRESS_TOOLS = [
   { name: 'add_schedule_item', description: "Put something on the schedule — \"schedule the pour for Friday\", \"county inspection Tuesday on Hartwell\". kind: work|pour|inspection|delivery|meeting|other. Dates are YYYY-MM-DD.",
     input_schema: { type: 'object' as const, properties: { title: { type: 'string' }, starts_on: { type: 'string' }, ends_on: { type: 'string' }, kind: { type: 'string' }, estimate_id: { type: 'string' }, estimate_number: { type: 'string' } }, required: ['title', 'starts_on'] } },
   { name: 'set_schedule_done', description: 'Mark a schedule item done (or not done), move its date, or remove it. Find the item_id with get_schedule first.',
-    input_schema: { type: 'object' as const, properties: { item_id: { type: 'string' }, done: { type: 'boolean' }, starts_on: { type: 'string', description: 'Move it to this day' }, remove: { type: 'boolean' } }, required: ['item_id'] } },
+    input_schema: { type: 'object' as const, properties: { item_id: { type: 'string' }, done: { type: 'boolean' }, starts_on: { type: 'string', description: 'Move it to this day' }, reason: { type: 'string', description: 'Why it moved — the customer reads this on their page and in the email' }, remove: { type: 'boolean' } }, required: ['item_id'] } },
+  { name: 'list_inspections', description: 'Permits and inspections on a job with status (scheduled|passed|corrections|failed|reinspection; permits applied|issued|closed), dates, agency and reference numbers. Use for "did the tap inspection pass", "what permits are on Hartwell".',
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' } } } },
+  { name: 'add_inspection', description: 'Put a permit or inspection on a job — "county inspection on the water tap Friday 8 to 12", "grading permit #G-2241 issued". record_type: inspection|permit. It shows on the customer\'s page (if their Inspections switch is on) and writes the timeline line.',
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, record_type: { type: 'string' }, title: { type: 'string' }, agency: { type: 'string' }, reference: { type: 'string' }, scheduled_on: { type: 'string', description: 'YYYY-MM-DD' }, time_window: { type: 'string' }, status: { type: 'string' }, notes: { type: 'string' } }, required: ['title'] } },
+  { name: 'set_inspection_result', description: 'Record what happened: status passed|corrections|failed|reinspection|cancelled (permits: issued|closed|expired), with notes the customer reads, or move scheduled_on (give reason). Posts to their timeline and emails them the fact. Get record_id from list_inspections.',
+    input_schema: { type: 'object' as const, properties: { estimate_id: { type: 'string' }, estimate_number: { type: 'string' }, record_id: { type: 'string' }, status: { type: 'string' }, notes: { type: 'string' }, scheduled_on: { type: 'string' }, reason: { type: 'string' } }, required: ['record_id'] } },
 ];
 
 const LETTER_TOOLS = [
@@ -1054,12 +1061,42 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       const patch: any = {};
       if (input.done !== undefined) patch.done = !!input.done;
       if (input.starts_on) patch.starts_on = input.starts_on;
+      if (input.reason) patch.reason = input.reason;
+      patch.by = 'JR';
       const d = await fetch(`${base1}/api/admin/schedule/${input.item_id}`, {
         method: 'PATCH', headers: internalHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(patch),
       }).then((r) => r.json());
       return { result: d.error ? `Error: ${d.error}` : JSON.stringify({ success: true, item: { title: d.item?.title, date: d.item?.starts_on, done: !!d.item?.done_at } }) };
     }
 
+    case 'list_inspections':
+    case 'add_inspection':
+    case 'set_inspection_result': {
+      let estId: string | undefined = input.estimate_id;
+      if (!estId && input.record_id) {
+        const { data: r } = await supabase.from('job_inspections').select('estimate_id').eq('id', input.record_id).maybeSingle();
+        estId = r?.estimate_id;
+      }
+      if (!estId && input.estimate_number) {
+        const { data: e } = await supabase.from('estimates').select('id').ilike('estimate_number', `%${input.estimate_number}%`).limit(1).maybeSingle();
+        estId = e?.id;
+      }
+      if (!estId) return { result: 'Error: which job? Give estimate_number or estimate_id.' };
+      if (name === 'add_inspection') {
+        const out = await createInspection({ estimateId: estId, record_type: input.record_type, title: String(input.title || ''), agency: input.agency, reference: input.reference, scheduled_on: input.scheduled_on, time_window: input.time_window, status: input.status, notes: input.notes, createdBy: 'JR' });
+        if (!out.record) return { result: 'Error: ' + out.error };
+        return { result: JSON.stringify({ added: true, record_id: out.record.id, status: out.record.status, on_customer_page: true }) };
+      }
+      if (name === 'set_inspection_result') {
+        const patch: any = {};
+        for (const k of ['status', 'notes', 'scheduled_on']) if (input[k] !== undefined) patch[k] = input[k];
+        const out = await updateInspection({ estimateId: estId, id: String(input.record_id), patch, by: 'JR', reason: input.reason || null });
+        if (!out.record) return { result: 'Error: ' + out.error };
+        return { result: JSON.stringify({ recorded: true, status: out.record.status, emailed: out.emailed, to: out.to, note: out.skipped }) };
+      }
+      const rows = await listInspections(estId);
+      return { result: JSON.stringify(rows.map((r) => ({ record_id: r.id, type: r.record_type, title: r.title, status: r.status, scheduled_on: r.scheduled_on, time_window: r.time_window, result_on: r.result_on, agency: r.agency, reference: r.reference, notes: r.notes }))) };
+    }
     case 'send_customer_update':
     case 'request_from_customer':
     case 'list_customer_requests': {
@@ -2875,6 +2912,7 @@ Job progress and customer progress reports:
 - notify_customer_update emails the customer a short "your page has an update" nudge with their link. Confirm with the user first; if it returns a warning (already sent today), ask before retrying with force:true.
 - The Schedule (/admin/schedule) is a rolling 3-week look-ahead: Slipped, Today, This Week (commitment), Next Week, Week 3 (make-ready — order materials, book inspections while problems are cheap), plus a 6-week Timeline of jobs as bars. get_schedule reads it, add_schedule_item books things ("pour Friday on Hartwell"), set_schedule_done checks them off, moves or removes them. Jobs board cards show each job's next scheduled item; the Job Room's Coming Up card shows that job's next few.
 - Customer feedback: their project page has a one-tap pulse ("how's this feeling?"), section notes, and an optional any-time star rating. It all lands in the Job Room (get_job_room returns feedback_recent/feedback_unseen) and notifies JR; a pulse answer of "I have a concern" flags the job on the Jobs board. Two per-job switches control what the customer sees (feedback_enabled = notes+pulse, reviews_enabled = stars) — JR flips them in the Job Room; to change them from chat, PATCH via update_estimate is NOT available, tell the user to use the Job Room toggles.
+Permits & inspections: add_inspection puts the county record on the job (and the customer's page); set_inspection_result records passed/corrections/failed with the inspector's notes — it posts to their timeline and emails them the fact. Moving a schedule item with set_schedule_done + reason also posts and emails the customer (\"moved to Monday — rain\"). Per-job switches show_schedule / show_inspections / show_photos control what the customer sees (Job Room → The Customer's View).
 Customer portal: every customer also has rounlimited.com/my (sign-in by email link) showing all their projects, what needs them, the latest update and what's next. send_customer_update posts a short update + photos on their page and emails it (\"tell the Hartwells the line is in\") — use it instead of notify_customer_update when he has something to say. request_from_customer puts \"we need X from you\" under Needs You on their page with an upload button and emails them (\"ask Greg for the HOA letter by Friday\"); list_customer_requests shows what came back, with file links.
 Customer questions: anything a customer types in the Questions box on their project page lands in /admin/questions (and in the Job Room). list_open_questions shows what's waiting; answer_customer_question posts the reply on their page and emails them — the customer never needs a text back. If he says "answer Greg: yes, until backfill" that IS the wording: send it. If he just asks "what did they want", list and read it back; offer to answer. Never invent dates or results in an answer; "JR will confirm" is fine.
 </progress>`;
@@ -2889,7 +2927,7 @@ Letters and notices on company letterhead:
 
 const LETTER_TOOL_NAMES = new Set(['write_letter','list_letters']);
 
-const PROGRESS_TOOL_NAMES = new Set(['send_customer_update','request_from_customer','list_customer_requests','list_open_questions','answer_customer_question','get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report','get_job_room','add_job_cost','add_log_entry','notify_customer_update','get_schedule','add_schedule_item','set_schedule_done']);
+const PROGRESS_TOOL_NAMES = new Set(['list_inspections','add_inspection','set_inspection_result','send_customer_update','request_from_customer','list_customer_requests','list_open_questions','answer_customer_question','get_job_progress','set_phase_progress','set_job_status','list_progress_reports','draft_progress_report','send_progress_report','get_job_room','add_job_cost','add_log_entry','notify_customer_update','get_schedule','add_schedule_item','set_schedule_done']);
 
 const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets','list_line_presets','search_option_images','add_option_group','update_option_group','delete_option_group']);
 

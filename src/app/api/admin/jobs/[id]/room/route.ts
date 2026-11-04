@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     const supabase = createAdminClient();
     const { id } = params;
 
-    const [estRes, itemsRes, progRes, costsRes, invRes, logRes, fbRes, schedRes, msgRes, reqRes] = await Promise.all([
+    const [estRes, itemsRes, progRes, costsRes, invRes, logRes, fbRes, schedRes, msgRes, reqRes, inspRes] = await Promise.all([
       supabase
         .from('estimates')
         .select(`id, estimate_number, project_name, total, division, share_token,
@@ -23,7 +23,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
           schedule_status, budget_status, status_reason, status_note, status_updated_at,
           reporting_cadence, reporting_day, next_report_due, progress_notified_at,
           internal_notes, view_count, first_viewed_at, last_viewed_at, pdf_count,
-          feedback_enabled, reviews_enabled,
+          feedback_enabled, reviews_enabled, show_schedule, show_inspections, show_photos,
           project_address, project_city,
           customer:customers(id, first_name, last_name, company_name, email, phone)`)
         .eq('id', id)
@@ -44,6 +44,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
         .eq('estimate_id', id).order('created_at', { ascending: true }).limit(40),
       supabase.from('customer_requests').select('id, kind, title, details, due_on, status, response_text, files, created_at, notified_at, submitted_at, done_at')
         .eq('estimate_id', id).order('created_at', { ascending: false }).limit(30),
+      supabase.from('job_inspections').select('*').eq('estimate_id', id).order('scheduled_on', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(30),
     ]);
 
     if (estRes.error || !estRes.data) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -75,6 +76,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       messages,
       open_questions: messages.filter((m) => m.author === 'customer' && !m.answered_at).length,
       requests: reqRes.data || [],
+      inspections: inspRes.data || [],
       progress: {
         percent: roll.percent,
         phases: roll.phases,

@@ -86,6 +86,9 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     let messages: any[] = [];
     let requests: any[] = [];
     let nextUp: any = null;
+    let schedule: any[] = [];
+    let inspections: any[] = [];
+    let rainDays = 0;
     let balanceDue = 0;
     let payHref: string | null = null;
     let feedbackRating: number | null = null;
@@ -135,16 +138,19 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
         .eq('estimate_id', estimate.id)
         .eq('include_in_report', true)
         .order('entry_date', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(40);
+      const showPhotos = estimate.show_photos !== false;
       story = (logRows || []).map((e) => ({
         entry_date: e.entry_date,
         type: e.type,
         text: e.text || (e.type === 'rain' ? null : ''),
-        photos: Array.isArray((e as any).photos) ? (e as any).photos.filter((p: any) => p && p.url).map((p: any) => ({ url: p.url, caption: p.caption || null })) : [],
+        photos: showPhotos && Array.isArray((e as any).photos) ? (e as any).photos.filter((p: any) => p && p.url).map((p: any) => ({ url: p.url, caption: p.caption || null })) : [],
       }));
+      rainDays = new Set((logRows || []).filter((e) => e.type === 'rain').map((e) => e.entry_date)).size;
 
-      // Jobsite photos already attached to the job.
-      sitePhotos = Array.isArray(estimate.photos)
+      // Jobsite photos already attached to the job (JR's per-job Photos switch).
+      sitePhotos = showPhotos && Array.isArray(estimate.photos)
         ? (estimate.photos as any[]).slice(-12).reverse().map((ph) => ({
             url: ph.url, caption: ph.caption || null,
           }))
@@ -177,7 +183,27 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
           .order('starts_on', { ascending: true }).limit(1).maybeSingle(),
       ]);
       requests = (reqRes.data || []).map((r) => ({ ...r, files: Array.isArray(r.files) ? r.files.map((f: any) => ({ name: f.name, url: f.url })) : [] }));
-      nextUp = nextRes.data ? { title: nextRes.data.title, kind: nextRes.data.kind, starts_on: nextRes.data.starts_on } : null;
+      nextUp = estimate.show_schedule !== false && nextRes.data ? { title: nextRes.data.title, kind: nextRes.data.kind, starts_on: nextRes.data.starts_on } : null;
+
+      // County-grade transparency: the two-week look-ahead, permits and
+      // inspections, and the timeline extras (approvals, payments, what they sent).
+      const twoWeeks = new Date(Date.now() + 14 * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const [schedRes, inspRes, paidRes] = await Promise.all([
+        estimate.show_schedule !== false
+          ? supabase.from('job_schedule_items').select('id, title, kind, starts_on, ends_on').eq('estimate_id', estimate.id).is('done_at', null).gte('starts_on', today).lte('starts_on', twoWeeks).order('starts_on', { ascending: true }).limit(12)
+          : Promise.resolve({ data: [] as any[] }),
+        estimate.show_inspections !== false
+          ? supabase.from('job_inspections').select('id, record_type, title, agency, reference, scheduled_on, time_window, status, result_on, notes').eq('estimate_id', estimate.id).order('scheduled_on', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(20)
+          : Promise.resolve({ data: [] as any[] }),
+        supabase.from('invoices').select('invoice_number, paid_at, total').eq('estimate_id', estimate.id).eq('status', 'paid').not('paid_at', 'is', null),
+      ]);
+      schedule = schedRes.data || [];
+      inspections = inspRes.data || [];
+      const extras: any[] = [];
+      for (const co of changeOrders) if (co.status === 'approved' && co.approved_at) extras.push({ entry_date: String(co.approved_at).slice(0, 10), type: 'approval', text: `Change order approved: ${co.title}`, photos: [] });
+      for (const inv of paidRes.data || []) extras.push({ entry_date: String(inv.paid_at).slice(0, 10), type: 'payment', text: `Payment received — thank you (Invoice ${inv.invoice_number})`, photos: [] });
+      for (const r of requests) if (r.submitted_at) extras.push({ entry_date: String(r.submitted_at).slice(0, 10), type: 'request', text: `You sent: ${r.title}`, photos: [] });
+      if (extras.length) story = [...story, ...extras].sort((a, b) => (a.entry_date < b.entry_date ? 1 : a.entry_date > b.entry_date ? -1 : 0)).slice(0, 60);
 
       // Their paperwork, in one place: every report sent, every invoice raised.
       const [reportsRes, invoicesRes] = await Promise.all([
@@ -237,6 +263,10 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       messages,
       requests,
       next_up: nextUp,
+      schedule,
+      inspections,
+      rain_days: rainDays,
+      show: { schedule: estimate.show_schedule !== false, inspections: estimate.show_inspections !== false, photos: estimate.show_photos !== false },
       balance_due: Math.round(balanceDue),
       pay_href: payHref,
       completed_at: estimate.completed_at || null,

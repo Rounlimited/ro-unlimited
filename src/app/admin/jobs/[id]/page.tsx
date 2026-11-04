@@ -13,6 +13,7 @@ import AppShell from '@/components/admin/AppShell';
 import { SCHEDULE_META, BUDGET_META, STATUS_REASONS, cadenceLabel, type ScheduleStatus, type BudgetStatus } from '@/lib/reporting';
 import { LOG_TYPES } from '@/lib/progress-reports';
 import { REQUEST_KINDS } from '@/lib/customer-request-kinds';
+import { INSPECTION_STATUS, PERMIT_STATUS } from '@/lib/inspection-status';
 
 /**
  * The Job Room — JR's behind-the-scenes view of one job. Everything the
@@ -45,6 +46,7 @@ interface Room {
   feedback: FeedbackRow[];
   feedback_unseen: number;
   upcoming: { id: string; title: string; kind: string; starts_on: string; ends_on: string | null }[];
+  inspections: { id: string; record_type: string; title: string; agency: string | null; reference: string | null; scheduled_on: string | null; time_window: string | null; status: string; result_on: string | null; notes: string | null; internal_notes: string | null }[];
   progress: { percent: number; phases: { phase: string; percent: number; value: number; earned: number }[]; total_value: number };
   money: { contract: number; earned: number; spent: number; margin: number; billed: number; paid: number; unbilled: number; by_category: Record<string, number> };
   costs: { id: string; spent_on: string; category: string; amount: number; vendor: string | null; note: string | null }[];
@@ -176,6 +178,53 @@ export default function JobRoomPage() {
     } catch { setRqNotice('Could not send — try again.'); }
     setRqBusy(false);
   };
+  // Move a schedule item (with the reason the customer will read).
+  const [moveId, setMoveId] = useState<string | null>(null);
+  const [moveDate, setMoveDate] = useState('');
+  const [moveReason, setMoveReason] = useState('');
+  const [moveBusy, setMoveBusy] = useState(false);
+  const [moveNote, setMoveNote] = useState('');
+  const moveItem = async () => {
+    if (!moveId || !moveDate) { setMoveNote('Pick the new day.'); return; }
+    setMoveBusy(true); setMoveNote('');
+    try {
+      const d = await fetch('/api/admin/schedule/' + moveId, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ starts_on: moveDate, reason: moveReason.trim() || null }) }).then((r) => r.json());
+      if (d.error) setMoveNote(d.error);
+      else { setMoveNote(d.notified?.emailed ? 'Moved — posted on their page and emailed ✓' : 'Moved — posted on their page ✓' + (d.notified?.skipped ? ' (' + d.notified.skipped + ')' : '')); setMoveId(null); setMoveDate(''); setMoveReason(''); await load(); }
+    } catch { setMoveNote('Could not move it — try again.'); }
+    setMoveBusy(false);
+  };
+  // Permits & inspections
+  const [inspOpen, setInspOpen] = useState(false);
+  const [inspType, setInspType] = useState<'inspection' | 'permit'>('inspection');
+  const [inspTitle, setInspTitle] = useState('');
+  const [inspAgency, setInspAgency] = useState('');
+  const [inspRef, setInspRef] = useState('');
+  const [inspDate, setInspDate] = useState('');
+  const [inspWindow, setInspWindow] = useState('');
+  const [inspBusy, setInspBusy] = useState<string | null>(null);
+  const [inspNote, setInspNote] = useState('');
+  const [resultFor, setResultFor] = useState<{ id: string; status: string } | null>(null);
+  const [resultNotes, setResultNotes] = useState('');
+  const addInspection = async () => {
+    if (!inspTitle.trim()) { setInspNote('Name it — "Final plumbing", "Water tap", "Grading permit".'); return; }
+    setInspBusy('add'); setInspNote('');
+    try {
+      const d = await fetch('/api/admin/estimates/' + id + '/inspections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ record_type: inspType, title: inspTitle.trim(), agency: inspAgency.trim() || null, reference: inspRef.trim() || null, scheduled_on: inspDate || null, time_window: inspWindow.trim() || null }) }).then((r) => r.json());
+      if (d.ok) { setInspNote('Added — it\u2019s on their page ✓'); setInspTitle(''); setInspRef(''); setInspDate(''); setInspWindow(''); setInspOpen(false); await load(); }
+      else setInspNote(d.error || 'Could not add it.');
+    } catch { setInspNote('Could not add it — try again.'); }
+    setInspBusy(null);
+  };
+  const setInspStatus = async (recordId: string, status: string, notes?: string) => {
+    setInspBusy(recordId); setInspNote('');
+    try {
+      const d = await fetch('/api/admin/estimates/' + id + '/inspections', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ record_id: recordId, status, ...(notes !== undefined ? { notes } : {}) }) }).then((r) => r.json());
+      if (d.ok) { setInspNote(d.emailed ? 'Recorded — on their page and emailed ✓' : 'Recorded — on their page ✓' + (d.warning ? ' (' + d.warning + ')' : '')); setResultFor(null); setResultNotes(''); await load(); }
+      else setInspNote(d.error || 'Could not record that.');
+    } catch { setInspNote('Could not record that — try again.'); }
+    setInspBusy(null);
+  };
   const closeRequest = async (requestId: string, status: 'done' | 'open' | 'cancelled') => {
     await fetch('/api/admin/estimates/' + id + '/requests', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ request_id: requestId, status }) });
     await load();
@@ -195,7 +244,7 @@ export default function JobRoomPage() {
   }, [id]);
 
   const [togglingFlag, setTogglingFlag] = useState<string | null>(null);
-  const setFlag = async (field: 'feedback_enabled' | 'reviews_enabled', value: boolean) => {
+  const setFlag = async (field: 'feedback_enabled' | 'reviews_enabled' | 'show_schedule' | 'show_inspections' | 'show_photos', value: boolean) => {
     setTogglingFlag(field);
     try {
       await fetch('/api/admin/estimates/' + id, {
@@ -497,16 +546,102 @@ export default function JobRoomPage() {
               {room.upcoming.slice(0, 5).map((s) => {
                 const overdue = s.starts_on < `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
                 return (
-                  <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                    <p className="text-[16px] font-semibold truncate">{s.title}</p>
-                    <p className="text-[14px] font-semibold shrink-0" style={{ color: overdue ? '#f87171' : '#D4B965' }}>
-                      {overdue ? 'Slipped · ' : ''}{fmtDay(s.starts_on)}
-                    </p>
+                  <div key={s.id} className="rounded-xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[16px] font-semibold truncate">{s.title}</p>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <p className="text-[14px] font-semibold" style={{ color: overdue ? '#f87171' : '#D4B965' }}>{overdue ? 'Slipped · ' : ''}{fmtDay(s.starts_on)}</p>
+                        <button onClick={() => { setMoveId(moveId === s.id ? null : s.id); setMoveDate(s.starts_on); setMoveReason(''); setMoveNote(''); }} className="min-h-[40px] px-3 rounded-lg text-[14px] font-bold" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.12)' }}>Move</button>
+                      </div>
+                    </div>
+                    {moveId === s.id && (
+                      <div className="mt-2 space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <input type="date" value={moveDate} onChange={(ev) => setMoveDate(ev.target.value)} className="min-h-[48px] rounded-xl px-3 text-[16px] text-white bg-white/5 border border-white/10 outline-none" style={{ colorScheme: 'dark' }} />
+                          <input value={moveReason} onChange={(ev) => setMoveReason(ev.target.value)} placeholder="Why (they will read this)" className="min-h-[48px] rounded-xl px-3 text-[16px] text-white bg-white/5 border border-white/10 outline-none" />
+                        </div>
+                        <button onClick={moveItem} disabled={moveBusy} className="w-full min-h-[48px] rounded-xl text-[15px] font-bold text-black disabled:opacity-50" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>{moveBusy ? 'Moving…' : 'Move it and tell the customer'}</button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
+          {moveNote && <p className="text-[15px] mt-2" style={{ color: moveNote.includes('✓') ? '#35d07f' : '#D4B965' }}>{moveNote}</p>}
+        </div>
+
+        {/* ── Permits & inspections — the county record, feeding the customer's page ── */}
+        <div className="rounded-2xl border border-white/8 bg-[#111] p-5">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[17px] font-bold">Permits &amp; Inspections</p>
+            <button onClick={() => setInspOpen((v) => !v)} className="min-h-[44px] px-4 rounded-xl text-[15px] font-semibold active:scale-95" style={{ background: 'rgba(201,168,76,0.14)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }}><Plus size={16} className="inline -mt-0.5" /> Add</button>
+          </div>
+          <p className="text-[14px] text-white/40 mb-3">Each one shows on the customer&rsquo;s page in plain words. Results post to their timeline and email them.</p>
+          {inspOpen && (
+            <div className="space-y-2 mb-4 rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="grid grid-cols-2 gap-2">
+                {(['inspection', 'permit'] as const).map((t) => (
+                  <button key={t} onClick={() => setInspType(t)} className="min-h-[44px] rounded-xl text-[15px] font-bold capitalize" style={{ background: inspType === t ? 'rgba(201,168,76,0.22)' : 'rgba(255,255,255,0.05)', color: inspType === t ? '#D4B965' : 'rgba(255,255,255,0.7)', border: '1px solid ' + (inspType === t ? 'rgba(201,168,76,0.6)' : 'rgba(255,255,255,0.12)') }}>{t}</button>
+                ))}
+              </div>
+              <input value={inspTitle} onChange={(ev) => setInspTitle(ev.target.value)} placeholder={inspType === 'permit' ? 'e.g. Grading permit' : 'e.g. County inspection — water tap'} className="w-full min-h-[48px] rounded-xl px-3 text-[16px] text-white bg-white/5 border border-white/10 outline-none" />
+              <div className="grid grid-cols-2 gap-2">
+                <input value={inspAgency} onChange={(ev) => setInspAgency(ev.target.value)} placeholder="Agency (Pickens County)" className="min-h-[48px] rounded-xl px-3 text-[16px] text-white bg-white/5 border border-white/10 outline-none" />
+                <input value={inspRef} onChange={(ev) => setInspRef(ev.target.value)} placeholder={inspType === 'permit' ? 'Permit #' : 'Ref # (optional)'} className="min-h-[48px] rounded-xl px-3 text-[16px] text-white bg-white/5 border border-white/10 outline-none" />
+              </div>
+              {inspType === 'inspection' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="date" value={inspDate} onChange={(ev) => setInspDate(ev.target.value)} className="min-h-[48px] rounded-xl px-3 text-[16px] text-white bg-white/5 border border-white/10 outline-none" style={{ colorScheme: 'dark' }} />
+                  <input value={inspWindow} onChange={(ev) => setInspWindow(ev.target.value)} placeholder="Window (8–12)" className="min-h-[48px] rounded-xl px-3 text-[16px] text-white bg-white/5 border border-white/10 outline-none" />
+                </div>
+              )}
+              <button onClick={addInspection} disabled={inspBusy !== null} className="w-full min-h-[48px] rounded-xl text-[15px] font-bold text-black disabled:opacity-50" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>{inspBusy === 'add' ? 'Adding…' : 'Add to the job'}</button>
+            </div>
+          )}
+          {room.inspections.length === 0 ? (
+            <p className="text-[15px] text-white/35">None recorded yet. Add the permit and the inspections as the county schedules them.</p>
+          ) : (
+            <div className="space-y-2">
+              {room.inspections.map((r) => {
+                const words = r.record_type === 'permit' ? PERMIT_STATUS : INSPECTION_STATUS;
+                const open = r.record_type === 'permit' ? ['applied', 'issued'].includes(r.status) : ['scheduled', 'reinspection', 'corrections', 'failed'].includes(r.status);
+                const nextStatuses = r.record_type === 'permit'
+                  ? (r.status === 'applied' ? [['issued', 'Issued']] : r.status === 'issued' ? [['closed', 'Closed out']] : [])
+                  : (r.status === 'scheduled' || r.status === 'reinspection' ? [['passed', 'Passed'], ['corrections', 'Corrections'], ['failed', 'Did not pass']] : r.status === 'corrections' || r.status === 'failed' ? [['reinspection', 'Re-inspect'], ['passed', 'Passed']] : []);
+                return (
+                  <div key={r.id} className="rounded-xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid ' + (r.status === 'corrections' || r.status === 'failed' ? 'rgba(248,113,113,0.35)' : 'rgba(255,255,255,0.06)') }}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[16px] font-semibold text-white/90">{r.title} <span className="text-white/40 font-normal capitalize">· {r.record_type}</span></p>
+                        <p className="text-[14px] text-white/50">{[words[r.status] || r.status, r.scheduled_on ? fmtDay(r.scheduled_on) : null, r.time_window, r.agency, r.reference ? '#' + r.reference : null].filter(Boolean).join(' · ')}</p>
+                        {r.notes && <p className="text-[15px] text-white/70 mt-1">{r.notes}</p>}
+                      </div>
+                    </div>
+                    {open && nextStatuses.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {nextStatuses.map(([st, label]) => (
+                          <button key={st} onClick={() => (st === 'corrections' || st === 'failed' ? setResultFor({ id: r.id, status: st }) : setInspStatus(r.id, st))} disabled={inspBusy !== null}
+                            className="min-h-[40px] px-3 rounded-lg text-[14px] font-bold disabled:opacity-50"
+                            style={st === 'passed' || st === 'issued' || st === 'closed' ? { background: 'rgba(53,208,127,0.12)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.4)' } : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.12)' }}>{label}</button>
+                        ))}
+                      </div>
+                    )}
+                    {resultFor?.id === r.id && (
+                      <div className="mt-2 space-y-2">
+                        <textarea value={resultNotes} onChange={(ev) => setResultNotes(ev.target.value)} rows={2} placeholder="What the inspector flagged (the customer reads this)" className="w-full rounded-xl px-3 py-2 text-[16px] text-white bg-white/5 border border-white/10 outline-none" />
+                        <div className="grid grid-cols-2 gap-2">
+                          <button onClick={() => setResultFor(null)} className="min-h-[44px] rounded-xl text-[15px] font-bold text-white/70" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }}>Cancel</button>
+                          <button onClick={() => setInspStatus(r.id, resultFor.status, resultNotes.trim())} disabled={inspBusy !== null} className="min-h-[44px] rounded-xl text-[15px] font-bold text-black disabled:opacity-50" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>Record it</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {inspNote && <p className="text-[15px] mt-2" style={{ color: inspNote.includes('✓') ? '#35d07f' : '#D4B965' }}>{inspNote}</p>}
         </div>
 
         {/* ── Questions from their page — answered here, emailed to them ── */}
@@ -729,6 +864,19 @@ export default function JobRoomPage() {
               : 'They haven’t opened their page yet.'}
             {cadence ? <> Reporting: {cadence}.</> : null}
           </p>
+          <p className="text-[14px] text-white/40 mb-2">What they can see on their page:</p>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {([['show_schedule', 'Schedule'], ['show_inspections', 'Inspections'], ['show_photos', 'Photos']] as const).map(([field, label]) => {
+              const on = (e as any)[field] !== false;
+              return (
+                <button key={field} onClick={() => setFlag(field, !on)} disabled={togglingFlag !== null}
+                  className="min-h-[52px] rounded-xl text-[14px] font-bold flex flex-col items-center justify-center active:scale-[0.98] disabled:opacity-50"
+                  style={on ? { background: 'rgba(53,208,127,0.12)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.4)' } : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <span>{label}</span><span className="text-[12px]">{togglingFlag === field ? '…' : on ? 'ON' : 'OFF'}</span>
+                </button>
+              );
+            })}
+          </div>
           <div className="grid grid-cols-1 gap-2">
             <a href={'/estimate/' + e.share_token} target="_blank" rel="noreferrer"
               className="min-h-[52px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99]"
