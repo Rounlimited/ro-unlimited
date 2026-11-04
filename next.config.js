@@ -27,6 +27,14 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_BUILD_SHA: (process.env.VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 7),
   },
+  // Safari 12: emoji Unicode-property regexes in GSAP SplitText and linkifyjs throw on load — see webpack-loaders/safari12-regex-loader.js
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /[\\/]node_modules[\\/](gsap[\\/](dist[\\/])?SplitText\.js|linkifyjs[\\/].*\.(m?js|cjs))$/,
+      use: [{ loader: require.resolve('./webpack-loaders/safari12-regex-loader.js') }],
+    });
+    return config;
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '200mb',
