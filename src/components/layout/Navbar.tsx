@@ -64,12 +64,12 @@ export default function Navbar() {
             />
           </Link>
 
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden xl:flex items-center gap-0.5 2xl:gap-1">
             {NAV_LINKS.map((link) => {
               const isActive = pathname === link.href;
               return (
                 <Link key={link.href} href={link.href}
-                  className={`relative px-3 py-2 text-xs tracking-wider uppercase font-body transition-colors duration-300 ${isActive ? 'text-ro-gold' : 'text-ro-gray-400 hover:text-ro-white'}`}>
+                  className={`relative px-2 2xl:px-3 py-2 whitespace-nowrap text-xs tracking-wider uppercase font-body transition-colors duration-300 ${isActive ? 'text-ro-gold' : 'text-ro-gray-400 hover:text-ro-white'}`}>
                   {link.label}
                   {isActive && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-[2px] bg-ro-gold" />}
                 </Link>
@@ -77,20 +77,24 @@ export default function Navbar() {
             })}
           </div>
 
-          <div className="hidden lg:flex items-center gap-4">
-            <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`}
-              className="flex items-center gap-2 text-ro-gray-400 hover:text-ro-gold transition-colors text-sm">
-              <Phone size={14} /><span className="font-mono text-xs">{COMPANY.phone}</span>
+          {/* Right group: a divider keeps it clear of the nav links; nothing here
+              ever wraps. On laptop widths the phone shows as an icon button
+              (number on hover/tooltip) so it can't get squeezed into 3 lines. */}
+          <div className="hidden xl:flex items-center gap-3 2xl:gap-4 ml-3 pl-4 border-l border-white/10 flex-shrink-0">
+            <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} title={`Call ${COMPANY.phone}`} aria-label={`Call ${COMPANY.phone}`}
+              className="flex items-center gap-2 whitespace-nowrap 2xl:mr-3 text-ro-gray-400 hover:text-ro-gold transition-colors text-sm">
+              <span className="w-9 h-9 2xl:w-auto 2xl:h-auto rounded-full 2xl:rounded-none border border-white/15 2xl:border-0 flex items-center justify-center"><Phone size={14} /></span>
+              <span className="hidden 2xl:inline font-mono text-xs">{COMPANY.phone}</span>
             </a>
-            <Link href="/my" className="text-ro-gray-400 hover:text-ro-gold transition-colors text-xs tracking-wider uppercase font-heading">
+            <Link href="/my" className="whitespace-nowrap text-ro-gray-400 hover:text-ro-gold transition-colors text-xs tracking-wider uppercase font-heading">
               Customer Login
             </Link>
             <Link href="/contact"
-              className="relative px-6 py-2.5 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-colors duration-300">
+              className="relative whitespace-nowrap px-5 py-2.5 bg-ro-gold text-ro-black font-heading text-sm tracking-wider uppercase hover:bg-ro-gold-light transition-colors duration-300">
               Get a Quote
             </Link>
             {/* Join the RO Network — desktop badge, same style as footer */}
-            <div ref={desktopJoinRef} style={{ transformOrigin: 'left center', display: 'inline-block' }}>
+            <div ref={desktopJoinRef} className="hidden min-[1440px]:inline-block" style={{ transformOrigin: 'left center' }}>
               <Link href="/join"
                 className="join-cta-badge inline-flex flex-col items-center gap-0 px-3 py-[5px] font-heading text-[10px] tracking-[0.2em] uppercase leading-[1.4]">
                 <span className="relative z-10">Join the</span>
@@ -99,14 +103,14 @@ export default function Navbar() {
             </div>
           </div>
 
-          <button onClick={() => setIsOpen(!isOpen)} className="lg:hidden text-ro-gold p-2" aria-label="Toggle menu">
+          <button onClick={() => setIsOpen(!isOpen)} className="xl:hidden text-ro-gold p-2" aria-label="Toggle menu">
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </div>
 
       {/* Mobile menu */}
-      <div className={`lg:hidden overflow-hidden transition-all duration-500 ease-out ${isOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}`}>
+      <div className={`xl:hidden overflow-hidden transition-all duration-500 ease-out ${isOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="bg-ro-black border-t border-ro-gold/10 px-4 py-6 space-y-1">
           {NAV_LINKS.map((link) => {
             const isActive = pathname === link.href;
