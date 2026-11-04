@@ -484,7 +484,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
     <div className="min-h-screen bg-[#f8f8f6]">
       <ReadingProgress />
       <ShineStyles />
-      <main id="doc-main" className="max-w-4xl mx-auto px-4 py-6 sm:py-10 space-y-4 pb-32">
+      <main id="doc-main" className={`max-w-4xl mx-auto px-4 space-y-4 pb-32 ${inPortal ? 'pt-3' : 'py-6 sm:py-10'}`}>
 
         {/* ─── Back bar — only when opened from the admin app / standalone PWA ── */}
         {showBackBar && !inPortal && (
@@ -501,12 +501,15 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
           </div>
         )}
 
-        {/* ─── Brand header — same language as the invoice page ── */}
-        <div className="flex items-center justify-between">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* ─── Brand header — same language as the invoice page (the portal shell already shows the brand) ── */}
+        {!(inPortal && estimate.signed_at) && (
+        <div className={`flex items-center ${inPortal ? 'justify-end' : 'justify-between'}`}>
+          {!inPortal && (
+          /* eslint-disable-next-line @next/next/no-img-element */
           <span className="inline-flex items-center rounded-xl px-3 py-2" style={{ background: '#0c0c0c' }}>
             <img src="/ro-co-logo-v2.png" alt="RO Unlimited Co." className="h-8 w-auto" />
           </span>
+          )}
           <button
             onClick={() => document.getElementById('accept-sign')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
             className="inline-flex items-center gap-2 min-h-[48px] px-5 rounded-xl text-[15px] font-bold text-black shadow-sm active:scale-[0.98] transition-transform"
@@ -515,6 +518,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
             {estimate.signed_at ? 'Signed ✓' : 'Review & Sign'}
           </button>
         </div>
+        )}
 
         {/* ─── Status banner ─────────────────────────────────── */}
         {(() => {

@@ -888,7 +888,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <div className="fixed top-0 left-0 right-0 bottom-0 bg-[#0a0a0a] flex flex-col overflow-hidden" style={{ height: '100dvh' }}>
       <div className="flex-shrink-0 h-[env(safe-area-inset-top)] bg-[#0a0a0a] relative z-10" />
 
-      <header data-admin-header className="flex-shrink-0 px-4 py-2.5 flex items-center justify-between bg-[#0f0f0f] border-b border-white/5 relative z-10">
+      <header data-admin-header className="flex-shrink-0 px-3 py-1.5 flex items-center justify-between bg-[#0f0f0f] border-b border-white/5 relative z-10">
         <div className="flex items-center gap-1">
           {pathname !== '/admin' && (
             <button
@@ -908,7 +908,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             onClick={() => { window.location.href = '/admin'; }}
             className="flex items-center gap-2 bg-transparent border-none cursor-pointer p-0"
           >
-            <img src="/ro-co-logo-v2.png" alt="RO Unlimited" className="w-48 h-auto object-contain" />
+            <img src="/ro-co-logo-v2.png" alt="RO Unlimited" className="w-36 h-auto object-contain" />
             <span className="text-[11px] text-white/20 uppercase tracking-wider border-l border-white/10 pl-2">Admin</span>
           </button>
         </div>

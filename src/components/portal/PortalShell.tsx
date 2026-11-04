@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Loader2, Mail, LogOut, FolderKanban, UserRound, KeyRound } from 'lucide-react';
+import { Loader2, Mail, LogOut, FolderKanban, UserRound, KeyRound, ChevronLeft } from 'lucide-react';
 
 /**
  * The customer portal shell — rounlimited.com/my.
@@ -34,12 +34,16 @@ export default function PortalShell({ children }: { children: React.ReactNode })
     <Ctx.Provider value={{ session, refresh }}>
       <div className="min-h-screen bg-[#f8f8f6]">
         <header className="sticky top-0 z-40" style={{ background: '#0c0c0c', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-          <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
-            <a href="/my" className="flex items-center gap-3 min-h-[48px]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/ro-co-logo-v2.png" alt="RO Unlimited Co." className="h-8 w-auto" />
-              <span className="text-[13px] font-bold uppercase tracking-wider hidden sm:inline" style={{ color: '#D4B965' }}>Customer Portal</span>
-            </a>
+          <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+            {pathname.startsWith('/my/project') ? (
+              <a href="/my" className="flex items-center gap-1 min-h-[48px] -ml-2 pr-2 text-[17px] font-bold" style={{ color: '#D4B965' }}><ChevronLeft size={24} /> My Projects</a>
+            ) : (
+              <a href="/my" className="flex items-center gap-3 min-h-[48px]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/ro-co-logo-v2.png" alt="RO Unlimited Co." className="h-7 w-auto" />
+                <span className="text-[13px] font-bold uppercase tracking-wider hidden sm:inline" style={{ color: '#D4B965' }}>Customer Portal</span>
+              </a>
+            )}
             <nav className="hidden sm:flex items-center gap-1">
               {tabs.map((t) => (
                 <a key={t.href} href={t.href} className="min-h-[44px] px-4 rounded-lg inline-flex items-center gap-2 text-[15px] font-bold" style={{ color: t.on ? '#D4B965' : 'rgba(255,255,255,0.7)', background: t.on ? 'rgba(201,168,76,0.14)' : 'transparent' }}><t.icon size={17} /> {t.label}</a>

@@ -34,7 +34,7 @@ export default function PortalHome() {
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-4">
-      <h1 className="text-[26px] sm:text-[30px] font-bold text-[#1a1a1a] leading-tight" style={{ textWrap: 'balance' } as any}>{name ? `${name}, here’s where things stand.` : 'Here’s where things stand.'}</h1>
+      <h1 className="text-[24px] sm:text-[30px] font-bold text-[#1a1a1a] leading-tight" style={{ textWrap: 'balance' } as any}>{name ? `${name}, here’s where things stand.` : 'Here’s where things stand.'}</h1>
 
       {!data.has_password && (
         <a href="/my/account#password" className="block rounded-2xl border p-4 active:scale-[0.995]" style={{ background: '#fff', borderColor: '#ead9ac' }}>
