@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
+import { CustomerReviews } from '@/components/admin/ReviewItems';
 import {
   Save, Trash2, Loader2, FileText, Mail, Phone, MapPin,
   Building2, Tag, Calendar, MessageSquare, ExternalLink,
@@ -376,6 +377,9 @@ export default function CustomerDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Reviews — every star rating / comment from this customer's jobs, estimates and receipts */}
+        {id && <CustomerReviews customerId={String(id)} />}
 
         {/* Notes */}
         <div className="bg-[#111] border border-white/5 rounded-2xl p-5">
