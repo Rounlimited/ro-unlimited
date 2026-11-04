@@ -121,12 +121,30 @@ function isExpired(validUntil: string | null, status: string): boolean {
   return new Date(validUntil) < new Date();
 }
 
+/** WAITING_ON_ANSWER: sent/viewed, never signed, 3+ days — needs JR to follow up or close it out. */
+function waitingDays(e: any): number | null {
+  if (!(e.status === 'sent' || e.status === 'viewed') || e.signed_at) return null;
+  const from = e.sent_at || e.created_at; if (!from) return null;
+  const d = Math.floor((Date.now() - new Date(from).getTime()) / 86400000);
+  return d >= 3 ? d : null;
+}
+function WaitingPill({ estimate }: { estimate: any }) {
+  const d = waitingDays(estimate); if (d == null) return null;
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[12px] font-bold border bg-orange-500/15 text-orange-300 border-orange-500/40" title="No answer yet — follow up, or open it and tap They said yes / They passed">
+      <AlertTriangle size={11} /> Needs answer · {d}d
+    </span>
+  );
+}
+
 export default function EstimatesPage() {
   const router = useRouter();
   const { isDesktop } = useDeviceContext();
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [needsOnly, setNeedsOnly] = useState(false);
+  useEffect(() => { try { if (new URLSearchParams(window.location.search).get('needs') === '1') setNeedsOnly(true); } catch {} }, []);
   const [search, setSearch] = useState('');
   const [divisionFilter, setDivisionFilter] = useState('all');
   const [deleteTarget, setDeleteTarget] = useState<Estimate | null>(null);
@@ -189,9 +207,10 @@ export default function EstimatesPage() {
 
   // Client-side search filtering
   const filtered = useMemo(() => {
-    if (!search) return estimates;
+    const base = needsOnly ? estimates.filter((e) => waitingDays(e) != null).sort((a, b) => (waitingDays(b) || 0) - (waitingDays(a) || 0)) : estimates;
+    if (!search) return base;
     const q = search.toLowerCase();
-    return estimates.filter((e) => {
+    return base.filter((e) => {
       const customerName = e.customer
         ? `${e.customer.first_name} ${e.customer.last_name}`.toLowerCase()
         : '';
@@ -203,7 +222,7 @@ export default function EstimatesPage() {
         companyName.includes(q)
       );
     });
-  }, [estimates, search]);
+  }, [estimates, search, needsOnly]);
 
   // Compute stats from all estimates (not filtered)
   const stats = useMemo(() => {
@@ -315,6 +334,24 @@ export default function EstimatesPage() {
             </div>
           ))}
         </div>
+
+        {/* Needs an answer — estimates out 3+ days with no decision */}
+        {!loading && (() => {
+          const waiting = estimates.filter((e) => waitingDays(e) != null);
+          if (!waiting.length && !needsOnly) return null;
+          const value = waiting.reduce((s, e) => s + (e.total || 0), 0);
+          return (
+            <button onClick={() => { setNeedsOnly(!needsOnly); if (!needsOnly) setActiveTab('all'); }}
+              className="w-full text-left rounded-xl p-4 mb-4 flex items-center gap-3 transition-colors"
+              style={{ background: needsOnly ? 'rgba(249,115,22,0.18)' : 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,' + (needsOnly ? '0.7' : '0.4') + ')' }}>
+              <AlertTriangle size={22} className="text-orange-300 flex-shrink-0" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[17px] font-bold text-white">{waiting.length} estimate{waiting.length === 1 ? '' : 's'} waiting on an answer · {formatCurrency(value)}</span>
+                <span className="block text-[15px] text-white/60">{needsOnly ? 'Showing only these, oldest first. Tap to show everything.' : 'Follow up, or open one and tap "They said yes" / "They passed". Tap to see them.'}</span>
+              </span>
+            </button>
+          );
+        })()}
 
         {/* Status filter tabs */}
         <div className="flex gap-1 bg-[#111] border border-white/5 rounded-xl p-1 mb-4 overflow-x-auto">
@@ -472,6 +509,7 @@ export default function EstimatesPage() {
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
                             {statusCfg.label}
                           </span>
+                          <WaitingPill estimate={estimate} />
                           <EngagementPills estimate={estimate} />
                           <div className="flex gap-1 flex-wrap"><JobStatusPills estimate={estimate} /></div>
                         </div>
@@ -524,6 +562,7 @@ export default function EstimatesPage() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>{statusCfg.label}</span>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${divCfg.bg} ${divCfg.text}`}><DivIcon size={10} />{divCfg.label}</span>
                       <JobStatusPills estimate={estimate} />
+                      <WaitingPill estimate={estimate} />
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-[18px] font-bold text-white">{formatCurrency(estimate.total || 0)}</span>

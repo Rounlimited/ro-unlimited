@@ -89,8 +89,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     // Insert status history record
     await supabase.from('estimate_status_history').insert({
       estimate_id: id,
-      from_status: currentStatus,
-      to_status: status,
+      old_status: currentStatus, // table columns are old_status/new_status
+      new_status: status,
       notes: notes || null,
       changed_by: body.changed_by || null,
     });

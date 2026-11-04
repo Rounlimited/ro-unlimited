@@ -134,17 +134,21 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
     // Update estimate status to sent
     const now = new Date().toISOString();
+    // KEEP_SIGNED_STATUS: re-sending a signed/accepted estimate (e.g. to give the
+    // customer their link again) must not knock it back to 'sent' — that is how
+    // signed jobs ended up showing "Viewed" with no way to close them out.
+    const keepStatus = !!estimate.signed_at || ['accepted', 'declined'].includes(estimate.status);
     await supabase
       .from('estimates')
-      .update({ status: 'sent', sent_at: now, updated_at: now })
+      .update(keepStatus ? { updated_at: now } : { status: 'sent', sent_at: now, updated_at: now })
       .eq('id', id);
 
     // Insert status history record
     await supabase.from('estimate_status_history').insert({
       estimate_id: id,
       old_status: estimate.status,
-      new_status: 'sent',
-      notes: `Sent to ${to_email}`,
+      new_status: keepStatus ? estimate.status : 'sent',
+      notes: keepStatus ? `Link re-sent to ${to_email}` : `Sent to ${to_email}`,
     });
 
     return NextResponse.json({ ok: true, sent_to: to_email, share_link: viewLink });

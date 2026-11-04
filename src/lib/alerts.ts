@@ -81,6 +81,7 @@ export const ALERT_TYPES: { id: string; label: string; about: string }[] = [
   { id: 'estimate_selections', label: 'Options confirmed', about: 'Customer locked in their picks' },
   { id: 'estimate_message', label: 'Customer message', about: 'Sent from the estimate link' },
   { id: 'estimate_signed', label: 'Estimate signed', about: 'Accepted and signed' },
+  { id: 'estimates_waiting', label: 'Estimates waiting on an answer', about: 'Weekly: estimates out 7+ days with no yes or no' },
   { id: 'invoice_viewed', label: 'Invoice opened', about: 'First open of an invoice link' },
   { id: 'invoice_pdf_downloaded', label: 'Invoice PDF downloaded', about: 'Every download' },
 ];

@@ -97,3 +97,37 @@ export async function runPortalReminders() {
   } catch (e) { console.error('[portal-reminders] nudges', e); }
   return out;
 }
+
+/**
+ * Weekly digest for JR: estimates that went out 7+ days ago and never got an
+ * answer in the app (sent/viewed, not signed). One combined alert per week,
+ * daytime ET only, linking to the Estimates list filtered to "Needs answer".
+ * Closing one out (They said yes / They passed) drops it from the digest.
+ */
+export async function runEstimatesWaitingDigest(): Promise<{ sent: boolean; count: number }> {
+  const { getSetting, setSetting } = await import('@/lib/handover');
+  const hourET = Number(new Date().toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false }));
+  if (hourET < 8 || hourET > 17) return { sent: false, count: 0 };
+  const last = await getSetting('estimates_waiting_digest_at');
+  if (last && Date.now() - new Date(String(last)).getTime() < 7 * 86400000 - 3600000) return { sent: false, count: 0 };
+  const cutoff = new Date(Date.now() - 7 * 86400000).toISOString();
+  const { data } = await createAdminClient().from('estimates')
+    .select('id, estimate_number, project_name, total, sent_at, created_at')
+    .in('status', ['sent', 'viewed']).is('signed_at', null)
+    .or(`sent_at.lte.${cutoff},and(sent_at.is.null,created_at.lte.${cutoff})`)
+    .order('sent_at', { ascending: true });
+  const list = (data || []).filter((e: any) => !/DEMO/i.test(e.estimate_number || ''));
+  if (!list.length) return { sent: false, count: 0 };
+  const total = list.reduce((s: number, e: any) => s + Number(e.total || 0), 0);
+  const money = total.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  const names = list.slice(0, 3).map((e: any) => String(e.project_name || e.estimate_number).trim()).join(', ');
+  await notifyTeam({
+    type: 'estimates_waiting',
+    title: `${list.length} estimate${list.length === 1 ? '' : 's'} still waiting on an answer · ${money}`,
+    body: `${names}${list.length > 3 ? ` and ${list.length - 3} more` : ''}. Follow up, or open each one and tap "They said yes" or "They passed" so it moves to Jobs or off the list.`,
+    url: '/admin/estimates?needs=1',
+    tag: 'estimates-waiting',
+  } as any);
+  await setSetting('estimates_waiting_digest_at', new Date().toISOString());
+  return { sent: true, count: list.length };
+}

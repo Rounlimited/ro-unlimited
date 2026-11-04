@@ -6,6 +6,7 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import LinkControlsSheet from '@/components/admin/estimates/LinkControls';
 import FixedPriceControl from '@/components/admin/estimates/FixedPriceControl';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
+import CloseOutCard from '@/components/admin/estimates/CloseOutCard';
 import { estimateDisplayDate, toDateInputValue } from '@/lib/estimates';
 import { docStage } from '@/lib/doc-stage';
 import {
@@ -766,6 +767,11 @@ export default function EstimateDetailPage() {
                 </p>
               </button>
             </div>
+
+            {/* Waiting on an answer — close it out (verbal yes / passed) */}
+            {!(estimate as any).signed_at && (
+              <CloseOutCard estimateId={id} status={estimate.status} sentAt={(estimate as any).sent_at || null} createdAt={estimate.created_at} onDone={fetchEstimate} />
+            )}
 
             {/* Customer Activity — opens, PDF, time reading, last device */}
             {['sent', 'viewed', 'accepted', 'declined', 'expired'].includes(estimate.status) && (
