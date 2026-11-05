@@ -350,6 +350,7 @@ export function StickyTotalBar({
 
   return (
     <div
+      data-bottom-dock
       className="fixed bottom-0 inset-x-0 z-40"
       style={{
         transform: shown ? 'translateY(0)' : 'translateY(110%)',

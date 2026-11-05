@@ -46,7 +46,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
             )}
             <nav className="hidden sm:flex items-center gap-1">
               {tabs.map((t) => (
-                <a key={t.href} href={t.href} className="min-h-[44px] px-4 rounded-lg inline-flex items-center gap-2 text-[15px] font-bold" style={{ color: t.on ? '#D4B965' : 'rgba(255,255,255,0.7)', background: t.on ? 'rgba(201,168,76,0.14)' : 'transparent' }}><t.icon size={17} /> {t.label}</a>
+                <a key={t.href} href={t.href} data-guide={t.href === '/my/account' ? 'account' : undefined} className="min-h-[44px] px-4 rounded-lg inline-flex items-center gap-2 text-[15px] font-bold" style={{ color: t.on ? '#D4B965' : 'rgba(255,255,255,0.7)', background: t.on ? 'rgba(201,168,76,0.14)' : 'transparent' }}><t.icon size={17} /> {t.label}</a>
               ))}
               <button onClick={signOut} className="min-h-[44px] px-4 rounded-lg inline-flex items-center gap-2 text-[15px] font-bold" style={{ color: 'rgba(255,255,255,0.6)' }}><LogOut size={17} /> Sign out</button>
             </nav>
@@ -55,10 +55,10 @@ export default function PortalShell({ children }: { children: React.ReactNode })
         </header>
         <div className="pb-24 sm:pb-8">{children}</div>
         {/* Mobile tab bar */}
-        <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t" style={{ background: '#fff', borderColor: '#e8e4da', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <nav data-bottom-dock className="sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t" style={{ background: '#fff', borderColor: '#e8e4da', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="grid grid-cols-2">
             {tabs.map((t) => (
-              <a key={t.href} href={t.href} className="min-h-[60px] flex flex-col items-center justify-center gap-0.5 text-[13px] font-bold" style={{ color: t.on ? '#8a6d20' : '#6b7280' }}><t.icon size={22} /> {t.label}</a>
+              <a key={t.href} href={t.href} data-guide={t.href === '/my/account' ? 'account' : undefined} className="min-h-[60px] flex flex-col items-center justify-center gap-0.5 text-[13px] font-bold" style={{ color: t.on ? '#8a6d20' : '#6b7280' }}><t.icon size={22} /> {t.label}</a>
             ))}
           </div>
         </nav>

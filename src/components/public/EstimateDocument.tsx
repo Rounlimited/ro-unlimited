@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState, useEffect } from 'react';
+import PortalGuide from '@/components/portal/PortalGuide';
 import SignaturePad from '@/components/public/SignaturePad';
 import CustomerFeedbackCard from '@/components/public/CustomerFeedbackCard';
 import {
@@ -1009,6 +1010,8 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
             </div>
           )}
         </div>
+        {/* First-visit tour + floating Help (not when RO previews from the admin app) */}
+        <PortalGuide mode={estimate.signed_at ? 'project' : 'proposal'} hide={showBackBar && !inPortal} />
       </main>
 
       <StickyTotalBar

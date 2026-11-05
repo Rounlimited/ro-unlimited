@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Loader2, ChevronRight, CalendarDays, Camera, MessageCircle } from 'lucide-react';
+import PortalGuide from '@/components/portal/PortalGuide';
 
 /**
  * Portal home — everything this customer has with RO, and the one list that
@@ -43,7 +44,7 @@ export default function PortalHome() {
       )}
 
       {/* The one list that matters */}
-      <section className="rounded-2xl border p-5" style={{ background: needs.length ? '#fdf6e7' : '#f7f7f5', borderColor: needs.length ? '#ead9ac' : '#e8e4da' }}>
+      <section data-guide="home-needs" className="rounded-2xl border p-5" style={{ background: needs.length ? '#fdf6e7' : '#f7f7f5', borderColor: needs.length ? '#ead9ac' : '#e8e4da' }}>
         <p className="text-[13px] font-bold uppercase tracking-wide mb-2" style={{ color: needs.length ? '#8a6d20' : '#6b7280' }}>Needs you</p>
         {needs.length === 0 ? (
           <p className="text-[17px] text-[#2a2a2a]">Nothing needed from you right now. We&rsquo;ll post here the moment something is.</p>
@@ -66,10 +67,10 @@ export default function PortalHome() {
       )}
 
       {projects.length > 0 && <p className="text-[13px] font-bold uppercase tracking-wide pt-2" style={{ color: '#8a6d20' }}>Your projects</p>}
-      {projects.map((p) => {
+      {projects.map((p, pi) => {
         const st = STAGE[p.stage];
         return (
-          <a key={p.id} href={open(p)} className="block rounded-2xl border bg-white p-5 sm:p-6 active:scale-[0.995]" style={{ borderColor: '#f0ece2' }}>
+          <a key={p.id} href={open(p)} data-guide={pi === 0 ? 'home-projects' : undefined} className="block rounded-2xl border bg-white p-5 sm:p-6 active:scale-[0.995]" style={{ borderColor: '#f0ece2' }}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[21px] font-bold text-[#1a1a1a] leading-tight">{p.name}</p>
@@ -97,6 +98,7 @@ export default function PortalHome() {
           </a>
         );
       })}
+      <PortalGuide mode="home" />
     </main>
   );
 }
