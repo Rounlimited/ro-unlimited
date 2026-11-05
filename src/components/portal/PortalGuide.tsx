@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { COMPANY } from '@/lib/constants';
 
 /**
@@ -103,6 +104,8 @@ export default function PortalGuide({ mode, hide = false }: { mode: GuideMode; h
   const [openQ, setOpenQ] = useState<number | null>(null);
   const [dock, setDock] = useState(16);
   const raf = useRef<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // Keep the Help button above whatever bottom bar is showing (sticky total, portal tab bar).
   useEffect(() => {
@@ -158,14 +161,16 @@ export default function PortalGuide({ mode, hide = false }: { mode: GuideMode; h
     window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
   }, [phase, finish]);
 
-  if (hide) return null;
+  if (hide || !mounted) return null;
   const step = steps[i];
   const askQuestion = () => { setHelpOpen(false); const el = document.getElementById('questions'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   const tel = 'tel:' + COMPANY.phone.replace(/[^0-9]/g, '');
   const hasQuestions = typeof document !== 'undefined' && !!document.getElementById('questions');
   const gold = '#C9A84C';
 
-  return (
+  // Rendered straight into <body>: an animated (transformed) ancestor would
+  // otherwise turn position:fixed into position-relative-to-that-ancestor.
+  return createPortal(
     <>
       {/* Floating help button */}
       <button id="ro-help-btn" type="button" onClick={() => { setHelpOpen(true); setOpenQ(null); }} aria-label="Help"
@@ -249,6 +254,7 @@ export default function PortalGuide({ mode, hide = false }: { mode: GuideMode; h
           </div>
         </div>
       )}
-    </>
+    </>,
+    document.body,
   );
 }
