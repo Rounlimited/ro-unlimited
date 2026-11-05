@@ -95,7 +95,14 @@ const pick = (sel?: string): HTMLElement | null => {
 };
 const visible = (sel?: string) => !sel || !!pick(sel);
 
-export default function PortalGuide({ mode, hide = false }: { mode: GuideMode; hide?: boolean }) {
+// FORCE_TOUR: ?tour=1 on any customer link replays the tour every time (for demos / showing the team),
+// even on a device that has seen it and even when opened from the admin app.
+const forced = () => { try { return new URLSearchParams(window.location.search).get('tour') === '1'; } catch { return false; } };
+
+export default function PortalGuide({ mode, hide: hideProp = false }: { mode: GuideMode; hide?: boolean }) {
+  const [force, setForce] = useState(false);
+  useEffect(() => { setForce(forced()); }, []);
+  const hide = hideProp && !force;
   const [phase, setPhase] = useState<'off' | 'welcome' | 'tour'>('off');
   const [steps, setSteps] = useState<Step[]>([]);
   const [i, setI] = useState(0);
@@ -126,10 +133,10 @@ export default function PortalGuide({ mode, hide = false }: { mode: GuideMode; h
 
   // First visit: offer the tour once the page has settled.
   useEffect(() => {
-    if (hide || seen(mode)) return;
+    if (hide || (seen(mode) && !force)) return;
     const t = window.setTimeout(() => setPhase('welcome'), 1400);
     return () => window.clearTimeout(t);
-  }, [hide, mode]);
+  }, [hide, mode, force]);
 
   const start = useCallback(() => {
     const list = STEPS[mode].filter((s, n) => n === 0 || visible(s.target));
