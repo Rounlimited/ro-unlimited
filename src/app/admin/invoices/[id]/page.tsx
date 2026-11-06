@@ -8,7 +8,7 @@ import {
   PenLine, MessageSquare, Star,
 } from 'lucide-react';
 import CustomerActivity from '@/components/admin/estimates/CustomerActivity';
-import LinkControlsSheet from '@/components/admin/estimates/LinkControls';
+import DocLinkHub from '@/components/admin/project-page/DocLinkHub';
 
 /** Invoice detail — status, lines, ledger, record payment. JR-sized. */
 
@@ -185,7 +185,7 @@ export default function InvoiceDetailPage() {
               style={inv.link_enabled
                 ? { background: 'rgba(201,168,76,0.1)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.3)' }
                 : { background: 'rgba(248,113,113,0.1)', color: '#f87171', border: '1px solid rgba(248,113,113,0.25)' }}>
-              <Link2 size={17} /> {inv.link_enabled ? 'The Link' : 'Link Paused'}
+              <Link2 size={17} /> {inv.link_enabled ? 'Invoice Page' : 'Page Paused'}
             </button>
           )}
           {inv.status === 'draft' && (
@@ -370,7 +370,8 @@ export default function InvoiceDetailPage() {
       </div>
 
       {showLinkControls && (
-        <LinkControlsSheet estimateId={String(id)} kind="invoice" onClose={() => { setShowLinkControls(false); load(); }} />
+        <DocLinkHub kind="invoice" id={String(id)} title={[inv.invoice_number, inv.project_name || (inv.estimate && inv.estimate.project_name)].filter(Boolean).join(' · ')} who={who || 'Customer'} phone={(inv.customer && inv.customer.phone) || null}
+          onClose={() => { setShowLinkControls(false); load(); }} onChanged={load} onSend={() => setShowSend(true)} sendLabel="Email the invoice" />
       )}
 
       {showSend && (

@@ -5,7 +5,7 @@ import {
   Loader2, FileText, Send, Copy, Check, ExternalLink, Trash2, Sparkles, Mail, Eye, Link2,
 } from 'lucide-react';
 import JobLogPanel from '@/components/admin/estimates/JobLogPanel';
-import LinkControlsSheet from '@/components/admin/estimates/LinkControls';
+import DocLinkHub from '@/components/admin/project-page/DocLinkHub';
 
 /**
  * Reports — the weekly/monthly update JR used to type up.
@@ -39,10 +39,19 @@ const shortDate = (s: string | null) =>
 
 export default function ReportsPanel({ estimateId, cadenceLabel }: { estimateId: string; cadenceLabel?: string | null }) {
   const [reports, setReports] = useState<Report[]>([]);
+  // The customer, for the Report Page hub's "Text it"
+  const [cust, setCust] = useState<{ name: string; phone: string | null } | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [drafting, setDrafting] = useState(false);
   const [editing, setEditing] = useState<Report | null>(null);
   const [linkFor, setLinkFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!linkFor || cust) return;
+    fetch('/api/admin/estimates/' + estimateId, { cache: 'no-store' }).then((r) => r.json()).then((e) => {
+      const c = e && e.customer; setCust({ name: c ? (c.company_name || [c.first_name, c.last_name].filter(Boolean).join(' ')) || 'Customer' : 'Customer', phone: (c && c.phone) || null });
+    }).catch(() => setCust({ name: 'Customer', phone: null }));
+  }, [linkFor, cust, estimateId]);
   const [copied, setCopied] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -155,16 +164,20 @@ export default function ReportsPanel({ estimateId, cadenceLabel }: { estimateId:
               <button onClick={() => setLinkFor(r.id)}
                 className="min-h-[48px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-95"
                 style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.12)' }}>
-                <Link2 size={16} /> Link
+                <Link2 size={16} /> Report Page
               </button>
             )}
           </div>
         </div>
       ))}
 
-      {linkFor && (
-        <LinkControlsSheet estimateId={linkFor} kind="report" onClose={() => { setLinkFor(null); load(); }} />
-      )}
+      {linkFor && (() => {
+        const rep = reports.find((x) => x.id === linkFor);
+        return (
+          <DocLinkHub kind="report" id={linkFor} title={'Progress report' + (rep ? ' · ' + shortDate(rep.period_end) : '')} who={cust ? cust.name : 'Customer'} phone={cust ? cust.phone : null}
+            onClose={() => { setLinkFor(null); load(); }} onChanged={load} />
+        );
+      })()}
 
       {editing && (
         <ReportSheet

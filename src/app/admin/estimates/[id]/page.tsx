@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
-import LinkControlsSheet from '@/components/admin/estimates/LinkControls';
 import FixedPriceControl from '@/components/admin/estimates/FixedPriceControl';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 import CloseOutCard from '@/components/admin/estimates/CloseOutCard';

@@ -54,14 +54,14 @@ const TABS: { id: HubTab; label: string; icon: any }[] = [
   { id: 'more', label: 'More', icon: MoreHorizontal },
 ];
 
-function useReducedMotion() {
+export function useReducedMotion() {
   const [r, setR] = useState(false);
   useEffect(() => { try { setR(window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch {} }, []);
   return r;
 }
 
 /* An animated on/off switch */
-function Switch({ on, busy }: { on: boolean; busy?: boolean }) {
+export function Switch({ on, busy }: { on: boolean; busy?: boolean }) {
   return (
     <span className="relative inline-flex flex-shrink-0 items-center w-[58px] h-[34px] rounded-full transition-colors duration-300" style={{ background: on ? GOLD : 'rgba(255,255,255,0.14)', boxShadow: on ? '0 0 18px rgba(201,168,76,0.35)' : 'none' }}>
       <span className="absolute top-[4px] w-[26px] h-[26px] rounded-full bg-white shadow-md flex items-center justify-center" style={{ left: on ? 28 : 4, transition: 'left 0.32s cubic-bezier(0.34,1.56,0.64,1)' }}>
@@ -72,7 +72,7 @@ function Switch({ on, busy }: { on: boolean; busy?: boolean }) {
 }
 
 /* A number that counts up when it appears */
-function CountUp({ value, reduced }: { value: number; reduced: boolean }) {
+export function CountUp({ value, reduced }: { value: number; reduced: boolean }) {
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (!ref.current) return;

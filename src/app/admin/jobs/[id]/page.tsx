@@ -7,7 +7,6 @@ import {
   CloudRain, CalendarDays, Lock, Mail, Save, TrendingUp, TrendingDown, ExternalLink, MessagesSquare, Send, Sparkles, Camera, Inbox, Paperclip,
 } from 'lucide-react';
 import AdminHeader from '@/components/admin/AdminHeader';
-import LinkControlsSheet from '@/components/admin/estimates/LinkControls';
 import { Link2 as LinkIcon } from 'lucide-react';
 import AppShell from '@/components/admin/AppShell';
 import { SCHEDULE_META, BUDGET_META, STATUS_REASONS, cadenceLabel, type ScheduleStatus, type BudgetStatus } from '@/lib/reporting';
