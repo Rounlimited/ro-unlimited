@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AppShell from '@/components/admin/AppShell';
 import AdminHeader from '@/components/admin/AdminHeader';
+import StartProjectWizard from '@/components/admin/jobs/StartProjectWizard';
 import {
   Loader2, HardHat, ChevronRight, AlertTriangle, FileText, CalendarClock,
   Phone, CheckCircle2, CloudRain, Hammer, Sparkles, X, Search, Check, Sun,
@@ -59,6 +60,7 @@ const daysAgo = (s: string | null) => {
 };
 
 export default function JobsPage() {
+  const [startOpen, setStartOpen] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [counts, setCounts] = useState({ all: 0, attention: 0, running: 0, behind: 0, complete: 0 });
   const [money, setMoney] = useState({ contract: 0, earned: 0, billed: 0 });
@@ -212,6 +214,13 @@ export default function JobsPage() {
     <AppShell>
       <AdminHeader title="Jobs" subtitle="Work in progress" />
       <div className="px-4 sm:px-6 pb-28 max-w-3xl mx-auto w-full min-w-0 overflow-x-hidden">
+
+        {/* START_PROJECT_BTN: give any job a Project Page — before, during or after the work */}
+        <button onClick={() => setStartOpen(true)} className="w-full mt-2 mb-4 min-h-[56px] rounded-2xl text-[17px] font-bold text-black flex items-center justify-center gap-2 active:scale-[0.99]"
+          style={{ background: 'linear-gradient(145deg, #C9A84C, #a8893d)', boxShadow: '0 4px 18px rgba(201,168,76,0.3)' }}>
+          <span className="text-[22px] leading-none">+</span> Start a Project Page
+        </button>
+        {startOpen && <StartProjectWizard onClose={() => { setStartOpen(false); }} />}
 
         {/* ── Today, across every job at once ── */}
         {today.running > 0 && (

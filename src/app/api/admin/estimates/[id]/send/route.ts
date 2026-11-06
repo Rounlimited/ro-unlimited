@@ -35,14 +35,17 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     // No PDF is generated or attached anymore — the link is the estimate,
     // and the PDF download lives behind it.
 
-    // Generate share token (32 char hex)
-    const shareToken = crypto.randomBytes(16).toString('hex');
+    // REUSE_LINK: keep the customer's existing link (a new token killed the
+    // link in every earlier email). Unsigned docs get/refresh a 60-day window;
+    // signed jobs never expire.
+    const isSigned = !!estimate.signed_at;
+    const shareToken = estimate.share_token || crypto.randomBytes(16).toString('hex');
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 60); // 60-day expiry
 
     await supabase.from('estimates').update({
       share_token: shareToken,
-      share_token_expires_at: expiresAt.toISOString(),
+      share_token_expires_at: isSigned ? null : expiresAt.toISOString(),
     }).eq('id', id);
 
     // Ensure email accounts are loaded

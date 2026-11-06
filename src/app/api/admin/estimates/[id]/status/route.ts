@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 
@@ -65,6 +66,12 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       status,
       updated_at: now,
     };
+
+    // ACCEPTED_LINK: once it's a yes, the customer's Project Page must exist and never expire.
+    if (status === 'accepted') {
+      updatePayload.share_token_expires_at = null;
+      if (!estimate.share_token) updatePayload.share_token = crypto.randomBytes(16).toString('hex');
+    }
 
     // Set corresponding timestamp
     const tsField = STATUS_TIMESTAMPS[status];

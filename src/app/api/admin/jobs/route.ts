@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { nextDueDate } from '@/lib/progress-reports';
@@ -36,6 +37,15 @@ export async function POST(req: NextRequest) {
       customerId = cust.id;
     }
     if (!customerId) return NextResponse.json({ error: 'Pick a customer or type a name' }, { status: 400 });
+    // EXISTING_CUSTOMER_EMAIL: an existing customer with no email can't use the
+    // portal — fill in what JR typed (never overwrite an email already on file).
+    if (body.customer_id && (body.customer_email || body.customer_phone)) {
+      const { data: cur } = await supabase.from('customers').select('email, phone').eq('id', customerId).maybeSingle();
+      const fill: Record<string, string> = {};
+      if (cur && !cur.email && body.customer_email) fill.email = String(body.customer_email).trim();
+      if (cur && !cur.phone && body.customer_phone) fill.phone = String(body.customer_phone).trim();
+      if (Object.keys(fill).length) await supabase.from('customers').update(fill).eq('id', customerId);
+    }
 
     const year = new Date().getFullYear();
     const prefix = `RO-JOB-${year}-`;
@@ -79,8 +89,16 @@ export async function POST(req: NextRequest) {
         reporting_day: day,
         reporting_includes: body.reporting_includes || ['completed', 'percent', 'photos', 'upcoming'],
         next_report_due: nextDueDate(cadence, day),
+        share_token: crypto.randomBytes(16).toString('hex'), // JOB_LINK_DAY_ONE: Project Page exists immediately, never expires
+        share_token_expires_at: null,
+        // WIZARD_FIELDS: what the customer sees + a job that is already finished
+        show_schedule: body.show_schedule !== false,
+        show_inspections: body.show_inspections !== false,
+        show_photos: body.show_photos !== false,
+        show_assistant: body.show_assistant !== false,
+        ...(body.completed ? { completed_at: now } : {}),
       })
-      .select('id, estimate_number')
+      .select('id, estimate_number, share_token, customer_id')
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -94,7 +112,9 @@ export async function POST(req: NextRequest) {
         phases.map((phase, i) => ({
           estimate_id: job.id,
           phase,
-          percent_complete: 0,
+          percent_complete: Array.isArray(body.phases) && typeof body.phases[i] === 'object' && body.phases[i].percent != null
+            ? Math.max(0, Math.min(100, Math.round(Number(body.phases[i].percent) || 0)))
+            : (body.completed ? 100 : 0), // PHASE_START_PERCENT: jobs started mid-stream
           custom: true,
           sort_order: i,
           weight: Array.isArray(body.phases) && typeof body.phases[i] === 'object' && body.phases[i].weight
@@ -104,7 +124,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ job: { ...job, phases: phases.length } });
+    return NextResponse.json({ job: { ...job, phases: phases.length, share_link: `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com').replace(/\/$/, '')}/estimate/${job.share_token}` } });
   } catch (err) {
     console.error('[jobs] POST error:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

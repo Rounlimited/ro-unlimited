@@ -74,6 +74,15 @@ export default function JobRoomPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [room, setRoom] = useState<Room | null>(null);
+  // ROOM_HASH_SCROLL: links like /admin/jobs/<id>#room-schedule land on that panel once it renders
+  const [hashDone, setHashDone] = useState(false);
+  useEffect(() => {
+    if (!room || hashDone) return;
+    const h = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
+    if (!h) { setHashDone(true); return; }
+    const t = window.setTimeout(() => { const el = document.getElementById(h); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); setHashDone(true); }, 400);
+    return () => window.clearTimeout(t);
+  }, [room, hashDone]);
   // Questions from the customer's page — answer right here.
   const [answer, setAnswer] = useState('');
   const [qBusy, setQBusy] = useState<'draft' | 'send' | null>(null);
@@ -572,7 +581,7 @@ export default function JobRoomPage() {
         </div>
 
         {/* ── Coming up on this job ── */}
-        <div className="rounded-2xl border border-white/8 bg-[#111] p-5">
+        <div id="room-schedule" className="rounded-2xl border border-white/8 bg-[#111] p-5 scroll-mt-20">
           <div className="flex items-center justify-between mb-1">
             <p className="text-[17px] font-bold">Coming Up</p>
             <button onClick={() => router.push('/admin/schedule?job=' + e.id)}
@@ -614,7 +623,7 @@ export default function JobRoomPage() {
         </div>
 
         {/* ── Permits & inspections — the county record, feeding the customer's page ── */}
-        <div className="rounded-2xl border border-white/8 bg-[#111] p-5">
+        <div id="room-inspections" className="rounded-2xl border border-white/8 bg-[#111] p-5 scroll-mt-20">
           <div className="flex items-center justify-between mb-1">
             <p className="text-[17px] font-bold">Permits &amp; Inspections</p>
             <button onClick={() => setInspOpen((v) => !v)} className="min-h-[44px] px-4 rounded-xl text-[15px] font-semibold active:scale-95" style={{ background: 'rgba(201,168,76,0.14)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }}><Plus size={16} className="inline -mt-0.5" /> Add</button>
@@ -778,7 +787,7 @@ export default function JobRoomPage() {
         </div>
 
         {/* ── Send them an update: two lines + photos, straight to their page ── */}
-        <div className="rounded-2xl border p-5" style={{ background: '#111', borderColor: 'rgba(201,168,76,0.3)' }}>
+        <div id="room-update" className="rounded-2xl border p-5 scroll-mt-20" style={{ background: '#111', borderColor: 'rgba(201,168,76,0.3)' }}>
           <div className="flex items-center justify-between gap-3 mb-1">
             <p className="text-[17px] font-bold flex items-center gap-2"><Send size={18} style={{ color: '#D4B965' }} /> Send Them an Update</p>
           </div>

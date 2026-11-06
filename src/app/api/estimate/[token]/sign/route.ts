@@ -52,6 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       signed_name: name.slice(0, 120),
       signer_ip_hash: crypto.createHash('sha256').update(ip).digest('hex').slice(0, 24),
       updated_at: signed_at,
+      share_token_expires_at: null, // SIGNED_LINK_NEVER_EXPIRES: the project page outlives the offer window
     };
     if (est.status !== 'accepted') {
       patch.status = 'accepted';
