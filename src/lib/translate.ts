@@ -12,7 +12,7 @@ import { createAdminClient } from '@/lib/supabase/server';
  */
 export type Lang = 'es';
 const MODEL = 'claude-opus-5-5';
-const BATCH = 80;            // phrases per Claude call
+const BATCH = 30;            // phrases per Claude call (small = fast first paint)
 const MAX_LEN = 1500;        // chars per phrase (longer is passed through untouched)
 
 const hash = (s: string) => crypto.createHash('sha1').update(s).digest('hex');

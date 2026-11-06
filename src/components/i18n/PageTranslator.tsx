@@ -168,17 +168,25 @@ async function translatePass(token: string | null) {
   if (!need.length) return;
   setInflight(1);
   try {
-    for (let i = 0; i < need.length; i += 200) {
-      const chunk = need.slice(i, i + 200);
-      const r = await fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang: 'es', texts: chunk, token }) });
-      if (!r.ok) break;
-      const j = await r.json();
-      const map = (j && j.map) || {};
-      for (const k of Object.keys(map)) mem.set(k, map[k]);
-      saveMem();
-      if (current !== 'es') return;
-      const again = collect(document.body); applyAll(again.groups, again.attrs);
-    }
+    // Small pieces, 4 at a time, applied as each lands — Spanish appears section by section.
+    // Visible text first (top of the page), so what they're looking at translates first.
+    const chunks: string[][] = [];
+    for (let i = 0; i < need.length; i += 30) chunks.push(need.slice(i, i + 30));
+    let next = 0;
+    const worker = async () => {
+      while (next < chunks.length && current === 'es') {
+        const chunk = chunks[next++];
+        const r = await fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang: 'es', texts: chunk, token }) });
+        if (!r.ok) continue;
+        const j = await r.json();
+        const map = (j && j.map) || {};
+        for (const k of Object.keys(map)) mem.set(k, map[k]);
+        saveMem();
+        if (current !== 'es') return;
+        const again = collect(document.body); applyAll(again.groups, again.attrs);
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
   } catch { /* network: stay in English for what's missing */ } finally { setInflight(-1); }
 }
 
