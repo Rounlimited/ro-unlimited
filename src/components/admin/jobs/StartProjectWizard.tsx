@@ -212,7 +212,7 @@ export default function StartProjectWizard({ onClose, onDone }: { onClose: () =>
   return (
     <div className="fixed z-[80] flex items-end sm:items-center sm:justify-center" style={{ top: 0, left: 0, right: 0, bottom: 0 }}>
       <div className="absolute bg-black/75" style={{ top: 0, left: 0, right: 0, bottom: 0 }} onClick={step === 'done' ? onClose : undefined} />
-      <div className="relative w-full sm:max-w-lg max-h-[94vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-[#121212] border-t sm:border border-white/10 text-white">
+      <div className="relative w-full sm:max-w-lg max-h-[94vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-[#121212] border-t sm:border border-white/10 text-white" style={{ maxHeight: '92dvh' }}>
         {/* header */}
         <div className="px-5 pt-4 pb-3 border-b border-white/8">
           <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-3 sm:hidden" />
@@ -234,7 +234,7 @@ export default function StartProjectWizard({ onClose, onDone }: { onClose: () =>
         </div>
 
         {/* body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 space-y-4" style={{ paddingBottom: step === 'start' ? 'max(56px, calc(24px + env(safe-area-inset-bottom, 0px)))' : '16px' }}>
           {step === 'start' && (
             <>
               <p className="text-[17px] text-white/70 leading-snug">Give a customer their Project Page at any point — before work starts, halfway through, or after it’s finished.</p>
@@ -432,7 +432,7 @@ export default function StartProjectWizard({ onClose, onDone }: { onClose: () =>
 
         {/* footer */}
         {step !== 'start' && (
-          <div className="px-5 pt-3 border-t border-white/8" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
+          <div className="px-5 pt-3 border-t border-white/8" style={{ paddingBottom: 'max(52px, calc(16px + env(safe-area-inset-bottom, 0px)))' }}>
             {step === 'pick' && <button onClick={convert} disabled={!pickedEst || busy} className="w-full min-h-[56px] rounded-xl text-[17px] font-bold text-black disabled:opacity-40 flex items-center justify-center gap-2" style={{ background: gold }}>{busy ? <Loader2 className="animate-spin" size={20} /> : <HardHat size={19} />} {pickedEst ? 'They said yes — make it the job' : 'Pick an estimate above'}</button>}
             {['who', 'job', 'now'].includes(step) && <button onClick={next} className="w-full min-h-[56px] rounded-xl text-[17px] font-bold text-black" style={{ background: gold }}>Next</button>}
             {step === 'see' && <button onClick={create} disabled={busy} className="w-full min-h-[56px] rounded-xl text-[17px] font-bold text-black disabled:opacity-40 flex items-center justify-center gap-2" style={{ background: gold }}>{busy ? <Loader2 className="animate-spin" size={20} /> : <HardHat size={19} />} Create the Project Page</button>}
