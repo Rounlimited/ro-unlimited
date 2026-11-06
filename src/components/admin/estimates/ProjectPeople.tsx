@@ -29,7 +29,7 @@ const soft = { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255
 const goldSoft = { background: 'rgba(201,168,76,0.16)', border: '1px solid rgba(201,168,76,0.55)', color: '#D4B965' };
 const inputCls = 'w-full min-h-[50px] px-4 rounded-xl bg-white/5 border border-white/10 text-[16px] text-white placeholder:text-white/30 focus:outline-none focus:border-[#C9A84C]/60';
 
-export default function ProjectPeople({ estimateId }: { estimateId: string }) {
+export default function ProjectPeople({ estimateId, embedded = false, onChanged }: { estimateId: string; embedded?: boolean; onChanged?: () => void }) {
   const api = `/api/admin/estimates/${estimateId}/people`;
   const [owner, setOwner] = useState<Owner>(null);
   const [members, setMembers] = useState<Member[] | null>(null);
@@ -54,7 +54,7 @@ export default function ProjectPeople({ estimateId }: { estimateId: string }) {
     setBusy(m.id + key); setNote((n) => ({ ...n, [m.id]: '' }));
     const d = await fetch(api, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ member_id: m.id, ...body }) }).then((r) => r.json()).catch(() => null);
     setNote((n) => ({ ...n, [m.id]: d && !d.error ? ok : (d && d.error) || 'Could not do that — try again.' }));
-    setBusy(null); setArm(null); await load();
+    setBusy(null); setArm(null); await load(); if (onChanged) onChanged();
   };
   const copy = async (id: string, text: string) => { try { await navigator.clipboard.writeText(text); setCopied(id); setTimeout(() => setCopied(null), 1500); } catch {} };
   const sms = (m: Member) => `sms:${m.phone ? m.phone.replace(/[^0-9+]/g, '') : ''}?&body=${encodeURIComponent(`Hi ${m.name.split(' ')[0]} — here's your link to the RO Unlimited project page: ${m.link}`)}`;
@@ -69,15 +69,15 @@ export default function ProjectPeople({ estimateId }: { estimateId: string }) {
     const sent = d.invited && d.invited.ok;
     setNote((n) => ({ ...n, [d.member.id]: sent ? `Added — link emailed to ${d.member.email} ✓` : 'Added ✓ — copy or text them their link below.' }));
     setF({ name: '', label: '', email: '', phone: '', role: 'viewer', invite: true }); setAdding(false); setOpen(d.member.id);
-    await load();
+    await load(); if (onChanged) onChanged();
   };
 
   const active = (members || []).filter((m) => !m.revoked_at);
   const removed = (members || []).filter((m) => m.revoked_at);
 
   return (
-    <div className="mt-5 pt-5 border-t border-white/10">
-      <p className="text-[18px] font-bold flex items-center gap-2"><Users size={19} style={{ color: '#D4B965' }} /> People on this project</p>
+    <div className={embedded ? '' : 'mt-5 pt-5 border-t border-white/10'}>
+      {!embedded && <p className="text-[18px] font-bold flex items-center gap-2"><Users size={19} style={{ color: '#D4B965' }} /> People on this project</p>}
       <p className="text-[14px] text-white/45 mt-0.5 mb-3">Everyone gets their own link, and what they do is tracked under their name. You choose who can approve.</p>
 
       {/* OWNER_SHARE_TOGGLE: whether the customer can invite people from their own page */}

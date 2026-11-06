@@ -520,7 +520,7 @@ export default function EstimatesPage() {
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-1">
                           <button onClick={(e) => quickCopyLink(e, estimate.id)}
-                            title="Copy customer link"
+                            title="Copy their Project Page link"
                             className={copiedId === estimate.id
                               ? 'p-2 rounded-lg text-[#35d07f] bg-[#35d07f]/10 transition-colors'
                               : 'p-2 rounded-lg text-white/20 hover:text-[#C9A84C] hover:bg-[#C9A84C]/10 transition-colors'}>
@@ -584,7 +584,7 @@ export default function EstimatesPage() {
                 </Link>
                 <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
                   <button onClick={(e) => quickCopyLink(e, estimate.id)}
-                    title="Copy customer link"
+                    title="Copy their Project Page link"
                     className={(copiedId === estimate.id
                       ? 'bg-[#35d07f]/15 border-[#35d07f]/40 text-[#35d07f] '
                       : 'bg-[#C9A84C]/10 border-[#C9A84C]/25 text-[#C9A84C] hover:bg-[#C9A84C]/20 ')

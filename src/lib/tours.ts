@@ -42,8 +42,8 @@ export const TOURS: Tour[] = [
       },
       {
         target: 'track-job',
-        title: 'Track a Job',
-        body: "For work you never estimated in here. Bid it on paper? Old contract? Tap this, name the job and the customer, list your phases, and you get the same progress tracking and customer reports.",
+        title: 'Start a Project',
+        body: "Give any customer a Project Page — even for work you never estimated in here, already running or already done. Pick the estimate they said yes to, or start fresh in four quick steps.",
       },
       {
         target: 'estimate-row',
@@ -163,7 +163,7 @@ export const TOURS: Tour[] = [
       {
         target: 'preview-link',
         title: 'See what they see',
-        body: "Preview Link opens the customer's actual page. Their picks update the total live, and lock in when they sign.",
+        body: "See it as the customer opens their actual page. Their picks update the total live, and lock in when they sign.",
       },
     ],
   },

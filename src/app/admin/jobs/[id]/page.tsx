@@ -15,6 +15,8 @@ import { LOG_TYPES } from '@/lib/progress-reports';
 import { REQUEST_KINDS } from '@/lib/customer-request-kinds';
 import { INSPECTION_STATUS, PERMIT_STATUS } from '@/lib/inspection-status';
 import { SERVICE_SYSTEMS } from '@/lib/service-systems';
+import ProjectPageHub, { type HubTab } from '@/components/admin/project-page/ProjectPageHub';
+import ProjectPageCard from '@/components/admin/project-page/ProjectPageCard';
 
 /**
  * The Job Room — JR's behind-the-scenes view of one job. Everything the
@@ -128,6 +130,9 @@ export default function JobRoomPage() {
   // notify
   const [notifying, setNotifying] = useState(false);
   const [showLinkControls, setShowLinkControls] = useState(false);
+  const [hubTab, setHubTab] = useState<HubTab>('share');
+  const [hubKey, setHubKey] = useState(0);
+  const openHub = (t: HubTab = 'share') => { setHubTab(t); setShowLinkControls(true); };
   const [notifyMsg, setNotifyMsg] = useState('');
   // Quick update to the customer: a couple of lines and some photos.
   const [upText, setUpText] = useState('');
@@ -748,21 +753,7 @@ export default function JobRoomPage() {
           </div>
           <p className="text-[14px] text-white/40 mb-3">Notes, quick answers and ratings from their project page — only you see these.</p>
 
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {([['feedback_enabled', 'Notes & questions'], ['reviews_enabled', 'Star ratings']] as const).map(([field, label]) => {
-              const on = e[field] !== false;
-              return (
-                <button key={field} onClick={() => setFlag(field, !on)} disabled={togglingFlag !== null}
-                  className="min-h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
-                  style={on
-                    ? { background: 'rgba(53,208,127,0.12)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.4)' }
-                    : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  {togglingFlag === field ? <Loader2 size={15} className="animate-spin" /> : null}
-                  {label}: {on ? 'ON' : 'OFF'}
-                </button>
-              );
-            })}
-          </div>
+          <button onClick={() => openHub('see')} className="mb-3 text-[14px] font-bold" style={{ color: '#D4B965' }}>Notes {e.feedback_enabled !== false ? 'on' : 'off'} · Star ratings {e.reviews_enabled !== false ? 'on' : 'off'} — change in Project Page →</button>
 
           {room.feedback.length === 0 ? (
             <p className="text-[15px] text-white/35">Nothing yet — when they tap an answer, leave a note or rate the job, it lands here.</p>
@@ -985,19 +976,15 @@ export default function JobRoomPage() {
           const stale = pp.days_since_update != null && pp.days_since_update >= 7;
           return (
             <div className="rounded-2xl border p-5" style={{ background: '#111', borderColor: stale ? 'rgba(248,113,113,0.35)' : 'rgba(255,255,255,0.08)' }}>
-              <p className="text-[17px] font-bold mb-1">Portal Pulse</p>
+              <p className="text-[17px] font-bold mb-1">Questions &amp; Assistant</p>
               <p className="text-[15px] text-white/50 mb-3">
-                Opened <strong className="text-white/85">{pp.opens_7d}×</strong> this week, {pp.opens_30d}× in 30 days{pp.avg_seconds ? <> · about {pp.avg_seconds >= 90 ? Math.round(pp.avg_seconds / 60) + ' min' : pp.avg_seconds + ' sec'} a visit</> : null}.
-                {pp.days_since_update != null && <> Last visible update <strong style={{ color: stale ? '#f87171' : 'rgba(255,255,255,0.85)' }}>{pp.days_since_update === 0 ? 'today' : pp.days_since_update + ' days ago'}</strong>{stale ? ' — silence reads as trouble; post two lines.' : '.'}</>}
+                {pp.days_since_update != null && <>Last visible update <strong style={{ color: stale ? '#f87171' : 'rgba(255,255,255,0.85)' }}>{pp.days_since_update === 0 ? 'today' : pp.days_since_update + ' days ago'}</strong>{stale ? ' — silence reads as trouble; post two lines.' : '.'}</>}
               </p>
               <div className="grid grid-cols-3 gap-2 mb-3">
                 <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)' }}><p className="text-[24px] font-bold leading-none" style={{ color: pp.questions.open ? '#D4B965' : '#fff' }}>{pp.questions.answered}/{pp.questions.asked}</p><p className="text-[13px] text-white/50 mt-1">Questions answered{pp.questions.avg_answer_hours != null ? ` · ${pp.questions.avg_answer_hours}h avg` : ''}</p></div>
                 <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)' }}><p className="text-[24px] font-bold leading-none text-white">{pp.assistant.answered_30d}/{pp.assistant.asks_30d}</p><p className="text-[13px] text-white/50 mt-1">Assistant answered · {pp.assistant.handoffs_30d} to you</p></div>
                 <div className="rounded-xl p-3" style={{ background: 'rgba(255,255,255,0.03)' }}><p className="text-[24px] font-bold leading-none" style={{ color: pp.assistant.helpful_no ? '#f87171' : '#35d07f' }}>{pp.assistant.helpful_yes}👍 {pp.assistant.helpful_no}👎</p><p className="text-[13px] text-white/50 mt-1">Rated by the customer</p></div>
               </div>
-              {secs.length > 0 && (
-                <p className="text-[14px] text-white/50">What they read most: {secs.map(([k, v]) => `${SEC[k] || k} (${v})`).join(' · ')}</p>
-              )}
               {pp.assistant.recent.length > 0 && (
                 <div className="mt-3 space-y-1">
                   <p className="text-[13px] font-bold uppercase tracking-wide text-white/40">They asked the assistant</p>
@@ -1008,46 +995,15 @@ export default function JobRoomPage() {
           );
         })()}
 
-        {/* ── The customer's side of the glass ── */}
-        <div className="rounded-2xl border border-white/8 bg-[#111] p-5">
-          <p className="text-[17px] font-bold mb-1">The Customer&rsquo;s View</p>
-          <p className="text-[15px] text-white/50 mb-3">
-            {e.view_count > 0
-              ? <>They&rsquo;ve opened their page <strong className="text-white/80">{e.view_count}{e.view_count === 1 ? ' time' : ' times'}</strong>{e.last_viewed_at ? <> — last {timeAgo(e.last_viewed_at)}</> : null}.</>
-              : 'They haven’t opened their page yet.'}
-            {cadence ? <> Reporting: {cadence}.</> : null}
-          </p>
-          <p className="text-[14px] text-white/40 mb-2">What they can see on their page:</p>
-          <div className="grid grid-cols-4 gap-2 mb-3">
-            {([['show_schedule', 'Schedule'], ['show_inspections', 'Inspections'], ['show_photos', 'Photos'], ['show_assistant', 'Assistant']] as const).map(([field, label]) => {
-              const on = (e as any)[field] !== false;
-              return (
-                <button key={field} onClick={() => setFlag(field, !on)} disabled={togglingFlag !== null}
-                  className="min-h-[52px] rounded-xl text-[14px] font-bold flex flex-col items-center justify-center active:scale-[0.98] disabled:opacity-50"
-                  style={on ? { background: 'rgba(53,208,127,0.12)', color: '#35d07f', border: '1px solid rgba(53,208,127,0.4)' } : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <span>{label}</span><span className="text-[12px]">{togglingFlag === field ? '…' : on ? 'ON' : 'OFF'}</span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="grid grid-cols-1 gap-2">
-            <a href={'/estimate/' + e.share_token} target="_blank" rel="noreferrer"
-              className="min-h-[52px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99]"
-              style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.12)' }}>
-              <Eye size={18} /> See What They See
-            </a>
-            <button onClick={notifyCustomer} disabled={notifying}
-              className="min-h-[52px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50"
-              style={{ background: 'rgba(201,168,76,0.14)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.4)' }}>
-              {notifying ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />} Email Them an Update
-            </button>
-            <button onClick={() => setShowLinkControls(true)}
-              className="min-h-[52px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99]"
-              style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.12)' }}>
-              <LinkIcon size={18} /> Link Controls
-            </button>
-          </div>
-          {notifyMsg && <p className="text-[14px] mt-2 text-center" style={{ color: notifyMsg.includes('✓') ? '#35d07f' : '#D4B965' }}>{notifyMsg}</p>}
+        {/* ── The customer's Project Page: one card, one hub ── */}
+        <div className="space-y-2">
+          <ProjectPageCard estimateId={String(id)} onOpen={openHub} refreshKey={hubKey} />
+          <button onClick={notifyCustomer} disabled={notifying}
+            className="w-full min-h-[52px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50"
+            style={{ background: 'rgba(201,168,76,0.1)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.35)' }}>
+            {notifying ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />} Email Them an Update
+          </button>
+          {notifyMsg && <p className="text-[14px] text-center" style={{ color: notifyMsg.includes('✓') ? '#35d07f' : '#D4B965' }}>{notifyMsg}</p>}
         </div>
 
         {/* ── Doors to the rest ── */}
@@ -1064,7 +1020,7 @@ export default function JobRoomPage() {
           </button>
         </div>
       </div>
-      {showLinkControls && <LinkControlsSheet estimateId={String(id)} onClose={() => setShowLinkControls(false)} />}
+      {showLinkControls && <ProjectPageHub estimateId={String(id)} initialTab={hubTab} onClose={() => { setShowLinkControls(false); setHubKey((k) => k + 1); }} onChanged={() => load()} />}
     </AppShell>
   );
 }

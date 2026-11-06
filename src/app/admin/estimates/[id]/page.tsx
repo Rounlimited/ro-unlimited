@@ -86,6 +86,8 @@ import ProgressPanel from '@/components/admin/estimates/ProgressPanel';
 import ReportsPanel from '@/components/admin/estimates/ReportsPanel';
 import { cadenceLabel } from '@/lib/reporting';
 import CustomerActivity from '@/components/admin/estimates/CustomerActivity';
+import ProjectPageHub, { type HubTab } from '@/components/admin/project-page/ProjectPageHub';
+import ProjectPageCard from '@/components/admin/project-page/ProjectPageCard';
 
 interface Estimate {
   id: string;
@@ -252,6 +254,9 @@ export default function EstimateDetailPage() {
   const [sending, setSending] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [showLinkControls, setShowLinkControls] = useState(false);
+  const [hubTab, setHubTab] = useState<HubTab>('share');
+  const [hubKey, setHubKey] = useState(0);
+  const openHub = (t: HubTab = 'share') => { setHubTab(t); setShowLinkControls(true); };
   const [linkCopied, setLinkCopied] = useState(false);
 
   // Action states
@@ -681,14 +686,14 @@ export default function EstimateDetailPage() {
             >
               {pdfLoading ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />} PDF Preview
             </button>
-            {/* One door for everything link-shaped: open, copy, pause,
-                replace, expiration, kill — all inside the sheet. */}
+            {/* One door for everything about the customer's page: share, people,
+                what they see, activity, pause/replace — the Project Page hub. */}
             <button
-              onClick={() => setShowLinkControls(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium text-[#C9A84C] bg-[#C9A84C]/10 border border-[#C9A84C]/25 rounded-lg hover:bg-[#C9A84C]/20 transition-all"
-              title="Open, copy, pause, replace, set expiration, or kill the customer link"
+              onClick={() => openHub('share')}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-semibold text-[#C9A84C] bg-[#C9A84C]/10 border border-[#C9A84C]/25 rounded-lg hover:bg-[#C9A84C]/20 transition-all"
+              title="Share it, who can see it, what they see, activity"
             >
-              <Link2 size={14} /> The Link
+              <Link2 size={14} /> Project Page
             </button>
             <button
               onClick={() => setShowSendModal(true)}
@@ -773,9 +778,9 @@ export default function EstimateDetailPage() {
               <CloseOutCard estimateId={id} status={estimate.status} sentAt={(estimate as any).sent_at || null} createdAt={estimate.created_at} onDone={fetchEstimate} />
             )}
 
-            {/* Customer Activity — opens, PDF, time reading, last device */}
-            {['sent', 'viewed', 'accepted', 'declined', 'expired'].includes(estimate.status) && (
-              <CustomerActivity estimateId={id} compact />
+            {/* The Project Page at a glance — opens the hub */}
+            {estimate.status !== 'draft' && (
+              <ProjectPageCard estimateId={String(id)} onOpen={openHub} refreshKey={hubKey} />
             )}
 
             {/* Customer Info */}
@@ -1036,7 +1041,7 @@ export default function EstimateDetailPage() {
                 className="shrink-0 min-h-[48px] px-4 rounded-xl text-[15px] font-bold flex items-center gap-2 active:scale-95 transition-transform"
                 style={{ background: 'rgba(201,168,76,0.12)', color: '#D4B965', border: '1px solid rgba(201,168,76,0.35)' }}
               >
-                <ExternalLink size={16} /> Preview Link
+                <ExternalLink size={16} /> See it as the customer
               </button>
             </div>
             <OptionsBuilder estimateId={String(estimate.id)} />
@@ -1327,7 +1332,7 @@ export default function EstimateDetailPage() {
       </div>
 
       {/* ─── SEND MODAL ───────────────────────────────────────── */}
-      {showLinkControls && <LinkControlsSheet estimateId={String(id)} onClose={() => setShowLinkControls(false)} />}
+      {showLinkControls && <ProjectPageHub estimateId={String(id)} initialTab={hubTab} onClose={() => { setShowLinkControls(false); setHubKey((k) => k + 1); }} onSendEstimate={() => setShowSendModal(true)} onChanged={() => fetchEstimate()} />}
 
       {showSendModal && (
         <ModalBackdrop onClose={() => { setShowSendModal(false); setShareLink(null); setLinkCopied(false); }}>
