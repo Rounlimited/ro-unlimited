@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2, Mail, LogOut, FolderKanban, UserRound, KeyRound, ChevronLeft } from 'lucide-react';
+import PageTranslator, { LangSwitch } from '@/components/i18n/PageTranslator';
 
 /**
  * The customer portal shell — rounlimited.com/my.
@@ -23,7 +24,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
   useEffect(() => { refresh(); }, [refresh]);
 
   if (session === null) return <div className="min-h-screen bg-[#f8f8f6] flex items-center justify-center"><Loader2 className="animate-spin text-gray-400" size={30} /></div>;
-  if (!session.signed_in) return <SignIn onSignedIn={refresh} />;
+  if (!session.signed_in) return (<><PageTranslator /><div className="fixed z-50" style={{ top: 'max(12px, env(safe-area-inset-top, 0px))', right: 'max(12px, env(safe-area-inset-right, 0px))' }}><LangSwitch /></div><SignIn onSignedIn={refresh} /></>);
 
   const tabs = [
     { href: '/my', label: 'My Projects', icon: FolderKanban, on: pathname === '/my' || pathname.startsWith('/my/project') },
@@ -44,6 +45,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
                 <span className="text-[13px] font-bold uppercase tracking-wider hidden sm:inline" style={{ color: '#D4B965' }}>Customer Portal</span>
               </a>
             )}
+            <div className="flex items-center gap-2 ml-auto sm:ml-0 sm:order-last"><LangSwitch dark /></div>
             <nav className="hidden sm:flex items-center gap-1">
               {tabs.map((t) => (
                 <a key={t.href} href={t.href} data-guide={t.href === '/my/account' ? 'account' : undefined} className="min-h-[44px] px-4 rounded-lg inline-flex items-center gap-2 text-[15px] font-bold" style={{ color: t.on ? '#D4B965' : 'rgba(255,255,255,0.7)', background: t.on ? 'rgba(201,168,76,0.14)' : 'transparent' }}><t.icon size={17} /> {t.label}</a>
@@ -54,6 +56,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
           </div>
         </header>
         <div className="pb-24 sm:pb-8">{children}</div>
+        <PageTranslator />
         {/* Mobile tab bar */}
         <nav data-bottom-dock className="sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t" style={{ background: '#fff', borderColor: '#e8e4da', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="grid grid-cols-2">

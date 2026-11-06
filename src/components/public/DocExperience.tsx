@@ -5,6 +5,7 @@ import NumberFlow from '@number-flow/react';
 import {
   CheckCircle2, Check, Loader2, PenLine, CloudRain, Hammer, Flag, ClipboardCheck, AlertTriangle, Camera, X, FileText, Receipt, ChevronRight, FilePlus2, MessageCircle, Send, CreditCard, ShieldCheck, Star, PartyPopper, Upload, Paperclip, CalendarDays, Inbox, Sparkles, ThumbsUp, ThumbsDown, BookOpen, ChevronDown, Download, FolderOpen, Wrench, Share2, Copy, Users,
 } from 'lucide-react';
+import { getLang } from '@/components/i18n/PageTranslator';
 
 /**
  * DocExperience v2 — the animated layer of the customer document links.
@@ -954,7 +955,7 @@ export function AssistantSection({ token, onHandoff }: { token: string; onHandof
     const question = text.trim(); if (!question || busy) return;
     setBusy(true); setError(null); setQ('');
     try {
-      const r = await fetch('/api/estimate/' + token + '/assistant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }) });
+      const r = await fetch('/api/estimate/' + token + '/assistant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question, lang: getLang() }) });
       const d = await r.json();
       if (!r.ok || d.error) { setError(d.error || 'Could not answer that right now.'); }
       else { setTurns((t) => [{ q: question, log_id: d.log_id, answer: d.answer, sources: d.sources || [], handoff: d.handoff }, ...t]); if (d.handoff) onHandoff(); }

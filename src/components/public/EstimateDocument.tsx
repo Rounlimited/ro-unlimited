@@ -14,6 +14,7 @@ import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 import { downloadPdfBlob } from '@/lib/pdf-preview';
 import { docStage } from '@/lib/doc-stage';
 import { estimateDisplayDate } from '@/lib/estimates';
+import PageTranslator, { LangSwitch, useLang } from '@/components/i18n/PageTranslator';
 
 /* ─── Types ──────────────────────────────────────────────── */
 
@@ -435,6 +436,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
   const optionGroups: PublicOptionGroup[] = estimate?.options || [];
   const optionsLocked = !!(estimate?.signed_at || estimate?.options_materialized_at);
   const docViewer: DocViewer = ((estimate as any)?.viewer as DocViewer) || { kind: 'owner' };
+  const lang = useLang();
   const localDelta = optionGroups.reduce(
     (sum, g) => sum + g.choices.filter((c) => selections.has(c.id)).reduce((s2, c) => s2 + Number(c.price_delta), 0),
     0
@@ -519,6 +521,8 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
             <img src="/ro-co-logo-v2.png" alt="RO Unlimited Co." className="h-8 w-auto" />
           </span>
           )}
+          <div className="flex items-center gap-2">
+          {!inPortal && <LangSwitch />}
           <button
             onClick={() => document.getElementById('accept-sign')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
             className="inline-flex items-center gap-2 min-h-[48px] px-5 rounded-xl text-[15px] font-bold text-black shadow-sm active:scale-[0.98] transition-transform"
@@ -526,6 +530,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
           >
             {estimate.signed_at ? 'Signed ✓' : 'Review & Sign'}
           </button>
+          </div>
         </div>
         )}
 
@@ -1022,6 +1027,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
         </div>
         {/* First-visit tour + floating Help (not when RO previews from the admin app) */}
         <PortalGuide mode={estimate.signed_at ? 'project' : 'proposal'} hide={showBackBar && !inPortal} />
+        {!inPortal && <PageTranslator token={token} />}
       </main>
       </ViewerContext.Provider>
 
@@ -1035,6 +1041,11 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
 
       {/* ─── Accept & Sign ──────────────────────────────────── */}
       <div id="accept-sign" data-track="sign" className="max-w-2xl mx-auto px-4 pb-4">
+        {lang === 'es' && !estimate.signed_at && (
+          <p data-no-translate className="mb-3 rounded-xl px-4 py-3 text-[16px] leading-snug" style={{ background: '#eef4fb', color: '#1e3a5f', border: '1px solid #c9dcf0' }}>
+            Esta traducción al español es solo de referencia. La versión en inglés de este documento es la que rige el contrato. ¿Preguntas? Llámenos al (864) 304-0139.
+          </p>
+        )}
         {docViewer.kind === 'member' && !estimate.signed_at ? (
           <div className="rounded-2xl bg-white border p-5 text-[17px] leading-snug text-[#2a2a2a]" style={{ borderColor: '#e5e0d2' }}>
             <p className="font-bold text-[19px] mb-1">Signing is up to the owner</p>

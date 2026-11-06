@@ -22,7 +22,7 @@ Hard rules:
 
 Respond with ONLY a JSON object: {"answer": string|null, "sources": string[], "confidence": "high"|"low", "handoff": boolean}`;
 
-export async function askAssistant(args: { estimateId: string; question: string; customerName?: string | null }): Promise<AssistantReply> {
+export async function askAssistant(args: { estimateId: string; question: string; customerName?: string | null; lang?: 'en' | 'es' }): Promise<AssistantReply> {
   const supabase = createAdminClient();
   const q = String(args.question || '').trim().slice(0, 600);
   const blank: AssistantReply = { log_id: '', answer: null, sources: [], confidence: 'low', handoff: true, question_id: null };
@@ -41,7 +41,7 @@ export async function askAssistant(args: { estimateId: string; question: string;
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST', headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 600, system: SYSTEM, messages: [{ role: 'user', content: `FACTS\n${built.facts}\n\nCUSTOMER QUESTION: ${q}` }] }),
+        body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 600, system: SYSTEM, messages: [{ role: 'user', content: `FACTS\n${built.facts}\n\nCUSTOMER QUESTION: ${q}${args.lang === 'es' ? '\n\nThe customer is reading the page in Spanish: write the answer text in natural Latin American Spanish (usted). Keep names, numbers, dates and money exact.' : ''}` }] }),
       });
       if (res.ok) {
         const data = await res.json();

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const est = await estimateFor(params.token);
     if ('error' in est) return est.error;
     const body = await req.json().catch(() => ({}));
-    const out = await askAssistant({ estimateId: est.id, question: String(body.question || ''), customerName: est.name });
+    const out = await askAssistant({ estimateId: est.id, question: String(body.question || ''), customerName: est.name, lang: body.lang === 'es' ? 'es' : 'en' });
     if (out.error) return NextResponse.json({ error: out.error }, { status: 400 });
     return NextResponse.json(out);
   } catch (err) {

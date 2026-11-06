@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { COMPANY } from '@/lib/constants';
+import { LangSwitch } from '@/components/i18n/PageTranslator';
 
 /**
  * PortalGuide — first-visit tour + always-there Help button for the customer
@@ -235,7 +236,7 @@ export default function PortalGuide({ mode, hide: hideProp = false }: { mode: Gu
         <div className="fixed z-[96] flex items-end sm:items-center justify-center" style={{ top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)' }} onClick={() => setHelpOpen(false)}>
           <div role="dialog" aria-modal="true" aria-labelledby="ro-help-title" className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col" style={{ maxHeight: '88vh', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }} onClick={(e) => e.stopPropagation()}>
             <div className="px-5 pt-5 pb-3 flex items-center justify-between gap-3 border-b" style={{ borderColor: '#efece4' }}>
-              <h2 id="ro-help-title" className="text-[22px] font-bold text-[#1a1a1a]">How can we help?</h2>
+              <div className="min-w-0"><h2 id="ro-help-title" className="text-[22px] font-bold text-[#1a1a1a]">How can we help?</h2><LangSwitch className="mt-2" /></div>
               <button type="button" onClick={() => setHelpOpen(false)} aria-label="Close help" className="min-w-[48px] min-h-[48px] rounded-full text-[26px] leading-none text-[#4b5563] bg-[#f1efe8]">×</button>
             </div>
             <div className="overflow-y-auto px-5 py-4 space-y-2">
