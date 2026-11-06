@@ -84,7 +84,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         const s = x.meta && x.meta.section; if (s) sections[s] = (sections[s] || 0) + 1;
       }
     }
-    for (const m of msgs.data || []) acts.push({ at: m.created_at, who: (m.member_id && nameOf.get(m.member_id)) || m.author_name || ownerName, kind: 'question', what: 'Asked a question', detail: String(m.body || '').slice(0, 140) });
+    for (const m of msgs.data || []) acts.push({ at: m.created_at, who: (m.member_id && nameOf.get(m.member_id)) || ownerName, kind: 'question', what: 'Asked a question', detail: String(m.body || '').slice(0, 140) });
     for (const co of cos.data || []) {
       const at = co.status === 'approved' ? co.approved_at : co.declined_at; if (!at) continue;
       acts.push({ at, who: co.decided_by || co.approved_name || ownerName, kind: co.status === 'approved' ? 'approve' : 'decline', what: `${co.status === 'approved' ? 'Approved' : 'Declined'} a change`, detail: co.title });

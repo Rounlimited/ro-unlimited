@@ -134,7 +134,8 @@ export default function ProjectPageHub({ estimateId, onClose, initialTab = 'shar
     const btn = wrap.querySelector(`[data-tab="${tab}"]`) as HTMLElement | null; if (!btn) return;
     const vars = { x: btn.offsetLeft, width: btn.offsetWidth };
     if (instant || reduced) gsap.set(ind, vars); else gsap.to(ind, { ...vars, duration: 0.45, ease: 'power3.out' });
-    try { btn.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest', inline: 'center' }); } catch {}
+    // Scroll ONLY the tab row (scrollIntoView also scrolled the sheet sideways)
+    try { wrap.scrollTo({ left: Math.max(0, btn.offsetLeft - wrap.clientWidth / 2 + btn.offsetWidth / 2), behavior: reduced ? 'auto' : 'smooth' }); } catch { wrap.scrollLeft = Math.max(0, btn.offsetLeft - wrap.clientWidth / 2 + btn.offsetWidth / 2); }
   }, [tab, reduced]);
   useLayoutEffect(() => { moveIndicator(); }, [moveIndicator, d]);
   useEffect(() => { const r = () => moveIndicator(true); window.addEventListener('resize', r); return () => window.removeEventListener('resize', r); }, [moveIndicator]);
