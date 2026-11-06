@@ -181,6 +181,7 @@ function divisionLabel(v: string): string {
  *                           standalone header/footer; the portal shell has its own)
  */
 export default function EstimateDocument({ token, inPortal = false }: { token: string; inPortal?: boolean }) {
+  const lang = useLang(); // hooks first — never after an early return (React #310)
 
   const [estimate, setEstimate] = useState<EstimateData | null>(null);
   const [selections, setSelections] = useState<Set<string>>(new Set());
@@ -436,7 +437,6 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
   const optionGroups: PublicOptionGroup[] = estimate?.options || [];
   const optionsLocked = !!(estimate?.signed_at || estimate?.options_materialized_at);
   const docViewer: DocViewer = ((estimate as any)?.viewer as DocViewer) || { kind: 'owner' };
-  const lang = useLang();
   const localDelta = optionGroups.reduce(
     (sum, g) => sum + g.choices.filter((c) => selections.has(c.id)).reduce((s2, c) => s2 + Number(c.price_delta), 0),
     0
