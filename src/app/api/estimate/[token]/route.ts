@@ -277,6 +277,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       disclaimers: disclaimerResult?.data || [],
       options,
       stage,
+      share_enabled: !__rt.member && !!(estimate as any).allow_customer_share, // SHARE_ENABLED
       viewer: viewerOf(__rt.member), // VIEWER: owner, or a person it was shared with (+ their role)
       progress,
       story,

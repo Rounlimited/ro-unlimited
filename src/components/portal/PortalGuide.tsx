@@ -43,6 +43,7 @@ const STEPS: Record<GuideMode, Step[]> = {
     { target: '#requests', title: 'Things we asked for', body: 'If we need something from you — a document, a photo, a choice — it’s here. You can upload straight from your phone.' },
     { target: '#questions', title: 'Ask us anything', body: 'Your question comes straight to us. The answer shows here and in your email.' },
     { target: '#assistant', title: 'Project assistant', body: 'Quick answers from your project’s own records. If it isn’t sure, it passes your question to us.' },
+    { target: '#share', title: 'Share it with your people', body: 'Add your spouse, architect or lender. Each person gets their own link to view the project. Approving and signing stay with you.' },
     { target: '#binder', title: 'Your project binder', body: 'Contract, invoices, permits, warranty and care reminders — kept together for when you need them.' },
     { target: '#ro-help-btn', title: 'Help is always here', body: 'Tap Help any time for answers, to see this tour again, or to call us.' },
   ],
@@ -74,6 +75,7 @@ const FAQ: Record<GuideMode, Faq[]> = {
     { q: 'Where are my contract, invoices and warranty?', a: 'They stay with your project. When the job is finished, everything is gathered in your Project Binder on this page.' },
     { q: 'How do I see this on another device?', a: 'Sign in at rounlimited.com/my with your email. Set a password under Account so you don’t need an email link each time.' },
     { q: 'Can I get fewer emails?', a: 'Yes. Sign in at rounlimited.com/my and choose under Account: every update, a weekly summary, or only when something needs you.' },
+    { q: 'Can I share this page with someone?', a: 'If you see “People on this project” on your page, tap Share this project — each person gets their own link and can view everything. Approving changes and signing stay with you. Don’t see it? Call us and we’ll add them for you.' },
   ],
   home: [
     { q: 'What is this page?', a: 'Your RO account. Every project you have with us is listed here, with anything that needs you at the top.' },

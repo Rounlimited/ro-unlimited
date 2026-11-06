@@ -3,9 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import NumberFlow from '@number-flow/react';
 import {
-  CheckCircle2, Check, Loader2, PenLine, CloudRain, Hammer, Flag, ClipboardCheck,
-  AlertTriangle, Camera, X, FileText, Receipt, ChevronRight,
-  FilePlus2, MessageCircle, Send, CreditCard, ShieldCheck, Star, PartyPopper, Upload, Paperclip, CalendarDays, Inbox, Sparkles, ThumbsUp, ThumbsDown, BookOpen, ChevronDown, Download, FolderOpen, Wrench, Share2, Copy,
+  CheckCircle2, Check, Loader2, PenLine, CloudRain, Hammer, Flag, ClipboardCheck, AlertTriangle, Camera, X, FileText, Receipt, ChevronRight, FilePlus2, MessageCircle, Send, CreditCard, ShieldCheck, Star, PartyPopper, Upload, Paperclip, CalendarDays, Inbox, Sparkles, ThumbsUp, ThumbsDown, BookOpen, ChevronDown, Download, FolderOpen, Wrench, Share2, Copy, Users,
 } from 'lucide-react';
 
 /**
@@ -866,6 +864,81 @@ export function TeamCard() {
         </div>
       </div>
       <p className="text-[15px] text-gray-500 mt-3">After hours, ask your question right here on this page &mdash; it&rsquo;s answered the next business morning and stays on record. If something on site can&rsquo;t wait, call the number above.</p>
+    </section>
+  );
+}
+
+/* ── Share this project: the OWNER invites people (only when RO turned it on) ── */
+type SharePerson = { id: string; name: string; label: string | null; role: string; email: string | null; phone: string | null; added_by_owner: boolean; opened: boolean; link: string | null };
+const SHARE_LABELS = ['Spouse', 'Family', 'Architect', 'Lender', 'Property manager', 'Partner'];
+export function ShareSection({ token, projectName }: { token: string; projectName: string }) {
+  const [people, setPeople] = useState<SharePerson[] | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [f, setF] = useState({ name: '', label: '', email: '', phone: '' });
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState('');
+  const [msg, setMsg] = useState('');
+  const [arm, setArm] = useState<string | null>(null);
+  const load = async () => { try { const d = await (await fetch('/api/estimate/' + token + '/people', { cache: 'no-store' })).json(); setPeople(d.people || []); } catch { setPeople([]); } };
+  useEffect(() => { load(); }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  const add = async () => {
+    setErr(''); setMsg('');
+    if (!f.name.trim()) { setErr('Type their name.'); return; }
+    if (!f.email.trim() && !f.phone.trim()) { setErr('Add their email or mobile number so they can get their link.'); return; }
+    setBusy('add');
+    const d = await fetch('/api/estimate/' + token + '/people', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f) }).then((r) => r.json()).catch(() => null);
+    setBusy(null);
+    if (!d || d.error) { setErr((d && d.error) || 'Could not add them — try again.'); return; }
+    const first = String(d.person.name).split(' ')[0];
+    setMsg(d.emailed ? `Done — we emailed ${first} their own link.` : `Added — text ${first} their link below.`);
+    setF({ name: '', label: '', email: '', phone: '' }); setAdding(false); load();
+  };
+  const remove = async (p: SharePerson) => {
+    if (arm !== p.id) { setArm(p.id); setTimeout(() => setArm(null), 4000); return; }
+    setBusy(p.id);
+    await fetch('/api/estimate/' + token + '/people', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: p.id, remove: true }) }).catch(() => null);
+    setBusy(null); setArm(null); setMsg(`${p.name} no longer has access.`); load();
+  };
+  const sms = (p: SharePerson) => `sms:${p.phone ? p.phone.replace(/[^0-9+]/g, '') : ''}?&body=${encodeURIComponent(`Here's your own link to the ${projectName} project page from RO Unlimited: ${p.link}`)}`;
+  const field = 'w-full min-h-[52px] px-4 rounded-xl border-2 border-gray-300 bg-white text-[17px] text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-[#C9A84C]';
+  return (
+    <section id="share" data-track="share" className="rounded-2xl border bg-white p-5 sm:p-6" style={{ borderColor: '#f0ece2' }}>
+      <p className="text-[13px] font-bold uppercase tracking-wide mb-1 flex items-center gap-1.5" style={{ color: '#8a6d20' }}><Users size={14} /> People on this project</p>
+      <p className="text-[17px] text-[#2a2a2a] leading-snug">Share this page with your spouse, architect or lender. Each person gets their own link and can view everything and ask questions. Approving changes and signing stay with you.</p>
+      {people && people.length > 0 && (
+        <ul className="mt-4 space-y-2">
+          {people.map((p) => (
+            <li key={p.id} className="rounded-xl px-4 py-3" style={{ background: '#faf9f6', border: '1px solid #f0ece2' }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[17px] font-bold text-[#1a1a1a]">{p.name}{p.label ? <span className="font-semibold text-gray-500"> · {p.label}</span> : null}</p>
+                  <p className="text-[15px] text-gray-500">{p.role === 'approver' ? 'Can approve changes' : 'Can view'} · {p.opened ? 'has opened it' : 'hasn’t opened it yet'}{!p.added_by_owner ? ' · added by RO' : ''}</p>
+                </div>
+                {p.added_by_owner && <button type="button" onClick={() => remove(p)} disabled={busy === p.id} className="min-h-[44px] px-3 rounded-lg text-[15px] font-bold flex-shrink-0" style={{ color: arm === p.id ? '#b03434' : '#6b7280', background: arm === p.id ? '#fbeaea' : 'transparent' }}>{busy === p.id ? '…' : arm === p.id ? 'Tap to remove' : 'Remove'}</button>}
+              </div>
+              {p.added_by_owner && p.link && p.phone && <a href={sms(p)} className="mt-2 inline-flex items-center gap-1.5 min-h-[44px] text-[15px] font-bold" style={{ color: '#8a6d20' }}><Send size={15} /> Text them their link</a>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {msg && <p className="mt-3 text-[16px] font-semibold" style={{ color: '#187a4b' }}>{msg}</p>}
+      {!adding ? (
+        <button type="button" onClick={() => { setAdding(true); setMsg(''); }} className="mt-4 w-full min-h-[52px] rounded-xl text-[17px] font-bold text-black flex items-center justify-center gap-2 active:scale-[0.99]" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}><Users size={18} /> Share this project</button>
+      ) : (
+        <div className="mt-4 space-y-3">
+          <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Their name" className={field} />
+          <div className="flex flex-wrap gap-2">
+            {SHARE_LABELS.map((l) => <button key={l} type="button" onClick={() => setF({ ...f, label: f.label === l ? '' : l })} className="min-h-[44px] px-4 rounded-full text-[15px] font-bold" style={f.label === l ? { background: '#fdf6e7', color: '#8a6d20', border: '2px solid #C9A84C' } : { background: '#fff', color: '#4b5563', border: '1px solid #e5e0d2' }}>{l}</button>)}
+          </div>
+          <input value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} type="email" inputMode="email" placeholder="Their email — we’ll send them their link" className={field} />
+          <input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} type="tel" inputMode="tel" placeholder="Or their mobile number" className={field} />
+          {err && <p className="text-[15px] text-[#b03434]">{err}</p>}
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => { setAdding(false); setErr(''); }} className="min-h-[52px] rounded-xl text-[16px] font-bold" style={{ background: '#fff', color: '#4b5563', border: '1px solid #e5e0d2' }}>Cancel</button>
+            <button type="button" onClick={add} disabled={busy === 'add'} className="min-h-[52px] rounded-xl text-[16px] font-bold text-black disabled:opacity-60" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>{busy === 'add' ? 'Adding…' : 'Share'}</button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

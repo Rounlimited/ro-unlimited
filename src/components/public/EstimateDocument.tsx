@@ -8,7 +8,7 @@ import {
   useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp, ShineStyles,
   ProgressSection, StorySection, SitePhotos, DocumentsSection,
   ChangeOrders, AskSection, BalanceDue, CompletionCard, WarrantyCard, FeedbackCard, RequestsSection, NextUpCard, ScheduleSection, InspectionsSection, TeamCard, AssistantSection, GlossarySection, BinderSection, ReferCard,
-  type PublicOptionGroup, ViewerContext, viewerCanAct, type DocViewer,
+  type PublicOptionGroup, ViewerContext, viewerCanAct, type DocViewer, ShareSection,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 import { downloadPdfBlob } from '@/lib/pdf-preview';
@@ -653,6 +653,8 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
         {estimate.glossary && estimate.glossary.length > 0 && <GlossarySection terms={estimate.glossary} />}
 
         {(estimate.stage === 'in_progress' || estimate.stage === 'signed') && <TeamCard />}
+        {/* Owner-only, and only when RO turned on "Let the customer invite people" */}
+        {docViewer.kind === 'owner' && (estimate as any).share_enabled && <ShareSection token={token} projectName={estimate.project_name || estimate.estimate_number} />}
 
         {(estimate.stage === 'in_progress' || estimate.stage === 'complete' || estimate.stage === 'signed') && (
           <AskSection token={token} messages={estimate.messages || []} onSent={reload} />

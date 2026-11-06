@@ -10,7 +10,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   try {
     const supabase = createAdminClient();
     const { data: est } = await supabase.from('estimates')
-      .select('id, share_token, view_count, last_viewed_at, last_viewed_device, signed_name, customer:customers(id, first_name, last_name, company_name, email, phone)')
+      .select('id, share_token, view_count, last_viewed_at, last_viewed_device, signed_name, allow_customer_share, customer:customers(id, first_name, last_name, company_name, email, phone)')
       .eq('id', params.id).maybeSingle();
     if (!est) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const c: any = (est as any).customer;
@@ -23,6 +23,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
         views: est.view_count || 0, last_seen: est.last_viewed_at, last_device: est.last_viewed_device,
       } : null,
       members: await listMembers(params.id),
+      allow_customer_share: !!(est as any).allow_customer_share,
     });
   } catch (e: any) { return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 }); }
 }
@@ -45,6 +46,11 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   try {
     const b = await req.json().catch(() => ({}));
     const supabase = createAdminClient();
+    // CUSTOMER_SHARE_SWITCH: RO decides whether the owner gets "Share this project"
+    if (typeof b.allow_customer_share === 'boolean' && !b.member_id) {
+      await supabase.from('estimates').update({ allow_customer_share: b.allow_customer_share }).eq('id', params.id);
+      return NextResponse.json({ ok: true, allow_customer_share: b.allow_customer_share });
+    }
     const { data: cur } = await supabase.from('project_members').select('*').eq('id', String(b.member_id || '')).eq('estimate_id', params.id).maybeSingle();
     if (!cur) return NextResponse.json({ error: 'Person not found on this project' }, { status: 404 });
     if (b.invite) {

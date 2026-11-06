@@ -12,7 +12,7 @@ import { Loader2, Users, UserPlus, Copy, Check, Mail, MessageSquare, Trash2, Rot
  * kills only their link. JR-sized: 16px+ text, 48px+ targets, words.
  */
 type Activity = { at: string; what: string };
-type Member = { id: string; name: string; email: string | null; phone: string | null; label: string | null; role: 'viewer' | 'approver'; link: string; invited_at: string | null; first_seen_at: string | null; last_seen_at: string | null; view_count: number; revoked_at: string | null; activity: Activity[] };
+type Member = { id: string; added_by: string | null; name: string; email: string | null; phone: string | null; label: string | null; role: 'viewer' | 'approver'; link: string; invited_at: string | null; first_seen_at: string | null; last_seen_at: string | null; view_count: number; revoked_at: string | null; activity: Activity[] };
 type Owner = { name: string; email: string | null; phone: string | null; link: string | null; views: number; last_seen: string | null; last_device: string | null } | null;
 
 const LABELS = ['Spouse', 'Architect', 'Engineer', 'Lender', 'Property manager', 'Partner'];
@@ -33,6 +33,8 @@ export default function ProjectPeople({ estimateId }: { estimateId: string }) {
   const api = `/api/admin/estimates/${estimateId}/people`;
   const [owner, setOwner] = useState<Owner>(null);
   const [members, setMembers] = useState<Member[] | null>(null);
+  const [share, setShare] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export default function ProjectPeople({ estimateId }: { estimateId: string }) {
   const [addErr, setAddErr] = useState('');
 
   const load = useCallback(async () => {
-    try { const d = await (await fetch(api, { cache: 'no-store' })).json(); setOwner(d.owner || null); setMembers(d.members || []); } catch { setMembers([]); }
+    try { const d = await (await fetch(api, { cache: 'no-store' })).json(); setOwner(d.owner || null); setMembers(d.members || []); setShare(!!d.allow_customer_share); } catch { setMembers([]); }
   }, [api]);
   useEffect(() => { load(); }, [load]);
 
@@ -78,6 +80,22 @@ export default function ProjectPeople({ estimateId }: { estimateId: string }) {
       <p className="text-[18px] font-bold flex items-center gap-2"><Users size={19} style={{ color: '#D4B965' }} /> People on this project</p>
       <p className="text-[14px] text-white/45 mt-0.5 mb-3">Everyone gets their own link, and what they do is tracked under their name. You choose who can approve.</p>
 
+      {/* OWNER_SHARE_TOGGLE: whether the customer can invite people from their own page */}
+      <button disabled={shareBusy || !members} onClick={async () => {
+          setShareBusy(true);
+          const d = await fetch(api, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ allow_customer_share: !share }) }).then((r) => r.json()).catch(() => null);
+          if (d && d.ok) setShare(!!d.allow_customer_share); setShareBusy(false);
+        }}
+        className="w-full mb-3 min-h-[56px] px-4 rounded-xl flex items-center justify-between gap-3 text-left disabled:opacity-60" style={share ? goldSoft : soft}>
+        <span className="min-w-0">
+          <span className="block text-[16px] font-bold">Let the customer invite people</span>
+          <span className="block text-[13px]" style={{ color: share ? 'rgba(212,185,101,0.8)' : 'rgba(255,255,255,0.45)' }}>{share ? 'On — they see “Share this project” on their page. Their invites are view-only.' : 'Off — only you can add people.'}</span>
+        </span>
+        <span className="flex-shrink-0 relative inline-flex items-center w-14 h-8 rounded-full" style={{ background: share ? '#C9A84C' : 'rgba(255,255,255,0.15)' }}>
+          {shareBusy ? <Loader2 size={16} className="animate-spin mx-auto text-black" /> : <span className="absolute w-6 h-6 rounded-full bg-white shadow" style={{ left: share ? 28 : 4, transition: 'left 0.2s' }} />}
+        </span>
+      </button>
+
       {!members ? <div className="py-4 flex items-center gap-2 text-white/40"><Loader2 size={18} className="animate-spin" /> Loading…</div> : (
         <div className="space-y-2">
           {owner && (
@@ -99,7 +117,7 @@ export default function ProjectPeople({ estimateId }: { estimateId: string }) {
                 <button onClick={() => setOpen(isOpen ? null : m.id)} className="w-full text-left flex items-start justify-between gap-3">
                   <span className="min-w-0">
                     <span className="block text-[16px] font-bold text-white">{m.name}{m.label ? <span className="text-white/50 font-semibold"> · {m.label}</span> : null}</span>
-                    <span className="block text-[14px] font-semibold" style={{ color: m.role === 'approver' ? '#D4B965' : 'rgba(255,255,255,0.55)' }}>{m.role === 'approver' ? 'Can approve' : 'Can view'}</span>
+                    <span className="block text-[14px] font-semibold" style={{ color: m.role === 'approver' ? '#D4B965' : 'rgba(255,255,255,0.55)' }}>{m.role === 'approver' ? 'Can approve' : 'Can view'}{m.added_by === 'owner' ? <span className="text-white/45 font-normal"> · added by the customer</span> : null}</span>
                     <span className="block text-[14px] text-white/40">{m.view_count ? `Opened ${m.view_count} time${m.view_count === 1 ? '' : 's'} · last ${ago(m.last_seen_at)}` : m.invited_at ? `Invited ${ago(m.invited_at)} · hasn’t opened it yet` : 'Hasn’t opened it yet'}</span>
                   </span>
                   {isOpen ? <ChevronUp size={20} className="text-white/40 mt-1" /> : <ChevronDown size={20} className="text-white/40 mt-1" />}
