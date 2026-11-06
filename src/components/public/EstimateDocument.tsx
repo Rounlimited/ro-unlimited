@@ -8,7 +8,7 @@ import {
   useDocIntro, ReadingProgress, OptionsSection, StickyTotalBar, CeremonyDone, SignatureStamp, ShineStyles,
   ProgressSection, StorySection, SitePhotos, DocumentsSection,
   ChangeOrders, AskSection, BalanceDue, CompletionCard, WarrantyCard, FeedbackCard, RequestsSection, NextUpCard, ScheduleSection, InspectionsSection, TeamCard, AssistantSection, GlossarySection, BinderSection, ReferCard,
-  type PublicOptionGroup,
+  type PublicOptionGroup, ViewerContext, viewerCanAct, type DocViewer,
 } from '@/components/public/DocExperience';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 import { downloadPdfBlob } from '@/lib/pdf-preview';
@@ -434,6 +434,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
 
   const optionGroups: PublicOptionGroup[] = estimate?.options || [];
   const optionsLocked = !!(estimate?.signed_at || estimate?.options_materialized_at);
+  const docViewer: DocViewer = ((estimate as any)?.viewer as DocViewer) || { kind: 'owner' };
   const localDelta = optionGroups.reduce(
     (sum, g) => sum + g.choices.filter((c) => selections.has(c.id)).reduce((s2, c) => s2 + Number(c.price_delta), 0),
     0
@@ -485,7 +486,14 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
     <div className="min-h-screen bg-[#f8f8f6]">
       <ReadingProgress />
       <ShineStyles />
+      <ViewerContext.Provider value={docViewer}>
       <main id="doc-main" className={`max-w-4xl mx-auto px-4 space-y-4 pb-32 ${inPortal ? 'pt-3' : 'py-6 sm:py-10'}`}>
+        {/* Shared with someone (People on this project): say who they are and what they can do */}
+        {docViewer.kind === 'member' && (
+          <div className="rounded-xl px-4 py-3 text-[16px] leading-snug" style={{ background: '#eef4fb', color: '#1e3a5f', border: '1px solid #c9dcf0' }}>
+            You&rsquo;re viewing this as <strong>{docViewer.name}</strong>{docViewer.label ? ` (${docViewer.label})` : ''}. {docViewer.role === 'approver' ? 'You can approve changes and send documents. Only the owner signs the contract.' : 'You can see everything and ask questions here.'}
+          </div>
+        )}
 
         {/* ─── Back bar — only when opened from the admin app / standalone PWA ── */}
         {showBackBar && !inPortal && (
@@ -825,7 +833,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
             onToggle={toggleChoice}
             onConfirm={confirmSelections}
             confirmedAt={estimate.selections_confirmed_at || null}
-            locked={optionsLocked}
+            locked={optionsLocked || !viewerCanAct(docViewer)}
             busy={confirmBusy}
             dirty={selectionsDirty}
           />
@@ -1013,6 +1021,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
         {/* First-visit tour + floating Help (not when RO previews from the admin app) */}
         <PortalGuide mode={estimate.signed_at ? 'project' : 'proposal'} hide={showBackBar && !inPortal} />
       </main>
+      </ViewerContext.Provider>
 
       <StickyTotalBar
         baseTotal={Number(estimate.total) || 0}
@@ -1024,6 +1033,12 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
 
       {/* ─── Accept & Sign ──────────────────────────────────── */}
       <div id="accept-sign" data-track="sign" className="max-w-2xl mx-auto px-4 pb-4">
+        {docViewer.kind === 'member' && !estimate.signed_at ? (
+          <div className="rounded-2xl bg-white border p-5 text-[17px] leading-snug text-[#2a2a2a]" style={{ borderColor: '#e5e0d2' }}>
+            <p className="font-bold text-[19px] mb-1">Signing is up to the owner</p>
+            <p>You can review everything on this page. When the owner is ready, they sign from their own link.</p>
+          </div>
+        ) : (
         <EstimateSignCard
           token={String(token)}
           estimate={estimate}
@@ -1032,6 +1047,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
           finalTotal={(Number(estimate.total) || 0) + (optionsLocked ? 0 : localDelta)}
           onSigned={(name, at) => setEstimate({ ...estimate, signed_at: at, signed_name: name, status: 'accepted', options_materialized_at: at } as any)}
         />
+        )}
       </div>
 
       {/* ─── Footer (the portal shell has its own) ─── */}

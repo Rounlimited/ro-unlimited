@@ -253,7 +253,9 @@ export async function recordDocumentEvent(args: RecordArgs): Promise<RecordResul
     const isPdf = event === 'pdf_view' || event === 'pdf_download';
     let isFirstView = false;
 
-    if (isView || isPdf) {
+    // A shared person's views live on their own row (project_members), not the owner's counters.
+    const byMember = !!(args.meta && (args.meta as any).member_id);
+    if ((isView || isPdf) && !byMember) {
       const { data: cur } = await supabase.from(table)
         .select('view_count, pdf_count, first_viewed_at').eq('id', doc.id).single();
       const now = new Date().toISOString();
@@ -271,7 +273,8 @@ export async function recordDocumentEvent(args: RecordArgs): Promise<RecordResul
     // ── Alerts: first open, PDF download, signature. Once each per document
     // for first-open; PDF downloads alert each time (it's a strong signal).
     const number = doc.estimate_number || doc.invoice_number || '';
-    const who = doc.customer
+    const memberName = args.meta && (args.meta as any).member_name ? String((args.meta as any).member_name) : '';
+    const who = memberName ? memberName : doc.customer
       ? (doc.customer.company_name || [doc.customer.first_name, doc.customer.last_name].filter(Boolean).join(' ').trim())
       : '';
     const where = describeLocation(visitor);

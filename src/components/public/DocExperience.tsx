@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import NumberFlow from '@number-flow/react';
 import {
   CheckCircle2, Check, Loader2, PenLine, CloudRain, Hammer, Flag, ClipboardCheck,
@@ -20,6 +20,14 @@ import {
  */
 
 /* ── Shine sweep — the admin invoice-button shimmer, document edition ── */
+/** Who is looking at the page: the owner, or a person it was shared with (People on this project). */
+export type DocViewer = { kind: 'owner' } | { kind: 'member'; id: string; name: string; label: string | null; role: 'viewer' | 'approver' };
+export const ViewerContext = createContext<DocViewer>({ kind: 'owner' });
+export const viewerCanAct = (v: DocViewer) => v.kind === 'owner' || v.role === 'approver';
+function ViewOnlyNote({ what }: { what: string }) {
+  return <p className="mt-3 rounded-xl px-4 py-3 text-[16px] leading-snug" style={{ background: '#f3f1ea', color: '#4b5563', border: '1px solid #e5e0d2' }}>You can see this, but {what} is up to the owner. Questions? Ask below or call (864) 304-0139.</p>;
+}
+
 export function ShineStyles() {
   return (
     <style>{`
@@ -689,6 +697,7 @@ export function RequestsSection({ token, requests, onDone }: { token: string; re
   const [busy, setBusy] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
+  const viewer = useContext(ViewerContext);
   const open = requests.filter((r) => r.status === 'open');
   const submitted = requests.filter((r) => r.status === 'submitted');
   const done = requests.filter((r) => r.status === 'done');
@@ -746,6 +755,8 @@ export function RequestsSection({ token, requests, onDone }: { token: string; re
                   </button>
                 </div>
               </div>
+            ) : !viewerCanAct(viewer) ? (
+              <ViewOnlyNote what="sending this" />
             ) : (
               <button type="button" onClick={() => { setActive(r.id); setError(null); }} className="mt-3 w-full min-h-[52px] rounded-xl text-[16px] font-bold text-black flex items-center justify-center gap-2 active:scale-[0.99]" style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>
                 {r.kind === 'document' ? <><Upload size={18} /> Upload it</> : <><Send size={18} /> Answer</>}
@@ -1168,6 +1179,7 @@ export function ChangeOrders({ token, orders, onDone }: {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const viewer = useContext(ViewerContext);
 
   if (!orders.length) return null;
   const money = (n: number) => (n >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(n)).toLocaleString();
@@ -1234,7 +1246,8 @@ export function ChangeOrders({ token, orders, onDone }: {
                 <p className="text-[15px] font-semibold mt-3 text-[#6b7280]">Declined — we&rsquo;ll leave it out.</p>
               )}
 
-              {!done && !open && (
+              {!done && !open && !viewerCanAct(viewer) && <ViewOnlyNote what="approving changes" />}
+              {!done && !open && viewerCanAct(viewer) && (
                 <button onClick={() => { setOpenId(o.id); setError(null); }}
                   className="w-full min-h-[52px] mt-3 rounded-xl text-[16px] font-bold text-black active:scale-[0.99]"
                   style={{ background: '#C9A84C' }}>

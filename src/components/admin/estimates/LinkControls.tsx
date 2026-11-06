@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Link2, X, Pause, Play, RefreshCw, Trash2, Copy, Check, Eye, ExternalLink } from 'lucide-react';
+import ProjectPeople from './ProjectPeople';
 
 /**
  * Link Controls — the ONE place for everything about a customer link.
@@ -200,6 +201,9 @@ export default function LinkControlsSheet({ estimateId, kind = 'estimate', onClo
             <p className="text-[13px] text-white/30 mt-4">
               Pausing beats killing for a quick phone-call fix — the customer keeps the same link and it just comes back on.
             </p>
+
+            {/* People on this project — personal links, view vs approve, per-person activity */}
+            {kind === 'estimate' && <ProjectPeople estimateId={estimateId} />}
           </>
         )}
       </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { notifyTeam } from '@/lib/alerts';
 import { recalcEstimateTotals, syncScheduleAmounts } from '@/lib/estimates';
+import { resolveToken, canAct, whoLabel, viewerOf, touchMember } from '@/lib/project-members';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,17 +15,19 @@ const money = (n: number) => (n >= 0 ? '+' : '−') + '$' + Math.abs(Math.round(
  */
 export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
   try {
+    const __rt = await resolveToken(params.token);
     const supabase = createAdminClient();
     const body = await req.json();
     const id = String(body.change_order_id || '');
     const decision = body.decision === 'decline' ? 'decline' : 'approve';
 
     if (!id) return NextResponse.json({ error: 'Which change order?' }, { status: 400 });
+    if (!canAct(__rt.member)) return NextResponse.json({ error: 'You can view this project, but approving and sending documents is up to the owner. Ask them or call RO at (864) 304-0139.' }, { status: 403 });
 
     const { data: est } = await supabase
       .from('estimates')
       .select('*')
-      .eq('share_token', params.token)
+      .eq('share_token', __rt.token)
       .single();
     if (!est) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     if ((est as any).link_enabled === false) {
@@ -46,12 +49,14 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
         status: 'declined',
         declined_at: new Date().toISOString(),
         decline_reason: (body.reason || '').toString().slice(0, 500) || null,
+        decided_member_id: __rt.member ? __rt.member.id : null,
+        decided_by: whoLabel(__rt.member, 'Owner'),
       }).eq('id', id);
 
       await notifyTeam({
         type: 'change_order_declined',
         title: `Change order declined — ${est.project_name || est.estimate_number}`,
-        body: `${co.title} · ${money(Number(co.amount))}`,
+        body: `${co.title} · ${money(Number(co.amount))} · by ${whoLabel(__rt.member, 'the owner')}`,
         url: `/admin/estimates/${est.id}`, reference_id: est.id, tag: `co-${id}`,
       } as any);
 
@@ -66,6 +71,8 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       approved_at: new Date().toISOString(),
       approved_name: name,
       signature_url: body.signature_url || null,
+      decided_member_id: __rt.member ? __rt.member.id : null,
+      decided_by: whoLabel(__rt.member, 'Owner'),
     }).eq('id', id);
 
     // Approved extra work is part of the contract, so the total has to follow

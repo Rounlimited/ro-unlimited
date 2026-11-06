@@ -14,7 +14,7 @@ type Project = {
   stage: 'proposal' | 'signed' | 'in_progress' | 'complete' | 'closed'; percent: number; total: number;
   href: string | null;
   latest: { date: string; text: string; photos: number } | null;
-  needs: string[]; next: { date: string; title: string } | null; questions_waiting: number; next_service?: { title: string; date: string } | null;
+  needs: string[]; next: { date: string; title: string } | null; shared_as?: { role: string; label: string | null } | null; questions_waiting: number; next_service?: { title: string; date: string } | null;
 };
 const STAGE: Record<Project['stage'], { label: string; color: string; bg: string }> = {
   in_progress: { label: 'In progress', color: '#8a6d20', bg: '#fdf6e7' },
@@ -74,6 +74,7 @@ export default function PortalHome() {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[21px] font-bold text-[#1a1a1a] leading-tight">{p.name}</p>
+                {p.shared_as && <p className="text-[15px] font-semibold mt-0.5" style={{ color: '#1e3a5f' }}>Shared with you{p.shared_as.label ? ` as ${p.shared_as.label.toLowerCase()}` : ''} · {p.shared_as.role === 'approver' ? 'you can approve changes' : 'view only'}</p>}
                 {p.address && <p className="text-[15px] text-gray-500 mt-0.5">{p.address}</p>}
               </div>
               <ChevronRight size={22} className="text-gray-400 shrink-0 mt-1" />

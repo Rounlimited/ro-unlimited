@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { notifyTeam } from '@/lib/alerts';
+import { resolveToken, canAct, whoLabel, viewerOf, touchMember } from '@/lib/project-members';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
   try {
+    const __rt = await resolveToken(params.token);
     const supabase = createAdminClient();
     const body = await req.json();
     const kind = String(body.kind || '');
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     const { data: est } = await supabase
       .from('estimates')
       .select('id, link_enabled, estimate_number, project_name, signed_at, feedback_enabled, reviews_enabled, customer:customers(first_name, last_name, company_name)')
-      .eq('share_token', params.token)
+      .eq('share_token', __rt.token)
       .single();
     if (!est || !est.signed_at) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     if ((est as any).link_enabled === false) {
@@ -44,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       .eq('estimate_id', est.id).gte('created_at', dayAgo);
     if ((count || 0) >= 25) return NextResponse.json({ error: 'Please call us — (864) 304-0139' }, { status: 429 });
 
-    const row: any = { estimate_id: est.id, kind };
+    const row: any = { estimate_id: est.id, kind, member_id: __rt.member ? __rt.member.id : null };
     const text = String(body.body || '').trim().slice(0, 2000) || null;
 
     if (kind === 'comment') {

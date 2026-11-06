@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCustomerSession } from '@/lib/customer-auth';
+import { membershipsFor } from '@/lib/project-members';
 import EstimateDocument from '@/components/public/EstimateDocument';
 import PortalProjectBar from '@/components/portal/PortalProjectBar';
 
@@ -14,9 +15,18 @@ export default async function PortalProjectPage({ params }: { params: { id: stri
   const session = await getCustomerSession();
   if (!session) return null; // the shell shows the sign-in screen
   const supabase = createAdminClient();
-  const { data: est } = await supabase.from('estimates')
+  const { data: owned } = await supabase.from('estimates')
     .select('id, project_name, estimate_number, share_token, customer:customers!inner(email)')
     .eq('id', params.id).ilike('customer.email', session.email).maybeSingle();
+  let est: { project_name: string | null; estimate_number: string; share_token: string | null } | null = owned as any;
+  if (!est) {
+    // Shared with this email → open through their personal link, so their role and name apply.
+    const m = (await membershipsFor(session.email)).find((x) => x.estimate_id === params.id);
+    if (m) {
+      const { data: e } = await supabase.from('estimates').select('project_name, estimate_number').eq('id', params.id).maybeSingle();
+      if (e) est = { ...e, share_token: m.token } as any;
+    }
+  }
   if (!est || !est.share_token) {
     return (
       <main className="max-w-2xl mx-auto px-4 py-10">

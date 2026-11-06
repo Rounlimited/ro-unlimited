@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
 import { recordDocumentEvent } from '@/lib/doc-events';
 import { notifyTeam } from '@/lib/alerts';
+import { resolveToken, canAct, whoLabel, viewerOf, touchMember } from '@/lib/project-members';
 
 type RouteContext = { params: { token: string } };
 
@@ -10,7 +11,8 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
-    const { token } = params;
+    const __rt = await resolveToken(params.token);
+    const token = __rt.token;
     const { name, message } = await req.json();
 
     if (!message?.trim()) {
@@ -33,7 +35,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'This link is paused' }, { status: 423 });
     }
 
-    await recordDocumentEvent({ req, docType: 'estimate', doc: estimate as any, event: 'message_sent', meta: { name, length: String(message).length } });
+    await recordDocumentEvent({ req, docType: 'estimate', doc: estimate as any, event: 'message_sent', meta: { name, length: String(message).length, ...(__rt.member ? { member_id: __rt.member.id, member_name: whoLabel(__rt.member) } : {}) } });
     // In-app notification + push (the old insert used a `link` column that
     // doesn't exist, so nobody was being told).
     await notifyTeam({

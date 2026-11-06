@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getCustomerSession, getCustomerPrefs, hasPassword } from '@/lib/customer-auth';
 import { rollUpProgress } from '@/lib/reporting';
+import { membershipsFor } from '@/lib/project-members';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,13 +18,16 @@ export async function GET() {
     const supabase = createAdminClient();
     const { data: custs } = await supabase.from('customers').select('id, first_name, last_name, company_name').ilike('email', s.email);
     const ids = (custs || []).map((c) => c.id);
-    const name = custs?.[0]?.first_name || custs?.[0]?.company_name || null;
-    if (!ids.length) return NextResponse.json({ email: s.email, name, projects: [], prefs: await getCustomerPrefs(s.email), has_password: await hasPassword(s.email) });
+    // SHARED_PROJECTS: projects someone added this email to (People on this project)
+    const memberships = await membershipsFor(s.email);
+    const name = custs?.[0]?.first_name || custs?.[0]?.company_name || (memberships[0] ? memberships[0].name.split(' ')[0] : null) || null;
+    if (!ids.length && !memberships.length) return NextResponse.json({ email: s.email, name, projects: [], prefs: await getCustomerPrefs(s.email), has_password: await hasPassword(s.email) });
 
-    const { data: ests } = await supabase.from('estimates')
-      .select('id, estimate_number, project_name, project_address, project_city, status, total, share_token, link_enabled, signed_at, completed_at, created_at, sent_at, document_mode')
-      .in('customer_id', ids).neq('status', 'draft').order('created_at', { ascending: false }).limit(30);
-    const list = (ests || []) as any[];
+    const SEL = 'id, estimate_number, project_name, project_address, project_city, status, total, share_token, link_enabled, signed_at, completed_at, created_at, sent_at, document_mode';
+    const owned = ids.length ? (((await supabase.from('estimates').select(SEL).in('customer_id', ids).neq('status', 'draft').order('created_at', { ascending: false }).limit(30)).data) || []) as any[] : [];
+    const sharedIds = memberships.map((m) => m.estimate_id).filter((id) => !owned.some((o) => o.id === id));
+    const shared = sharedIds.length ? (((await supabase.from('estimates').select(SEL).in('id', sharedIds).neq('status', 'draft')).data) || []) as any[] : [];
+    const list = [...owned, ...shared.map((e) => { const m = memberships.find((x) => x.estimate_id === e.id)!; return { ...e, share_token: m.token, shared_as: { role: m.role, label: m.label } }; })] as any[];
     if (!list.length) return NextResponse.json({ email: s.email, name, projects: [], prefs: await getCustomerPrefs(s.email), has_password: await hasPassword(s.email) });
     const estIds = list.map((e) => e.id);
     const today = new Date().toISOString().slice(0, 10);
@@ -62,7 +66,12 @@ export async function GET() {
       const latest = (logs.get(e.id) || [])[0] || null;
       const next = (sched.get(e.id) || [])[0] || null;
       const waiting = (msgs.get(e.id) || []).filter((m) => !m.answered_at).length;
+      if (e.shared_as) {
+        if (e.shared_as.role !== 'approver') needs.length = 0;
+        else for (let n = needs.length - 1; n >= 0; n--) if (/sign your|Balance due/.test(needs[n])) needs.splice(n, 1);
+      }
       return {
+        shared_as: e.shared_as || null,
         id: e.id, number: e.estimate_number, name: e.project_name || e.estimate_number,
         address: [e.project_address, e.project_city].filter(Boolean).join(', ') || null,
         stage, percent, total: Number(e.total || 0),

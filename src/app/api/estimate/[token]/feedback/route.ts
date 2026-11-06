@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { notifyTeam } from '@/lib/alerts';
+import { resolveToken, canAct, whoLabel, viewerOf, touchMember } from '@/lib/project-members';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
   try {
+    const __rt = await resolveToken(params.token);
     const supabase = createAdminClient();
     const body = await req.json();
     const rating = Math.round(Number(body.rating) || 0);
@@ -21,7 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     const { data: est } = await supabase
       .from('estimates')
       .select('id, estimate_number, project_name, division, completed_at, customer:customers(first_name, last_name, company_name)')
-      .eq('share_token', params.token)
+      .eq('share_token', __rt.token)
       .single();
     if (!est) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
 

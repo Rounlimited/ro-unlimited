@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { sanityWriteClient } from '@/lib/sanity/client';
 import { submitRequest } from '@/lib/customer-requests';
+import { resolveToken, canAct, whoLabel, viewerOf, touchMember } from '@/lib/project-members';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -12,10 +13,12 @@ const MAX_BYTES = 4 * 1024 * 1024; // Vercel request limit is 4.5MB
 const OK_TYPES = /^(image\/(jpeg|png|webp|heic|heif|gif)|application\/pdf)$/i;
 
 async function estimateFor(token: string) {
-  const { data } = await createAdminClient().from('estimates').select('id, link_enabled').eq('share_token', token).single();
+  const __rt = await resolveToken(token);
+  const { data } = await createAdminClient().from('estimates').select('id, link_enabled').eq('share_token', __rt.token).single();
   if (!data) return { error: NextResponse.json({ error: 'Invalid or expired link' }, { status: 404 }) };
   if ((data as any).link_enabled === false) return { error: NextResponse.json({ error: 'This link is paused' }, { status: 423 }) };
-  return { id: data.id };
+  if (!canAct(__rt.member)) return { error: NextResponse.json({ error: 'You can view this project, but sending documents is up to the owner. Ask them or call RO at (864) 304-0139.' }, { status: 403 }) };
+  return { id: data.id, member: __rt.member };
 }
 
 /** One file at a time (multipart: request_id, file) → { url, name, size, type }. The customer page uploads each, then submits. */
@@ -51,7 +54,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const text = String(body.text || '').trim().slice(0, 2000) || null;
     if (!body.request_id) return NextResponse.json({ error: 'request_id required' }, { status: 400 });
     if (!text && !files.length) return NextResponse.json({ error: 'Add a note or a file first' }, { status: 400 });
-    const out = await submitRequest({ estimateId: est.id, requestId: String(body.request_id), text, files });
+    const out = await submitRequest({ estimateId: est.id, requestId: String(body.request_id), text, files, member: est.member });
     if (!out.request) return NextResponse.json({ error: out.error }, { status: 400 });
     return NextResponse.json({ ok: true, request: out.request });
   } catch (err) {

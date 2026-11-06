@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { notifyTeam } from '@/lib/alerts';
 import { recordDocumentEvent, visitorFromCookies } from '@/lib/doc-events';
+import { resolveToken, canAct, whoLabel, viewerOf, touchMember } from '@/lib/project-members';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
   try {
+    const __rt = await resolveToken(params.token);
     const supabase = createAdminClient();
     const body = await req.json();
     const text = String(body.body || '').trim();
@@ -24,7 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     const { data: est } = await supabase
       .from('estimates')
       .select('id, estimate_number, project_name, division, signed_at, share_token_expires_at, customer:customers(first_name, last_name, company_name)')
-      .eq('share_token', params.token)
+      .eq('share_token', __rt.token)
       .single();
 
     if (!est) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
 
     const { data: msg, error } = await supabase
       .from('project_messages')
-      .insert({ estimate_id: est.id, author: 'customer', author_name: name || null, body: text })
+      .insert({ estimate_id: est.id, author: 'customer', author_name: (__rt.member ? whoLabel(__rt.member) : name) || null, member_id: __rt.member ? __rt.member.id : null, body: text })
       .select()
       .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });

@@ -64,14 +64,14 @@ export async function createRequest(args: { estimateId: string; kind: RequestKin
 }
 
 /** Customer answered or uploaded. */
-export async function submitRequest(args: { estimateId: string; requestId: string; text?: string | null; files: { url: string; name: string; size?: number; type?: string }[] }) {
+export async function submitRequest(args: { estimateId: string; requestId: string; text?: string | null; files: { url: string; name: string; size?: number; type?: string }[]; member?: { id: string; name: string; label: string | null } | null }) {
   const supabase = createAdminClient();
   const { data: row } = await supabase.from('customer_requests').select('id, title, status, files').eq('id', args.requestId).eq('estimate_id', args.estimateId).maybeSingle();
   if (!row) return { error: 'Request not found' };
   if (row.status === 'done' || row.status === 'cancelled') return { error: 'This request is already closed' };
   const files = [...(Array.isArray(row.files) ? row.files : []), ...args.files];
   const { data: upd, error } = await supabase.from('customer_requests')
-    .update({ status: 'submitted', response_text: args.text || null, files, submitted_at: new Date().toISOString() })
+    .update({ status: 'submitted', response_text: args.text || null, files, submitted_at: new Date().toISOString(), submitted_member_id: args.member ? args.member.id : null })
     .eq('id', row.id).select().single();
   if (error) return { error: error.message };
 
@@ -79,7 +79,7 @@ export async function submitRequest(args: { estimateId: string; requestId: strin
   const c: any = est?.customer;
   await notifyTeam({
     type: 'request_submitted',
-    title: `${c?.first_name || c?.company_name || 'Customer'} sent: ${row.title} — ${est?.project_name || est?.estimate_number}`,
+    title: `${args.member ? args.member.name + (args.member.label ? ' (' + args.member.label + ')' : '') : (c?.first_name || c?.company_name || 'Customer')} sent: ${row.title} — ${est?.project_name || est?.estimate_number}`,
     body: args.files.length ? `${args.files.length} file${args.files.length === 1 ? '' : 's'} uploaded${args.text ? ' · ' + String(args.text).slice(0, 100) : ''}` : String(args.text || '').slice(0, 160),
     url: `/admin/jobs/${args.estimateId}`, reference_id: args.estimateId, division: est?.division || null, tag: `request-${row.id}`,
   } as any);

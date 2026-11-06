@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { recordDocumentEvent } from '@/lib/doc-events';
 import { notifyTeam } from '@/lib/alerts';
 import { materializeSelections } from '@/lib/estimate-options';
+import { resolveToken, canAct, whoLabel, viewerOf, touchMember } from '@/lib/project-members';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,10 +17,12 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
   try {
+    const __rt = await resolveToken(params.token);
     const supabase = createAdminClient();
     const body = await req.json();
     const name = String(body.name || '').trim();
     const sig = String(body.signature_data || '');
+    if (__rt.member) return NextResponse.json({ error: 'Only the owner can sign the contract. You can review everything here — RO will reach out to the owner to sign.' }, { status: 403 });
 
     if (name.length < 2) return NextResponse.json({ error: 'Please enter your full name' }, { status: 400 });
     if (!sig.startsWith('data:image/png;base64,') || sig.length < 500) {
@@ -30,7 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     const { data: est } = await supabase
       .from('estimates')
       .select('id, link_enabled, estimate_number, status, document_mode, project_name, division, total, signed_at, share_token_expires_at, customer:customers(first_name, last_name, company_name)')
-      .eq('share_token', params.token)
+      .eq('share_token', __rt.token)
       .single();
     if (!est) return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
     if ((est as any).link_enabled === false) {

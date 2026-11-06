@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { askAssistant, rateAssistant } from '@/lib/assistant';
+import { resolveToken, canAct, whoLabel, viewerOf, touchMember } from '@/lib/project-members';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 type Ctx = { params: { token: string } };
 
 async function estimateFor(token: string) {
-  const { data } = await createAdminClient().from('estimates').select('id, link_enabled, show_assistant, customer:customers(first_name, company_name)').eq('share_token', token).single();
+  const { data } = await createAdminClient().from('estimates').select('id, link_enabled, show_assistant, customer:customers(first_name, company_name)').eq('share_token', (await resolveToken(token)).token).single(); // __rt: personal links resolve too
   if (!data) return { error: NextResponse.json({ error: 'Project not found' }, { status: 404 }) };
   if ((data as any).link_enabled === false) return { error: NextResponse.json({ error: 'This link is paused' }, { status: 423 }) };
   if ((data as any).show_assistant === false) return { error: NextResponse.json({ error: 'The assistant is off for this project — ask RO below.' }, { status: 403 }) };

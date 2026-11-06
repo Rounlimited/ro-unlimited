@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { applySelections } from '@/lib/estimate-options';
 import { recordDocumentEvent } from '@/lib/doc-events';
 import { notifyTeam } from '@/lib/alerts';
+import { resolveToken, canAct, whoLabel, viewerOf, touchMember } from '@/lib/project-members';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,15 +14,17 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
   try {
+    const __rt = await resolveToken(params.token);
     const supabase = createAdminClient();
     const body = await req.json();
     const choiceIds: string[] = Array.isArray(body.choice_ids) ? body.choice_ids.map(String) : [];
     const confirmedBy = String(body.name || '').trim().slice(0, 120);
+    if (!canAct(__rt.member)) return NextResponse.json({ error: 'You can view this project, but approving and sending documents is up to the owner. Ask them or call RO at (864) 304-0139.' }, { status: 403 });
 
     const { data: est } = await supabase
       .from('estimates')
       .select('id, link_enabled, estimate_number, status, document_mode, project_name, division, total, signed_at, share_token_expires_at, customer:customers(first_name, last_name, company_name)')
-      .eq('share_token', params.token)
+      .eq('share_token', __rt.token)
       .single();
     if (!est) return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     if ((est as any).link_enabled === false) {

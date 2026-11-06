@@ -25,7 +25,13 @@ export async function requestLoginLink(emailRaw: string, next?: string | null): 
   const email = norm(emailRaw);
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: true, known: false };
   const supabase = createAdminClient();
-  const { data: cust } = await supabase.from('customers').select('id, first_name, company_name').ilike('email', email).limit(1).maybeSingle();
+  let { data: cust } = await supabase.from('customers').select('id, first_name, company_name').ilike('email', email).limit(1).maybeSingle();
+  if (!cust) {
+    // Someone a Project Page was shared with (People on this project) signs in the same way.
+    const { data: mem } = await supabase.from('project_members').select('id, name').ilike('email', email).is('revoked_at', null).limit(1).maybeSingle();
+    if (!mem) return { ok: true, known: false };
+    cust = { id: mem.id, first_name: String(mem.name || '').split(' ')[0] || null, company_name: null } as any;
+  }
   if (!cust) return { ok: true, known: false };
 
   const token = crypto.randomBytes(24).toString('hex');

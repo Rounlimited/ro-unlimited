@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { recordDocumentEvent, visitorFromCookies, DocEvent } from '@/lib/doc-events';
+import { resolveToken, canAct, whoLabel, viewerOf, touchMember } from '@/lib/project-members';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,7 @@ const ALLOWED: DocEvent[] = ['section_seen', 'time_on_page', 'options_changed'];
  */
 export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
   try {
+    const __rt = await resolveToken(params.token);
     let body: any = {};
     try { body = JSON.parse(await req.text()); } catch { body = {}; }
     const event = String(body.event || '') as DocEvent;
@@ -22,7 +24,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     const { data: est } = await supabase
       .from('estimates')
       .select('id, estimate_number, project_name, division, status, customer:customers(first_name, last_name, company_name)')
-      .eq('share_token', params.token)
+      .eq('share_token', __rt.token)
       .single();
     if (!est) return NextResponse.json({ ok: false }, { status: 404 });
 
@@ -35,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     if (event === 'options_changed') meta.choice = String(body.choice || '').slice(0, 120);
 
     const visitor = visitorFromCookies();
-    await recordDocumentEvent({ req, docType: 'estimate', doc: est as any, event, meta, visitorId: visitor.isNew ? null : visitor.id });
+    await recordDocumentEvent({ req, docType: 'estimate', doc: est as any, event, meta: { ...(meta || {}), ...(__rt.member ? { member_id: __rt.member.id, member_name: whoLabel(__rt.member) } : {}) }, visitorId: visitor.isNew ? null : visitor.id });
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: false }, { status: 500 });

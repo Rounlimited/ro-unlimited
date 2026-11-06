@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { renderEstimatePdf, pdfHeaders } from '@/lib/estimate-pdf-data';
 import { recordDocumentEvent, visitorFromCookies, visitorCookie } from '@/lib/doc-events';
+import { resolveToken, canAct, whoLabel, viewerOf, touchMember } from '@/lib/project-members';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,11 +15,12 @@ type RouteContext = { params: { token: string } };
  */
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
+    const __rt = await resolveToken(params.token);
     const supabase = createAdminClient();
     const { data: estimate, error } = await supabase
       .from('estimates')
       .select('*, customer:customers(*)')
-      .eq('share_token', params.token)
+      .eq('share_token', __rt.token)
       .single();
 
     if (error || !estimate) {
@@ -34,7 +36,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     // ?mode=download from the Download button; anything else is an in-page view.
     const mode = req.nextUrl.searchParams.get('mode') === 'download' ? 'pdf_download' : 'pdf_view';
     const visitor = visitorFromCookies();
-    await recordDocumentEvent({ req, docType: 'estimate', doc: estimate, event: mode, visitorId: visitor.id });
+    await recordDocumentEvent({ req, docType: 'estimate', doc: estimate, event: mode, meta: { ...(__rt.member ? { member_id: __rt.member.id, member_name: whoLabel(__rt.member) } : {}) }, visitorId: visitor.id });
 
     const pdf = await renderEstimatePdf(supabase, estimate);
     const headers: Record<string, string> = pdfHeaders(estimate.estimate_number);

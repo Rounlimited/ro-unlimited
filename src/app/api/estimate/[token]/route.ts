@@ -5,12 +5,14 @@ import { getOptionsWithChoices, selectionsDelta } from '@/lib/estimate-options';
 import { rollUpProgress } from '@/lib/reporting';
 import { recordDocumentEvent, visitorFromCookies, visitorCookie } from '@/lib/doc-events';
 import { getBinder } from '@/lib/handover';
+import { resolveToken, canAct, whoLabel, viewerOf, touchMember } from '@/lib/project-members';
 
 type RouteContext = { params: { token: string } };
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
-    const { token } = params;
+    const __rt = await resolveToken(params.token);
+    const token = __rt.token;
     const supabase = createAdminClient();
 
     const { data: estimate, error } = await supabase
@@ -48,13 +50,15 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     // Log the open (device, location, repeat visits). Staff opening their own
     // link are recorded as internal and don't count or flip the status.
     const visitor = visitorFromCookies();
-    const { internal } = await recordDocumentEvent({ req, docType: 'estimate', doc: estimate, event: 'link_view', visitorId: visitor.id });
+    const { internal } = await recordDocumentEvent({ req, docType: 'estimate', doc: estimate, event: 'link_view', meta: { ...(__rt.member ? { member_id: __rt.member.id, member_name: whoLabel(__rt.member) } : {}) }, visitorId: visitor.id });
     if (!internal && req.nextUrl.searchParams.get('from') === 'email') {
-      await recordDocumentEvent({ req, docType: 'estimate', doc: estimate, event: 'email_clicked', visitorId: visitor.id });
+      await recordDocumentEvent({ req, docType: 'estimate', doc: estimate, event: 'email_clicked', meta: { ...(__rt.member ? { member_id: __rt.member.id, member_name: whoLabel(__rt.member) } : {}) }, visitorId: visitor.id });
     }
 
     // Mark as viewed if currently sent
-    if (estimate.status === 'sent' && !internal) {
+    if (__rt.member && !internal) await touchMember(__rt.member, estimate);
+    // A shared person opening it isn't the owner reviewing the estimate.
+    if (estimate.status === 'sent' && !internal && !__rt.member) {
       const now = new Date().toISOString();
       await supabase.from('estimates').update({ status: 'viewed', viewed_at: now }).eq('id', estimate.id);
       await supabase.from('estimate_status_history').insert({
@@ -273,6 +277,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       disclaimers: disclaimerResult?.data || [],
       options,
       stage,
+      viewer: viewerOf(__rt.member), // VIEWER: owner, or a person it was shared with (+ their role)
       progress,
       story,
       site_photos: sitePhotos,
