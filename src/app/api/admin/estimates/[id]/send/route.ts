@@ -65,37 +65,52 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     // The LINK is the estimate. It's where they review, pick options, sign,
     // and later follow the whole job — so the email points at exactly one
     // thing. No PDF attached; the download lives behind the link.
-    const bodyContent = `
+    // STAGE_AWARE_SEND: a signed job gets "your Project Page", never "review and sign your estimate".
+    const projName = estimate.project_name || estimate.estimate_number;
+    const docWord = estimate.document_mode === 'quick_quote' ? 'quote' : estimate.document_mode === 'contract' ? 'proposal' : 'estimate';
+    const jobBody = `
       ${message ? `<p>${message}</p>` : ''}
-      <p style="font-size:16px;">Your ${estimate.document_mode === 'quick_quote' ? 'quote' : 'estimate'} for
+      <p style="font-size:16px;">Here's your Project Page for <strong>${projName}</strong> — progress, what's coming up, permits and inspections, updates with photos, and your documents, all in one place.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0;">
+        <tr>
+          <td style="background-color:#C9A84C;border-radius:10px;padding:16px 36px;">
+            <a href="${viewLink}?from=email" style="color:#000;text-decoration:none;font-size:17px;font-weight:700;display:inline-block;">Open Your Project Page</a>
+          </td>
+        </tr>
+      </table>
+      <p style="color:#bbb;font-size:14px;">Bookmark it — it stays with your project from the first day to the last. You can also sign in any time at rounlimited.com/my.</p>
+    `;
+    const bodyContent = isSigned ? jobBody : `
+      ${message ? `<p>${message}</p>` : ''}
+      <p style="font-size:16px;">Your ${docWord} for
         <strong>${estimate.project_name || estimate.estimate_number}</strong> is ready.
         Review it, choose your options, and sign — all from your secure link:</p>
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0;">
         <tr>
           <td style="background-color:#C9A84C;border-radius:10px;padding:16px 36px;">
-            <a href="${viewLink}?from=email" style="color:#000;text-decoration:none;font-size:17px;font-weight:700;display:inline-block;">View &amp; Sign Your Estimate</a>
+            <a href="${viewLink}?from=email" style="color:#000;text-decoration:none;font-size:17px;font-weight:700;display:inline-block;">View &amp; Sign Your ${docWord.charAt(0).toUpperCase() + docWord.slice(1)}</a>
           </td>
         </tr>
       </table>
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 20px;width:100%;">
         <tr>
-          <td style="padding:8px 0;color:#999;font-size:13px;width:140px;">Estimate #</td>
+          <td style="padding:8px 0;color:#999;font-size:13px;width:140px;">${docWord.charAt(0).toUpperCase() + docWord.slice(1)} #</td>
           <td style="padding:8px 0;color:#fff;font-size:14px;font-weight:600;">${estimate.estimate_number}</td>
         </tr>
         <tr>
           <td style="padding:8px 0;color:#999;font-size:13px;">Total</td>
           <td style="padding:8px 0;color:#fff;font-size:14px;font-weight:600;">$${Number(estimate.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
         </tr>
-        <tr>
+        ${estimate.valid_until ? `<tr>
           <td style="padding:8px 0;color:#999;font-size:13px;">Valid Until</td>
           <td style="padding:8px 0;color:#fff;font-size:14px;">${validUntil}</td>
-        </tr>
+        </tr>` : ''}
       </table>
       <p style="color:#bbb;font-size:14px;">That link stays with your project — once you approve, it's where you'll follow progress, photos, reports and invoices from the first day to the last.</p>
       <p style="color:#999;font-size:13px;">Prefer paper? There's a Download PDF button on the same page.</p>
     `;
 
-    const subject = `Estimate ${estimate.estimate_number}${estimate.project_name ? ` — ${estimate.project_name}` : ''}`;
+    const subject = isSigned ? `${projName} — your Project Page` : `${docWord.charAt(0).toUpperCase() + docWord.slice(1)} ${estimate.estimate_number}${estimate.project_name ? ` — ${estimate.project_name}` : ''}`;
     const html = buildEmailHtml(recipientName, bodyContent, subject, senderEmail);
 
     // Send via Resend

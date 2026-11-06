@@ -278,7 +278,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
         const res = await fetch(`/api/estimate/${token}${fromEmail ? '?from=email' : ''}`);
         if (fromEmail) window.history.replaceState(null, '', window.location.pathname);
         if (res.status === 410) {
-          setError({ message: 'This estimate link has expired. Please contact us for an updated link.', expired: true });
+          setError({ message: 'This link has expired. Call RO at (864) 304-0139 and we\u2019ll send you a fresh one.', expired: true });
           return;
         }
         if (res.status === 423) {
@@ -286,7 +286,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
           return;
         }
         if (!res.ok) {
-          setError({ message: 'This estimate could not be found.' });
+          setError({ message: 'This link isn\u2019t active. If you think that\u2019s a mistake, call RO at (864) 304-0139 and we\u2019ll get you a working link.' });
           return;
         }
         const data = await res.json();
@@ -959,7 +959,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
         {/* ─── Message Section ────────────────────────────────── */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
           <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-1">Questions or Changes?</h2>
-          <p className="text-[13px] text-gray-400 mb-4">Send us a message about this estimate.</p>
+          <p className="text-[13px] text-gray-400 mb-4">Send us a message about this {stageWord.toLowerCase()}.</p>
 
           {msgSent ? (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">

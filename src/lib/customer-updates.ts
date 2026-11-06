@@ -44,7 +44,7 @@ export async function sendUpdate(args: { estimateId: string; body: string; photo
           <p style="margin:0 0 16px;font-size:17px;color:#222;white-space:pre-line">${esc(text)}</p>
           ${pics ? `<div style="margin:0 0 16px">${pics}</div>` : ''}
           ${photos.length > 4 ? `<p style="margin:0 0 16px;color:#666">${photos.length - 4} more photo${photos.length - 4 === 1 ? '' : 's'} on your project page.</p>` : ''}
-          <p style="margin:0 0 28px"><a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">See Your Project</a></p>
+          <p style="margin:0 0 28px"><a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">Open Your Project Page</a></p>
           <p style="margin:0;color:#666">Questions any time — ask on your page or call (864) 304-0139.</p>`;
         const resend = new Resend(process.env.RESEND_API_KEY);
         const { error: sendErr } = await resend.emails.send({ from: getFromHeader(DEFAULT_FROM_EMAIL), to, subject, html: buildEmailHtml(name, bodyHtml, subject, DEFAULT_FROM_EMAIL) });

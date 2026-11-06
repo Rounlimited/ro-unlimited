@@ -32,7 +32,7 @@ export async function emailCustomerFact(args: { estimateId: string; kind: 'neede
       <p style="margin:0 0 16px">Hi ${esc(name)},</p>
       <p style="margin:0 0 12px;font-size:18px;font-weight:bold;color:#222">${esc(args.headline)}</p>
       ${args.detail ? `<p style="margin:0 0 16px;color:#444;white-space:pre-line">${esc(args.detail)}</p>` : ''}
-      <p style="margin:0 0 28px"><a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">${esc(args.button || 'See Your Project')}</a></p>
+      <p style="margin:0 0 28px"><a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">${esc(args.button || 'Open Your Project Page')}</a></p>
       <p style="margin:0;color:#666">Dates are estimates — weather and inspections move them. Questions any time on your page or (864) 304-0139.</p>`;
     const resend = new Resend(process.env.RESEND_API_KEY);
     const { error } = await resend.emails.send({ from: getFromHeader(DEFAULT_FROM_EMAIL), to, subject, html: buildEmailHtml(name, bodyHtml, subject, DEFAULT_FROM_EMAIL) });

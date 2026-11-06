@@ -1339,7 +1339,7 @@ export default function EstimateDetailPage() {
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-[17px] font-bold text-white flex items-center gap-2">
                 <Send size={18} className="text-[#C9A84C]" />
-                {shareLink ? 'Estimate Sent!' : 'Send Estimate'}
+                {(estimate as any).signed_at ? (shareLink ? 'Project Page Sent!' : 'Send Their Project Page') : (shareLink ? 'Estimate Sent!' : 'Send Estimate')}
               </h3>
               <button onClick={() => { setShowSendModal(false); setShareLink(null); setLinkCopied(false); }} className="text-white/30 hover:text-white">
                 <X size={20} />
@@ -1449,7 +1449,7 @@ export default function EstimateDetailPage() {
                     {sending ? (
                       <><Loader2 size={16} className="animate-spin" /> Sending...</>
                     ) : (
-                      <><Send size={14} /> Send Estimate</>
+                      <><Send size={14} /> {(estimate as any).signed_at ? 'Send Project Page' : 'Send Estimate'}</>
                     )}
                   </button>
                 </div>

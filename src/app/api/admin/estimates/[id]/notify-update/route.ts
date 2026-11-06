@@ -81,7 +81,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       ${latestLine}
       <p style="margin:0 0 28px">
         <a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;
-          padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">See Your Project</a>
+          padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">Open Your Project Page</a>
       </p>
       <p style="margin:0;color:#666">Questions any time — (864) 304-0139.</p>`;
 
