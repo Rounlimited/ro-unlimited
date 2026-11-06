@@ -198,7 +198,7 @@ export default function DocLinkHub({ kind, id, title, who, phone, onClose, onCha
           ) : tab === 'activity' ? (
             <>
               <div data-anim className="grid grid-cols-3 gap-2.5">
-                {([['This week', week, 'opens', '#6db3f2'], ['All time', opens.length, 'opens', '#35d07f'], ['PDF', pdfs.length, pdfs.length === 1 ? 'download' : 'downloads', '#a78bfa']] as const).map(([l, v, u, c]) => (
+                {([['This week', week, 'opens', '#6db3f2'], ['All time', Math.max(opens.length, s ? s.view_count : 0), 'opens', '#35d07f'], ['PDF', pdfs.length, pdfs.length === 1 ? 'download' : 'downloads', '#a78bfa']] as const).map(([l, v, u, c]) => (
                   <div key={l} className="rounded-2xl p-3.5 relative overflow-hidden" style={glass}>
                     <div className="absolute -right-6 -top-6 w-16 h-16 rounded-full" style={{ background: c + '1f' }} />
                     <p className="text-[12px] font-bold uppercase tracking-wide text-white/45">{l}</p>
