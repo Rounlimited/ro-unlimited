@@ -56,18 +56,21 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const { action, date, days } = await req.json();
     const patch: any = {};
 
-    if (action === 'off') {
+    // JOB_NO_EXPIRY: a signed/accepted job's Project Page never expires on its own.
+    const { data: jobRow } = await supabase.from('estimates').select('signed_at, status').eq('id', params.id).maybeSingle();
+    const isJob = !!(jobRow && (jobRow.signed_at || jobRow.status === 'accepted'));
+        if (action === 'off') {
       patch.link_enabled = false;
     } else if (action === 'on') {
       patch.link_enabled = true;
       const s = await status(supabase, params.id);
       if (s && (!s.has_link || s.expired)) {
         patch.share_token = crypto.randomBytes(16).toString('hex');
-        patch.share_token_expires_at = new Date(Date.now() + 60 * 86400000).toISOString();
+        patch.share_token_expires_at = isJob ? null : new Date(Date.now() + 60 * 86400000).toISOString();
       }
     } else if (action === 'new') {
       patch.share_token = crypto.randomBytes(16).toString('hex');
-      patch.share_token_expires_at = new Date(Date.now() + 60 * 86400000).toISOString();
+      patch.share_token_expires_at = isJob ? null : new Date(Date.now() + 60 * 86400000).toISOString();
       patch.link_enabled = true;
     } else if (action === 'kill') {
       patch.share_token = null;
