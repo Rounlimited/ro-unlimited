@@ -392,7 +392,7 @@ function CommentsCard({ inv, token, onPosted }: { inv: PublicInvoice; token: str
 
 /** RO doesn't have a public Google review link yet — set it here when the
  *  Google Business Profile exists and 4-5 star feedback will funnel to it. */
-const GOOGLE_REVIEW_URL = '';
+const GOOGLE_REVIEW_URL = 'https://g.page/r/CUpIjWaRfx2eEBM/review';
 
 function FeedbackCard({ token, existingRating, onDone }: { token: string; existingRating: number | null; onDone: (r: number) => void }) {
   const [rating, setRating] = useState(0);
