@@ -93,6 +93,7 @@ export default function LoginPage() {
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
+            <a href="/admin/login/reset" className="block text-center text-sm text-white/50 hover:text-white/80 pt-1">Forgot password?</a>
           </div>
         </div>
 

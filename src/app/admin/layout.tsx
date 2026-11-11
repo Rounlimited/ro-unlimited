@@ -57,7 +57,7 @@ function AdminContent({ children }: { children: React.ReactNode }) {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLogin = pathname === '/admin/login' || pathname?.startsWith('/admin/join');
+  const isLogin = pathname?.startsWith('/admin/login') || pathname?.startsWith('/admin/join');
 
   useEffect(() => {
     document.body.classList.add('admin-mode');
