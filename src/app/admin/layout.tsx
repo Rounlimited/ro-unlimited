@@ -8,6 +8,7 @@ import PWAInstall from '@/components/admin/PWAInstall';
 import OnboardingProvider, { useOnboarding } from '@/components/admin/OnboardingProvider';
 import WalkthroughTours from '@/components/admin/WalkthroughTours';
 import AiChatBubble from '@/components/admin/AiChatBubble';
+import ForcePasswordChange from '@/components/admin/ForcePasswordChange';
 import ActivityTracker from '@/components/admin/ActivityTracker';
 import UserPreferencesProvider from '@/components/admin/UserPreferencesProvider';
 import DesktopShell from '@/components/admin/desktop/DesktopShell';
@@ -36,6 +37,7 @@ function AdminContent({ children }: { children: React.ReactNode }) {
       )}
       <AiChatBubble />
       <ActivityTracker />
+      <ForcePasswordChange />
       {!isDesktop && <PWAInstall />}
       {!isDesktop && (
         <WalkthroughTours
