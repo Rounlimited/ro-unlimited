@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   Loader2, Eye, FileText, ClipboardList, Wallet, Plus, Trash2, CheckCircle2,
   CloudRain, CalendarDays, Lock, Mail, Save, TrendingUp, TrendingDown, ExternalLink, MessagesSquare, Send, Sparkles, Camera, Inbox, Paperclip,
+  Star,
 } from 'lucide-react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { Link2 as LinkIcon } from 'lucide-react';
@@ -272,6 +273,14 @@ export default function JobRoomPage() {
     setHoBusy('svc'); setHoNote('');
     const d = await fetch('/api/admin/estimates/' + id + '/handover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'add_service', system: hoSvcSystem, next_due: hoSvcDate }) }).then((r) => r.json()).catch(() => null);
     if (d?.ok) { setHoNote('On their maintenance schedule ✓ — they get an email 30 days before.'); setHoSvcDate(''); setHoSvcOpen(false); await loadHandover(); } else setHoNote(d?.error || 'Could not add it.');
+    setHoBusy(null);
+  };
+  const reviewAsk = async (force = false) => {
+    setHoBusy('review'); setHoNote('');
+    const d = await fetch('/api/admin/estimates/' + id + '/handover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'review_request', force }) }).then((r) => r.json()).catch(() => null);
+    if (d?.ok) { setHoNote('Review request emailed to ' + d.to + ' ✓'); await loadHandover(); await load(); }
+    else if (d?.already && !force) { if (window.confirm((d.error || 'Already asked.') + ' Send it again?')) { await reviewAsk(true); return; } }
+    else setHoNote(d?.error || 'Could not send.');
     setHoBusy(null);
   };
   const hoSend = async () => {
@@ -961,6 +970,12 @@ export default function JobRoomPage() {
                 style={{ background: 'linear-gradient(145deg, #D4B965, #a8893d)' }}>
                 {hoBusy === 'send' ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />} {b.completion.handover_sent_at ? 'Send the handover package again' : 'Send the handover package'}
               </button>
+              <button onClick={() => reviewAsk(false)} disabled={hoBusy !== null || !e.completed_at}
+                className="w-full mt-2 min-h-[54px] rounded-xl text-[16px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-40"
+                style={{ background: 'rgba(245,184,61,0.12)', color: '#F5B83D', border: '1px solid rgba(245,184,61,0.4)' }}>
+                {hoBusy === 'review' ? <Loader2 size={18} className="animate-spin" /> : <Star size={18} />} {b.completion.review_requested_at ? 'Ask for a Google review again' : 'Ask for a Google review'}
+              </button>
+              {b.completion.review_requested_at && <p className="text-[14px] text-white/45 mt-1.5 text-center">Last asked {String(b.completion.review_requested_at).slice(0, 10)}</p>}
               {!e.completed_at && <p className="text-[14px] text-white/45 mt-2 text-center">Mark the job complete (Contract &amp; Tabs) to send it — that starts the warranty clock.</p>}
               {hoNote && <p className="text-[15px] mt-2" style={{ color: hoNote.includes('✓') ? '#35d07f' : '#D4B965' }}>{hoNote}</p>}
             </div>

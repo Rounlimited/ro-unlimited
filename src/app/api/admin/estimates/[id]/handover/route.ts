@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerUser } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { sendReviewRequest } from '@/lib/review-request';
 import { getBinder, getChecklist, addBinderItem, sendHandover, createServiceReminder } from '@/lib/handover';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,11 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     if (body.action === 'send') {
       const out = await sendHandover(params.id, who);
       if ('error' in out) return NextResponse.json({ error: out.error }, { status: 400 });
+      return NextResponse.json(out);
+    }
+    if (body.action === 'review_request') {
+      const out = await sendReviewRequest(params.id, who, !!body.force);
+      if ('error' in out) return NextResponse.json({ error: out.error, already: (out as any).already || false }, { status: 400 });
       return NextResponse.json(out);
     }
     if (body.action === 'add_item') {

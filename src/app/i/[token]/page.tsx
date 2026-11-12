@@ -390,8 +390,8 @@ function CommentsCard({ inv, token, onPosted }: { inv: PublicInvoice; token: str
 }
 
 
-/** RO doesn't have a public Google review link yet — set it here when the
- *  Google Business Profile exists and 4-5 star feedback will funnel to it. */
+/** Google review link. Shown to EVERY customer after they rate, whatever the
+ *  rating — Google's rules forbid sending only happy customers to the review page. */
 const GOOGLE_REVIEW_URL = 'https://g.page/r/CUpIjWaRfx2eEBM/review';
 
 function FeedbackCard({ token, existingRating, onDone }: { token: string; existingRating: number | null; onDone: (r: number) => void }) {
@@ -427,9 +427,17 @@ function FeedbackCard({ token, existingRating, onDone }: { token: string; existi
             )}
           </div>
         ) : (
-          <p className="text-[16px] text-gray-700">
-            Thank you for the honesty — this goes straight to the owner, and you may hear from us so we can make it right.
-          </p>
+          <div>
+            <p className="text-[16px] text-gray-700 mb-3">
+              Thank you for the honesty — this goes straight to the owner, and you may hear from us so we can make it right.
+            </p>
+            {GOOGLE_REVIEW_URL && (
+              <a href={GOOGLE_REVIEW_URL} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 min-h-[52px] px-6 rounded-xl bg-[#C9A84C] text-black text-[16px] font-bold active:scale-[0.98] transition-transform">
+                <Star size={18} /> Share your experience on Google
+              </a>
+            )}
+          </div>
         )}
       </div>
     );

@@ -1625,10 +1625,19 @@ export function FeedbackCard({ token, existingRating, reviewUrl }: {
             )}
           </div>
         ) : (
-          <p className="text-[17px] text-[#2a2a2a] leading-relaxed">
-            Thank you for the honesty. This goes straight to the owner, and you may hear from
-            us so we can put it right.
-          </p>
+          <div>
+            <p className="text-[17px] text-[#2a2a2a] leading-relaxed mb-3">
+              Thank you for the honesty. This goes straight to the owner, and you may hear from
+              us so we can put it right.
+            </p>
+            {reviewUrl && (
+              <a href={reviewUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 min-h-[52px] px-6 rounded-xl text-black text-[16px] font-bold"
+                style={{ background: '#C9A84C' }}>
+                <Star size={18} /> Share your experience on Google
+              </a>
+            )}
+          </div>
         )
       ) : (
         <>
