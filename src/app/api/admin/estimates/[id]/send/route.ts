@@ -169,6 +169,17 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       notes: keepStatus ? `Link re-sent to ${to_email}` : `Sent to ${to_email}`,
     });
 
+    // Remember who we emailed: a customer record with no email (the common case
+    // when the address is typed in the Send box) never showed the email on file.
+    // Only fills an empty field and never an internal/staff address.
+    try {
+      const addr = String(to_email).trim().toLowerCase();
+      const internal = /@(rounlimited\.com|nexavisiongroup\.com)$|^(rounlimitedco|jrdjzae)@gmail\.com$/.test(addr);
+      if (estimate.customer_id && !estimate.customer?.email && !internal && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
+        await supabase.from('customers').update({ email: addr, updated_at: now }).eq('id', estimate.customer_id).is('email', null);
+      }
+    } catch { /* never block a send */ }
+
     return NextResponse.json({ ok: true, sent_to: to_email, share_link: viewLink });
   } catch (err) {
     console.error('[estimates/send] POST error:', err);
