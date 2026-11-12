@@ -33,7 +33,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     title: 'Roofing',
     tagline: 'Roof Repair & Replacement Across the Tri-State',
     icon: 'hard-hat',
-    description: 'From storm damage repairs to full roof replacements, RO handles residential and light commercial roofing with licensed, insured work and quality materials. Storms don\'t stop at the state line — we run out of the Greenville area and work South Carolina, North Carolina, and Georgia. We show up fast, assess honestly, and build roofs that last.',
+    description: 'From storm damage repairs to full roof replacements, RO handles residential and light commercial roofing with licensed, insured work and quality materials. Storms don\'t stop at the state line — we run out of the Greenville area and work South Carolina and Georgia. We show up fast, assess honestly, and build roofs that last.',
     hero: 'Whether it\'s a missing shingle or a full tear-off, RO\'s roofing crews deliver fast, honest work backed by 25+ years of construction experience. We don\'t upsell — we fix what needs fixing and build what needs building.',
     services: [
       'Roof repair and patching',
@@ -74,7 +74,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     title: 'Septic Systems',
     tagline: 'Pumping, Inspection, Repair & Installation — Done Right',
     icon: 'droplets',
-    description: 'Full-service septic: tank pumping, inspections, new installations, drain field work, sewer line jetting, and 24/7 emergency response. Fully permitted, licensed in South Carolina, North Carolina, and Georgia, and built to last decades.',
+    description: 'Full-service septic: tank pumping, inspections, new installations, drain field work, sewer line jetting, and 24/7 emergency response. Fully permitted, licensed in South Carolina and Georgia, and built to last decades.',
     hero: 'Septic work isn\'t glamorous, but it\'s critical. A failed system means health hazards, property damage, and code violations. RO\'s crews have the equipment and experience for every part of the system — pumping, inspections, repairs, full installations — and we do it right the first time.',
     services: [
       'Septic Pumping',
@@ -89,12 +89,12 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     faq: [
       { q: 'How often should I pump my septic tank?', a: 'Standard recommendation is every 3–5 years for a family of four with a 1,000-gallon tank. Smaller tanks, larger households, or heavy usage shorten that interval. We\'ll give you a specific schedule based on what we find during pumping.' },
       { q: 'How do I know if my septic system needs repair?', a: 'Slow drains, sewage odors, standing water near the drain field, gurgling toilets, or unusually green grass over the system are all warning signs. A quick inspection identifies the cause.' },
-      { q: 'Do you install new septic systems for new construction?', a: 'Yes. We handle soil testing, system design, permitting, installation, and final inspection — the full scope from start to finish. In South Carolina the permit runs through DHEC; in North Carolina and Georgia it comes from the county health department instead. We\'re licensed in all three, so we file wherever the property sits and you don\'t have to learn the difference.' },
-      { q: 'What about real estate septic inspections?', a: 'We do full inspections for home purchases and sales — tank pumping, camera scoping, and drain field assessment. In South Carolina we report to DHEC-compatible standards; across the North Carolina and Georgia lines we match what the county health department and your closing attorney need. Results within 48 hours.' },
+      { q: 'Do you install new septic systems for new construction?', a: 'Yes. We handle soil testing, system design, permitting, installation, and final inspection — the full scope from start to finish. In South Carolina the permit runs through DHEC; in Georgia it comes from the county health department instead. We\'re licensed in both states, so we file wherever the property sits and you don\'t have to learn the difference.' },
+      { q: 'What about real estate septic inspections?', a: 'We do full inspections for home purchases and sales — tank pumping, camera scoping, and drain field assessment. In South Carolina we report to DHEC-compatible standards; across the Georgia line we match what the county health department and your closing attorney need. Results within 48 hours.' },
       { q: 'Do you offer emergency service?', a: 'Yes — 24/7 for backups, overflows, and total system failures. Same-day arrival in most cases, usually within 2–4 hours of your call.' },
-      { q: 'What areas do you serve for septic work?', a: 'We\'re based in the Greenville area and licensed in South Carolina and Georgia, so septic work travels. Greenville, Pickens, Anderson, and Spartanburg counties are the core; from there we run west into northeast Georgia and north into western North Carolina. Call us to confirm coverage for your address.' },
+      { q: 'What areas do you serve for septic work?', a: 'We\'re based in the Greenville area and licensed in South Carolina and Georgia, so septic work travels. Greenville, Pickens, Anderson, and Spartanburg counties are the core; from there we run west into northeast Georgia and north into the upper Upstate. Call us to confirm coverage for your address.' },
     ],
-    seoKeywords: ['septic pumping Greenville SC', 'septic repair Easley SC', 'septic tank installer Pickens County SC', 'septic inspection real estate', 'drain field repair Anderson SC', '24 hour septic service SC NC GA'],
+    seoKeywords: ['septic pumping Greenville SC', 'septic repair Easley SC', 'septic tank installer Pickens County SC', 'septic inspection real estate', 'drain field repair Anderson SC', '24 hour septic service SC GA'],
     heroImage: '/images/services/septic/septic-hero.jpg',
     cardImage: '/images/services/hub/hub-septic.jpg',
     galleryImages: [
@@ -138,12 +138,12 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     ],
     faq: [
       { q: 'What drives the cost of a panel upgrade?', a: 'The panel itself is the small part. What moves the number is what feeds it and what leaves it — whether the service entrance cable, meter base, and grounding all have to be replaced, whether the utility has to reset the drop, how many circuits need AFCI or GFCI protection to meet current code, and what the branch wiring looks like once the cover comes off. Aluminum branch wiring or knob-and-tube behind the panel is a different job than a straight swap. We look first, then quote.' },
-      { q: 'Are your electricians licensed?', a: 'Yes — RO holds a South Carolina mechanical contractor license with the Electrical classification (CLM.119115) and is licensed in Georgia. Every job is permitted and inspected under it. The NEC is the baseline in all three states, but each one adopts its own edition and each county issues its own permits, so we pull through whichever authority has jurisdiction over your address.' },
+      { q: 'Are your electricians licensed?', a: 'Yes — RO holds a South Carolina mechanical contractor license with the Electrical classification (CLM.119115) and is licensed in Georgia. Every job is permitted and inspected under it. The NEC is the baseline in both states, but each one adopts its own edition and each county issues its own permits, so we pull through whichever authority has jurisdiction over your address.' },
       { q: 'Can you install EV chargers at my home?', a: 'Absolutely. We install Tesla Wall Connectors, ChargePoint, and universal Level 2 chargers with dedicated 240V circuits. A 30% federal tax credit applies to installation costs.' },
       { q: 'Do you install solar panels and battery storage?', a: 'Yes. We install complete solar-plus-storage systems including Tesla Powerwall, Enphase, and Generac PWRcell — with full electrical integration from panel to rooftop.' },
       { q: 'What is a smart electrical panel?', a: 'A smart panel like the SPAN Panel replaces your traditional breaker box, giving you app-based control and monitoring of every circuit. It\'s the foundation for whole-home energy management.' },
     ],
-    seoKeywords: ['electrician Greenville SC', 'electrical panel upgrade Easley SC', 'EV charger installation SC', 'solar battery storage Anderson SC', 'licensed electrical contractor SC NC GA'],
+    seoKeywords: ['electrician Greenville SC', 'electrical panel upgrade Easley SC', 'EV charger installation SC', 'solar battery storage Anderson SC', 'licensed electrical contractor SC GA'],
     heroImage: '/images/services/electrical/electrical-hero.jpg',
     cardImage: '/images/services/hub/hub-electrical.jpg',
     galleryImages: [
@@ -290,7 +290,7 @@ export const SERVICES_DETAIL: Record<string, ServiceDetail> = {
       'Septic system diagnosis and repair',
       'Tank replacement and drain field restoration',
       'New system design and installation',
-      'Soil testing and permitting — DHEC in SC, county health in NC and GA',
+      'Soil testing and permitting — DHEC in SC, county health in GA',
       'Tank pumping coordination',
       'Code compliance and final inspection',
     ],

@@ -32,7 +32,7 @@ const DIFFERENTIATORS = [
   { icon: Shield, title: 'Single Point of Accountability', desc: 'One company from land grading through final walkthrough. No finger-pointing between subs.' },
   { icon: Layers, title: 'Ground-Up Capability', desc: 'We grade the dirt, pour the foundation, raise the steel, and finish the interior. All under one license holder.' },
   { icon: Clock, title: '25+ Years of Problem Solving', desc: 'Complex sites, tight timelines, impossible specs — we\'ve built through all of it.' },
-  { icon: MapPin, title: 'Tri-State Knowledge', desc: 'Georgia, South Carolina, North Carolina — soil conditions, permitting, inspectors, and suppliers across all three states.' },
+  { icon: MapPin, title: 'Local Knowledge', desc: 'Georgia and South Carolina — soil conditions, permitting, inspectors, and suppliers across both states.' },
 ];
 
 const CROSS_DIVISIONS = [
@@ -591,9 +591,9 @@ export default function CommercialPage() {
           <div className="trust-content">
             <div className="text-ro-gold/15 font-heading text-[120px] sm:text-[160px] leading-none select-none mb-[-40px] sm:mb-[-60px]">&ldquo;</div>
             <blockquote className="text-ro-white font-heading text-2xl sm:text-3xl lg:text-4xl tracking-tight uppercase leading-[1.1] mb-8">
-              Ask anyone in <span className="gradient-text-gold">Georgia, the Carolinas,</span><br />or anywhere we&apos;ve built.
+              Ask anyone in <span className="gradient-text-gold">South Carolina, Georgia,</span><br />or anywhere we&apos;ve built.
             </blockquote>
-            <p className="text-ro-gray-500 text-sm font-mono tracking-[0.3em] uppercase mb-6">25+ years building across three states</p>
+            <p className="text-ro-gray-500 text-sm font-mono tracking-[0.3em] uppercase mb-6">25+ years building across two states</p>
             <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-ro-gold/40 to-transparent mx-auto" />
           </div>
         </div>

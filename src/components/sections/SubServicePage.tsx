@@ -204,7 +204,6 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
       areaServed: [
         { '@type': 'State', name: 'South Carolina' },
         { '@type': 'State', name: 'Georgia' },
-        { '@type': 'State', name: 'North Carolina' },
       ],
     },
   };

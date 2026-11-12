@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   },
   // Leads with the buildings. The underground is the reason RO is different,
   // not the thing RO is — an agent read the old copy and assumed dirt only.
-  description: 'RO Unlimited Construction & Development, providing professional full-range commercial construction — including site development and utility services — throughout South Carolina, Georgia, and North Carolina. Licensed general contractor, 25+ years, based in Easley SC.',
+  description: 'RO Unlimited Construction & Development, providing professional full-range commercial construction — including site development and utility services — throughout South Carolina and Georgia. Licensed general contractor, 25+ years, based in Easley SC.',
   applicationName: COMPANY.name,
   authors: [{ name: COMPANY.fullName, url: SITE_URL }],
   creator: COMPANY.fullName,
@@ -38,13 +38,13 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: COMPANY.name,
     title: `${COMPANY.fullName} | Commercial General Contractor`,
-    description: 'Professional full-range commercial construction — including site development and utility services — throughout South Carolina, Georgia, and North Carolina.',
+    description: 'Professional full-range commercial construction — including site development and utility services — throughout South Carolina and Georgia.',
     images: [{ url: `${SITE_URL}/og-licenses.png`, width: 1200, height: 630, alt: `${COMPANY.fullName} — 13 South Carolina license classifications, one contractor` }],
   },
   twitter: {
     card: 'summary_large_image',
     title: COMPANY.fullName,
-    description: `Full-range commercial construction — including site development and utility services — across SC, GA & NC. ${COMPANY.experience} years.`,
+    description: `Full-range commercial construction — including site development and utility services — across SC & GA. ${COMPANY.experience} years.`,
     images: [`${SITE_URL}/og-licenses.png`],
   },
   robots: {
@@ -88,8 +88,6 @@ const organizationJsonLd = {
     { '@type': 'City', name: 'Toccoa', containedInPlace: { '@type': 'State', name: 'Georgia' } },
     { '@type': 'City', name: 'Lavonia', containedInPlace: { '@type': 'State', name: 'Georgia' } },
     { '@type': 'City', name: 'Hartwell', containedInPlace: { '@type': 'State', name: 'Georgia' } },
-    { '@type': 'City', name: 'Hendersonville', containedInPlace: { '@type': 'State', name: 'North Carolina' } },
-    { '@type': 'City', name: 'Asheville', containedInPlace: { '@type': 'State', name: 'North Carolina' } },
   ],
   openingHoursSpecification: [{
     '@type': 'OpeningHoursSpecification',
@@ -101,7 +99,7 @@ const organizationJsonLd = {
     '@type': 'ContactPoint',
     telephone: COMPANY.phone,
     contactType: 'customer service',
-    areaServed: ['US-SC', 'US-GA', 'US-NC'],
+    areaServed: ['US-SC', 'US-GA'],
     availableLanguage: 'English',
   },
   sameAs: [COMPANY.facebook],

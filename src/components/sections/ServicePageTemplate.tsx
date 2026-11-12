@@ -140,7 +140,6 @@ export default function ServicePageTemplate({ category, serviceLinks }: { catego
       areaServed: [
         { '@type': 'State', name: 'South Carolina' },
         { '@type': 'State', name: 'Georgia' },
-        { '@type': 'State', name: 'North Carolina' },
       ],
       address: { '@type': 'PostalAddress', addressRegion: 'SC', addressCountry: 'US' },
     },

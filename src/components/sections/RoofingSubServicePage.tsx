@@ -159,7 +159,6 @@ export default function RoofingSubServicePage({ subService }: { subService: Roof
       areaServed: [
         { '@type': 'State', name: 'South Carolina' },
         { '@type': 'State', name: 'Georgia' },
-        { '@type': 'State', name: 'North Carolina' },
       ],
     },
   };

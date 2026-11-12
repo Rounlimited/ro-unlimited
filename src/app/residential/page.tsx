@@ -23,7 +23,7 @@ const HERO_STATS = [
 const PROCESS_STEPS = [
   { num: '01', title: 'Discovery', desc: 'We sit down and listen. Your vision, your lifestyle, your must-haves.' },
   { num: '02', title: 'Design', desc: 'Floor plans, elevations, materials — your home takes shape on paper first.' },
-  { num: '03', title: 'Permitting', desc: 'We handle approvals across GA, SC, and NC so you don\'t have to.' },
+  { num: '03', title: 'Permitting', desc: 'We handle approvals across GA and SC so you don\'t have to.' },
   { num: '04', title: 'Construction', desc: 'Foundation through finishes. Weekly updates with photos.' },
   { num: '05', title: 'Walkthrough & Keys', desc: 'Every detail inspected. Every room walked. Keys in your hand.' },
 ];
@@ -548,7 +548,7 @@ export default function ResidentialPage() {
             <blockquote className="text-ro-white font-heading text-2xl sm:text-3xl lg:text-4xl tracking-tight uppercase leading-[1.15] mb-8">
               We build homes the way<br /><span className="gradient-text-gold">we&apos;d build our own.</span>
             </blockquote>
-            <p className="text-ro-gray-500 text-sm font-mono tracking-[0.3em] uppercase mb-4">25+ years of building across three states</p>
+            <p className="text-ro-gray-500 text-sm font-mono tracking-[0.3em] uppercase mb-4">25+ years of building across two states</p>
             <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-ro-gold/30 to-transparent mx-auto mb-4" />
             <Link href="/our-story" className="text-ro-gold/50 text-xs font-mono tracking-wider uppercase hover:text-ro-gold transition-colors inline-flex items-center gap-1">
               Read our story <ArrowRight size={10} />

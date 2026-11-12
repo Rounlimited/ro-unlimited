@@ -8,7 +8,7 @@ import { COMPANY } from '@/lib/constants';
  * into a vendor packet. Same document brand as the estimate PDF (navy +
  * orange on white, Helvetica). Everything on it is owner-confirmed: the
  * seven license classifications, the three license numbers off the Utility
- * Division badge, and the tri-state footprint. No invented numbers — no
+ * Division badge, and the South Carolina and Georgia footprint. No invented numbers — no
  * bonding capacity, EMR, or GL limits until JR supplies them; those are
  * "furnished on request."
  */

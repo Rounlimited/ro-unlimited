@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://rounlimited.com/contact' },
   openGraph: {
     title: 'Contact RO Unlimited',
-    description: 'Reach RO Unlimited for any construction, repair, or service work across Upstate SC, GA, and NC. Honest answers, fast quotes.',
+    description: 'Reach RO Unlimited for any construction, repair, or service work across Upstate SC and GA. Honest answers, fast quotes.',
     url: 'https://rounlimited.com/contact',
     siteName: 'RO Unlimited',
     type: 'website',

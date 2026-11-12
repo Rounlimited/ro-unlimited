@@ -143,14 +143,13 @@ export default function ServicesPage() {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: 'RO Unlimited Construction & Development',
-    description: 'Roofing, plumbing, electrical, septic systems, and general repairs. Based in Easley, minutes from Greenville, and licensed across South Carolina, North Carolina, and Georgia. Insured, 25+ years experience.',
+    description: 'Roofing, plumbing, electrical, septic systems, and general repairs. Based in Easley, minutes from Greenville, and licensed across South Carolina and Georgia. Insured, 25+ years experience.',
     telephone: '(864) 304-0139',
     email: 'Rounlimitedco@gmail.com',
     url: 'https://rounlimited.com/services',
     areaServed: [
       { '@type': 'State', name: 'South Carolina' },
       { '@type': 'State', name: 'Georgia' },
-      { '@type': 'State', name: 'North Carolina' },
     ],
     address: {
       '@type': 'PostalAddress',
@@ -379,8 +378,8 @@ export default function ServicesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
             {[
               { title: 'Full-Service Company', desc: 'Most handymen can\'t do structural work. Most GCs won\'t do small jobs. RO does both — with the same crew, same standards, same accountability.' },
-              { title: '25+ Years of Trust', desc: 'We\'ve worked out of the Greenville area for over two decades, and the work has carried us across three states. Your neighbors know us. Your property manager has our number. We show up and we deliver.' },
-              { title: 'Licensed in Three States', desc: 'South Carolina, North Carolina, and Georgia — every trade we touch is properly licensed and insured in all three. No fly-by-night subs, no liability gaps, no scrambling when a job sits across a state line.' },
+              { title: '25+ Years of Trust', desc: 'We\'ve worked out of the Greenville area for over two decades, and the work has carried us across two states. Your neighbors know us. Your property manager has our number. We show up and we deliver.' },
+              { title: 'Licensed in Two States', desc: 'South Carolina and Georgia — every trade we touch is properly licensed and insured in both. No fly-by-night subs, no liability gaps, no scrambling when a job sits across a state line.' },
               { title: 'One Call, Everything Handled', desc: 'Roof, plumbing, electrical, septic — one number to call for all of it. We coordinate the trades so you don\'t have to manage multiple contractors.' },
             ].map((item, i) => (
               <div key={i} className="why-item group relative p-8 sm:p-10 border border-ro-gray-800/40 bg-[#1a150d]/20 backdrop-blur-sm hover:border-ro-gold/25 hover:bg-ro-gold/[0.03] transition-all duration-700">

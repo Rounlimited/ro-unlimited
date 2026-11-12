@@ -7,9 +7,9 @@ export const COMPANY = {
   heroStatement: '25 Years of Showing Up and Building It Right.',
   cta: 'Send us your project. We\'ll show you what we can do.',
   experience: '25+',
-  serviceArea: 'Georgia, South Carolina & North Carolina',
+  serviceArea: 'Georgia & South Carolina',
   areaCode: '864',
-  serviceAreaShort: 'Tri-State (GA, SC, NC)',
+  serviceAreaShort: 'GA & SC',
   hours: 'Mon–Sat 7am–6pm',
   facebook: 'https://www.facebook.com/profile.php?id=61578630061375',
 } as const;

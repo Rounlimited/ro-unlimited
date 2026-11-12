@@ -14,7 +14,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
     slug: 'shingle-roofing',
     title: 'Shingle Roofing',
     tagline: 'Proven Protection Built for Foothills Weather',
-    heroDescription: 'From basic 3-tab to premium designer styles that replicate natural slate and cedar shake, we install shingle systems built to handle the heat, humidity, and storm seasons this part of the country runs on. We work out of Easley, just west of Greenville, and we roof across South Carolina, North Carolina, and Georgia. After 25-plus years on these roofs we know which products perform and which ones just look good in a brochure.',
+    heroDescription: 'From basic 3-tab to premium designer styles that replicate natural slate and cedar shake, we install shingle systems built to handle the heat, humidity, and storm seasons this part of the country runs on. We work out of Easley, just west of Greenville, and we roof across South Carolina and Georgia. After 25-plus years on these roofs we know which products perform and which ones just look good in a brochure.',
     heroImage: '/images/services/roofing/subs/shingle-hero.jpg',
     cardImage: '/images/services/roofing/subs/shingle-card.jpg',
     galleryImages: [
@@ -115,7 +115,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'Why It Makes Sense Here',
-        content: 'The climate here throws everything at a roof: UV bombardment, humidity, hail, high winds, and heavy rain. It does it the same way in Pickens County as it does over the line in Henderson County, North Carolina, or down in Rabun County, Georgia. Metal handles all of it. No granule loss, no moss growth, no rotting. The reflective properties directly combat our biggest climate challenge — sustained summer heat. We\'ve been installing metal roofing across this region for over two decades and have seen firsthand how it outperforms.',
+        content: 'The climate here throws everything at a roof: UV bombardment, humidity, hail, high winds, and heavy rain. It does it the same way in Pickens County as it does over the line in Rabun County, Georgia. Metal handles all of it. No granule loss, no moss growth, no rotting. The reflective properties directly combat our biggest climate challenge — sustained summer heat. We\'ve been installing metal roofing across this region for over two decades and have seen firsthand how it outperforms.',
       },
     ],
     warningSigns: [
@@ -154,7 +154,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { item: 'Standing Seam (Steel/Aluminum)', cost: 'On-site roll-forming, clip labor, custom flashing at every transition', lifespan: '40–70 years' },
       { item: 'Metal Shingles', cost: 'Installed piece by piece — roof complexity multiplies the hours', lifespan: '30–50 years' },
     ],
-    seoKeywords: ['metal roofing Greenville SC', 'standing seam roof installation Easley SC', 'metal roof contractor western North Carolina', 'steel roofing Spartanburg SC'],
+    seoKeywords: ['metal roofing Greenville SC', 'standing seam roof installation Easley SC', 'steel roofing Spartanburg SC'],
   },
 
   // ═══ 3. FLAT / LOW-SLOPE ROOFING ═══
@@ -189,7 +189,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'What This Climate Does to a Flat Roof',
-        content: 'High UV exposure, extreme heat, humidity, and heavy storm rainfall together make material selection and installation quality especially critical on a low-slope roof. Ponding water — any water still sitting 48 hours after rain — is the number one enemy of flat roofs, and the downpours we get from spring through hurricane season test drainage hard. Proper slope-to-drain design and fully sealed seams aren\'t optional here; they\'re survival requirements. We hold roofing licenses in South Carolina, North Carolina, and Georgia, so an owner with buildings on both sides of a state line gets one contractor and one standard of work instead of three.',
+        content: 'High UV exposure, extreme heat, humidity, and heavy storm rainfall together make material selection and installation quality especially critical on a low-slope roof. Ponding water — any water still sitting 48 hours after rain — is the number one enemy of flat roofs, and the downpours we get from spring through hurricane season test drainage hard. Proper slope-to-drain design and fully sealed seams aren\'t optional here; they\'re survival requirements. We hold roofing licenses in South Carolina and Georgia, so an owner with buildings on both sides of a state line gets one contractor and one standard of work instead of three.',
       },
     ],
     warningSigns: [
@@ -228,7 +228,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { item: 'Modified Bitumen', cost: 'Layer count, plus torch-applied versus self-adhered', lifespan: '20–25 years' },
       { item: 'Built-Up (BUR)', cost: 'Layers built up on site — the heaviest labor load of the four', lifespan: '20–30 years' },
     ],
-    seoKeywords: ['flat roof repair Greenville SC', 'TPO roofing contractor Spartanburg SC', 'commercial flat roofing SC NC GA', 'EPDM roof installation near me'],
+    seoKeywords: ['flat roof repair Greenville SC', 'TPO roofing contractor Spartanburg SC', 'commercial flat roofing SC GA', 'EPDM roof installation near me'],
   },
 
   // ═══ 4. ROOF REPAIR ═══
@@ -255,7 +255,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'What We Get Called Out For',
-        content: 'The weather here creates predictable repair needs. Spring and summer thunderstorms bring hail that bruises shingles and cracks flashing sealant. High winds lift and tear shingles, especially on roofs over 15 years old. Whether the house is in Greenville County or an hour up the road in North Carolina, we see the same failure points year after year — chimney flashing, pipe boot failures, valley deterioration, and wind-damaged ridge caps.',
+        content: 'The weather here creates predictable repair needs. Spring and summer thunderstorms bring hail that bruises shingles and cracks flashing sealant. High winds lift and tear shingles, especially on roofs over 15 years old. Whether the house is in Greenville County or an hour up the road in the mountains, we see the same failure points year after year — chimney flashing, pipe boot failures, valley deterioration, and wind-damaged ridge caps.',
       },
       {
         heading: 'How We Price a Repair',
@@ -290,7 +290,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { num: '05', title: 'Verification & Follow-Up', description: 'We verify the repair resolved the issue, clean up completely, and provide documentation. For insurance claims, all necessary paperwork. We check back after the next significant rain.' },
     ],
     faq: [
-      { q: 'How quickly can you respond to an emergency?', a: 'Close to home — Greenville, Easley, Pickens, Anderson, Spartanburg — we aim for same-day on an active leak. Farther out into North Carolina or Georgia, we\'ll tell you honestly what time we can be on your roof instead of promising a window we can\'t hit. Either way, emergency service starts with temporary tarping and patching, and the permanent repair plan follows once conditions allow.' },
+      { q: 'How quickly can you respond to an emergency?', a: 'Close to home — Greenville, Easley, Pickens, Anderson, Spartanburg — we aim for same-day on an active leak. Farther out into Georgia, we\'ll tell you honestly what time we can be on your roof instead of promising a window we can\'t hit. Either way, emergency service starts with temporary tarping and patching, and the permanent repair plan follows once conditions allow.' },
       { q: 'Should I file an insurance claim for roof damage?', a: 'If the damage is from a covered event (hail, wind, fallen tree), yes. File promptly — most policies have time limits. We provide detailed damage assessments with photo documentation that adjusters need.' },
       { q: 'Can I repair just part of my roof?', a: 'Often, yes. If damage is localized and the rest of the roof is in good condition, targeted repair is absolutely appropriate. We\'ll give you an honest assessment.' },
       { q: 'Why does the leak seem worse sometimes?', a: 'Wind direction matters. Many leaks only manifest when rain is driven from a specific direction, which is why professional assessment is important — the entry point may only be visible under certain conditions.' },
@@ -328,7 +328,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'Tear-Off vs. Overlay',
-        content: 'A full tear-off prices off square footage, pitch, how many layers are coming off, and how cut-up the roofline is — every valley, hip, dormer, chimney, and pipe penetration is hand work that area alone doesn\'t capture. An overlay comes in meaningfully lower because there\'s no tear-off labor and no dumpster. It also lasts roughly half as long: new shingles conform to the old surface\'s imperfections, and the heat trapped between the two layers cooks the new one from below. More importantly, an overlay means nobody ever looks at your decking — you\'re roofing over an unknown. Code in all three states we work in caps you at two layers, so an overlay also spends the one shot you get; the next roof is a full tear-off regardless, and it\'ll be a tear-off of two layers instead of one.',
+        content: 'A full tear-off prices off square footage, pitch, how many layers are coming off, and how cut-up the roofline is — every valley, hip, dormer, chimney, and pipe penetration is hand work that area alone doesn\'t capture. An overlay comes in meaningfully lower because there\'s no tear-off labor and no dumpster. It also lasts roughly half as long: new shingles conform to the old surface\'s imperfections, and the heat trapped between the two layers cooks the new one from below. More importantly, an overlay means nobody ever looks at your decking — you\'re roofing over an unknown. Code in both states we work in caps you at two layers, so an overlay also spends the one shot you get; the next roof is a full tear-off regardless, and it\'ll be a tear-off of two layers instead of one.',
       },
       {
         heading: 'When to Replace vs. Repair',
@@ -336,7 +336,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'What Sets Your Number — and Your Schedule',
-        content: 'Ask a roofer to price a replacement sight-unseen and you\'ll get a guess. Here\'s what actually decides it: total square footage and pitch, since a steep roof needs staging and slows every stage; the number of layers coming off; roof complexity; access and staging — whether a dump trailer can sit under the eave or every bundle gets carried; the material tier you choose; and decking condition once we\'re down to bare deck. We carry a stated sheet allowance in every estimate and bill only the sheets we actually swap, so rotten sheathing is a known variable instead of a surprise. On timing, a standard tear-off and replace is a 1–3 day job, 3–5 for larger or complex roofs. We stage it so the deck is never open overnight and we don\'t strip a slope we can\'t dry in the same day. Summer heat is the real scheduling constraint here — asphalt softens and scuffs underfoot on a 95-degree afternoon, so we start at first light and shut down the hot side of the roof early. Below roughly 40 degrees the self-sealing strips won\'t bond on their own and every tab has to be hand-sealed, which is why winter work gets planned around a warm stretch, and why a job up in the mountain counties can need a different week than the same job in Anderson. Permitting is the other thing that moves with the address: we hold licenses in South Carolina, North Carolina, and Georgia, and every county and municipality runs its own permit and inspection process, so we tell you up front which one applies to your house and whether it adds a day. Insurance jobs run on the carrier\'s clock, not ours: adjuster visit, then an approved scope, then a supplement if what we uncover on the deck exceeds it — build that into your expectations. A new roof is consistently ranked among the highest-return home improvements and removes the number one objection buyers raise.',
+        content: 'Ask a roofer to price a replacement sight-unseen and you\'ll get a guess. Here\'s what actually decides it: total square footage and pitch, since a steep roof needs staging and slows every stage; the number of layers coming off; roof complexity; access and staging — whether a dump trailer can sit under the eave or every bundle gets carried; the material tier you choose; and decking condition once we\'re down to bare deck. We carry a stated sheet allowance in every estimate and bill only the sheets we actually swap, so rotten sheathing is a known variable instead of a surprise. On timing, a standard tear-off and replace is a 1–3 day job, 3–5 for larger or complex roofs. We stage it so the deck is never open overnight and we don\'t strip a slope we can\'t dry in the same day. Summer heat is the real scheduling constraint here — asphalt softens and scuffs underfoot on a 95-degree afternoon, so we start at first light and shut down the hot side of the roof early. Below roughly 40 degrees the self-sealing strips won\'t bond on their own and every tab has to be hand-sealed, which is why winter work gets planned around a warm stretch, and why a job up in the mountain counties can need a different week than the same job in Anderson. Permitting is the other thing that moves with the address: we hold licenses in South Carolina and Georgia, and every county and municipality runs its own permit and inspection process, so we tell you up front which one applies to your house and whether it adds a day. Insurance jobs run on the carrier\'s clock, not ours: adjuster visit, then an approved scope, then a supplement if what we uncover on the deck exceeds it — build that into your expectations. A new roof is consistently ranked among the highest-return home improvements and removes the number one objection buyers raise.',
       },
     ],
     warningSigns: [
@@ -375,7 +375,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       { item: 'Overlay', cost: 'No tear-off, no dumpster — and no look at the decking', lifespan: '12–18 years' },
       { item: 'Metal Roof Replacement', cost: 'Panel fabrication and flashing detail at every transition', lifespan: '40–70 years' },
     ],
-    seoKeywords: ['roof replacement Greenville SC', 'new roof cost Easley SC', 'roof replacement contractor Pickens SC', 'licensed roofing contractor SC NC GA'],
+    seoKeywords: ['roof replacement Greenville SC', 'new roof cost Easley SC', 'roof replacement contractor Pickens SC', 'licensed roofing contractor SC GA'],
   },
 
   // ═══ 6. ROOF INSPECTIONS ═══
@@ -406,7 +406,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'What Sets the Fee — and What It Saves',
-        content: 'A standard inspection prices off roof size, pitch, and how much of it we can safely walk — a walkable ranch takes a fraction of the time a steep, cut-up two-story does. Add-ons move the number: drone work when pitch or fragile material rules out walking, and infrared scanning when we need to find moisture trapped inside decking or under a membrane that looks fine from the surface. Storm damage assessments for an insurance claim we usually provide at no charge, because if a claim is coming, we want the documentation done right from the first visit. Distance factors in once you\'re well outside the Greenville area — we\'d rather group a run into western North Carolina or north Georgia with other work we already have that direction than bill you for the windshield time. Set any of that against what an inspection heads off — a leak quietly rotting decking and framing, buying a house that needs a full roof the month you close, or missing your carrier\'s filing window entirely. Plan on 45–90 minutes on site and a written report with photos.',
+        content: 'A standard inspection prices off roof size, pitch, and how much of it we can safely walk — a walkable ranch takes a fraction of the time a steep, cut-up two-story does. Add-ons move the number: drone work when pitch or fragile material rules out walking, and infrared scanning when we need to find moisture trapped inside decking or under a membrane that looks fine from the surface. Storm damage assessments for an insurance claim we usually provide at no charge, because if a claim is coming, we want the documentation done right from the first visit. Distance factors in once you\'re well outside the Greenville area — we\'d rather group a run into north Georgia with other work we already have that direction than bill you for the windshield time. Set any of that against what an inspection heads off — a leak quietly rotting decking and framing, buying a house that needs a full roof the month you close, or missing your carrier\'s filing window entirely. Plan on 45–90 minutes on site and a written report with photos.',
       },
       {
         heading: 'Why Frequency Matters',
@@ -554,7 +554,7 @@ export const ROOFING_SUB_SERVICES: RoofingSubService[] = [
       },
       {
         heading: 'Types of Ventilation',
-        content: 'Ridge vents run along the entire peak providing the most uniform exhaust when paired with continuous soffit vents. Box vents are individual exhaust points near the ridge. Powered attic fans actively pull air through the attic. The key is balance: intake area (soffit vents) should equal or slightly exceed exhaust area. Code in South Carolina, North Carolina, and Georgia alike requires a minimum of 1 square foot of net free ventilation per 150 square feet of attic floor, and your local inspector will check it.',
+        content: 'Ridge vents run along the entire peak providing the most uniform exhaust when paired with continuous soffit vents. Box vents are individual exhaust points near the ridge. Powered attic fans actively pull air through the attic. The key is balance: intake area (soffit vents) should equal or slightly exceed exhaust area. Code in South Carolina and Georgia alike requires a minimum of 1 square foot of net free ventilation per 150 square feet of attic floor, and your local inspector will check it.',
       },
       {
         heading: 'What the Work Actually Involves',

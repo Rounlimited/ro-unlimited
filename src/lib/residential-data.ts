@@ -135,7 +135,7 @@ export const RESIDENTIAL_PROCESS: Record<string, ProcessDetail> = {
       'Municipal building permit application and management',
       'Engineering and architectural plan review coordination',
       'HOA and covenant compliance review if applicable',
-      'All permitting handled across Georgia, South Carolina, and North Carolina',
+      'All permitting handled across Georgia and South Carolina',
     ],
     clientRole: 'Provide any HOA or covenant documents. We handle the rest.',
     deliverable: 'Approved building permits — construction-ready.',

@@ -230,7 +230,7 @@ export default function OurStoryPage() {
             <div className="w-20 h-[2px] bg-gradient-to-r from-transparent via-ro-gold to-transparent mx-auto mt-6 mb-6" />
             <p className="text-ro-gray-400 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
               RO Unlimited Construction &amp; Development provides professional full-range commercial construction —
-              including site development and utility services — throughout South Carolina, Georgia, and North Carolina.
+              including site development and utility services — throughout South Carolina and Georgia.
             </p>
           </div>
 

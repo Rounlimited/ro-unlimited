@@ -394,7 +394,7 @@ export default function Hero({ heroVideoUrl }: HeroProps) {
 
             {/* Description */}
             <p ref={descRef} className="max-w-2xl sm:mx-auto text-ro-white/90 text-lg sm:text-xl font-body leading-relaxed tracking-wide mb-12 drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]">
-              RO Unlimited Construction &amp; Development, providing professional full-range commercial construction &mdash; including site development and utility services &mdash; throughout South Carolina, Georgia, and North Carolina.
+              RO Unlimited Construction &amp; Development, providing professional full-range commercial construction &mdash; including site development and utility services &mdash; throughout South Carolina and Georgia.
             </p>
 
             {/* CTAs */}

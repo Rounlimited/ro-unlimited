@@ -12,6 +12,7 @@ import { Link2 as LinkIcon } from 'lucide-react';
 import AppShell from '@/components/admin/AppShell';
 import { SCHEDULE_META, BUDGET_META, STATUS_REASONS, cadenceLabel, type ScheduleStatus, type BudgetStatus } from '@/lib/reporting';
 import { LOG_TYPES } from '@/lib/progress-reports';
+import ReviewShare from '@/components/admin/ReviewShare';
 import { REQUEST_KINDS } from '@/lib/customer-request-kinds';
 import { INSPECTION_STATUS, PERMIT_STATUS } from '@/lib/inspection-status';
 import { SERVICE_SYSTEMS } from '@/lib/service-systems';
@@ -975,6 +976,7 @@ export default function JobRoomPage() {
                 style={{ background: 'rgba(245,184,61,0.12)', color: '#F5B83D', border: '1px solid rgba(245,184,61,0.4)' }}>
                 {hoBusy === 'review' ? <Loader2 size={18} className="animate-spin" /> : <Star size={18} />} {b.completion.review_requested_at ? 'Ask for a Google review again' : 'Ask for a Google review'}
               </button>
+              <ReviewShare token={e.share_token} phone={customer.phone} firstName={customer.first_name} project={e.project_name} />
               {b.completion.review_requested_at && <p className="text-[14px] text-white/45 mt-1.5 text-center">Last asked {String(b.completion.review_requested_at).slice(0, 10)}</p>}
               {!e.completed_at && <p className="text-[14px] text-white/45 mt-2 text-center">Mark the job complete (Contract &amp; Tabs) to send it — that starts the warranty clock.</p>}
               {hoNote && <p className="text-[15px] mt-2" style={{ color: hoNote.includes('✓') ? '#35d07f' : '#D4B965' }}>{hoNote}</p>}

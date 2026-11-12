@@ -13,7 +13,7 @@ const TRADES = [
   { id: 'concrete', title: 'Concrete & Foundation', tagline: 'Footings, slabs, retaining walls — done right the first time.', icon: HardHat },
   { id: 'hvac', title: 'HVAC Professionals', tagline: 'Residential and commercial systems. Sized right, installed right.', icon: Wind },
   { id: 'finish', title: 'Finish Carpenters', tagline: 'The details that make a house a home.', icon: Wrench },
-  { id: 'operator', title: 'Heavy Equipment Operators', tagline: 'Grading, excavation, and site work across three states.', icon: Flame },
+  { id: 'operator', title: 'Heavy Equipment Operators', tagline: 'Grading, excavation, and site work across two states.', icon: Flame },
   { id: 'pm', title: 'Project Managers', tagline: 'Run the job. Own the schedule. Deliver the result.', icon: CircuitBoard },
 ];
 
@@ -29,7 +29,7 @@ const BENEFITS = [
   { title: 'Consistent, Quality Projects', desc: 'No low-bid chaos. Real projects with real budgets and professional management.' },
   { title: 'Professional Job Sites', desc: 'One point of contact. Clear scope. Organized schedules. No runaround.' },
   { title: 'A Reputation Worth Having', desc: 'RO has been building trust for 25 years. Your work carries that name.' },
-  { title: 'Tri-State Pipeline', desc: 'Georgia, South Carolina, North Carolina. Steady work across three states.' },
+  { title: 'Steady Pipeline', desc: 'Georgia and South Carolina. Steady work across two states.' },
 ];
 
 const TRADE_OPTIONS = [

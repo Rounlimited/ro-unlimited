@@ -227,7 +227,7 @@ export function buildEmailHtml(toName: string, bodyHtml: string, subject: string
                 <td style="padding-left:12px;">
                   <p style="margin:0 0 2px;color:#ffffff;font-size:14px;font-weight:700;">RO Unlimited</p>
                   <p style="margin:0 0 1px;color:#999999;font-size:12px;">Contractor &amp; Developer</p>
-                  <p style="margin:0;color:#666666;font-size:11px;">SC &nbsp;&middot;&nbsp; GA &nbsp;&middot;&nbsp; NC</p>
+                  <p style="margin:0;color:#666666;font-size:11px;">SC &nbsp;&middot;&nbsp; GA </p>
                 </td>
               </tr>
             </table>

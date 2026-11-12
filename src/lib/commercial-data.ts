@@ -37,7 +37,7 @@ export const COMMERCIAL_SERVICE_DETAILS: Record<string, ServiceDetail> = {
     title: 'Commercial Building Development',
     overview: 'From vacant land to occupied building — RO manages the full development lifecycle. We coordinate site selection advisory, feasibility analysis, zoning research, architectural design-build, and ground-up construction under one contract, with one license holder accountable.',
     includes: [
-      'Site selection and feasibility advisory across GA, SC, and NC',
+      'Site selection and feasibility advisory across GA and SC',
       'Zoning research, variance applications, and municipal compliance',
       'Architectural and engineering design-build coordination',
       'Full permitting — building, environmental, fire, ADA',
@@ -83,7 +83,7 @@ export const COMMERCIAL_SERVICE_DETAILS: Record<string, ServiceDetail> = {
   'Problem Solving for Complex Sites': {
     id: 'complex-sites',
     title: 'Problem Solving for Complex Sites',
-    overview: 'Not every site is flat, clear, and ready to build. RO specializes in the projects other contractors walk away from — difficult terrain, limited access, wetlands, unusual soil conditions, existing structure demolition, and environmental restrictions. With our own grading license classification and 25+ years of tri-state experience, we solve site problems before they become schedule killers.',
+    overview: 'Not every site is flat, clear, and ready to build. RO specializes in the projects other contractors walk away from — difficult terrain, limited access, wetlands, unusual soil conditions, existing structure demolition, and environmental restrictions. With our own grading license classification and 25+ years of experience across South Carolina and Georgia, we solve site problems before they become schedule killers.',
     includes: [
       'Difficult terrain grading — slopes, rock, poor drainage',
       'Wetland mitigation and environmental compliance coordination',
