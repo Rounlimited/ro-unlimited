@@ -580,7 +580,10 @@ export default function EstimateDetailPage() {
   }
 
   const statusCfg = STATUS_CONFIG[estimate.status] || STATUS_CONFIG.draft;
-  const divCfg = DIVISION_CONFIG[estimate.division] || DIVISION_CONFIG.residential;
+  const divKey = String(estimate.division || '');
+  const divCfg = DIVISION_CONFIG[divKey]
+    || (divKey.startsWith('commercial') ? { ...DIVISION_CONFIG.commercial, label: divKey === 'commercial' ? 'Commercial' : 'Commercial ' + divKey.replace(/^commercial_?/, '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) } : null)
+    || (divKey ? { label: (divKey.includes(':') ? divKey.split(':').pop()! : divKey).replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()), icon: Building2, text: 'text-white/70' } : DIVISION_CONFIG.residential);
   const DivIcon = divCfg.icon;
   const customerName = estimate.customer
     ? `${estimate.customer.first_name} ${estimate.customer.last_name}`

@@ -98,6 +98,15 @@ const DIVISION_CONFIG: Record<string, { bg: string; text: string; label: string;
   grading:     { bg: 'bg-green-500/10',    text: 'text-green-400',   label: 'Grading',     icon: Mountain },
 };
 
+function divisionCfg(v: string | null | undefined) {
+  const k = String(v || '');
+  if (DIVISION_CONFIG[k]) return DIVISION_CONFIG[k];
+  if (k.startsWith('commercial')) return DIVISION_CONFIG.commercial;
+  if (!k) return DIVISION_CONFIG.residential;
+  const label = (k.includes(':') ? k.split(':').pop()! : k).replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+  return { bg: 'bg-white/5', text: 'text-white/70', label, icon: Building2 };
+}
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -490,7 +499,7 @@ export default function EstimatesPage() {
               <tbody>
                 {sorted.map(estimate => {
                   const statusCfg = STATUS_CONFIG[estimate.status] || STATUS_CONFIG.draft;
-                  const divCfg = DIVISION_CONFIG[estimate.division] || DIVISION_CONFIG.residential;
+                  const divCfg = divisionCfg(estimate.division);
                   const DivIcon = divCfg.icon;
                   const customerName = estimate.customer ? `${estimate.customer.first_name} ${estimate.customer.last_name}` : 'No Customer';
                   const href = `/admin/estimates/${estimate.id}`;
@@ -543,7 +552,7 @@ export default function EstimatesPage() {
           <div className="space-y-2">
             {filtered.map((estimate) => {
               const statusCfg = STATUS_CONFIG[estimate.status] || STATUS_CONFIG.draft;
-              const divCfg = DIVISION_CONFIG[estimate.division] || DIVISION_CONFIG.residential;
+              const divCfg = divisionCfg(estimate.division);
               const DivIcon = divCfg.icon;
               const customerName = estimate.customer
                 ? `${estimate.customer.first_name} ${estimate.customer.last_name}`

@@ -168,8 +168,9 @@ const DIVISION_LABELS: Record<string, string> = {
 /** Internal values like "other:Utility" render as "Utility". */
 function divisionLabel(v: string): string {
   if (DIVISION_LABELS[v]) return DIVISION_LABELS[v];
+  if (v === 'commercial_renovation') return 'Commercial Renovation';
   const raw = v.includes(':') ? v.split(':').pop()! : v;
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
+  return raw.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 }
 
 /* ─── Component ──────────────────────────────────────────── */
