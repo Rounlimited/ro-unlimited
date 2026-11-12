@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { snapshotRow, recordEdit, recordDelete } from '@/lib/edit-history';
 import { createAdminClient } from '@/lib/supabase/server';
 
 type RouteContext = { params: { id: string } };
@@ -42,6 +43,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
     const supabase = createAdminClient();
 
+    const prior = await snapshotRow(supabase, 'vendors', id);
     const { data, error } = await supabase
       .from('vendors')
       .update({ ...body, updated_at: new Date().toISOString() })
@@ -51,6 +53,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!data) return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });
+    await recordEdit(supabase, 'vendors', id, prior, data);
 
     return NextResponse.json(data);
   } catch (err) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { snapshotRow, recordEdit, recordDelete } from '@/lib/edit-history';
 import { recalcEstimateTotals, syncScheduleAmounts, withLiveAmounts } from '@/lib/estimates';
 
 type RouteContext = { params: { id: string } };
@@ -119,6 +120,9 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
     // (recalc above owns `total` — fixed price plus any credit/charge.)
 
+    // Snapshot for Undo/Redo (taken before the write)
+    const priorRow = await snapshotRow(supabase, 'estimates', id);
+
     const { data, error } = await supabase
       .from('estimates')
       .update({ ...body, updated_at: new Date().toISOString() })
@@ -128,6 +132,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!data) return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
+    await recordEdit(supabase, 'estimates', id, priorRow, data);
     if (financialChanged) await syncScheduleAmounts(supabase, id, Number(data.total) || 0);
 
     // Insert status history if status changed

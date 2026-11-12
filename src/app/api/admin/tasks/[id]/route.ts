@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { snapshotRow, recordEdit, recordDelete } from '@/lib/edit-history';
 import { createAdminClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -41,6 +42,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
+    const prior = await snapshotRow(supabase, 'tasks', id);
     const { data, error } = await supabase
       .from('tasks')
       .update(updates)
@@ -54,6 +56,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (body.status === 'done' && data?.recurrence_type && data.recurrence_type !== 'none') {
       await spawnNextRecurrence(supabase, data);
     }
+    await recordEdit(supabase, 'tasks', id, prior, data);
 
     return NextResponse.json({ task: data });
   } catch (err: any) {
@@ -68,6 +71,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const { hard } = await req.json().catch(() => ({ hard: false }));
 
     if (hard) {
+      await recordDelete(supabase, 'tasks', await snapshotRow(supabase, 'tasks', params.id));
       await supabase.from('tasks').delete().eq('id', params.id);
     } else {
       await supabase.from('tasks').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', params.id);

@@ -1,5 +1,7 @@
 'use client';
 
+import UndoRedoButtons from '@/components/admin/UndoRedoButtons';
+
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -126,6 +128,10 @@ export default function InvoiceDetailPage() {
               )}
             </div>
           </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-3">
+          <UndoRedoButtons table="invoices" id={String(id)} onChange={load} refreshKey={inv?.updated_at} />
         </div>
 
         {/* Actions — send, pdf, share link */}

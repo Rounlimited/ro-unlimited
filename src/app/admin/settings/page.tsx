@@ -1,4 +1,5 @@
 'use client';
+import RecentlyDeleted from '@/components/admin/RecentlyDeleted';
 
 import { useState, useEffect } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
@@ -477,6 +478,8 @@ export default function SettingsPage() {
         {isNexa && <AlertRoutingCard currentEmail={currentUser?.email || null} />}
 
         {/* ── Email Accounts ──────────────────────────────────────────── */}
+        <RecentlyDeleted />
+
         <section className="bg-[#111] border border-white/5 rounded-xl overflow-hidden mb-6">
           <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
             <div className="flex items-center gap-3">

@@ -1,5 +1,7 @@
 'use client';
 
+import UndoRedoButtons from '@/components/admin/UndoRedoButtons';
+
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
@@ -410,7 +412,8 @@ export default function CustomerDetailPage() {
         )}
 
         {/* Action buttons */}
-        <div className="flex items-center gap-3 pt-2 pb-8">
+        <div className="flex flex-wrap items-center gap-3 pt-2 pb-8">
+          <UndoRedoButtons table="customers" id={String(id)} onChange={() => window.location.reload()} refreshKey={customer?.updated_at} />
           <button
             onClick={handleSave}
             disabled={saving}

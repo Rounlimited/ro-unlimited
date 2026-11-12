@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
+import UndoRedoButtons from '@/components/admin/UndoRedoButtons';
 import FixedPriceControl from '@/components/admin/estimates/FixedPriceControl';
 import PdfPreviewModal from '@/components/admin/PdfPreviewModal';
 import CloseOutCard from '@/components/admin/estimates/CloseOutCard';
@@ -270,6 +271,7 @@ export default function EstimateDetailPage() {
 
   /* ─── Data Fetching ──────────────────────────────────────────── */
 
+  const [histKey, setHistKey] = useState(0);
   const fetchEstimate = async () => {
     setLoading(true);
     setError('');
@@ -278,6 +280,7 @@ export default function EstimateDetailPage() {
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       setEstimate(data);
+      setHistKey((k) => k + 1);
       // Pre-fill send email from customer
       if (data.customer?.email) {
         setSendTo(data.customer.email);
@@ -694,6 +697,7 @@ export default function EstimateDetailPage() {
             >
               <Link2 size={14} /> Project Page
             </button>
+            <UndoRedoButtons table="estimates" id={String(id)} onChange={fetchEstimate} refreshKey={histKey} />
             <button
               onClick={() => setShowSendModal(true)}
               className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-semibold text-black rounded-lg hover:opacity-90 transition-all"

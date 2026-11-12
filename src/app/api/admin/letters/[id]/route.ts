@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { snapshotRow, recordEdit, recordDelete } from '@/lib/edit-history';
 import { createAdminClient } from '@/lib/supabase/server';
 
 type RouteContext = { params: { id: string } };
@@ -20,9 +21,11 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       'recipient_company', 'recipient_address', 'signer_name', 'signer_title', 'doc_type']) {
       if (body[k] !== undefined) fields[k] = body[k];
     }
+    const prior = await snapshotRow(supabase, 'company_letters', params.id);
     const { data, error } = await supabase
       .from('company_letters').update(fields).eq('id', params.id).select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    await recordEdit(supabase, 'company_letters', params.id, prior, data);
     return NextResponse.json({ letter: data });
   } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
@@ -31,6 +34,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
 export async function DELETE(_req: NextRequest, { params }: RouteContext) {
   const supabase = createAdminClient();
+  await recordDelete(supabase, 'company_letters', await snapshotRow(supabase, 'company_letters', params.id));
   const { error } = await supabase.from('company_letters').delete().eq('id', params.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ deleted: true });

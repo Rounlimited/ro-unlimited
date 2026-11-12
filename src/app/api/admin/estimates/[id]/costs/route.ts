@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { snapshotRow, recordDelete } from '@/lib/edit-history';
 import { createAdminClient } from '@/lib/supabase/server';
 
 type RouteContext = { params: { id: string } };
@@ -68,6 +69,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     const supabase = createAdminClient();
     const id = new URL(req.url).searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+    await recordDelete(supabase, 'job_costs', await snapshotRow(supabase, 'job_costs', id));
     const { error } = await supabase.from('job_costs').delete().eq('id', id).eq('estimate_id', params.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json(await listCosts(supabase, params.id));

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { snapshotRow, recordEdit, recordDelete } from '@/lib/edit-history';
 import { createAdminClient } from '@/lib/supabase/server';
 import { notifyScheduleChange } from '@/lib/schedule-notify';
 
@@ -24,6 +25,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       const delta = Math.round((new Date(patch.starts_on + 'T12:00:00').getTime() - new Date(before.starts_on + 'T12:00:00').getTime()) / 86400000);
       patch.ends_on = new Date(new Date(before.ends_on + 'T12:00:00').getTime() + delta * 86400000).toISOString().slice(0, 10);
     }
+    const prior = await snapshotRow(supabase, 'job_schedule_items', params.id);
     const { data, error } = await supabase.from('job_schedule_items')
       .update(patch).eq('id', params.id).select().single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -32,6 +34,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     if (before && patch.starts_on && before.starts_on !== patch.starts_on && before.estimate_id) {
       notified = await notifyScheduleChange({ item: before, oldStart: before.starts_on, newStart: patch.starts_on, reason: body.reason || null, by: body.by || null }).catch(() => null);
     }
+    await recordEdit(supabase, 'job_schedule_items', params.id, prior, data);
     return NextResponse.json({ item: data, notified });
   } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
@@ -41,6 +44,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 export async function DELETE(_req: NextRequest, { params }: RouteContext) {
   try {
     const supabase = createAdminClient();
+    await recordDelete(supabase, 'job_schedule_items', await snapshotRow(supabase, 'job_schedule_items', params.id));
     const { error } = await supabase.from('job_schedule_items').delete().eq('id', params.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true });

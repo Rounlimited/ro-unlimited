@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { snapshotRow, recordEdit, recordDelete } from '@/lib/edit-history';
 import { createAdminClient } from '@/lib/supabase/server';
 
 // GET — single customer by ID
@@ -33,6 +34,7 @@ export async function PATCH(
     const body = await req.json();
     const supabase = createAdminClient();
 
+    const prior = await snapshotRow(supabase, 'customers', params.id);
     const { data, error } = await supabase
       .from('customers')
       .update({ ...body, updated_at: new Date().toISOString() })
@@ -42,6 +44,7 @@ export async function PATCH(
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!data) return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
+    await recordEdit(supabase, 'customers', params.id, prior, data);
     return NextResponse.json(data);
   } catch (err) {
     console.error('[customers] PATCH error:', err);
@@ -57,6 +60,7 @@ export async function DELETE(
   try {
     const supabase = createAdminClient();
 
+    await recordDelete(supabase, 'customers', await snapshotRow(supabase, 'customers', params.id));
     const { error } = await supabase
       .from('customers')
       .delete()

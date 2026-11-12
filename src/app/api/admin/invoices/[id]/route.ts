@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { snapshotRow, recordEdit, recordDelete } from '@/lib/edit-history';
 import { createAdminClient } from '@/lib/supabase/server';
 import { calcTotals, effectiveStatus, normalizeLineItems } from '@/lib/invoices';
 
@@ -69,6 +70,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
+    const prior = await snapshotRow(supabase, 'invoices', params.id);
     const { data, error } = await supabase
       .from('invoices')
       .update({ ...body, updated_at: new Date().toISOString() })
@@ -76,6 +78,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       .select('*, customer:customers(id, first_name, last_name, company_name, email, phone)')
       .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await recordEdit(supabase, 'invoices', params.id, prior, data);
     return NextResponse.json({ ...data, effective_status: effectiveStatus(data) });
   } catch (err) {
     console.error('[invoice] PATCH error:', err);
