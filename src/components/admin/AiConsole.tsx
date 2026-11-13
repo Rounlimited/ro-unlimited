@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import './ai-console.css';
+import AiVoice, { VoiceTurn } from './AiVoice';
 
 /**
  * Nexa AI module — the full-screen assistant. Opens from the AI button in the
@@ -162,6 +163,7 @@ export default function AiConsole() {
   const [payMsg, setPayMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [autoOn, setAutoOn] = useState(false); const [autoBelow, setAutoBelow] = useState('5'); const [autoAmt, setAutoAmt] = useState('20');
   const reqIdRef = useRef('');
+  const [voiceCtx, setVoiceCtx] = useState<AudioContext | null>(null);
   const pinRef = useRef(''); pinRef.current = pin;
   const feedRef = useRef<HTMLDivElement>(null);
   const inpRef = useRef<HTMLTextAreaElement>(null);
@@ -363,6 +365,35 @@ export default function AiConsole() {
     } catch { say('Could not shorten the chat'); }
   };
 
+  // Voice: the audio engine must be created inside the tap itself, or phones keep it silent.
+  const startVoice = () => {
+    setMenu(false);
+    if (busy) return say('Wait for the answer to finish first.');
+    try {
+      const AC: any = (window as any).AudioContext || (window as any).webkitAudioContext;
+      let c: AudioContext;
+      try { c = new AC({ sampleRate: 24000 }); } catch { c = new AC(); }
+      c.resume().catch(() => {});
+      setVoiceCtx(c);
+    } catch { say('This browser cannot do voice.'); }
+  };
+  const endVoice = async (turns: VoiceTurn[]) => {
+    setVoiceCtx(null);
+    if (!turns.length) return;
+    const final: Msg[] = [...msgs, ...turns.map((t) => ({ role: t.role, content: t.content }))];
+    setMsgs(final); scrollEnd();
+    let id = convId;
+    try {
+      if (!id) {
+        const first = turns.find((t) => t.role === 'user')?.content || 'Voice chat';
+        const r = await convApi({ action: 'create', title: first.slice(0, 60) });
+        if (r.ok) { id = (await r.json()).conversation.id; setConvId(id); }
+      }
+      if (id) await convApi({ action: 'save', id, messages: final, pin: curLocked ? pinRef.current : undefined });
+    } catch { /* the words stay on screen even if saving failed */ }
+    loadConvs(); loadCat(); loadWallet();
+  };
+
   const classic = () => { setMenu(false); setOpen(false); window.dispatchEvent(new Event('ro-ai-classic')); };
 
   const send = async (override?: string) => {
@@ -503,6 +534,7 @@ export default function AiConsole() {
           <button className="nxa-icon nxa-menub" aria-label="Chats" onClick={() => setSide(true)}>☰</button>
           <div className="nxa-title"><b>{title}</b><span>{cur ? cur.label : 'Assistant'}</span></div>
           <button className="nxa-pill" onClick={() => setPicker('hosted')} title="Choose the AI model">⚡ <span className="l">{cur?.label || 'Model'}</span><span className="s">{cur?.short || 'Model'}</span></button>
+          <button className="nxa-pill nxa-talk" onClick={startVoice} title="Talk with the assistant">🎙 <span className="l">Talk</span></button>
           <button className="nxa-icon" aria-label="More" onClick={() => setMenu((v) => !v)}>⋮</button>
           <button className="nxa-icon" aria-label="Close assistant" onClick={() => setOpen(false)}>✕</button>
         </header>
@@ -515,7 +547,8 @@ export default function AiConsole() {
             <button onClick={toggleLock}>{curLocked ? 'Take the PIN lock off this chat' : 'Lock this chat with a PIN'}</button>
             {pin && <button onClick={lockNow}>Close my locked chats now</button>}
             <button onClick={() => { setMenu(false); askPin(pinSet ? 'change' : 'set'); }}>{pinSet ? 'Change my PIN' : 'Set a PIN'}</button>
-            <button onClick={classic}>Voice mode (classic assistant)</button>
+            <button onClick={startVoice}>Talk (voice conversation)</button>
+            <button onClick={classic}>Open the old assistant</button>
             <button onClick={() => { setMenu(false); setOpen(false); router.push('/admin/ai-settings'); }}>AI settings</button>
           </div>
         )}
@@ -615,6 +648,11 @@ export default function AiConsole() {
             <button className="nxa-btn" onClick={() => setPicker(null)}>Close</button>
           </div>
         </>
+      )}
+      {voiceCtx && (
+        <AiVoice ctx={voiceCtx} history={msgs.map((m) => ({ role: m.role, content: m.content }))} currentPage={pathname}
+          onNavigate={(path, d) => { say(`Opening ${d || path}…`); router.push(path); }}
+          onClose={endVoice} onOutOfCredit={() => { loadWallet(); setTimeout(openWallet, 300); }} />
       )}
       {walletOpen && (
         <>

@@ -3048,6 +3048,22 @@ const toolStatusLabel = (name: string) => TOOL_STATUS_LABELS[name] || 'Working o
 
 type StreamEmit = (evt: Record<string, any>) => void;
 
+// Text-to-speech list price (x-ai/grok-voice-tts-1.0 on OpenRouter), USD per character spoken.
+const VOICE_TTS_USD_PER_CHAR = 15 / 1_000_000;
+// Added to the normal instructions when the assistant is SPEAKING instead of typing.
+const VOICE_RULES = `
+
+## YOU ARE SPEAKING OUT LOUD NOW
+This is a live voice conversation. The person hears you; they do not see text.
+- Talk like a capable coworker on the phone. Short, natural sentences. Usually one to three sentences, then stop and let them talk.
+- Never use markdown, bullets, tables, headings, emoji, or symbols. Never read out a web address, an ID code, or a link. Ignore every instruction above about [SATELLITE_URL] lines, links, or formatting: describe things in words.
+- Say numbers the way people say them: "forty-two thousand dollars", "November seventh", "estimate two fifty-four".
+- If a list has more than three things, give the count and the top two or three, then ask if they want the rest.
+- Before a tool that takes a moment, say a few words first ("Let me check." / "One second."), then call it.
+- Before anything that sends, deletes, charges, or changes a price, say what you are about to do and wait for a yes. Reading and looking things up needs no permission.
+- If you did not catch something, ask them to say it again. Do not guess at names or amounts.
+- If they interrupt you, stop and listen. Do not repeat what you already said.`;
+
 // Normalised result of one streamed round, shared by the Grok and Claude
 // paths so a single tool loop can drive either provider.
 // `toolCalls` is always OpenAI-shaped ({ id, function: { name, arguments } });
@@ -3239,7 +3255,9 @@ export async function POST(req: NextRequest) {
     const user = await getServerUser(req);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { messages, currentPage, projectContext, useModel, imageData, stream, model } = await req.json();
+    const reqBody = await req.json();
+    const { currentPage, projectContext, useModel, imageData, mode, audio } = reqBody;
+    let { messages, stream, model } = reqBody;
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages required' }, { status: 400 });
     }
@@ -3253,6 +3271,37 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createAdminClient();
+
+    // ── Voice conversation, one spoken turn: the browser sends what it heard
+    // (a short recording), we turn it into text, then answer exactly like a
+    // typed message — same tools, same model list, same OpenRouter account. ──
+    let voiceHeard = '';
+    let voiceSttCost = 0;
+    if (mode === 'voice_turn') {
+      const orKeyV = process.env.OPENROUTER_API_KEY;
+      if (!orKeyV) return NextResponse.json({ error: 'Voice is not set up yet.' }, { status: 503 });
+      const b64 = typeof audio?.data === 'string' ? audio.data : '';
+      if (!b64 || b64.length > 8_000_000) return NextResponse.json({ error: 'No audio received.' }, { status: 400 });
+      const transcribe = async (sttModel: string) => {
+        const r = await fetch('https://openrouter.ai/api/v1/audio/transcriptions', {
+          method: 'POST', headers: { Authorization: `Bearer ${orKeyV}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: sttModel, input_audio: { data: b64, format: audio?.format === 'mp3' ? 'mp3' : 'wav' }, language: 'en' }),
+        });
+        if (!r.ok) throw new Error(`stt ${r.status}`);
+        return r.json();
+      };
+      let stt: any = null;
+      try { stt = await transcribe('deepgram/nova-3'); }
+      catch { try { stt = await transcribe('x-ai/grok-stt-2.0'); } catch (e) { console.error('[ai-chat] voice STT failed:', e); } }
+      if (!stt) return NextResponse.json({ error: 'I could not hear that. Try again.' }, { status: 502 });
+      voiceHeard = String(stt.text || '').trim();
+      voiceSttCost = Number(stt.usage?.cost) || 0;
+      // Nothing intelligible (a cough, a door): say so quietly and keep listening.
+      if (voiceHeard.replace(/[^a-z0-9]/gi, '').length < 2) return NextResponse.json({ heard: '' });
+      messages = [...messages, { role: 'user', content: voiceHeard }];
+      stream = true;
+      if (!hostedModel(model)) model = 'haiku';
+    }
 
     // Load persistent memories
     const { data: allMemories } = await supabase
@@ -3336,7 +3385,7 @@ export async function POST(req: NextRequest) {
     contextParts.push(`\nCurrent time (Eastern): ${timeEastern}`);
 
     // Build dynamic context block (memories, current page, active project)
-    const dynamicContext = contextParts.length ? '\n' + contextParts.join('\n') : '';
+    const dynamicContext = (contextParts.length ? '\n' + contextParts.join('\n') : '') + (voiceHeard ? VOICE_RULES : '');
     let content = '';
     let usedModel = '';
     const actions: { type: string; path: string; description: string }[] = [];
@@ -3494,10 +3543,12 @@ export async function POST(req: NextRequest) {
           // Track whether any text reached the client — we can only switch to
           // the Claude fallback cleanly before the first delta.
           let textEmitted = false;
+          let spokenChars = 0;
           const emitTracked: StreamEmit = (evt) => {
-            if (evt.type === 'delta' && evt.text) textEmitted = true;
+            if (evt.type === 'delta' && evt.text) { textEmitted = true; spokenChars += evt.text.length; }
             emit(evt);
           };
+          if (voiceHeard) emit({ type: 'heard', text: voiceHeard });
           try {
             // Same tool set, same round cap, same status labels for both
             // providers — only the wire format of the conversation differs.
@@ -3606,9 +3657,11 @@ export async function POST(req: NextRequest) {
           // Meter what the gateway charged for this message (never blocks the reply).
           if (gwModel && gwUsage.seen) {
             try {
-              const cost = gwUsage.cost > 0 ? gwUsage.cost : estimateCost(gwModel, gwUsage.tokens_in, gwUsage.tokens_out);
+              // A spoken turn also pays for hearing (speech-to-text) and for the voice (text-to-speech).
+              const cost = (gwUsage.cost > 0 ? gwUsage.cost : estimateCost(gwModel, gwUsage.tokens_in, gwUsage.tokens_out))
+                + (voiceHeard ? voiceSttCost + spokenChars * VOICE_TTS_USD_PER_CHAR : 0);
               await supabase.from('ai_usage').insert({
-                user_id: user.id, user_email: user.email || null, model: gwModel.key, source: 'chat',
+                user_id: user.id, user_email: user.email || null, model: gwModel.key, source: voiceHeard ? 'voice' : 'chat',
                 tokens_in: gwUsage.tokens_in, tokens_out: gwUsage.tokens_out,
                 cost_usd: cost, charged_usd: cost * AI_MARKUP,
               });
