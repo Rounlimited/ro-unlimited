@@ -340,7 +340,7 @@ export default function AiVoice({ ctx, history, currentPage, onNavigate, onClose
             baseAssetPath: `https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@${VAD_VER}/dist/`,
             onnxWASMBasePath: `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VER}/dist/`,
             positiveSpeechThreshold: 0.6, negativeSpeechThreshold: 0.4,
-            redemptionFrames: 7, minSpeechFrames: 4, preSpeechPadFrames: 3,
+            redemptionFrames: 6, minSpeechFrames: 4, preSpeechPadFrames: 3,
             onSpeechStart, onSpeechEnd, onVADMisfire: onMisfire,
             onFrameProcessed: (p: any) => { levelRef.current = Math.max(levelRef.current, Math.min(1, (p?.isSpeech || 0) * 0.9)); },
           });
@@ -382,7 +382,10 @@ export default function AiVoice({ ctx, history, currentPage, onNavigate, onClose
   }, []);
 
   const pickVoice = (id: string) => { setVoice(id); ls.set('nxa-voice', id); };
-  const pickBrain = (k: string) => { setBrain(k); ls.set('nxa-voice-brain', k); };
+  const warm = (k: string) => { fetch('/api/admin/ai-chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'voice_warm', model: k, messages: [] }) }).catch(() => {}); };
+  const pickBrain = (k: string) => { setBrain(k); ls.set('nxa-voice-brain', k); warm(k); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { warm(brainRef.current); }, []);
   const toggleBarge = () => { const v = !bargeIn; setBargeIn(v); ls.set('nxa-voice-barge', v ? '1' : '0'); };
   const toggleMute = () => { const m = !muted; setMuted(m); mutedRef.current = m; if (m && phaseRef.current === 'hearing') setP('listening'); };
 

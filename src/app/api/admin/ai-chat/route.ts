@@ -3272,6 +3272,13 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient();
 
+    // Started now so it runs while a spoken turn is being transcribed
+    const memoriesPromise = supabase
+      .from('ai_memories')
+      .select('content, category')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
     // ── Voice conversation, one spoken turn: the browser sends what it heard
     // (a short recording), we turn it into text, then answer exactly like a
     // typed message — same tools, same model list, same OpenRouter account. ──
@@ -3304,11 +3311,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Load persistent memories
-    const { data: allMemories } = await supabase
-      .from('ai_memories')
-      .select('content, category')
-      .order('created_at', { ascending: false })
-      .limit(200);
+    const { data: allMemories } = await memoriesPromise;
 
     // Relevance-filter memories against the conversation instead of dumping
     // the newest 50: preferences/pricing always ride along (they shape every
@@ -3519,6 +3522,32 @@ export async function POST(req: NextRequest) {
         gwUsage.cost += Number(u.cost) || 0;
       },
     } : undefined;
+    // ── Voice warm-up: sent when the voice screen opens. It loads the long
+    // instructions + tool list into the model provider's cache, so the first
+    // spoken answer starts about as fast as the later ones. ──
+    if (mode === 'voice_warm') {
+      const wm = hostedModel(model) || hostedModel('haiku');
+      if (!orKey || !wm) return NextResponse.json({ ok: false });
+      try {
+        const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST', headers: { Authorization: `Bearer ${orKey}`, 'Content-Type': 'application/json', 'X-Title': 'Nexa AI module' },
+          body: JSON.stringify({
+            model: wm.slug, max_tokens: 1, usage: { include: true }, tools: openaiTools(ALL_TOOLS),
+            messages: [
+              wm.slug.startsWith('anthropic/')
+                ? { role: 'system', content: [{ type: 'text', text: buildSystemPrompt(ALL_TOOLS, ''), cache_control: { type: 'ephemeral' } }] }
+                : { role: 'system', content: buildSystemPrompt(ALL_TOOLS, '') },
+              { role: 'user', content: 'ok' },
+            ],
+          }),
+        });
+        const d = await r.json().catch(() => ({}));
+        const cost = Number(d?.usage?.cost) || 0;
+        if (cost > 0) await supabase.from('ai_usage').insert({ user_id: user.id, user_email: user.email || null, model: wm.key, source: 'voice', tokens_in: Number(d.usage?.prompt_tokens) || 0, tokens_out: 0, cost_usd: cost, charged_usd: cost * AI_MARKUP });
+        return NextResponse.json({ ok: r.ok, cached: d?.usage?.prompt_tokens_details?.cached_tokens ?? null });
+      } catch { return NextResponse.json({ ok: false }); }
+    }
+
     // Prepaid credit: once the first credit has been bought, an empty balance
     // stops hosted models (after one try at an automatic top-up).
     if (gwModel && walletConfigured()) {
@@ -3599,6 +3628,7 @@ export async function POST(req: NextRequest) {
                   tool_calls: round.toolCalls,
                 });
               }
+              if (round.text && round.text.trim()) emit({ type: 'delta', text: '\n\n' });
               // Anthropic wants every tool_result for a turn in ONE user
               // message, so collect them and flush after the loop.
               const claudeToolResults: any[] = [];

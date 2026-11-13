@@ -160,6 +160,9 @@
   .nxa-side.open{transform:none;box-shadow:30px 0 70px rgba(0,0,0,.6)}
   .nxa-sidescrim{position:absolute;inset:0;z-index:44;background:rgba(2,4,10,.6)}
   .nxa-top{gap:6px;padding:calc(6px + var(--sat)) 8px 6px}
+  .nxa-top .nxa-icon{width:44px;height:48px;flex-basis:44px}
+  .nxa-top .nxa-pill{padding:0 11px}
+  .nxa-title{min-width:0}
   .nxa-title span{display:none}
   .nxa-pill .l{display:none}.nxa-pill .s{display:inline}
   .nxa-feed{padding:12px 10px 4px}
