@@ -3512,7 +3512,7 @@ export async function POST(req: NextRequest) {
     // through the one OpenRouter account. Old callers (no `model`) are unchanged.
     const orKey = process.env.OPENROUTER_API_KEY;
     const gwModel = orKey ? hostedModel(model) : null;
-    const gwUsage = { tokens_in: 0, tokens_out: 0, cost: 0, seen: false };
+    const gwUsage = { tokens_in: 0, tokens_out: 0, cost: 0, cached: 0, seen: false };
     const gwOpts = gwModel ? {
       model: gwModel.slug,
       onUsage: (u: any) => {
@@ -3520,6 +3520,7 @@ export async function POST(req: NextRequest) {
         gwUsage.tokens_in += Number(u.prompt_tokens) || 0;
         gwUsage.tokens_out += Number(u.completion_tokens) || 0;
         gwUsage.cost += Number(u.cost) || 0;
+        gwUsage.cached += Number(u.prompt_tokens_details?.cached_tokens) || 0;
       },
     } : undefined;
     // ── Voice warm-up: sent when the voice screen opens. It loads the long
@@ -3695,7 +3696,7 @@ export async function POST(req: NextRequest) {
                 tokens_in: gwUsage.tokens_in, tokens_out: gwUsage.tokens_out,
                 cost_usd: cost, charged_usd: cost * AI_MARKUP,
               });
-              emit({ type: 'usage', charged_usd: Math.round(cost * AI_MARKUP * 10000) / 10000 });
+              emit({ type: 'usage', charged_usd: Math.round(cost * AI_MARKUP * 10000) / 10000, tokens_in: gwUsage.tokens_in, cached_tokens: gwUsage.cached });
               await maybeAutoTopUp().catch(() => null);
             } catch (e) { console.error('[ai-chat] usage log failed:', e); }
           }
