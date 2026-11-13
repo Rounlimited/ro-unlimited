@@ -21,6 +21,7 @@ import { getChecklist, sendHandover, createServiceReminder, listServiceDue } fro
 import { LICENSES, STATES_LICENSED, LICENSE_CLASSIFICATION_COUNT } from '@/lib/licenses';
 import { headers as nextHeaders } from 'next/headers';
 import { hostedModel, estimateCost, AI_MARKUP } from '@/lib/ai-models';
+import { getBalance, maybeAutoTopUp, walletConfigured } from '@/lib/ai-wallet';
 
 /**
  * Tool calls that go back through our own admin API must carry the caller's
@@ -3469,6 +3470,17 @@ export async function POST(req: NextRequest) {
         gwUsage.cost += Number(u.cost) || 0;
       },
     } : undefined;
+    // Prepaid credit: once the first credit has been bought, an empty balance
+    // stops hosted models (after one try at an automatic top-up).
+    if (gwModel && walletConfigured()) {
+      try {
+        let w = await getBalance();
+        if (w.started && w.balance <= 0) { await maybeAutoTopUp(); w = await getBalance(); }
+        if (w.started && w.balance <= 0) {
+          return NextResponse.json({ error: 'The AI credit has run out. Add credit to keep going.', out_of_credit: true }, { status: 402 });
+        }
+      } catch (e) { console.error('[ai-chat] wallet check failed:', e); }
+    }
     const preferGrokStream = !!gwModel || (useModel !== 'claude' && useModel !== 'groq' && !!grokKey);
     // Claude streams too, but ONLY when explicitly selected — Grok stays the
     // default. Claude's time-to-first-token is ~0.5-1.0s vs Grok's ~2.5-3.2s,
@@ -3601,6 +3613,7 @@ export async function POST(req: NextRequest) {
                 cost_usd: cost, charged_usd: cost * AI_MARKUP,
               });
               emit({ type: 'usage', charged_usd: Math.round(cost * AI_MARKUP * 10000) / 10000 });
+              await maybeAutoTopUp().catch(() => null);
             } catch (e) { console.error('[ai-chat] usage log failed:', e); }
           }
           controller.close();

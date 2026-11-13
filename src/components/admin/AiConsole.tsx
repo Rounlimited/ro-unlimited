@@ -15,6 +15,13 @@ import './ai-console.css';
 
 type Msg = { role: 'user' | 'assistant'; content: string; imagePreview?: string };
 type Conv = { id: string; title: string; updated_at?: string; locked?: boolean };
+type Wallet = {
+  configured: boolean; canSpend?: boolean; started?: boolean; balance?: number; low?: boolean; on_hold?: boolean;
+  card?: { brand: string | null; last4: string | null } | null;
+  auto?: { on: boolean; below: number; amount: number; last_error?: string | null };
+  presets?: number[]; min?: number; max?: number;
+  history?: { at: string; amount: number; kind: string; status: string; by: string | null }[];
+};
 type PinSheet = { mode: 'unlock' | 'set' | 'change'; then?: (pin: string) => void };
 type Model = { key: string; label: string; short: string; group: string; best: string; price_in: number; price_out: number };
 type Catalog = {
@@ -146,6 +153,15 @@ export default function AiConsole() {
   const [pinA, setPinA] = useState(''); const [pinB, setPinB] = useState(''); const [pinC, setPinC] = useState('');
   const [pinErr, setPinErr] = useState('');
   const [curLocked, setCurLocked] = useState(false);
+  const [curTitle, setCurTitle] = useState('');
+  // Prepaid credit wallet
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [walletOpen, setWalletOpen] = useState(false);
+  const [amt, setAmt] = useState('20');
+  const [paying, setPaying] = useState(false);
+  const [payMsg, setPayMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [autoOn, setAutoOn] = useState(false); const [autoBelow, setAutoBelow] = useState('5'); const [autoAmt, setAutoAmt] = useState('20');
+  const reqIdRef = useRef('');
   const pinRef = useRef(''); pinRef.current = pin;
   const feedRef = useRef<HTMLDivElement>(null);
   const inpRef = useRef<HTMLTextAreaElement>(null);
@@ -193,6 +209,64 @@ export default function AiConsole() {
     convApi({ action: 'pin_status' }).then((r) => r.json()).then((d) => setPinSet(!!d.set)).catch(() => {});
   }, [open, pinSet]);
 
+  const loadWallet = useCallback(async () => {
+    try {
+      const r = await fetch('/api/admin/ai-wallet');
+      if (!r.ok) return;
+      const w: Wallet = await r.json();
+      setWallet(w);
+      if (w.auto) { setAutoOn(w.auto.on); setAutoBelow(String(w.auto.below)); setAutoAmt(String(w.auto.amount)); }
+    } catch { /* offline */ }
+  }, []);
+  useEffect(() => { if (open) loadWallet(); }, [open, loadWallet]);
+  // Coming back from the card page (…/admin?ai=wallet): open straight to the wallet
+  useEffect(() => {
+    try {
+      const u = new URL(window.location.href);
+      if (u.searchParams.get('ai') === 'wallet') {
+        setOpen(true); setWalletOpen(true);
+        u.searchParams.delete('ai'); window.history.replaceState({}, '', u.pathname + (u.search || ''));
+      }
+    } catch { /* ignore */ }
+  }, []);
+  const walletApi = (body: any) => fetch('/api/admin/ai-wallet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const newReqId = () => { reqIdRef.current = (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2, 12); };
+  const openWallet = () => { setSide(false); setPayMsg(null); newReqId(); setWalletOpen(true); loadWallet(); };
+  const cardSetup = async () => {
+    setPaying(true); setPayMsg(null);
+    try {
+      const r = await walletApi({ action: 'setup' }); const d = await r.json();
+      if (r.ok && d.card_url) { window.location.href = d.card_url; return; }
+      setPayMsg({ ok: false, text: d.error || 'Could not open the card page.' });
+    } catch { setPayMsg({ ok: false, text: 'Could not open the card page.' }); }
+    setPaying(false);
+  };
+  const doTopUp = async () => {
+    const n = Number(amt);
+    const min = wallet?.min || 10; const max = wallet?.max || 500;
+    if (!(n >= min && n <= max)) return setPayMsg({ ok: false, text: `Enter an amount from $${min} to $${max}.` });
+    if (!window.confirm(`Charge $${n.toFixed(2)} to the card ending in ${wallet?.card?.last4 || ''}?`)) return;
+    setPaying(true); setPayMsg(null);
+    try {
+      // The same request id is re-sent if this is retried, so the card can't be charged twice for one tap.
+      const r = await walletApi({ action: 'topup', amount: n, request_id: reqIdRef.current }); const d = await r.json();
+      if (r.ok) { setPayMsg({ ok: true, text: `$${n.toFixed(2)} of credit added. A receipt was emailed.` }); newReqId(); }
+      else { setPayMsg({ ok: false, text: d.error || 'The top-up did not go through.' }); if (!d.unknown) newReqId(); }
+    } catch { setPayMsg({ ok: false, text: 'Connection problem. Check the balance before trying again.' }); }
+    setPaying(false); loadWallet();
+  };
+  const saveAuto = async (on: boolean) => {
+    setPayMsg(null);
+    const r = await walletApi({ action: 'auto', on, below: Number(autoBelow), amount: Number(autoAmt) }); const d = await r.json().catch(() => ({}));
+    if (!r.ok) return setPayMsg({ ok: false, text: d.error || 'Could not save that.' });
+    setAutoOn(on); setPayMsg({ ok: true, text: on ? 'Automatic top-up is on.' : 'Automatic top-up is off.' }); loadWallet();
+  };
+  const removeCard = async () => {
+    if (!window.confirm('Remove the saved card? Automatic top-up will turn off.')) return;
+    const r = await walletApi({ action: 'remove_card' });
+    setPayMsg(r.ok ? { ok: true, text: 'Card removed.' } : { ok: false, text: 'Could not remove the card.' }); loadWallet();
+  };
+
   const askPin = (mode: PinSheet['mode'], then?: (pin: string) => void) => { setPinA(''); setPinB(''); setPinC(''); setPinErr(''); setPinSheet({ mode, then }); };
 
   const submitPin = async () => {
@@ -226,8 +300,18 @@ export default function AiConsole() {
     withPin(async (p) => {
       const r = await convApi({ action: 'lock', id, on, pin: p });
       if (!r.ok) return say('Could not change the lock');
-      setCurLocked(on); loadConvs(); say(on ? 'Chat locked with your PIN' : 'Lock removed');
+      setCurLocked(on); loadConvs(); say(on ? 'Chat locked. Its name is hidden in the list.' : 'Lock removed');
     });
+  };
+
+  const rename = async () => {
+    setMenu(false);
+    if (!convId) return say('Send a message first, then name the chat.');
+    const name = window.prompt(curLocked ? 'Name for this chat. This name shows in the chat list, so keep it private-safe.' : 'Name for this chat', curLocked ? '' : title);
+    if (!name || !name.trim()) return;
+    const r = await convApi({ action: 'rename', id: convId, title: name.trim().slice(0, 60) });
+    if (!r.ok) return say('Could not rename the chat');
+    setCurTitle(name.trim().slice(0, 60)); loadConvs();
   };
 
   const lockNow = () => {
@@ -255,11 +339,11 @@ export default function AiConsole() {
       if (r.status === 423) { if (usePin || pinRef.current) setPin(''); return askPin(pinSet === false ? 'set' : 'unlock', (p) => openConv(id, p)); }
       if (!r.ok) return say('Could not open that chat');
       const d = await r.json();
-      setMsgs(d.conversation.messages || []); setConvId(id); setCurLocked(!!d.conversation.locked); scrollEnd();
+      setMsgs(d.conversation.messages || []); setConvId(id); setCurLocked(!!d.conversation.locked); setCurTitle(d.conversation.title || ''); scrollEnd();
     } catch { say('Could not open that chat'); }
   };
 
-  const newChat = () => { setMsgs([]); setConvId(null); setCurLocked(false); setSide(false); setTimeout(() => inpRef.current?.focus(), 100); };
+  const newChat = () => { setMsgs([]); setConvId(null); setCurLocked(false); setCurTitle(''); setSide(false); setTimeout(() => inpRef.current?.focus(), 100); };
 
   const delConv = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -333,6 +417,7 @@ export default function AiConsole() {
       } else {
         const d = await res.json();
         reply = d.content || d.error || 'Sorry, something went wrong.'; actions = d.actions;
+        if (d.out_of_credit) { loadWallet(); setTimeout(openWallet, 400); }
       }
     } catch (e: any) {
       if (e?.name === 'AbortError') reply = reply ? reply + '\n\n(Stopped.)' : '(Stopped.)';
@@ -343,7 +428,7 @@ export default function AiConsole() {
     setMsgs(final); setBusy(false); setStatus(''); abortRef.current = null;
     if (id) {
       fetch('/api/admin/ai-conversations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', id, messages: final, pin: curLocked ? pinRef.current : undefined, title: base.length <= 1 ? (text || 'Photo').slice(0, 60) : undefined }) })
-        .then(() => { loadConvs(); loadCat(); }).catch(() => {});
+        .then(() => { loadConvs(); loadCat(); loadWallet(); }).catch(() => {});
     }
     const nav = actions?.find((a) => a.type === 'navigate' && a.path);
     if (nav) { say(`Opening ${nav.description || nav.path}…`); setTimeout(() => { router.push(nav.path); setOpen(false); }, 700); }
@@ -373,7 +458,7 @@ export default function AiConsole() {
   if (!open) return null;
 
   const cur = cat?.models.find((m) => m.key === model);
-  const title = convs.find((c) => c.id === convId)?.title || 'New chat';
+  const title = curTitle || convs.find((c) => c.id === convId)?.title || 'New chat';
   const shown = q.trim() ? convs.filter((c) => (c.title || '').toLowerCase().includes(q.trim().toLowerCase())) : convs;
   const lastIsEmptyAssistant = busy && msgs.length > 0 && msgs[msgs.length - 1].role === 'assistant' && !msgs[msgs.length - 1].content;
 
@@ -403,6 +488,8 @@ export default function AiConsole() {
         </div>
         <div className="nxa-foot">
           {cat?.user?.email && <div className="nxa-usage"><span>Signed in</span><b style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.user.email}</b></div>}
+          {wallet?.configured && wallet.started && <div className="nxa-usage"><span>Credit left</span><b style={wallet.low ? { color: 'var(--bad)' } : undefined}>${(wallet.balance || 0).toFixed(2)}</b></div>}
+          {wallet?.configured && <button className="nxa-mini" style={{ flex: 'none' }} onClick={openWallet}>💳&nbsp; Add credit</button>}
           {cat && <div className="nxa-usage"><span>Used this month</span><b>${cat.month.charged_usd.toFixed(2)} · {cat.month.messages} messages</b></div>}
           <div className="nxa-frow">
             <button className="nxa-mini" onClick={() => { setSide(false); setPicker('hosted'); }}>⚡&nbsp; Models</button>
@@ -423,6 +510,8 @@ export default function AiConsole() {
           <div className="nxa-menu" onMouseLeave={() => setMenu(false)}>
             <button onClick={() => { setMenu(false); newChat(); }}>New chat</button>
             <button onClick={compact} disabled={!convId}>Shorten this chat (saves cost)</button>
+            {wallet?.configured && <button onClick={() => { setMenu(false); openWallet(); }}>Add credit</button>}
+            <button onClick={rename}>Rename this chat</button>
             <button onClick={toggleLock}>{curLocked ? 'Take the PIN lock off this chat' : 'Lock this chat with a PIN'}</button>
             {pin && <button onClick={lockNow}>Close my locked chats now</button>}
             <button onClick={() => { setMenu(false); askPin(pinSet ? 'change' : 'set'); }}>{pinSet ? 'Change my PIN' : 'Set a PIN'}</button>
@@ -524,6 +613,69 @@ export default function AiConsole() {
               </div>
             )}
             <button className="nxa-btn" onClick={() => setPicker(null)}>Close</button>
+          </div>
+        </>
+      )}
+      {walletOpen && (
+        <>
+          <div className="nxa-scrim" onClick={() => !paying && setWalletOpen(false)} />
+          <div className="nxa-sheet">
+            <h3>AI credit</h3>
+            <div className="sub">
+              {!wallet ? 'Loading…' : wallet.started
+                ? <>Credit left: <b style={{ color: wallet.low ? 'var(--bad)' : 'var(--txt)' }}>${(wallet.balance || 0).toFixed(2)}</b></>
+                : 'No credit has been bought yet. The assistant works without it for now. Once you add credit, usage comes out of the balance and the assistant stops when it reaches zero.'}
+            </div>
+            {wallet && !wallet.canSpend && <div className="nxa-rackstat">Only an admin can add credit or change the card.</div>}
+            {wallet?.on_hold && <div className="nxa-rackstat" style={{ marginBottom: 10 }}><b>Adding credit is paused.</b> An earlier charge is being checked by NexaVision.</div>}
+            {wallet?.canSpend && !wallet.card && (
+              <>
+                <div className="nxa-rackstat">First, save a card. It opens the secure Nexa Pay page. Nothing is charged until you add credit.</div>
+                <button className="nxa-btn" style={{ background: 'var(--grad)', color: '#04121f', border: 0 }} disabled={paying} onClick={cardSetup}>{paying ? 'Opening…' : 'Save a card'}</button>
+              </>
+            )}
+            {wallet?.canSpend && wallet.card && (
+              <>
+                <div className="nxa-grp">Card on file</div>
+                <div className="nxa-rackstat" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                  <span><b>{wallet.card.brand || 'Card'}</b> ending in <b>{wallet.card.last4}</b></span>
+                  <span style={{ display: 'flex', gap: 6 }}>
+                    <button className="nxa-mini" style={{ flex: 'none', padding: '9px 14px' }} disabled={paying} onClick={cardSetup}>Change</button>
+                    <button className="nxa-mini" style={{ flex: 'none', padding: '9px 14px' }} disabled={paying} onClick={removeCard}>Remove</button>
+                  </span>
+                </div>
+                <div className="nxa-grp">Add credit</div>
+                <div className="nxa-frow" style={{ flexWrap: 'wrap' }}>
+                  {(wallet.presets || [10, 20, 50, 100]).map((p) => (
+                    <button key={p} className="nxa-mini" style={String(p) === amt ? { borderColor: 'var(--a1)', color: 'var(--a1)', background: 'rgba(125,211,252,.12)', fontWeight: 700 } : { fontWeight: 700 }} onClick={() => setAmt(String(p))}>${p}</button>
+                  ))}
+                </div>
+                <input className="nxa-search" style={{ marginTop: 8 }} inputMode="decimal" placeholder={`Other amount ($${wallet.min}–$${wallet.max})`} value={amt} onChange={(e) => setAmt(e.target.value.replace(/[^0-9.]/g, ''))} />
+                <button className="nxa-btn" style={{ background: 'var(--grad)', color: '#04121f', border: 0 }} disabled={paying || !!wallet.on_hold} onClick={doTopUp}>{paying ? 'Charging the card…' : `Add $${Number(amt || 0).toFixed(2)} of credit`}</button>
+                <div className="nxa-grp">Automatic top-up</div>
+                <div className="nxa-rackstat">
+                  When credit drops below $<input className="nxa-search" style={{ display: 'inline-block', width: 76, minHeight: 44, padding: '6px 10px', margin: '0 4px' }} inputMode="numeric" value={autoBelow} onChange={(e) => setAutoBelow(e.target.value.replace(/\D/g, ''))} />
+                  add $<input className="nxa-search" style={{ display: 'inline-block', width: 84, minHeight: 44, padding: '6px 10px', margin: '0 4px' }} inputMode="numeric" value={autoAmt} onChange={(e) => setAutoAmt(e.target.value.replace(/\D/g, ''))} /> automatically.
+                  {wallet.auto?.last_error && <div style={{ color: 'var(--bad)', marginTop: 8 }}>It was turned off: {wallet.auto.last_error}</div>}
+                  <button className="nxa-btn" style={autoOn ? undefined : { background: 'var(--grad)', color: '#04121f', border: 0 }} onClick={() => saveAuto(!autoOn)}>{autoOn ? 'Turn automatic top-up off' : 'Turn automatic top-up on'}</button>
+                  {autoOn && <button className="nxa-btn" onClick={() => saveAuto(true)}>Save these amounts</button>}
+                </div>
+              </>
+            )}
+            {payMsg && <div style={{ color: payMsg.ok ? 'var(--ok)' : 'var(--bad)', fontSize: 16, marginTop: 12 }}>{payMsg.text}</div>}
+            {!!wallet?.history?.length && (
+              <>
+                <div className="nxa-grp">Recent top-ups</div>
+                {wallet.history.map((h, i) => (
+                  <div key={i} className="nxa-usage" style={{ padding: '6px 2px' }}>
+                    <span>{new Date(h.at).toLocaleDateString()} · {h.kind === 'auto' ? 'automatic' : h.by || 'top-up'}</span>
+                    <b style={h.status === 'failed' ? { color: 'var(--bad)' } : undefined}>${h.amount.toFixed(2)}{h.status === 'failed' ? ' · declined' : h.status === 'pending' ? ' · checking' : ''}</b>
+                  </div>
+                ))}
+              </>
+            )}
+            <div className="sub" style={{ marginTop: 12, marginBottom: 0 }}>Charges show on the card statement as SQ *JENKINS HOME &amp; PROPE. Payments are handled by NexaVision Group.</div>
+            <button className="nxa-btn" disabled={paying} onClick={() => setWalletOpen(false)}>Close</button>
           </div>
         </>
       )}

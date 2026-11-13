@@ -119,6 +119,14 @@ export async function POST(req: NextRequest) {
     const v = await pinRow();
     return v ? keyIfPinRight(body.pin, v) : null;
   };
+  // A locked chat hides its real title too: the list shows this (or a name the
+  // owner types in), and the real title travels inside the encrypted part.
+  const LOCKED_TITLE = 'Locked chat';
+  const pack = (title: string | null, messages: any[]) => JSON.stringify({ t: title, m: messages });
+  const unpack = (plain: string): { t: string | null; m: any[] } => {
+    const v = JSON.parse(plain);
+    return Array.isArray(v) ? { t: null, m: v } : { t: v.t ?? null, m: Array.isArray(v.m) ? v.m : [] };
+  };
   const LOCKED = () => NextResponse.json({ error: 'This chat is locked. Enter your PIN.', locked: true }, { status: 423 });
 
   if (action === 'pin_status') {
@@ -163,11 +171,12 @@ export async function POST(req: NextRequest) {
     const key = await keyFromBody();
     if (!key) return NextResponse.json({ error: 'That PIN is not right.' }, { status: 403 });
     if (on && !conv.locked) {
-      await supabase.from('ai_conversations').update({ locked: true, enc: encrypt(key, JSON.stringify(stripImagePreviews(conv.messages || []))), messages: [], summary: null }).eq('id', id);
+      await supabase.from('ai_conversations').update({ locked: true, enc: encrypt(key, pack(conv.title, stripImagePreviews(conv.messages || []))), title: LOCKED_TITLE, messages: [], summary: null }).eq('id', id);
     } else if (!on && conv.locked) {
       const plain = conv.enc ? decrypt(key, conv.enc) : null;
       if (plain == null) return LOCKED();
-      await supabase.from('ai_conversations').update({ locked: false, enc: null, messages: JSON.parse(plain) }).eq('id', id);
+      const u = unpack(plain);
+      await supabase.from('ai_conversations').update({ locked: false, enc: null, messages: u.m, ...(conv.title === LOCKED_TITLE && u.t ? { title: u.t } : {}) }).eq('id', id);
     }
     return NextResponse.json({ success: true, locked: !!on });
   }
@@ -203,8 +212,11 @@ export async function POST(req: NextRequest) {
       const key = await keyFromBody();
       if (!key) return LOCKED();
       const cleanedL = stripImagePreviews(incoming);
-      const upd: any = { enc: encrypt(key, JSON.stringify(cleanedL)), token_estimate: estimateTokens(cleanedL), updated_at: new Date().toISOString() };
-      if (title) upd.title = title;
+      // Keep the hidden title; never write an automatic title where others can read it.
+      let hiddenTitle: string | null = title || null;
+      const before = conv.enc ? decrypt(key, conv.enc) : null;
+      if (before != null) hiddenTitle = unpack(before).t || hiddenTitle;
+      const upd: any = { enc: encrypt(key, pack(hiddenTitle, cleanedL)), token_estimate: estimateTokens(cleanedL), updated_at: new Date().toISOString() };
       const { error: le } = await supabase.from('ai_conversations').update(upd).eq('id', id);
       if (le) return NextResponse.json({ error: le.message }, { status: 500 });
       return NextResponse.json({ success: true, token_estimate: upd.token_estimate });
@@ -243,7 +255,8 @@ export async function POST(req: NextRequest) {
       const plain = key && conv.enc ? decrypt(key, conv.enc) : null;
       if (plain == null) return LOCKED();
       const { enc: _e, ...rest } = conv;
-      return NextResponse.json({ conversation: { ...rest, messages: JSON.parse(plain) }, readOnly: false });
+      const u = unpack(plain);
+      return NextResponse.json({ conversation: { ...rest, messages: u.m, title: conv.title === LOCKED_TITLE && u.t ? u.t : conv.title, list_title: conv.title }, readOnly: false });
     }
     const readOnly = conv.user_id !== user.id && !isDev(user);
     return NextResponse.json({ conversation: conv, readOnly });
