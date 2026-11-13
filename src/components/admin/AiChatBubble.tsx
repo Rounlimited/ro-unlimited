@@ -1239,17 +1239,16 @@ export default function AiChatBubble() {
 
   // ── Closed state — header button triggers open via DOM click ──
   useEffect(() => {
-    const btn = document.getElementById('ai-bubble-header-btn');
-    if (!btn) return;
+    // The header AI button now opens the full-screen assistant (AiConsole).
+    // This older assistant (voice mode) opens from that screen's menu.
     const handler = () => { setAnim('in'); setOpen(true); setDisplayMode('full'); };
-    btn.addEventListener('click', handler);
-    // Show unread badge on header button
-    if (unread > 0) {
-      btn.setAttribute('data-unread', String(unread));
-    } else {
-      btn.removeAttribute('data-unread');
+    window.addEventListener('ro-ai-classic', handler);
+    const btn = document.getElementById('ai-bubble-header-btn');
+    if (btn) {
+      if (unread > 0) btn.setAttribute('data-unread', String(unread));
+      else btn.removeAttribute('data-unread');
     }
-    return () => btn.removeEventListener('click', handler);
+    return () => window.removeEventListener('ro-ai-classic', handler);
   }, [open, unread]);
 
   if (!open) {

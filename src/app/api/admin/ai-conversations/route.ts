@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, getServerUser, roleOf } from '@/lib/supabase/server';
+import { pinKeyName, validPin, newVerifier, keyIfPinRight, encrypt, decrypt } from '@/lib/ai-pin';
 
 // ── Per-user chat history with role-based visibility ──
 // Everyone owns their chats. Visibility of OTHER people's boxes:
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
   const view = url.searchParams.get('view');
   let query = supabase
     .from('ai_conversations')
-    .select('id, title, summary, token_estimate, compacted, created_at, updated_at, user_email')
+    .select('id, title, summary, token_estimate, compacted, created_at, updated_at, user_email, locked')
     .order('updated_at', { ascending: false })
     .limit(50);
 
@@ -106,6 +107,71 @@ export async function POST(req: NextRequest) {
     return { conv, allowed: false };
   };
 
+  // ── PIN-locked chats ──
+  // The caller's PIN verifier, and the key when the PIN they sent is right.
+  const pinRow = async () => {
+    const { data } = await supabase.from('app_settings').select('value').eq('key', pinKeyName(user.id)).maybeSingle();
+    const v = data?.value as any;
+    return v && v.salt && v.check ? (v as { salt: string; check: string }) : null;
+  };
+  const keyFromBody = async (): Promise<Buffer | null> => {
+    if (!validPin(body.pin)) return null;
+    const v = await pinRow();
+    return v ? keyIfPinRight(body.pin, v) : null;
+  };
+  const LOCKED = () => NextResponse.json({ error: 'This chat is locked. Enter your PIN.', locked: true }, { status: 423 });
+
+  if (action === 'pin_status') {
+    return NextResponse.json({ set: !!(await pinRow()) });
+  }
+
+  // Set the PIN the first time, or change it (needs the current PIN; every
+  // locked chat is re-encrypted with the new one).
+  if (action === 'pin_set') {
+    if (!validPin(body.pin)) return NextResponse.json({ error: 'Use 4 to 12 digits.' }, { status: 400 });
+    const existing = await pinRow();
+    let oldKey: Buffer | null = null;
+    if (existing) {
+      oldKey = validPin(body.current) ? keyIfPinRight(body.current, existing) : null;
+      if (!oldKey) return NextResponse.json({ error: 'The current PIN is not right.' }, { status: 403 });
+    }
+    const v = newVerifier(body.pin);
+    const newKey = keyIfPinRight(body.pin, v)!;
+    if (oldKey) {
+      const { data: rows } = await supabase.from('ai_conversations').select('id, enc').eq('user_id', user.id).eq('locked', true);
+      for (const r of rows || []) {
+        const plain = r.enc ? decrypt(oldKey, r.enc) : null;
+        if (plain == null) return NextResponse.json({ error: 'Could not re-lock a chat. PIN not changed.' }, { status: 500 });
+        await supabase.from('ai_conversations').update({ enc: encrypt(newKey, plain) }).eq('id', r.id);
+      }
+    }
+    const { error } = await supabase.from('app_settings').upsert({ key: pinKeyName(user.id), value: v }, { onConflict: 'key' });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  // Check a PIN without opening anything (the "unlock my chats" step)
+  if (action === 'pin_check') {
+    return (await keyFromBody()) ? NextResponse.json({ success: true }) : NextResponse.json({ error: 'That PIN is not right.' }, { status: 403 });
+  }
+
+  // Lock a chat (on:true) or take the lock off (on:false). Owner only.
+  if (action === 'lock') {
+    const { id, on } = body;
+    const { data: conv } = await supabase.from('ai_conversations').select('*').eq('id', id).single();
+    if (!conv || conv.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const key = await keyFromBody();
+    if (!key) return NextResponse.json({ error: 'That PIN is not right.' }, { status: 403 });
+    if (on && !conv.locked) {
+      await supabase.from('ai_conversations').update({ locked: true, enc: encrypt(key, JSON.stringify(stripImagePreviews(conv.messages || []))), messages: [], summary: null }).eq('id', id);
+    } else if (!on && conv.locked) {
+      const plain = conv.enc ? decrypt(key, conv.enc) : null;
+      if (plain == null) return LOCKED();
+      await supabase.from('ai_conversations').update({ locked: false, enc: null, messages: JSON.parse(plain) }).eq('id', id);
+    }
+    return NextResponse.json({ success: true, locked: !!on });
+  }
+
   // Create new conversation — always owned by the caller
   if (action === 'create') {
     const { data, error } = await supabase
@@ -132,6 +198,17 @@ export async function POST(req: NextRequest) {
     // than what's stored means this client is stale — reject and return the
     // stored conversation so the client can reconcile.
     const incoming = Array.isArray(messages) ? messages : [];
+    if (conv?.locked) {
+      if (conv.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      const key = await keyFromBody();
+      if (!key) return LOCKED();
+      const cleanedL = stripImagePreviews(incoming);
+      const upd: any = { enc: encrypt(key, JSON.stringify(cleanedL)), token_estimate: estimateTokens(cleanedL), updated_at: new Date().toISOString() };
+      if (title) upd.title = title;
+      const { error: le } = await supabase.from('ai_conversations').update(upd).eq('id', id);
+      if (le) return NextResponse.json({ error: le.message }, { status: 500 });
+      return NextResponse.json({ success: true, token_estimate: upd.token_estimate });
+    }
     const stored = Array.isArray(conv?.messages) ? conv.messages : [];
     if (incoming.length < stored.length) {
       return NextResponse.json(
@@ -159,6 +236,15 @@ export async function POST(req: NextRequest) {
     const { conv, allowed } = await getConvWithAccess(id, false);
     if (!conv) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (conv.locked) {
+      // Only the owner with the right PIN. Nobody else can open it, by design.
+      if (conv.user_id !== user.id) return NextResponse.json({ error: 'This chat is locked by its owner.', locked: true }, { status: 423 });
+      const key = await keyFromBody();
+      const plain = key && conv.enc ? decrypt(key, conv.enc) : null;
+      if (plain == null) return LOCKED();
+      const { enc: _e, ...rest } = conv;
+      return NextResponse.json({ conversation: { ...rest, messages: JSON.parse(plain) }, readOnly: false });
+    }
     const readOnly = conv.user_id !== user.id && !isDev(user);
     return NextResponse.json({ conversation: conv, readOnly });
   }
@@ -173,6 +259,7 @@ export async function POST(req: NextRequest) {
     const { conv, allowed } = await getConvWithAccess(id, true);
     if (!conv) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (conv.locked) return NextResponse.json({ error: 'Take the lock off before sharing this chat.' }, { status: 400 });
 
     const { data: target } = await supabase.auth.admin.getUserById(target_user_id);
     if (!target?.user) return NextResponse.json({ error: 'Target user not found' }, { status: 404 });
@@ -226,6 +313,7 @@ export async function POST(req: NextRequest) {
     const { conv, allowed } = await getConvWithAccess(id, true);
     if (!conv) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (conv.locked) return NextResponse.json({ error: 'Take the lock off before shortening this chat.' }, { status: 400 });
 
     const messages = conv.messages as any[];
     if (messages.length < 6) return NextResponse.json({ error: 'Too short to compact' }, { status: 400 });

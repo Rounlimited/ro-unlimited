@@ -20,6 +20,7 @@ import { listInspections, createInspection, updateInspection } from '@/lib/inspe
 import { getChecklist, sendHandover, createServiceReminder, listServiceDue } from '@/lib/handover';
 import { LICENSES, STATES_LICENSED, LICENSE_CLASSIFICATION_COUNT } from '@/lib/licenses';
 import { headers as nextHeaders } from 'next/headers';
+import { hostedModel, estimateCost, AI_MARKUP } from '@/lib/ai-models';
 
 /**
  * Tool calls that go back through our own admin API must carry the caller's
@@ -2807,7 +2808,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 
 // Block 1 — always included, always cached
 const PROMPT_CORE = `<role>
-You are RO Assistant — the AI for RO Unlimited Construction (Greenville SC, serving SC/GA/NC). Say "RO Assistant" if asked who you are. Do not name your underlying model or company.
+You are RO Assistant — the AI for RO Unlimited Construction (Greenville SC, serving SC and GA). Say "RO Assistant" if asked who you are. Do not name your underlying model or company.
 </role>
 
 <principles>
@@ -3058,15 +3059,21 @@ const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
 // One streamed Grok round: emits text deltas live, accumulates any tool calls.
 async function grokStreamRound(
   apiMessages: any[], tools: any[] | undefined, grokKey: string, emit: StreamEmit,
+  // Set when the round goes through the OpenRouter gateway (any hosted model)
+  gw?: { model: string; onUsage: (u: any) => void },
 ): Promise<StreamRound | null> {
-  const res = await fetch('https://api.x.ai/v1/chat/completions', {
+  const res = await fetch(gw ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.x.ai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${grokKey}`, 'Content-Type': 'application/json' },
+    headers: {
+      'Authorization': `Bearer ${grokKey}`, 'Content-Type': 'application/json',
+      ...(gw ? { 'X-Title': 'Nexa AI module' } : {}),
+    },
     body: JSON.stringify({
-      model: 'grok-4-1-fast',
-      max_tokens: 4000,
+      model: gw ? gw.model : 'grok-4-1-fast',
+      max_tokens: gw ? 8000 : 4000,
       messages: apiMessages,
       stream: true,
+      ...(gw ? { usage: { include: true } } : {}),
       ...(tools?.length ? { tools } : {}),
     }),
   });
@@ -3096,6 +3103,8 @@ async function grokStreamRound(
       if (payload === '[DONE]') continue;
       try {
         const chunk = JSON.parse(payload);
+        // The usage chunk arrives last with an empty `choices` — read it first.
+        if (chunk.usage && gw) gw.onUsage(chunk.usage);
         const choice = chunk.choices?.[0];
         if (!choice) continue;
         if (choice.finish_reason) finishReason = choice.finish_reason;
@@ -3229,7 +3238,7 @@ export async function POST(req: NextRequest) {
     const user = await getServerUser(req);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { messages, currentPage, projectContext, useModel, imageData, stream } = await req.json();
+    const { messages, currentPage, projectContext, useModel, imageData, stream, model } = await req.json();
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages required' }, { status: 400 });
     }
@@ -3446,11 +3455,25 @@ export async function POST(req: NextRequest) {
     };
 
     // ═══ STREAMING MODE — NDJSON events: {type:'delta'|'status'|'done'|'error'} ═══
-    const preferGrokStream = useModel !== 'claude' && useModel !== 'groq' && !!grokKey;
+    // Gateway model picked in the new assistant screen: everything hosted runs
+    // through the one OpenRouter account. Old callers (no `model`) are unchanged.
+    const orKey = process.env.OPENROUTER_API_KEY;
+    const gwModel = orKey ? hostedModel(model) : null;
+    const gwUsage = { tokens_in: 0, tokens_out: 0, cost: 0, seen: false };
+    const gwOpts = gwModel ? {
+      model: gwModel.slug,
+      onUsage: (u: any) => {
+        gwUsage.seen = true;
+        gwUsage.tokens_in += Number(u.prompt_tokens) || 0;
+        gwUsage.tokens_out += Number(u.completion_tokens) || 0;
+        gwUsage.cost += Number(u.cost) || 0;
+      },
+    } : undefined;
+    const preferGrokStream = !!gwModel || (useModel !== 'claude' && useModel !== 'groq' && !!grokKey);
     // Claude streams too, but ONLY when explicitly selected — Grok stays the
     // default. Claude's time-to-first-token is ~0.5-1.0s vs Grok's ~2.5-3.2s,
     // which is what voice mode waits on before it can start speaking.
-    const preferClaudeStream = useModel === 'claude' && !!claudeKey;
+    const preferClaudeStream = !gwModel && useModel === 'claude' && !!claudeKey;
     if (stream === true && (preferGrokStream || preferClaudeStream)) {
       const encoder = new TextEncoder();
       const ndjson = new ReadableStream({
@@ -3475,7 +3498,15 @@ export async function POST(req: NextRequest) {
             const apiMessages: any[] = preferClaudeStream
               ? buildApiMessages(messages, true)
               : [
-                  { role: 'system', content: buildSystemPrompt(selectedTools, dynamicContext) },
+                  // Claude through the gateway: mark the stable part of the
+                  // prompt (and the tools before it) as cacheable; the part
+                  // that changes every message rides in a second block.
+                  gwModel && gwModel.slug.startsWith('anthropic/')
+                    ? { role: 'system', content: [
+                        { type: 'text', text: buildSystemPrompt(selectedTools, ''), cache_control: { type: 'ephemeral' } },
+                        ...(dynamicContext ? [{ type: 'text', text: dynamicContext }] : []),
+                      ] }
+                    : { role: 'system', content: buildSystemPrompt(selectedTools, dynamicContext) },
                   ...buildApiMessages(messages),
                 ];
 
@@ -3483,7 +3514,7 @@ export async function POST(req: NextRequest) {
               try {
                 return preferClaudeStream
                   ? await claudeStreamRound(apiMessages, claudeSystemBlocks, claudeTools, claudeKey!, emitTracked)
-                  : await grokStreamRound(apiMessages, tools, grokKey!, emitTracked);
+                  : await grokStreamRound(apiMessages, tools, gwModel ? orKey! : grokKey!, emitTracked, gwOpts);
               } catch (err) {
                 console.error('[ai-chat] stream round threw:', err);
                 return null;
@@ -3493,7 +3524,7 @@ export async function POST(req: NextRequest) {
             let round = await runRound();
 
             let rounds = 0;
-            while (round && round.finishReason === 'tool_calls' && round.toolCalls.length > 0 && rounds < 8) {
+            while (round && round.finishReason === 'tool_calls' && round.toolCalls.length > 0 && rounds < (gwModel ? 16 : 8)) {
               rounds++;
               if (preferClaudeStream) {
                 // Replay the assistant turn as Anthropic content blocks
@@ -3554,11 +3585,23 @@ export async function POST(req: NextRequest) {
                 // Hit the round cap while the model still wanted more tools
                 emit({ type: 'delta', text: "\n\nI ran out of steps while working on that — here's where I got to." });
               }
-              emit({ type: 'done', model: preferClaudeStream ? 'claude-haiku-4.5' : 'grok-4-1-fast', ...(actions.length ? { actions } : {}) });
+              emit({ type: 'done', model: gwModel ? gwModel.label : preferClaudeStream ? 'claude-haiku-4.5' : 'grok-4-1-fast', ...(actions.length ? { actions } : {}) });
             }
           } catch (err: any) {
             console.error('[ai-chat] stream error:', err);
             emit({ type: 'error', error: 'AI service error — try again.' });
+          }
+          // Meter what the gateway charged for this message (never blocks the reply).
+          if (gwModel && gwUsage.seen) {
+            try {
+              const cost = gwUsage.cost > 0 ? gwUsage.cost : estimateCost(gwModel, gwUsage.tokens_in, gwUsage.tokens_out);
+              await supabase.from('ai_usage').insert({
+                user_id: user.id, user_email: user.email || null, model: gwModel.key, source: 'chat',
+                tokens_in: gwUsage.tokens_in, tokens_out: gwUsage.tokens_out,
+                cost_usd: cost, charged_usd: cost * AI_MARKUP,
+              });
+              emit({ type: 'usage', charged_usd: Math.round(cost * AI_MARKUP * 10000) / 10000 });
+            } catch (e) { console.error('[ai-chat] usage log failed:', e); }
           }
           controller.close();
         },
