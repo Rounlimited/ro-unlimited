@@ -383,7 +383,10 @@ export default function AiConsole() {
   const endVoice = async (turns: VoiceTurn[]) => {
     setVoiceCtx(null);
     if (!turns.length) return;
-    const final: Msg[] = [...msgs, ...turns.map((t) => ({ role: t.role, content: t.content }))];
+    // A spoken answer can arrive in pieces (a lead-in, then the answer): show it as one reply
+    const merged: VoiceTurn[] = [];
+    for (const t of turns) { const last = merged[merged.length - 1]; if (last && last.role === 'assistant' && t.role === 'assistant') last.content += ' ' + t.content; else merged.push({ ...t }); }
+    const final: Msg[] = [...msgs, ...merged.map((t) => ({ role: t.role, content: t.content }))];
     setMsgs(final); scrollEnd();
     let id = convId;
     try {

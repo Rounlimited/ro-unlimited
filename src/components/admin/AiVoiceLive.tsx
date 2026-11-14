@@ -136,7 +136,7 @@ export default function AiVoiceLive({ ctx, history, currentPage, onNavigate, onC
     src.start(at); nextAtRef.current = at + buf.duration; srcsRef.current.push(src);
     src.onended = () => {
       srcsRef.current = srcsRef.current.filter((x) => x !== src);
-      if (!srcsRef.current.length && !endedRef.current && phaseRef.current === 'speaking') { touch(); setPhase('listening'); }
+      if (!srcsRef.current.length && !endedRef.current && phaseRef.current === 'speaking') { touch(); setPhase(busyToolsRef.current > 0 || curRespRef.current ? 'thinking' : 'listening'); }
     };
     let sum = 0; for (let i = 0; i < f32.length; i += 8) sum += f32[i] * f32[i];
     outLevelRef.current = Math.min(1, Math.sqrt(sum / (f32.length / 8 || 1)) * 4);
