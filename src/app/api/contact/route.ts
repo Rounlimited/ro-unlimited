@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
             <p style="font-size: 15px; color: #cccccc; line-height: 1.6;">In the meantime, feel free to reach us directly:</p>
             <div style="margin: 24px 0; padding: 20px; background: #111; border-left: 3px solid #C9A84C;">
               <p style="margin: 0 0 8px; color: #C9A84C; font-size: 18px; font-weight: bold;">(864) 304-0139</p>
-              <p style="margin: 0; color: #888; font-size: 13px;">Rounlimitedco@gmail.com</p>
+              <p style="margin: 0; color: #888; font-size: 13px;">info@rounlimited.com</p>
             </div>
             <p style="font-size: 14px; color: #666; line-height: 1.6; margin-top: 32px;">
               — RO Unlimited Team<br/>

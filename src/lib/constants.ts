@@ -2,7 +2,7 @@ export const COMPANY = {
   name: 'RO Unlimited',
   fullName: 'RO Unlimited Construction & Development',
   phone: '(864) 304-0139',
-  email: 'Rounlimitedco@gmail.com',
+  email: 'info@rounlimited.com',
   tagline: 'Show Up. Build Right. Stand Behind It.',
   heroStatement: '25 Years of Showing Up and Building It Right.',
   cta: 'Send us your project. We\'ll show you what we can do.',

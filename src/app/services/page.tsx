@@ -145,7 +145,7 @@ export default function ServicesPage() {
     name: 'RO Unlimited Construction & Development',
     description: 'Roofing, plumbing, electrical, septic systems, and general repairs. Based in Easley, minutes from Greenville, and licensed across South Carolina and Georgia. Insured, 25+ years experience.',
     telephone: '(864) 304-0139',
-    email: 'Rounlimitedco@gmail.com',
+    email: 'info@rounlimited.com',
     url: 'https://rounlimited.com/services',
     areaServed: [
       { '@type': 'State', name: 'South Carolina' },

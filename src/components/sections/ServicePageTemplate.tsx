@@ -135,7 +135,7 @@ export default function ServicePageTemplate({ category, serviceLinks }: { catego
       '@type': 'LocalBusiness',
       name: 'RO Unlimited Construction & Development',
       telephone: '(864) 304-0139',
-      email: 'Rounlimitedco@gmail.com',
+      email: 'info@rounlimited.com',
       url: 'https://rounlimited.com',
       areaServed: [
         { '@type': 'State', name: 'South Carolina' },
