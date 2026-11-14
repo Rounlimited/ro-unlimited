@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
     let ruleNotify = true;
     if (isKnownRecipient) {
       try {
-        const rule = await fileFolder(from_email, subjectStr, plainBody(body_text, body_html));
+        const rule = await fileFolder(from_email, subjectStr, plainBody(body_text, body_html), to_email);
         ruleFolder = rule.folder;
         ruleNotify = rule.notify;
       } catch (err) {

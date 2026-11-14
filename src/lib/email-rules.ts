@@ -8,6 +8,9 @@ import { createAdminClient } from '@/lib/supabase/server';
  * Patterns: "user@domain" (exact) or "@domain" (that domain and any subdomain of it).
  * Filters run in list order; the first one that matches wins. Blocked senders always win (→ Spam).
  *
+ * Folders belong to mailboxes: a folder with `accounts` only shows for, and only files mail received by,
+ * those mailboxes (empty = every mailbox). site@ has its own folders, jr@ its own, and so on.
+ *
  * Customer mail is never filed: a sender whose address is on a customer record always stays in the Inbox
  * (unless JR blocked that exact sender himself).
  */
@@ -17,7 +20,7 @@ export const SYSTEM_FOLDERS = new Set(['inbox', 'sent', 'drafts', 'starred', 'tr
 /** targets a filter may use besides custom folders */
 export const SYSTEM_TARGETS = new Set(['spam', 'archive']);
 
-export type EmailFolderDef = { key: string; label: string; icon?: string; notify?: boolean };
+export type EmailFolderDef = { key: string; label: string; icon?: string; notify?: boolean; accounts?: string[] };
 export type EmailRule = { id: string; folder: string; from?: string[]; subject?: string; body?: string; note?: string };
 export type EmailRules = { blocked: string[]; folders: EmailFolderDef[]; rules: EmailRule[] };
 
@@ -66,6 +69,7 @@ function clean(j: Partial<EmailRules> | null | undefined): EmailRules {
     ? j!.folders.filter((f) => f && f.key && f.label).map((f) => ({
         key: slugify(String(f.key)), label: String(f.label).trim().slice(0, 40),
         ...(f.icon ? { icon: String(f.icon) } : {}), ...(f.notify ? { notify: true } : {}),
+        ...(Array.isArray(f.accounts) && f.accounts.length ? { accounts: Array.from(new Set(f.accounts.map(normalizePattern).filter((a) => a.includes('@')))) } : {}),
       }))
     : [];
   const keys = new Set(folders.map((f) => f.key));
@@ -116,22 +120,30 @@ export async function customerEmails(supabase: Admin = createAdminClient()): Pro
   return out;
 }
 
-/** Where a message belongs by the rules: 'spam' | custom folder key | 'archive' | null (no rule matched). */
-export function folderFor(rules: EmailRules, fromEmail: string, subject: string, body?: string, customers?: Set<string>): string | null {
+/** Does this folder belong to the mailbox? (no `accounts` = every mailbox; unknown mailbox = yes) */
+export function folderInAccount(f: EmailFolderDef | undefined, account?: string | null): boolean {
+  if (!f || !f.accounts?.length || !account) return true;
+  return f.accounts.includes(normalizePattern(account));
+}
+
+/** Where a message belongs by the rules: 'spam' | custom folder key | 'archive' | null (no rule matched).
+ *  `account` = the mailbox that received it; filters whose folder belongs to other mailboxes are skipped. */
+export function folderFor(rules: EmailRules, fromEmail: string, subject: string, body?: string, customers?: Set<string>, account?: string | null): string | null {
   const from = normalizePattern(fromEmail);
   // a blocked EXACT address always wins; a blocked domain never swallows a customer
   if (rules.blocked.some((p) => !p.startsWith('@') && p === from)) return 'spam';
   if (customers?.has(from)) return null;
   if (isBlockedBy(rules, from)) return 'spam';
-  const hit = rules.rules.find((r) => ruleMatches(r, from, subject, body));
+  const byKey = new Map(rules.folders.map((f) => [f.key, f]));
+  const hit = rules.rules.find((r) => (SYSTEM_TARGETS.has(r.folder) || folderInAccount(byKey.get(r.folder), account)) && ruleMatches(r, from, subject, body));
   return hit ? hit.folder : null;
 }
 
 /** For the inbound webhook: the folder the rules pick (null = Inbox) and whether to alert for it. */
-export async function fileFolder(fromEmail: string, subject: string, body: string): Promise<{ folder: string | null; notify: boolean }> {
+export async function fileFolder(fromEmail: string, subject: string, body: string, account?: string | null): Promise<{ folder: string | null; notify: boolean }> {
   const supabase = createAdminClient();
   const [rules, customers] = await Promise.all([getRules(supabase), customerEmails(supabase)]);
-  const folder = folderFor(rules, fromEmail, subject, body, customers);
+  const folder = folderFor(rules, fromEmail, subject, body, customers, account);
   const notify = folder === null || folder === 'inbox' || !!rules.folders.find((f) => f.key === folder)?.notify;
   return { folder, notify };
 }
@@ -178,7 +190,7 @@ export async function applyRules(
 
   const byTarget = new Map<string, Row[]>();
   for (const r of rows) {
-    const target = folderFor(active, r.from_email, r.subject || '', bodies.get(r.id) ?? (bodyRules.length ? '' : undefined), customers);
+    const target = folderFor(active, r.from_email, r.subject || '', bodies.get(r.id) ?? (bodyRules.length ? '' : undefined), customers, r.to_email);
     if (!target || target === 'inbox' || target === r.folder) continue;
     if (!byTarget.has(target)) byTarget.set(target, []);
     byTarget.get(target)!.push(r);

@@ -66,7 +66,7 @@ interface Message {
 interface EmailAccount { id?: string; email: string; display_name: string; color: string; initials: string; is_default?: boolean }
 interface ComposeFile { path: string; filename: string; content_type: string; size_bytes: number }
 interface Draft { to: string; cc: string; bcc: string; subject: string; body: string; from: string; savedAt: number }
-interface CustomFolder { key: string; label: string; icon?: string; notify?: boolean }
+interface CustomFolder { key: string; label: string; icon?: string; notify?: boolean; accounts?: string[] }
 interface FilterRule { id: string; folder: string; from?: string[]; subject?: string; body?: string; note?: string }
 interface Rules { blocked: string[]; folders: CustomFolder[]; rules: FilterRule[] }
 type ThreadsData = { threads: Thread[]; folderCounts: Record<string, number> };
@@ -392,16 +392,23 @@ export default function AdminInbox() {
   const accountByEmail = useMemo(() => new Map(accounts.map((a) => [a.email.toLowerCase(), a])), [accounts]);
   const rulesQ = useCached<Rules>("inbox:rules", async (signal) => fetchJson<Rules>(`${API}/rules`, { cache: "no-store", signal }));
   const blocked = useMemo(() => rulesQ.data?.blocked || [], [rulesQ.data]);
-  const customFolders = useMemo(() => rulesQ.data?.folders || [], [rulesQ.data]);
+  const allFolders = useMemo(() => rulesQ.data?.folders || [], [rulesQ.data]);
   const filters = useMemo(() => rulesQ.data?.rules || [], [rulesQ.data]);
-  const folderLabel = (k: string) => FOLDER_LABEL[k] || customFolders.find((f) => f.key === k)?.label || k;
+  const folderLabel = (k: string) => FOLDER_LABEL[k] || allFolders.find((f) => f.key === k)?.label || k;
   const [movePick, setMovePick] = useState<{ ids: string[]; after?: () => void } | null>(null);
   const [filePick, setFilePick] = useState<string | null>(null);
-  const [folderForm, setFolderForm] = useState<{ key?: string; label: string; icon: string; notify: boolean } | null>(null);
+  const [folderForm, setFolderForm] = useState<{ key?: string; label: string; icon: string; notify: boolean; accounts?: string[] } | null>(null);
   const [filterForm, setFilterForm] = useState<{ id?: string; from: string; subject: string; body: string; folder: string } | null>(null);
   const [rulesBusy, setRulesBusy] = useState(false);
   const [activeAccount, setActiveAccount] = useState<EmailAccount | null>(null);
   const [fromAccount, setFromAccount] = useState("");
+  // Folders belong to mailboxes: the menu shows only the open mailbox's folders (All mailboxes = every folder).
+  const customFolders = useMemo(() => {
+    const acct = activeAccount?.email.toLowerCase();
+    return acct ? allFolders.filter((f) => !f.accounts?.length || f.accounts.includes(acct)) : allFolders;
+  }, [allFolders, activeAccount]);
+  const newFolderForm = () => ({ label: "", icon: "folder", notify: false, accounts: activeAccount ? [activeAccount.email.toLowerCase()] : [] });
+  const mailboxNames = (list?: string[]) => (!list?.length ? "All mailboxes" : list.map((e) => (accountByEmail.get(e)?.display_name || e.split("@")[0])).join(", "));
 
   // mailbox management
   const [accountForm, setAccountForm] = useState<{ id?: string; email: string; display_name: string; color: string; initials: string } | null>(null);
@@ -692,8 +699,8 @@ export default function AdminInbox() {
     e.preventDefault(); if (!folderForm) return;
     try {
       const j = await rulesPost(folderForm.key
-        ? { action: "folder_update", key: folderForm.key, label: folderForm.label, icon: folderForm.icon, notify: folderForm.notify }
-        : { action: "folder_add", label: folderForm.label, icon: folderForm.icon, notify: folderForm.notify });
+        ? { action: "folder_update", key: folderForm.key, label: folderForm.label, icon: folderForm.icon, notify: folderForm.notify, accounts: folderForm.accounts || [] }
+        : { action: "folder_add", label: folderForm.label, icon: folderForm.icon, notify: folderForm.notify, accounts: folderForm.accounts || [] });
       setFolderForm(null);
       if (j.folder && filterForm && !filterForm.folder) setFilterForm({ ...filterForm, folder: j.folder.key });
     } catch (err) { showToast(errMsg(err)); }
@@ -925,7 +932,7 @@ export default function AdminInbox() {
           ...(folder !== "inbox" ? [{ icon: Inbox, label: "Inbox", onClick: () => { setSelected(new Set()); threadAction("restore", movePick.ids); movePick.after?.(); } }] : []),
           ...(folder !== "archive" ? [{ icon: Archive, label: "Archive", onClick: () => { setSelected(new Set()); threadAction("archive", movePick.ids); movePick.after?.(); } }] : []),
           ...customFolders.filter((f) => f.key !== folder).map((f) => ({ icon: iconFor(f.icon), label: f.label, onClick: () => { setSelected(new Set()); threadAction("move", movePick.ids, { value: f.key }); movePick.after?.(); } })),
-          { icon: FolderPlus, label: "New folder…", onClick: () => { setFolderForm({ label: "", icon: "folder", notify: false }); goToView("rules"); } },
+          { icon: FolderPlus, label: "New folder…", onClick: () => { setFolderForm(newFolderForm()); goToView("rules"); } },
         ]} />
       )}
       {filePick && (
@@ -933,7 +940,7 @@ export default function AdminInbox() {
           ...customFolders.map((f) => ({ icon: iconFor(f.icon), label: f.label, onClick: () => addFilter({ from: filePick, folder: f.key }) })),
           { icon: Archive, label: "Archive", onClick: () => addFilter({ from: filePick, folder: "archive" }) },
           { icon: ShieldAlert, label: "Spam", onClick: () => addFilter({ from: filePick, folder: "spam" }) },
-          { icon: FolderPlus, label: "New folder…", onClick: () => { setFolderForm({ label: "", icon: "folder", notify: false }); setFilterForm({ from: filePick, subject: "", body: "", folder: "" }); goToView("rules"); } },
+          { icon: FolderPlus, label: "New folder…", onClick: () => { setFolderForm(newFolderForm()); setFilterForm({ from: filePick, subject: "", body: "", folder: "" }); goToView("rules"); } },
         ]} />
       )}
       {confirmSheet && (
@@ -1118,7 +1125,7 @@ export default function AdminInbox() {
         <section className="px-5 pt-5">
           <div className="flex items-center justify-between">
             <h3 className="text-[19px] font-semibold text-mail-text">Folders</h3>
-            <button onClick={() => setFolderForm({ label: "", icon: "folder", notify: false })} className="flex items-center gap-1.5 min-h-[44px] px-3 text-[16px] font-bold text-mail-gold rounded-full hover:bg-mail-line/[0.06]"><Plus size={18} /> New folder</button>
+            <button onClick={() => setFolderForm(newFolderForm())} className="flex items-center gap-1.5 min-h-[44px] px-3 text-[16px] font-bold text-mail-gold rounded-full hover:bg-mail-line/[0.06]"><Plus size={18} /> New folder</button>
           </div>
           <p className="text-[16px] text-mail-sub mt-1 mb-2 leading-snug">Your own folders show in the menu. The bell turns phone alerts on for mail filed there. Off means it is filed quietly.</p>
           {customFolders.length === 0 && !folderForm && <p className="text-[17px] text-mail-muted py-3">No folders yet.</p>}
@@ -1128,11 +1135,11 @@ export default function AdminInbox() {
                 <I size={22} className="text-mail-gold shrink-0" />
                 <span className="min-w-0">
                   <span className="block text-[17px] font-medium text-mail-text truncate">{f.label}</span>
-                  <span className="block text-[15px] text-mail-muted">{n} {n === 1 ? "filter" : "filters"}{(folderCounts[f.key] || 0) > 0 ? ` · ${folderCounts[f.key]} unread` : ""}{f.notify ? " · alerts on" : ""}</span>
+                  <span className="block text-[15px] text-mail-muted">{mailboxNames(f.accounts)} · {n} {n === 1 ? "filter" : "filters"}{(folderCounts[f.key] || 0) > 0 ? ` · ${folderCounts[f.key]} unread` : ""}{f.notify ? " · alerts on" : ""}</span>
                 </span>
               </button>
               <button onClick={() => updateFolder(f.key, { notify: !f.notify })} aria-label={f.notify ? `Turn alerts off for ${f.label}` : `Turn alerts on for ${f.label}`} className={cn(ICON_BTN, f.notify && "text-mail-gold")}>{f.notify ? <Bell size={20} /> : <BellOff size={20} />}</button>
-              <button onClick={() => setFolderForm({ key: f.key, label: f.label, icon: f.icon || "folder", notify: !!f.notify })} aria-label={`Rename ${f.label}`} className={ICON_BTN}><Pencil size={19} /></button>
+              <button onClick={() => setFolderForm({ key: f.key, label: f.label, icon: f.icon || "folder", notify: !!f.notify, accounts: f.accounts || [] })} aria-label={`Edit ${f.label}`} className={ICON_BTN}><Pencil size={19} /></button>
               <button onClick={() => setConfirmSheet({ title: `Delete the folder "${f.label}"? Its mail goes back to the Inbox and its filters are removed.`, label: "Delete folder", onConfirm: () => deleteFolder(f.key) })} aria-label={`Delete ${f.label}`} className={cn(ICON_BTN, "hover:text-mail-danger")}><Trash2 size={19} /></button>
             </div>
           ); })}
@@ -1149,6 +1156,17 @@ export default function AdminInbox() {
                 <input type="checkbox" checked={folderForm.notify} onChange={(e) => setFolderForm({ ...folderForm, notify: e.target.checked })} className="w-6 h-6 accent-[#C9A84C]" />
                 Phone alert when mail is filed here
               </label>
+              <div>
+                <p className="text-[16px] text-mail-sub mb-1.5">Which mailboxes is this folder for?</p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setFolderForm({ ...folderForm, accounts: [] })}
+                    className={cn("min-h-[44px] px-4 rounded-full border text-[16px]", !(folderForm.accounts || []).length ? "border-mail-gold text-mail-gold bg-mail-gold/15" : "border-mail-line/20 text-mail-sub")}>All mailboxes</button>
+                  {accounts.map((a) => { const e = a.email.toLowerCase(); const on = (folderForm.accounts || []).includes(e); return (
+                    <button type="button" key={a.email} onClick={() => setFolderForm({ ...folderForm, accounts: on ? (folderForm.accounts || []).filter((x) => x !== e) : [...(folderForm.accounts || []), e] })}
+                      className={cn("min-h-[44px] px-4 rounded-full border text-[16px]", on ? "border-mail-gold text-mail-gold bg-mail-gold/15" : "border-mail-line/20 text-mail-sub")}>{a.email.split("@")[0]}@</button>
+                  ); })}
+                </div>
+              </div>
               <div className="flex gap-2 justify-end">
                 <button type="button" onClick={() => setFolderForm(null)} className="min-h-[48px] px-5 rounded-full bg-mail-line/[0.06] border border-mail-line/20 text-[17px] text-mail-sub">Cancel</button>
                 <button type="submit" disabled={rulesBusy || !folderForm.label.trim()} className="min-h-[48px] px-5 rounded-full bg-mail-gold text-mail-ink text-[17px] font-bold disabled:opacity-50">{folderForm.key ? "Save" : "Create"}</button>
@@ -1199,7 +1217,7 @@ export default function AdminInbox() {
                   <option value="spam">Spam</option>
                 </select>
               </label>
-              {!filterForm.folder && <button type="button" onClick={() => setFolderForm({ label: "", icon: "folder", notify: false })} className="text-[16px] font-bold text-mail-gold min-h-[44px]">+ Make a new folder first</button>}
+              {!filterForm.folder && <button type="button" onClick={() => setFolderForm(newFolderForm())} className="text-[16px] font-bold text-mail-gold min-h-[44px]">+ Make a new folder first</button>}
               <div className="flex gap-2 justify-end">
                 <button type="button" onClick={() => setFilterForm(null)} className="min-h-[48px] px-5 rounded-full bg-mail-line/[0.06] border border-mail-line/20 text-[17px] text-mail-sub">Cancel</button>
                 <button type="submit" disabled={rulesBusy || !filterForm.folder || (!filterForm.from.trim() && !filterForm.subject.trim() && !filterForm.body.trim())} className="min-h-[48px] px-5 rounded-full bg-mail-gold text-mail-ink text-[17px] font-bold disabled:opacity-50">{filterForm.id ? "Save" : "Save & run"}</button>

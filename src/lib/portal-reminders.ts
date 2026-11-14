@@ -25,7 +25,8 @@ export async function runPortalReminders() {
   const { data: jobs } = await supabase.from('estimates')
     .select('id, estimate_number, project_name, division, signed_at, last_viewed_at, update_reminder_at, stale_nudged_at, quiet_nudged_at, customer:customers(first_name, company_name, email)')
     .not('signed_at', 'is', null).is('completed_at', null).neq('link_enabled', false);
-  const active = (jobs || []) as any[];
+  // Demo/example jobs never email anyone (their test customer is JR's own address).
+  const active = ((jobs || []) as any[]).filter((j) => !/DEMO/i.test(j.estimate_number || ''));
   if (!active.length) return out;
   const ids = active.map((j) => j.id);
 

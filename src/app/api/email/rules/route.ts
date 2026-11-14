@@ -70,7 +70,8 @@ export async function POST(req: NextRequest) {
       let key = slugify(label);
       if (SYSTEM_FOLDERS.has(key) || key === 'all') key = `${key}-2`;
       while (rules.folders.some((f) => f.key === key)) key = `${key}-${newId().slice(0, 3)}`;
-      const folder = { key, label, ...(body.icon ? { icon: String(body.icon) } : {}), ...(body.notify ? { notify: true } : {}) };
+      const accts = Array.isArray(body.accounts) ? body.accounts.map((a: unknown) => String(a).toLowerCase()).filter((a: string) => a.includes('@')) : [];
+      const folder = { key, label, ...(body.icon ? { icon: String(body.icon) } : {}), ...(body.notify ? { notify: true } : {}), ...(accts.length ? { accounts: accts } : {}) };
       return ok(await saveRules({ ...rules, folders: [...rules.folders, folder] }, supabase), { folder });
     }
     if (action === 'folder_update') {
@@ -81,6 +82,10 @@ export async function POST(req: NextRequest) {
       if (body.label !== undefined) { const l = String(body.label).trim().slice(0, 40); if (!l) return bad('Give the folder a name.'); next.label = l; }
       if (body.icon !== undefined) { if (body.icon) next.icon = String(body.icon); else delete next.icon; }
       if (body.notify !== undefined) { if (body.notify) next.notify = true; else delete next.notify; }
+      if (body.accounts !== undefined) {
+        const accts = Array.isArray(body.accounts) ? body.accounts.map((a: unknown) => String(a).toLowerCase()).filter((a: string) => a.includes('@')) : [];
+        if (accts.length) next.accounts = accts; else delete next.accounts;
+      }
       return ok(await saveRules({ ...rules, folders: rules.folders.map((x) => (x.key === key ? next : x)) }, supabase), { folder: next });
     }
     if (action === 'folder_delete') {
