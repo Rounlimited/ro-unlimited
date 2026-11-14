@@ -1421,7 +1421,7 @@ export default function AdminInbox() {
                       {open && (
                         <div className="px-1.5 pb-3">
                           {msg.body_html ? (
-                            <div className="rounded-xl overflow-hidden"><EmailBody html={msg.body_html} dark={!light} original={originalColors.has(msg.id)} hideQuotes={!showQuote} /></div>
+                            <div className="rounded-xl overflow-hidden"><EmailBody html={msg.body_html} dark={!light} original={originalColors.has(msg.id) !== out} hideQuotes={!showQuote} /></div>
                           ) : (
                             <pre className="px-2.5 py-1 text-[18px] text-mail-text whitespace-pre-wrap break-words font-body leading-relaxed"><Linkified text={(showQuote ? msg.body_text : stripQuotedText(msg.body_text || "")) || "(no content)"} /></pre>
                           )}
@@ -1518,7 +1518,7 @@ export default function AdminInbox() {
             { icon: Reply, label: "Reply", onClick: () => startCompose("reply", msgMenu) },
             ...((msgMenu.cc_emails || []).length ? [{ icon: ReplyAll, label: "Reply all", onClick: () => startCompose("replyAll", msgMenu) }] : []),
             { icon: Forward, label: "Forward", onClick: () => startCompose("forward", msgMenu) },
-            ...(msgMenu.body_html && !light ? [{ icon: Palette, label: originalColors.has(msgMenu.id) ? "Match dark mode" : "Show original colors", onClick: () => toggleIn(setOriginalColors, msgMenu.id) }] : []),
+            ...(msgMenu.body_html && !light ? [{ icon: Palette, label: (originalColors.has(msgMenu.id) !== (msgMenu.direction === "outbound")) ? "Match dark mode" : "Show original colors", onClick: () => toggleIn(setOriginalColors, msgMenu.id) }] : []),
             { icon: Info, label: details.has(msgMenu.id) ? "Hide details" : "Show details", onClick: () => toggleIn(setDetails, msgMenu.id) },
             { icon: Copy, label: "Copy sender address", hint: msgMenu.from_email.length > 26 ? undefined : msgMenu.from_email, onClick: () => copy(msgMenu.from_email) },
           ]} />
