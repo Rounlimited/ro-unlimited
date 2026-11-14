@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AdminHeader from '@/components/admin/AdminHeader';
+import VisitorLog from '@/components/admin/VisitorLog';
 import {
   Eye, Download, FileSignature, Smartphone, Monitor, Tablet, MapPin, Globe, RefreshCw,
   AlertTriangle, ArrowRight, MessageSquare, Mail, Phone, PlayCircle, ExternalLink,
@@ -275,6 +276,9 @@ export default function AnalyticsPage() {
                 </>
               )}
             </Section>
+
+            {/* ══ WEBSITE VISITORS — person or robot, page by page ══ */}
+            <VisitorLog days={days} />
 
             {/* ══ 4 · VISITOR BEHAVIOUR (teal) ══ */}
             <Section id="behaviour" kicker="Section 4" title="Visitor Behaviour" sub="What visitors actually do — who calls, who fills the form" icon={<MousePointerClick size={18} />} insights={forSection('behaviour')}>
