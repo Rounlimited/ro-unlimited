@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logEmail, buildEmailHtml, stripHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, loadOutboundAttachments, saveOutboundAttachmentRows } from '@/lib/email';
 import { requireEmailAccess } from '@/lib/email-auth';
+import { newTrackToken, instrumentHtml } from '@/lib/email-tracking';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
@@ -40,11 +41,14 @@ export async function POST(req: NextRequest) {
     }
 
     const r = getResend();
+    // Tracked copy goes out; the clean copy is what the inbox keeps (see email-tracking.ts)
+    const trackToken = newTrackToken();
     const params: Parameters<typeof r.emails.send>[0] = {
       from: getFromHeader(senderEmail, accounts),
       to: [to_email],
       subject: replySubject,
-      html,
+      html: instrumentHtml(html, trackToken),
+      text: plainText,
     };
     if (inReplyToHeader) {
       params.headers = { 'In-Reply-To': inReplyToHeader, 'References': inReplyToHeader };
@@ -72,6 +76,7 @@ export async function POST(req: NextRequest) {
       resend_message_id: data?.id,
       folder: 'sent',
       has_attachments: records.length > 0,
+      track_token: trackToken,
     });
 
     if (logged?.id) await saveOutboundAttachmentRows(supabase, logged.id, records);

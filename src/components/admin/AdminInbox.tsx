@@ -31,6 +31,56 @@ interface Message {
   body_text: string | null; read: boolean; starred: boolean;
   folder: string; created_at: string; cc_emails: string[]; bcc_emails: string[];
   attachments: { id: string; filename: string; content_type: string; size_bytes: number; s3_url: string }[];
+  tracking?: TrackEv[] | null;
+}
+type TrackEv = { at: string; event: 'open' | 'click' | 'site'; url: string | null; automated: boolean; why: string | null; device: string; place: string };
+
+/**
+ * Under each email JR sent: did they open it, on what, and did they go to the
+ * website. Machine opens (mail scanners, Apple Mail preloading) are shown
+ * separately so they are never mistaken for the customer.
+ */
+function EmailTracking({ events }: { events: TrackEv[] | null | undefined }) {
+  const [open, setOpen] = useState(false);
+  if (events === undefined || events === null) return null;
+  const real = events.filter((e) => !e.automated);
+  const opens = real.filter((e) => e.event === 'open');
+  const clicks = real.filter((e) => e.event === 'click');
+  const site = real.filter((e) => e.event === 'site');
+  const machine = events.filter((e) => e.automated);
+  const when = (iso: string) => new Date(iso).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const short = (u: string | null) => (u || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') || 'link';
+  const last = real[real.length - 1];
+  const headline = !real.length
+    ? (machine.length ? 'Not opened yet (only automatic mail-scanner checks so far)' : 'Not opened yet')
+    : `Opened ${opens.length || 0}×${clicks.length ? ` · clicked ${clicks.length}×` : ''}${site.length ? ` · ${site.length} website page${site.length === 1 ? '' : 's'}` : ''}`;
+  const label = (e: TrackEv) => e.event === 'open' ? 'Opened the email' : e.event === 'click' ? `Clicked ${short(e.url)}` : `Viewed ${e.url === '/' ? 'the home page' : short(e.url)} on the website`;
+  return (
+    <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03]">
+      <button onClick={() => setOpen((v) => !v)} className="w-full flex items-center gap-2 px-3 py-3 min-h-[48px] text-left">
+        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: real.length ? '#35d07f' : 'rgba(255,255,255,0.3)' }} />
+        <span className="flex-1 text-[15px] text-white/85">{headline}</span>
+        {last && <span className="text-[13px] text-white/50">{when(last.at)}</span>}
+        <ChevronDown size={14} className={`text-white/50 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="px-3 pb-3 space-y-2">
+          {!events.length && <p className="text-[14px] text-white/55">Nothing yet. It shows here the moment they open it or tap a link.</p>}
+          {events.map((e, i) => (
+            <div key={i} className={`flex gap-3 text-[14px] ${e.automated ? 'opacity-50' : ''}`}>
+              <span className="text-white/50 w-[118px] shrink-0">{when(e.at)}</span>
+              <span className="text-white/85">
+                {e.automated ? 'Automatic check' : label(e)}
+                {(e.device || e.place) && <span className="text-white/55"> · {[e.device, e.place].filter(Boolean).join(' · ')}</span>}
+                {e.automated && e.why && <span className="block text-[13px] text-white/45">{e.why}</span>}
+              </span>
+            </div>
+          ))}
+          <p className="text-[12px] text-white/40 pt-1">Opens can be missed if their email app blocks images. Clicks and website visits are reliable.</p>
+        </div>
+      )}
+    </div>
+  );
 }
 interface EmailAccount { id?: string; email: string; display_name: string; color: string; initials: string; is_default?: boolean; }
 
@@ -955,6 +1005,7 @@ export default function AdminInbox() {
                 </div>
               </div>
               <EmailBody html={msg.body_html} text={msg.body_text} compact />
+              {msg.direction === 'outbound' && <EmailTracking events={msg.tracking} />}
               {msg.attachments?.length > 0 && (
                 <AttachmentPreview attachments={msg.attachments} />
               )}
@@ -1163,6 +1214,7 @@ export default function AdminInbox() {
                       <button onClick={() => folder === "trash" ? permanentDelete() : threadAction("trash")} className="p-2 rounded-full text-white/20 hover:neon-red hover:bg-white/5 transition-all" title={folder === "trash" ? "Delete permanently" : "Move to Trash"}><Trash2 size={16} /></button>
                     </div>
                     <EmailBody html={msg.body_html} text={msg.body_text} />
+                    {msg.direction === 'outbound' && <EmailTracking events={msg.tracking} />}
                     {msg.attachments?.length > 0 && <AttachmentPreview attachments={msg.attachments} />}
                   </div>
                 ))}

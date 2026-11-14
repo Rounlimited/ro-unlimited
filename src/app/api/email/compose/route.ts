@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logEmail, buildEmailHtml, stripHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, loadOutboundAttachments, saveOutboundAttachmentRows } from '@/lib/email';
 import { requireEmailAccess } from '@/lib/email-auth';
+import { newTrackToken, instrumentHtml } from '@/lib/email-tracking';
 import { randomUUID } from 'crypto';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
@@ -27,11 +28,15 @@ export async function POST(req: NextRequest) {
 
     let resendMessageId: string | undefined;
     const r = getResend();
+    // Tracked copy goes out; the clean copy is what the inbox keeps (see email-tracking.ts)
+    const trackToken = newTrackToken();
     const params: Parameters<typeof r.emails.send>[0] = {
       from: getFromHeader(senderEmail, accounts),
       to: [to_email],
       subject,
-      html,
+      html: instrumentHtml(html, trackToken),
+      // A plain-text version alongside the HTML: better for spam filters and screen readers
+      text: emailBody || stripHtml(richHtml || ''),
     };
     if (cc_emails?.length) params.cc = cc_emails;
     if (bcc_emails?.length) params.bcc = bcc_emails;
@@ -65,6 +70,7 @@ export async function POST(req: NextRequest) {
       cc_emails: cc_emails || [],
       bcc_emails: bcc_emails || [],
       has_attachments: records.length > 0,
+      track_token: trackToken,
     });
 
     if (logged?.id) await saveOutboundAttachmentRows(supabase, logged.id, records);

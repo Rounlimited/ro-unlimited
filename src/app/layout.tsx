@@ -5,6 +5,7 @@ import { COMPANY } from '@/lib/constants';
 import GSAPProvider from '@/components/animations/GSAPProvider';
 import ROLoader from '@/components/animations/ROLoader';
 import SiteAnalytics from '@/components/analytics/SiteAnalytics';
+import EmailVisitBeacon from '@/components/EmailVisitBeacon';
 import { Suspense } from 'react';
 import '@/styles/globals.css';
 
@@ -157,6 +158,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </ROLoader>
         </GSAPProvider>
         <Suspense fallback={null}><SiteAnalytics /></Suspense>
+        <EmailVisitBeacon />
       </body>
     </html>
   );

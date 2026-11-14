@@ -120,6 +120,7 @@ export async function logEmail(params: {
   cc_emails?: string[];
   bcc_emails?: string[];
   read?: boolean;
+  track_token?: string | null;
 }): Promise<EmailMessage | null> {
   const supabase = createAdminClient();
   const folder = params.folder || (params.is_draft ? 'drafts' : params.direction === 'outbound' ? 'sent' : 'inbox');
@@ -141,6 +142,7 @@ export async function logEmail(params: {
       has_attachments: params.has_attachments || false,
       cc_emails: params.cc_emails || [],
       bcc_emails: params.bcc_emails || [],
+      ...(params.track_token ? { track_token: params.track_token } : {}),
     })
     .select()
     .single();

@@ -1,3 +1,4 @@
+import { trackingFor } from '@/lib/email-tracking';
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { requireEmailAccess } from '@/lib/email-auth';
@@ -168,7 +169,8 @@ export async function POST(req: NextRequest) {
     if (!attMap.has(att.message_id)) attMap.set(att.message_id, []);
     attMap.get(att.message_id)!.push(att);
   }
-  const messagesWithAtts = messages.map(m => ({ ...m, attachments: attMap.get(m.id) || [] }));
+  const tracked = await trackingFor(messages.filter(m => m.direction === 'outbound' && m.track_token).map(m => m.id));
+  const messagesWithAtts = messages.map(m => ({ ...m, attachments: attMap.get(m.id) || [], tracking: m.track_token ? (tracked[m.id] || []) : null }));
   return NextResponse.json({ messages: messagesWithAtts });
 }
 
