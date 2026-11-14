@@ -99,6 +99,7 @@ const OWN_DOMAIN = "rounlimited.com";
 /** "no-reply@accounts.google.com" → "google.com"; "john@acme.com" → "john"; our own mailboxes keep their name */
 function senderLabel(email: string): string {
   const [local = "", domain = ""] = (email || "").toLowerCase().split("@");
+  if (domain === OWN_DOMAIN && (local === "noreply" || local === "no-reply")) return "Website form";
   if ((GENERIC_LOCAL.has(local) || local.endsWith("-noreply") || local.endsWith("noreply")) && domain && domain !== OWN_DOMAIN)
     return domain.replace(/^(www|mail|email|e|m|info|accounts?|notifications?|news|updates)\./, "");
   return local || email || "unknown";
@@ -122,6 +123,14 @@ function timeAgo(d: string) {
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
   if (diff < 86400000 && new Date(d).toDateString() === new Date().toDateString()) return fmtWhen(d);
   return fmtWhen(d);
+}
+/** mailbox badge colours: a dark brand colour (navy, black) gets a solid chip with white letters so it stays readable */
+function chipStyle(color: string): React.CSSProperties {
+  const m = /^#?([0-9a-f]{6})$/i.exec(color || "");
+  if (!m) return { backgroundColor: "rgba(201,168,76,.2)", color: "#C9A84C" };
+  const n = parseInt(m[1], 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return lum < 0.35 ? { backgroundColor: "#" + m[1], color: "#ffffff" } : { backgroundColor: "#" + m[1] + "33", color: "#" + m[1] };
 }
 const fmtSize = (b: number) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 const cleanPreview = (s: string) => (s || "").replace(/\[image:[^\]]*\]/gi, " ").replace(/\s+/g, " ").trim();
@@ -960,7 +969,7 @@ export default function AdminInbox() {
       </div>
       <button onClick={() => { setDrawerOpen(false); goToView("accounts"); }} className="mx-3 mb-3 flex items-center gap-3 px-3.5 min-h-[60px] py-2 rounded-2xl bg-mail-line/[0.05] border border-mail-line/15 text-left" aria-label="Switch mailbox">
         <span className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-bold shrink-0"
-          style={activeAccount ? { backgroundColor: activeAccount.color + "30", color: activeAccount.color } : { backgroundColor: "rgba(201,168,76,.2)", color: "#C9A84C" }}>
+          style={activeAccount ? chipStyle(activeAccount.color) : { backgroundColor: "rgba(201,168,76,.2)", color: "#C9A84C" }}>
           {activeAccount ? activeAccount.initials : "All"}
         </span>
         <span className="flex-1 min-w-0">
@@ -1031,7 +1040,7 @@ export default function AdminInbox() {
         {accounts.map((a) => (
           <div key={a.email} className={cn("flex items-center gap-3 pl-5 pr-2 min-h-[72px] py-2 border-b border-mail-line/10", activeAccount?.email === a.email && "bg-mail-gold/10")}>
             <button onClick={() => { setActiveAccount(a); setFromAccount(a.email); back(); }} className="flex-1 min-w-0 flex items-center gap-4 text-left min-h-[56px]">
-              <span className="w-12 h-12 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0" style={{ backgroundColor: a.color + "30", color: a.color }}>{a.initials}</span>
+              <span className="w-12 h-12 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0" style={chipStyle(a.color)}>{a.initials}</span>
               <span className="flex-1 min-w-0">
                 <span className="flex items-center gap-2">
                   <span className="text-[18px] font-semibold text-mail-text truncate">{a.display_name}</span>
@@ -1541,7 +1550,12 @@ export default function AdminInbox() {
       ) : (
         <div className="flex items-center gap-1 px-1.5 py-1.5 shrink-0" style={safeTop}>
           <button onClick={() => (wide ? setSidebarHidden((h) => !h) : setDrawerOpen(true))} aria-label="Menu: folders and mailboxes" className={ICON_BTN}><Menu size={27} /></button>
-          {(!wide || sidebarHidden) && <button onClick={goDashboard} aria-label="Back to Dashboard" title="Dashboard" className={ICON_BTN}><LayoutDashboard size={24} /></button>}
+          {(!wide || sidebarHidden) && (
+            <button onClick={goDashboard} aria-label="Back to Dashboard" title="Back to Dashboard"
+              className="shrink-0 flex items-center gap-1 min-h-[48px] pl-1.5 pr-3 rounded-full text-[16px] font-semibold text-mail-sub hover:bg-mail-line/10">
+              <ChevronLeft size={22} /> Dashboard
+            </button>
+          )}
           <div className="flex-1 min-w-0 flex items-center gap-2 pl-3.5 pr-1 min-h-[52px] bg-mail-panel rounded-full border border-mail-line/15">
             <Search size={20} className="text-mail-muted shrink-0" />
             <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search mail" enterKeyHint="search" aria-label="Search mail"
@@ -1549,7 +1563,7 @@ export default function AdminInbox() {
             {search && <button onClick={() => setSearch("")} aria-label="Clear search" className="w-11 h-11 flex items-center justify-center text-mail-muted"><X size={20} /></button>}
             <button onClick={() => goToView("accounts")} aria-label="Switch mailbox" title="Switch mailbox"
               className="w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-bold shrink-0"
-              style={activeAccount ? { backgroundColor: activeAccount.color + "30", color: activeAccount.color } : { backgroundColor: "rgba(201,168,76,.2)", color: "#C9A84C" }}>
+              style={activeAccount ? chipStyle(activeAccount.color) : { backgroundColor: "rgba(201,168,76,.2)", color: "#C9A84C" }}>
               {activeAccount ? activeAccount.initials : "All"}
             </button>
           </div>
@@ -1631,7 +1645,9 @@ export default function AdminInbox() {
                   <p className={cn("text-[17px] truncate mt-0.5", unread ? "font-semibold text-mail-text" : "text-mail-sub")}>{thread.subject || "(no subject)"}</p>
                   <p className="text-[16px] text-mail-muted truncate mt-0.5">
                     {!activeAccount && mailbox && (
-                      <span className="inline-flex items-center gap-1 mr-2 font-semibold" style={{ color: acct?.color || undefined }}>to {mailbox.split("@")[0]}@</span>
+                      <span className="inline-flex items-center gap-1.5 mr-2 font-semibold text-mail-sub">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: acct?.color || "#C9A84C" }} />to {mailbox.split("@")[0]}@
+                      </span>
                     )}
                     {cleanPreview(thread.latest_body_preview) || " "}
                   </p>
