@@ -327,6 +327,8 @@ export default function AdminInbox() {
 
   // ── State ──
   const [view, setView] = useState<View>("list");
+  const viewRef = useRef<View>("list");
+  viewRef.current = view;
   const [folder, setFolder] = useState<string>("inbox");
   const [selectedThread, setSelectedThread] = useState<Thread | null>(null);
   const selectedRef = useRef<Thread | null>(null);
@@ -506,7 +508,9 @@ export default function AdminInbox() {
   // ── Open a conversation: saved copy at once, then refresh it (the server marks it read) ──
   const [threadError, setThreadError] = useState<string | null>(null);
   const openThread = async (thread: Thread) => {
-    const replace = view === "thread" && wide;
+    // already looking at a conversation (another one on a computer, or the same one after sending a reply):
+    // swap it in place so Back does not have to step through the same conversation twice
+    const replace = viewRef.current === "thread";
     setSelectedThread(thread);
     selectedRef.current = thread;
     setExpanded(new Set()); setDetails(new Set()); setOriginalColors(new Set()); setShowAllMsgs(false); setQuotesShown(new Set());
