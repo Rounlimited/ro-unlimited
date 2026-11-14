@@ -67,13 +67,14 @@ function speakable(t: string): string {
     .replace(/[*_#`>|]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-export default function AiVoice({ ctx, history, currentPage, onNavigate, onClose, onOutOfCredit }: {
+export default function AiVoice({ ctx, history, currentPage, onNavigate, onClose, onOutOfCredit, onUseLive }: {
   ctx: AudioContext;                       // created in the tap that opened voice (browsers require that)
   history: VoiceTurn[];
   currentPage: string | null;
   onNavigate: (path: string, description?: string) => void;
   onClose: (turns: VoiceTurn[]) => void;
   onOutOfCredit: () => void;
+  onUseLive?: () => void;                  // switch back to the fast live engine
 }) {
   const [phase, setPhase] = useState<Phase>('starting');
   const [err, setErr] = useState('');
@@ -422,6 +423,7 @@ export default function AiVoice({ ctx, history, currentPage, onNavigate, onClose
             <div className="tx"><b>{bargeIn ? 'Talk to cut in: on' : 'Talk to cut in: off'}</b><span>{bargeIn ? 'Start talking and it stops. If it keeps stopping itself on a loud speaker, turn this off.' : 'It finishes unless you tap the circle. Best on a loud speaker or a noisy site.'}</span></div>
           </button>
           {basic && <div className="nxa-rackstat" style={{ marginTop: 8 }}>The better speech detector could not load on this device, so a simpler one is in use. A quiet spot or headphones will help.</div>}
+          {onUseLive && <button className="nxa-btn" onClick={() => { onUseLive(); end(); }}>Use live voice (answers in about a second, charged per minute)</button>}
           <button className="nxa-btn" onClick={() => setShowSet(false)}>Done</button>
         </div>
       )}

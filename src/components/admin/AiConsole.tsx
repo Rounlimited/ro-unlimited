@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import './ai-console.css';
 import AiVoice, { VoiceTurn } from './AiVoice';
+import AiVoiceLive from './AiVoiceLive';
 
 /**
  * Nexa AI module — the full-screen assistant. Opens from the AI button in the
@@ -164,6 +165,7 @@ export default function AiConsole() {
   const [autoOn, setAutoOn] = useState(false); const [autoBelow, setAutoBelow] = useState('5'); const [autoAmt, setAutoAmt] = useState('20');
   const reqIdRef = useRef('');
   const [voiceCtx, setVoiceCtx] = useState<AudioContext | null>(null);
+  const [voiceEngine, setVoiceEngine] = useState<'live' | 'standard'>('live');
   const pinRef = useRef(''); pinRef.current = pin;
   const feedRef = useRef<HTMLDivElement>(null);
   const inpRef = useRef<HTMLTextAreaElement>(null);
@@ -374,6 +376,7 @@ export default function AiConsole() {
       let c: AudioContext;
       try { c = new AC({ sampleRate: 24000 }); } catch { c = new AC(); }
       c.resume().catch(() => {});
+      setVoiceEngine(ls.get('nxa-voice-engine') === 'standard' ? 'standard' : 'live');
       setVoiceCtx(c);
     } catch { say('This browser cannot do voice.'); }
   };
@@ -649,10 +652,17 @@ export default function AiConsole() {
           </div>
         </>
       )}
-      {voiceCtx && (
+      {voiceCtx && voiceEngine === 'live' && (
+        <AiVoiceLive ctx={voiceCtx} history={msgs.map((m) => ({ role: m.role, content: m.content }))} currentPage={pathname}
+          onNavigate={(path, d) => { say(`Opening ${d || path}…`); router.push(path); }}
+          onClose={endVoice} onOutOfCredit={() => { loadWallet(); setTimeout(openWallet, 300); }}
+          onFallback={(byChoice) => { if (!byChoice) say('Live voice is not available. Using the standard voice.'); setVoiceEngine('standard'); }} />
+      )}
+      {voiceCtx && voiceEngine === 'standard' && (
         <AiVoice ctx={voiceCtx} history={msgs.map((m) => ({ role: m.role, content: m.content }))} currentPage={pathname}
           onNavigate={(path, d) => { say(`Opening ${d || path}…`); router.push(path); }}
-          onClose={endVoice} onOutOfCredit={() => { loadWallet(); setTimeout(openWallet, 300); }} />
+          onClose={endVoice} onOutOfCredit={() => { loadWallet(); setTimeout(openWallet, 300); }}
+          onUseLive={() => { try { localStorage.setItem('nxa-voice-engine', 'live'); } catch { /* private mode */ } say('Live voice is on. Tap Talk to start it.'); }} />
       )}
       {walletOpen && (
         <>
