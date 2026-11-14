@@ -6,6 +6,8 @@ import { requireEmailAccess } from '@/lib/email-auth';
 import { newTrackToken, instrumentHtml } from '@/lib/email-tracking';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
+// typed (plain-text) bodies: escape before turning line breaks into <br>
+const escapeText = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\r?\n/g, '<br>');
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +15,8 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return auth.res;
     const supabase = createAdminClient();
     const body = await req.json();
-    const { thread_id, to_email, to_name, subject, reply_body, reply_html, lead_id, from_email, attachments } = body;
+    const { thread_id, to_email, to_name, subject, reply_body, reply_html, lead_id, from_email, attachments, cc_emails } = body;
+    const ccList: string[] = Array.isArray(cc_emails) ? cc_emails.filter((e: unknown) => typeof e === 'string' && e.includes('@')).map((e: string) => e.trim()) : [];
     const accounts = await fetchEmailAccounts();
 
     if (!thread_id || !to_email || (!reply_body && !reply_html)) {
@@ -24,7 +27,7 @@ export async function POST(req: NextRequest) {
     const customerName = to_name || to_email.split('@')[0];
     const replySubject = subject?.startsWith('Re:') ? subject : `Re: ${subject || 'Your inquiry'}`;
     const plainText = reply_body || stripHtml(reply_html || '');
-    const html = buildEmailHtml(customerName, reply_html || (reply_body || '').replace(/\n/g, '<br>'), subject || 'Your inquiry', senderEmail);
+    const html = buildEmailHtml(customerName, reply_html || escapeText(reply_body || ''), subject || 'Your inquiry', senderEmail);
 
     // Get In-Reply-To for email threading
     let inReplyToHeader: string | undefined;
@@ -50,6 +53,7 @@ export async function POST(req: NextRequest) {
       html: instrumentHtml(html, trackToken),
       text: plainText,
     };
+    if (ccList.length) params.cc = ccList;
     if (inReplyToHeader) {
       params.headers = { 'In-Reply-To': inReplyToHeader, 'References': inReplyToHeader };
     }
@@ -75,6 +79,7 @@ export async function POST(req: NextRequest) {
       body_text: plainText,
       resend_message_id: data?.id,
       folder: 'sent',
+      cc_emails: ccList,
       has_attachments: records.length > 0,
       track_token: trackToken,
     });

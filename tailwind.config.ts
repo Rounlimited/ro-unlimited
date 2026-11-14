@@ -8,6 +8,21 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Mail client (AdminInbox): CSS-var driven so .ro-mail-light flips the whole client to light mode.
+        mail: {
+          bg: 'rgb(var(--m-bg) / <alpha-value>)',
+          panel: 'rgb(var(--m-panel) / <alpha-value>)',
+          raised: 'rgb(var(--m-raised) / <alpha-value>)',
+          line: 'rgb(var(--m-line) / <alpha-value>)',
+          text: 'rgb(var(--m-text) / <alpha-value>)',
+          sub: 'rgb(var(--m-sub) / <alpha-value>)',
+          muted: 'rgb(var(--m-muted) / <alpha-value>)',
+          gold: 'rgb(var(--m-gold) / <alpha-value>)',
+          ink: 'rgb(var(--m-ink) / <alpha-value>)',
+          danger: 'rgb(var(--m-danger) / <alpha-value>)',
+          warn: 'rgb(var(--m-warn) / <alpha-value>)',
+          ok: 'rgb(var(--m-ok) / <alpha-value>)',
+        },
         ro: {
           black: '#1A1A1A',
           // Gold is var-driven so a wrapper class can re-theme a subtree

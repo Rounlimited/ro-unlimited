@@ -1,7 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/server';
 
 import { LICENSE_CLASSIFICATION_COUNT } from '@/lib/licenses';
-export type EmailFolder = 'inbox' | 'sent' | 'drafts' | 'trash' | 'spam';
+// system folders + 'archive' + custom folder keys from Folders & filters (see email-rules.ts)
+export type EmailFolder = 'inbox' | 'sent' | 'drafts' | 'trash' | 'spam' | 'archive' | (string & {});
 
 export interface EmailMessage {
   id: string;

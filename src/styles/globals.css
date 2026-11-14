@@ -887,3 +887,37 @@ body.admin-mode > div > div > div > main.min-h-screen { min-height: auto !import
 @media (prefers-reduced-motion: reduce) {
   .inv-fancy-border, .inv-fancy-shimmer, .inv-fancy-glow { animation: none; }
 }
+
+/* ── Mail client (src/components/admin/AdminInbox.tsx) ───────────────────────
+   Colour tokens for the mail-* Tailwind colours. Dark = RO black/gold; .ro-mail-light = light mode.
+   All text colours meet JR's contrast rule (no faint greys for anything he must read). */
+.ro-mail {
+  --m-bg: 11 11 12; --m-panel: 22 22 24; --m-raised: 34 34 37; --m-line: 255 255 255;
+  --m-text: 247 244 237; --m-sub: 222 216 204; --m-muted: 184 177 163;
+  --m-gold: 201 168 76; --m-ink: 17 15 10;
+  --m-danger: 242 112 98; --m-warn: 236 182 84; --m-ok: 61 214 135;
+  color-scheme: dark;
+  font-family: var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.ro-mail.ro-mail-light {
+  --m-bg: 246 244 239; --m-panel: 255 255 255; --m-raised: 236 232 223; --m-line: 0 0 0;
+  --m-text: 20 18 14; --m-sub: 48 44 36; --m-muted: 82 76 64;
+  --m-gold: 132 100 18; --m-ink: 255 255 255;
+  --m-danger: 180 35 24; --m-warn: 140 88 6; --m-ok: 18 122 66;
+  color-scheme: light;
+}
+.ro-mail button, .ro-mail [role="button"] { -webkit-tap-highlight-color: transparent; }
+.ro-mail select option { color: #14120e; background: #fff; }
+.ro-mail-backdrop {
+  background-color: rgb(var(--m-bg));
+  background-image: radial-gradient(900px 520px at 0% -10%, rgba(201,168,76,.10), transparent 60%);
+}
+.ro-mail-light .ro-mail-backdrop, .ro-mail-light.ro-mail-backdrop {
+  background-image: radial-gradient(900px 520px at 0% -10%, rgba(201,168,76,.16), transparent 60%);
+}
+@keyframes ro-mail-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes ro-mail-left { from { transform: translateX(-100%); } to { transform: none; } }
+.ro-mail-up { animation: ro-mail-up .2s ease-out both; }
+.ro-mail-left { animation: ro-mail-left .2s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .ro-mail-up, .ro-mail-left { animation: none; } }

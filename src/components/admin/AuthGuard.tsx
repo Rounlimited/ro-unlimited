@@ -41,6 +41,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // the mail client keeps a copy of the mailbox on the device: wipe it when someone signs out
+      if (_event === 'SIGNED_OUT') import('@/lib/mail-cache').then((m) => m.cacheClear()).catch(() => {});
       if (!session && !isPublicAdminRoute) {
         router.push('/admin/login');
       }

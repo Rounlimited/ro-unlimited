@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { logEmail } from '@/lib/email';
+import { fileFolder, plainBody } from '@/lib/email-rules';
 
 function parseEmail(raw: string): string {
   const match = raw.match(/<([^>]+)>/);
@@ -145,13 +146,30 @@ export async function POST(req: NextRequest) {
     const to_email = recipients.find((r) => knownEmails.includes(r)) || recipients[0] || 'build@rounlimited.com';
     const isKnownRecipient = knownEmails.length === 0 || knownEmails.includes(to_email);
 
-    // Auto-purge spam older than 90 days
+    // Auto-purge spam that has SAT in Spam for 90 days (updated_at = when it was moved there), so mail
+    // that a filter or "Block" moved into Spam today is not wiped just because it was received long ago.
     if (isKnownRecipient === false) {
       try {
         const cutoff = new Date(Date.now() - 90 * 86400000).toISOString();
-        await supabase.from('email_messages').delete().eq('folder', 'spam').lt('created_at', cutoff);
+        await supabase.from('email_messages').delete().eq('folder', 'spam').lt('updated_at', cutoff).lt('created_at', cutoff);
       } catch { /* non-critical */ }
     }
+
+    // Folders & filters / blocked senders (set in the mail client). A blocked sender always goes to Spam;
+    // a filter files the mail into its folder; folders with alerts off are filed quietly. Customers on file
+    // always land in the Inbox (see email-rules.ts).
+    let ruleFolder: string | null = null;
+    let ruleNotify = true;
+    if (isKnownRecipient) {
+      try {
+        const rule = await fileFolder(from_email, subjectStr, plainBody(body_text, body_html));
+        ruleFolder = rule.folder;
+        ruleNotify = rule.notify;
+      } catch (err) {
+        console.error('[inbound] rules failed (filed to Inbox):', err);
+      }
+    }
+    const folder = !isKnownRecipient ? 'spam' : (ruleFolder || 'inbox');
 
     // Try to find existing thread via In-Reply-To
     let threadId: string | undefined;
@@ -182,8 +200,8 @@ export async function POST(req: NextRequest) {
       body_html: body_html ?? undefined,
       body_text: body_text ?? undefined,
       has_attachments: attachmentsMeta.length > 0,
-      folder: isKnownRecipient ? 'inbox' : 'spam',
-      read: isKnownRecipient ? false : true,
+      folder,
+      read: folder === 'spam',
     });
 
     // Store the Resend email id — enables attachment re-fetch/recovery and
@@ -239,8 +257,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Send push notification for new email (skip spam)
-    if (isKnownRecipient) try {
+    // Send push notification for new email (skip spam, and folders whose alerts are off)
+    if (isKnownRecipient && folder !== 'spam' && ruleNotify) try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com';
       await fetch(`${siteUrl}/api/admin/push-send`, {
         method: 'POST',
@@ -251,7 +269,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           title: `New Email from ${from_email}`,
           body: subjectStr,
-          url: '/admin/inbox',
+          url: logged?.thread_id ? `/admin/inbox?thread=${logged.thread_id}` : '/admin/inbox',
           tag: 'email-' + (logged?.thread_id || 'new'),
         }),
       });
@@ -263,6 +281,7 @@ export async function POST(req: NextRequest) {
       success: true,
       message_id: logged?.id,
       thread_id: logged?.thread_id,
+      folder,
       attachments_found: attachmentsMeta.length,
       attachments_saved: attachmentsSaved,
     });

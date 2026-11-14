@@ -24,6 +24,9 @@ export async function GET(req: NextRequest) {
     .from('email_messages')
     .select('id')
     .eq('folder', 'trash')
+    // updated_at = when it was moved to Trash (every folder move stamps it), so mail trashed today is kept
+    // for 30 days even if it was received months ago. created_at kept as a second guard.
+    .lt('updated_at', cutoff.toISOString())
     .lt('created_at', cutoff.toISOString());
 
   if (fetchErr) {

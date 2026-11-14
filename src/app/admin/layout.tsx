@@ -19,6 +19,10 @@ function AdminContent({ children }: { children: React.ReactNode }) {
   const { onboarding, updateOnboarding } = useOnboarding();
   const [activeTour, setActiveTour] = useState<string | null>(null);
   const { isDesktop } = useDeviceContext();
+  const pathname = usePathname();
+  // The mail client is a full-screen app of its own (own menu, Dashboard button, light/dark): no admin
+  // header, side bar, tab bar or floating AI bubble around it. Auth stays enforced by AuthGuard above.
+  const fullScreen = pathname?.startsWith('/admin/inbox');
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -28,6 +32,16 @@ function AdminContent({ children }: { children: React.ReactNode }) {
     window.addEventListener('start-tour', handler);
     return () => window.removeEventListener('start-tour', handler);
   }, []);
+
+  if (fullScreen) {
+    return (
+      <>
+        {children}
+        <ActivityTracker />
+        <ForcePasswordChange />
+      </>
+    );
+  }
 
   return (
     <>

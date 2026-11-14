@@ -7,6 +7,8 @@ import { newTrackToken, instrumentHtml } from '@/lib/email-tracking';
 import { randomUUID } from 'crypto';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
+// typed (plain-text) bodies: escape before turning line breaks into <br>
+const escapeText = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\r?\n/g, '<br>');
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +26,7 @@ export async function POST(req: NextRequest) {
     const senderEmail = from_email || DEFAULT_FROM_EMAIL;
     const thread_id = randomUUID();
     const customerName = to_name || to_email.split('@')[0];
-    const html = buildEmailHtml(customerName, richHtml || (emailBody || '').replace(/\n/g, '<br>'), subject, senderEmail);
+    const html = buildEmailHtml(customerName, richHtml || escapeText(emailBody || ''), subject, senderEmail);
 
     let resendMessageId: string | undefined;
     const r = getResend();
