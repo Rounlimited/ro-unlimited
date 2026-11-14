@@ -3048,6 +3048,8 @@ const toolStatusLabel = (name: string) => TOOL_STATUS_LABELS[name] || 'Working o
 
 type StreamEmit = (evt: Record<string, any>) => void;
 
+// Live voice (xAI Grok Voice 3.0) list price, USD per minute the line is open.
+const VOICE_LIVE_USD_PER_MIN = 0.08;
 // Text-to-speech list price (x-ai/grok-voice-tts-1.0 on OpenRouter), USD per character spoken.
 const VOICE_TTS_USD_PER_CHAR = 15 / 1_000_000;
 // Added to the normal instructions when the assistant is SPEAKING instead of typing.
@@ -3256,7 +3258,7 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const reqBody = await req.json();
-    const { currentPage, projectContext, useModel, imageData, mode, audio } = reqBody;
+    const { currentPage, projectContext, useModel, imageData, mode, audio, tool, usage_id, seconds } = reqBody;
     let { messages, stream, model } = reqBody;
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'messages required' }, { status: 400 });
@@ -3271,6 +3273,55 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createAdminClient();
+
+    // ── Live voice: run one tool the live voice model asked for ──
+    if (mode === 'voice_tool') {
+      const name = typeof tool?.name === 'string' ? tool.name : '';
+      if (!ALL_TOOLS.some((t) => t.name === name)) return NextResponse.json({ result: JSON.stringify({ error: 'Unknown tool' }) });
+      try {
+        const { result, action } = await executeTool(name, tool?.args && typeof tool.args === 'object' ? tool.args : {}, supabase);
+        const body = typeof result === 'string' ? result : JSON.stringify(result);
+        // A spoken answer never needs a 30KB table
+        return NextResponse.json({ result: body.length > 12000 ? body.slice(0, 12000) + '\n…(cut short for voice; ask for a narrower search)' : body, action: action || null, label: toolStatusLabel(name) });
+      } catch (e: any) {
+        return NextResponse.json({ result: JSON.stringify({ error: 'Tool failed: ' + (e?.message || 'unknown') }) });
+      }
+    }
+
+    // ── Live voice: a fresh short-lived token for reconnecting after a quiet hang-up ──
+    if (mode === 'voice_live_token') {
+      const k = process.env.GROK_API_KEY;
+      const { data: row } = await supabase.from('ai_usage').select('id, user_id').eq('id', Number(usage_id)).eq('source', 'voice_live').maybeSingle();
+      if (!k || !row || row.user_id !== user.id) return NextResponse.json({ error: 'Unknown session' }, { status: 404 });
+      const sec = await fetch('https://api.x.ai/v1/realtime/client_secrets', {
+        method: 'POST', headers: { Authorization: `Bearer ${k}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ expires_after: { seconds: 300 } }),
+      });
+      const secret = await sec.json().catch(() => ({}));
+      if (!sec.ok || !secret?.value) return NextResponse.json({ error: 'Could not reconnect voice.' }, { status: 502 });
+      return NextResponse.json({ protocols: [`xai-client-secret.${secret.value}`] });
+    }
+
+    // ── Live voice: meter the minutes the paid line was actually open. The page
+    // reports connected seconds; we never accept more than the wall-clock time
+    // since the call began. ──
+    if (mode === 'voice_live_bill') {
+      const id = Number(usage_id);
+      const { data: row } = await supabase.from('ai_usage').select('id, at, user_id').eq('id', id).eq('source', 'voice_live').maybeSingle();
+      if (!row || row.user_id !== user.id) return NextResponse.json({ error: 'Unknown session' }, { status: 404 });
+      const elapsed = Math.max(0, (Date.now() - new Date(row.at).getTime()) / 1000);
+      const secs = Math.min(elapsed, Math.max(0, Number(seconds) || 0), 6 * 3600);
+      const cost = (secs / 60) * VOICE_LIVE_USD_PER_MIN;
+      await supabase.from('ai_usage').update({ cost_usd: cost, charged_usd: cost * AI_MARKUP, tokens_out: Math.round(secs) }).eq('id', id);
+      let stop = false;
+      if (walletConfigured()) {
+        try {
+          let w = await getBalance();
+          if (w.started && w.balance <= 0) { await maybeAutoTopUp(); w = await getBalance(); }
+          stop = w.started && w.balance <= 0;
+        } catch { /* never cut a call on a balance-check error */ }
+      }
+      return NextResponse.json({ ok: true, charged_usd: Math.round(cost * AI_MARKUP * 100) / 100, stop });
+    }
 
     // Started now so it runs while a spoken turn is being transcribed
     const memoriesPromise = supabase
@@ -3389,6 +3440,51 @@ export async function POST(req: NextRequest) {
 
     // Build dynamic context block (memories, current page, active project)
     const dynamicContext = (contextParts.length ? '\n' + contextParts.join('\n') : '') + (voiceHeard ? VOICE_RULES : '');
+    // ── Live voice: start a call. The browser talks straight to the live voice
+    // model with a short-lived token; our key never leaves the server. ──
+    if (mode === 'voice_live_start') {
+      if (!grokKey) return NextResponse.json({ error: 'Live voice is not set up.', fallback: true }, { status: 503 });
+      if (walletConfigured()) {
+        try {
+          let w = await getBalance();
+          if (w.started && w.balance <= 0) { await maybeAutoTopUp(); w = await getBalance(); }
+          if (w.started && w.balance <= 0) return NextResponse.json({ error: 'The AI credit has run out. Add credit to keep going.', out_of_credit: true }, { status: 402 });
+        } catch (e) { console.error('[ai-chat] wallet check failed:', e); }
+      }
+      const sec = await fetch('https://api.x.ai/v1/realtime/client_secrets', {
+        method: 'POST', headers: { Authorization: `Bearer ${grokKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ expires_after: { seconds: 300 } }),
+      });
+      const secret = await sec.json().catch(() => ({}));
+      if (!sec.ok || !secret?.value) {
+        // Out of funds at the voice supplier, or it is down: the page falls back to the standard voice.
+        console.error('[ai-chat] live voice token failed:', sec.status, JSON.stringify(secret).slice(0, 200));
+        return NextResponse.json({ error: 'Live voice is not available right now.', fallback: true }, { status: 502 });
+      }
+      const { data: usageRow } = await supabase.from('ai_usage').insert({
+        user_id: user.id, user_email: user.email || null, model: 'voice-live', source: 'voice_live', cost_usd: 0, charged_usd: 0,
+      }).select('id').single();
+      const recent = (messages as any[]).filter((m) => typeof m?.content === 'string' && m.content.trim()).slice(-12)
+        .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${String(m.content).slice(0, 700)}`).join('\n');
+      return NextResponse.json({
+        url: 'wss://api.x.ai/v1/realtime?model=grok-voice-3.0',
+        protocols: [`xai-client-secret.${secret.value}`],
+        voices: ['leo', 'rex', 'sal', 'atlas', 'orion', 'eve', 'ara', 'luna'],
+        usage_id: usageRow?.id || null,
+        price_per_min: Math.round(VOICE_LIVE_USD_PER_MIN * AI_MARKUP * 1000) / 1000,
+        session: {
+          instructions: buildSystemPrompt(ALL_TOOLS, dynamicContext) + VOICE_RULES + (recent ? `\n\n## EARLIER IN THIS CHAT (typed)\n${recent}` : ''),
+          tools: ALL_TOOLS.map((t) => ({ type: 'function', name: t.name, description: t.description, parameters: t.input_schema })),
+          reasoning: { effort: 'none' },
+          turn_detection: { type: 'server_vad', silence_duration_ms: 600, prefix_padding_ms: 300 },
+          audio: {
+            input: { format: { type: 'audio/pcm', rate: 24000 }, transcription: { model: 'grok-transcribe', language_hint: 'en' } },
+            output: { format: { type: 'audio/pcm', rate: 24000 } },
+          },
+          resumption: { enabled: true },
+        },
+      });
+    }
+
     let content = '';
     let usedModel = '';
     const actions: { type: string; path: string; description: string }[] = [];
