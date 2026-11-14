@@ -725,7 +725,7 @@ export default function AiConsole() {
                 ))}
               </>
             )}
-            <div className="sub" style={{ marginTop: 12, marginBottom: 0 }}>Charges show on the card statement as SQ *JENKINS HOME &amp; PROPE. Payments are handled by NexaVision Group.</div>
+            <div className="sub" style={{ marginTop: 12, marginBottom: 0 }}>Charges show on the card statement as SQ *NEXAVISION GROUP. Payments are handled by NexaVision Group.</div>
             <button className="nxa-btn" disabled={paying} onClick={() => setWalletOpen(false)}>Close</button>
           </div>
         </>
