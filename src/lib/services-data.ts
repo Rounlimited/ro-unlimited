@@ -31,7 +31,7 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
     id: 'roofing',
     slug: 'roofing',
     title: 'Roofing',
-    tagline: 'Roof Repair & Replacement Across the Tri-State',
+    tagline: 'Roof Repair & Replacement Across South Carolina and Georgia',
     icon: 'hard-hat',
     description: 'From storm damage repairs to full roof replacements, RO handles residential and light commercial roofing with licensed, insured work and quality materials. Storms don\'t stop at the state line — we run out of the Greenville area and work South Carolina and Georgia. We show up fast, assess honestly, and build roofs that last.',
     hero: 'Whether it\'s a missing shingle or a full tear-off, RO\'s roofing crews deliver fast, honest work backed by 25+ years of construction experience. We don\'t upsell — we fix what needs fixing and build what needs building.',
