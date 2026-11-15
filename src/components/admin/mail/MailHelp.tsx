@@ -102,6 +102,7 @@ export default function MailHelp({ accounts, hintOn, onHintChange, onShowSwipe, 
 
       <Section id="folders" icon={Inbox} title="The folders in the Menu">
         <Row icon={Inbox} name="Inbox">new mail comes in here. The number next to it is how many are new (unread).</Row>
+        <Row icon={Mail} name="All mail">every email in this mailbox in one list, whatever folder it was filed in, so you never have to dig through folders. Spam and Trash are left out.</Row>
         <Row icon={Star} name="Starred">everything you starred, wherever it is filed.</Row>
         <Row icon={Send} name="Sent">emails you sent from here.</Row>
         <Row icon={Archive} name="Archive">put away, kept forever.</Row>

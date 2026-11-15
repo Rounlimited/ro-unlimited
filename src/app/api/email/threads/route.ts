@@ -29,6 +29,8 @@ function inFolder(m: Row, folder: string) {
   if (folder === 'sent') return m.direction === 'outbound' && !m.is_draft && m.folder !== 'trash';
   if (folder === 'spam') return m.folder === 'spam';
   if (folder === 'archive') return !m.is_draft && m.folder === 'archive';
+  // All mail: everything in the mailbox, whatever folder it is filed in (not Spam, Trash or unsent drafts)
+  if (folder === 'all') return !m.is_draft && m.folder !== 'trash' && m.folder !== 'spam';
   // custom folder (Folders & filters): exactly the mail filed there
   if (!SYSTEM_FOLDERS.has(folder)) return !m.is_draft && m.folder === folder;
   // Inbox: received mail still in the inbox + our own sent replies (so a thread shows its latest reply)
@@ -56,7 +58,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 2) folder counts (same rows, no second query). Inbox/custom = unread; the rest = totals.
-    const folderCounts: Record<string, number> = { inbox: 0, sent: 0, starred: 0, drafts: 0, trash: 0, spam: 0, archive: 0 };
+    const folderCounts: Record<string, number> = { inbox: 0, all: 0, sent: 0, starred: 0, drafts: 0, trash: 0, spam: 0, archive: 0 };
     const mine = (m: Row) => !account || (m.direction === 'inbound' ? lc(m.to_email) === account : lc(m.from_email) === account);
     for (const m of rows) {
       if (!mine(m)) continue;
@@ -65,6 +67,7 @@ export async function GET(req: NextRequest) {
       if (m.folder === 'trash') folderCounts.trash++;
       if (m.folder === 'spam' && !m.read) folderCounts.spam++;
       if (!m.read && m.folder === 'inbox' && !m.is_draft) folderCounts.inbox++;
+      if (!m.read && !m.is_draft && m.direction === 'inbound' && m.folder !== 'trash' && m.folder !== 'spam') folderCounts.all++;
       if (!m.read && !m.is_draft && !SYSTEM_FOLDERS.has(m.folder)) folderCounts[m.folder] = (folderCounts[m.folder] || 0) + 1;
       if (m.direction === 'outbound' && !m.is_draft && m.folder !== 'trash') folderCounts.sent++;
     }

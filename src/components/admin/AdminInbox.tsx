@@ -82,6 +82,7 @@ type Peek = { dx: number; side: -1 | 1; ms: number };
 const TRASH_DAYS = 30, SPAM_DAYS = 90;
 const FOLDERS: { key: string; label: string; icon: React.ElementType; desc: string }[] = [
   { key: "inbox", label: "Inbox", icon: Inbox, desc: "New mail comes in here" },
+  { key: "all", label: "All mail", icon: Mail, desc: "Every email in this mailbox, in any folder" },
   { key: "starred", label: "Starred", icon: Star, desc: "Mail you marked with a star" },
   { key: "sent", label: "Sent", icon: Send, desc: "Mail you sent" },
   { key: "archive", label: "Archive", icon: Archive, desc: "Put away, kept forever" },
@@ -92,6 +93,7 @@ const FOLDERS: { key: string; label: string; icon: React.ElementType; desc: stri
 /** what an empty folder is for and what to do (custom folders get their own line) */
 const EMPTY_TEXT: Record<string, string> = {
   inbox: "You're all caught up. New email for this mailbox lands here.",
+  all: "No mail in this mailbox yet. All mail shows every email from every folder (except Spam and Trash) in one list.",
   starred: "Nothing starred. Tap the star on the right of any email to keep it here for quick finding.",
   sent: "Emails you send from here show up in Sent.",
   archive: "Nothing archived yet. Swipe an email to the left (or tap Archive at the top of an open email) to clear it out of the Inbox without deleting it. It waits here forever.",
@@ -107,6 +109,9 @@ const FOLDER_ICONS: Record<string, React.ElementType> = {
   customer: UserRound, job: HardHat, star: Star,
 };
 const iconFor = (name?: string): React.ElementType => FOLDER_ICONS[name || ""] || Folder;
+/** Company mailboxes (the business's shared addresses) vs a person's own address, for the two Mailboxes tabs. */
+const COMPANY_BOXES = new Set(["build", "site", "info", "noreply", "no-reply", "office", "admin", "sales", "contact", "hello", "support", "billing", "estimates", "jobs", "careers"]);
+const isCompanyBox = (email: string) => COMPANY_BOXES.has(email.split("@")[0].toLowerCase());
 const INPUT_CLS = "w-full min-h-[48px] px-3.5 py-2.5 bg-mail-bg border border-mail-line/20 rounded-xl text-[17px] text-mail-text placeholder:text-mail-muted focus:outline-none focus:border-mail-gold";
 const ICON_BTN = "w-12 h-12 shrink-0 flex items-center justify-center rounded-full text-mail-sub hover:bg-mail-line/10 active:bg-mail-line/15";
 const PILL_BTN = "shrink-0 inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-full border border-mail-line/20 bg-mail-line/[0.04] text-[16px] font-semibold text-mail-text hover:bg-mail-line/10 disabled:opacity-40";
@@ -674,7 +679,7 @@ export default function AdminInbox() {
         showToast("Could not reach the server. The change was not saved.");
       }
     })();
-    const leaves = ["trash", "spam", "restore", "delete", "move", "archive"].includes(action);
+    const leaves = folder === "all" ? ["trash", "spam", "delete"].includes(action) : ["trash", "spam", "restore", "delete", "move", "archive"].includes(action);
     if (leaves) {
       setThreads((prev) => prev.filter((t) => !idSet.has(t.thread_id)));
       if (!opts?.quiet) {
@@ -988,7 +993,7 @@ export default function AdminInbox() {
 
   const safeTop = { paddingTop: "calc(0.25rem + env(safe-area-inset-top))" };
   const isSystem = (k: string) => !!FOLDER_LABEL[k];
-  const leftAction = folder === "trash" ? null : (folder === "archive" || folder === "spam" || folder === "sent" || folder === "drafts") ? "trash" : "archive";
+  const leftAction = folder === "trash" ? null : (folder === "all" || folder === "archive" || folder === "spam" || folder === "sent" || folder === "drafts") ? "trash" : "archive";
 
   // ═══════════════════════════════════════════
   // SWIPE TIP: every time Mail opens, the top email slides a little to the left by itself to show what
@@ -1172,7 +1177,16 @@ export default function AdminInbox() {
           </span>
           <ChevronDown size={20} className="text-mail-muted shrink-0 -rotate-90" />
         </button>
-        {FOLDERS.map((f) => navBtn(f.key, f.label, f.icon, f.key === "inbox" || f.key === "drafts" || f.key === "spam" ? folderCounts[f.key] : undefined, f.key === "inbox", f.desc, f.key === "drafts" ? "saved" : "new"))}
+        {accounts.some((a) => isCompanyBox(a.email)) && (
+          <div className="grid gap-1.5 -mt-1 mb-3 px-1" style={{ gridTemplateColumns: `repeat(${Math.min(accounts.filter((a) => isCompanyBox(a.email)).length + 1, 4)}, minmax(0, 1fr))` }} aria-label="Quick switch">
+            <button onClick={() => { setActiveAccount(null); setDrawerOpen(false); }} className={cn("min-h-[44px] rounded-lg border text-[15px] font-semibold", !activeAccount ? "bg-mail-gold/15 border-mail-gold text-mail-gold" : "border-mail-line/15 text-mail-sub")}>All</button>
+            {accounts.filter((a) => isCompanyBox(a.email)).map((a) => (
+              <button key={a.email} onClick={() => { setActiveAccount(a); setFromAccount(a.email); setDrawerOpen(false); }} title={a.email}
+                className={cn("min-h-[44px] rounded-lg border text-[15px] font-semibold capitalize", activeAccount?.email === a.email ? "bg-mail-gold/15 border-mail-gold text-mail-gold" : "border-mail-line/15 text-mail-sub")}>{a.email.split("@")[0]}</button>
+            ))}
+          </div>
+        )}
+        {FOLDERS.map((f) => navBtn(f.key, f.label, f.icon, f.key === "inbox" || f.key === "all" || f.key === "drafts" || f.key === "spam" ? folderCounts[f.key] : undefined, f.key === "inbox", f.desc, f.key === "drafts" ? "saved" : "new"))}
         {(customFolders.length > 0 || hiddenFolders > 0) && <p className="px-3 pt-4 pb-1 text-[14px] font-bold uppercase tracking-wider text-mail-muted">Your folders</p>}
         {hiddenFolders > 0 && activeAccount && (
           <p className="px-3 pb-1.5 text-[14px] text-mail-muted leading-snug">Showing the folders for {activeAccount.email.split("@")[0]}@. {hiddenFolders} more belong to other mailboxes.</p>
@@ -1214,20 +1228,43 @@ export default function AdminInbox() {
         </button>
       ))}
       <div className="flex-1 overflow-y-auto min-h-0">
-        <p className="px-5 pt-4 pb-3 text-[17px] text-mail-sub leading-snug border-b border-mail-line/10">Each email address RO uses is a mailbox. Tap one to see only its mail, or <b className="text-mail-text">All mailboxes</b> to see everything together. New emails you write are sent from the mailbox you are looking at.</p>
+        <p className="px-5 pt-3 pb-2 text-[16px] text-mail-sub leading-snug">Tap a mailbox to see only its mail. New emails are sent from the mailbox you are looking at.</p>
         <button onClick={() => { setActiveAccount(null); back(); }}
-          className={cn("w-full flex items-center gap-4 px-5 min-h-[72px] py-3 border-b border-mail-line/10 hover:bg-mail-line/[0.04]", !activeAccount && "bg-mail-gold/10")}>
-          <span className="w-12 h-12 rounded-full bg-mail-raised flex items-center justify-center shrink-0"><Mail size={22} className="text-mail-gold" /></span>
+          className={cn("w-full flex items-center gap-4 px-5 min-h-[60px] py-2 border-y border-mail-line/10 hover:bg-mail-line/[0.04]", !activeAccount && "bg-mail-gold/10")}>
+          <span className="w-11 h-11 rounded-full bg-mail-raised flex items-center justify-center shrink-0"><Mail size={21} className="text-mail-gold" /></span>
           <span className="flex-1 text-left">
             <span className="block text-[18px] font-semibold text-mail-text">All mailboxes</span>
-            <span className="block text-[15px] text-mail-muted">Every address in one list. A coloured dot on each email shows which address it came to.</span>
+            <span className="block text-[15px] text-mail-muted">Every address in one list</span>
           </span>
           {!activeAccount && <Check size={22} className="text-mail-gold shrink-0" />}
         </button>
-        {accounts.map((a) => (
-          <div key={a.email} className={cn("flex items-center gap-3 pl-5 pr-2 min-h-[72px] py-2 border-b border-mail-line/10", activeAccount?.email === a.email && "bg-mail-gold/10")}>
-            <button onClick={() => { setActiveAccount(a); setFromAccount(a.email); back(); }} className="flex-1 min-w-0 flex items-center gap-4 text-left min-h-[56px]">
-              <span className="w-12 h-12 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0" style={chipStyle(a.color)}>{a.initials}</span>
+        {(() => {
+          const company = accounts.filter((a) => isCompanyBox(a.email));
+          if (!company.length) return null;
+          return (
+            <div className="px-4 pt-3 pb-1">
+              <p className="px-1 pb-2 flex items-center gap-2 text-[14px] font-bold uppercase tracking-wider text-mail-gold"><Building2 size={16} /> Business mailboxes <span className="normal-case tracking-normal font-normal text-mail-muted">· shared by the company</span></p>
+              <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(company.length, 3)}, minmax(0, 1fr))` }}>
+                {company.map((a) => { const on = activeAccount?.email === a.email; return (
+                  <button key={a.email} onClick={() => { setActiveAccount(a); setFromAccount(a.email); back(); }} title={a.email}
+                    className={cn("relative overflow-hidden min-h-[76px] rounded-2xl border px-2 py-2 flex flex-col items-center justify-center gap-0.5 transition active:scale-[0.98]",
+                      on ? "border-mail-gold shadow-[0_0_0_2px_rgba(201,168,76,.35),0_8px_22px_rgba(201,168,76,.18)]" : "border-mail-gold/35")}
+                    style={{ background: on ? "linear-gradient(150deg, rgba(212,185,101,.32), rgba(201,168,76,.10))" : "linear-gradient(150deg, rgba(212,185,101,.16), rgba(201,168,76,.03))" }}>
+                    <Building2 size={20} className="text-mail-gold" />
+                    <span className="text-[18px] font-bold leading-tight capitalize text-mail-text">{a.email.split("@")[0]}</span>
+                    <span className="text-[13px] leading-tight text-mail-muted">{a.email.split("@")[0]}@</span>
+                    {on && <Check size={16} className="absolute top-1.5 right-1.5 text-mail-gold" />}
+                  </button>
+                ); })}
+              </div>
+            </div>
+          );
+        })()}
+        {accounts.some((a) => !isCompanyBox(a.email)) && <p className="px-5 pt-5 pb-1.5 flex items-center gap-2 text-[14px] font-bold uppercase tracking-wider text-mail-sub"><UserRound size={16} /> People <span className="normal-case tracking-normal font-normal text-mail-muted">· each person&apos;s own address</span></p>}
+        {accounts.filter((a) => !isCompanyBox(a.email)).map((a) => (
+          <div key={a.email} className={cn("flex items-center gap-2 pl-5 pr-2 min-h-[60px] py-1 border-b border-mail-line/10", activeAccount?.email === a.email && "bg-mail-gold/10")}>
+            <button onClick={() => { setActiveAccount(a); setFromAccount(a.email); back(); }} className="flex-1 min-w-0 flex items-center gap-4 text-left min-h-[52px]">
+              <span className="w-11 h-11 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0" style={chipStyle(a.color)}>{a.initials}</span>
               <span className="flex-1 min-w-0">
                 <span className="flex items-center gap-2">
                   <span className="text-[18px] font-semibold text-mail-text truncate">{a.display_name}</span>
@@ -1241,6 +1278,15 @@ export default function AdminInbox() {
             <ToolBtn icon={Trash2} label="Remove" title={`Remove ${a.email}`} danger onClick={() => removeAccount(a)} />
           </div>
         ))}
+        {accounts.some((a) => isCompanyBox(a.email)) && (
+          <div className="px-5 pt-3 flex flex-wrap items-center gap-2 text-[15px] text-mail-muted">
+            <span>Edit a company mailbox:</span>
+            {accounts.filter((a) => isCompanyBox(a.email)).map((a) => (
+              <button key={a.email} onClick={() => setAccountForm({ id: a.id, email: a.email, display_name: a.display_name, color: a.color, initials: a.initials })}
+                className="min-h-[44px] px-3 rounded-full border border-mail-line/20 text-mail-sub inline-flex items-center gap-1.5"><Pencil size={15} /> {a.email.split("@")[0]}@</button>
+            ))}
+          </div>
+        )}
         {accounts.length === 0 && <p className="text-center text-mail-sub text-[17px] py-16 px-6">{accountsQ.loading ? "Loading mailboxes…" : "No mailboxes yet. A mailbox is an @rounlimited.com address. Tap Add at the top to set one up."}</p>}
         {accounts.some((a) => a.is_default) && <p className="px-5 pt-3 text-[15px] text-mail-muted leading-snug"><b className="text-mail-sub">Main</b> = the address a new email is sent from when All mailboxes is open (you can change it on the From line). Remove only takes an address off this list; its emails are kept.</p>}
         <button onClick={() => goToView("rules")} className="mx-4 my-6 flex items-center gap-3 px-4 min-h-[64px] rounded-2xl bg-mail-line/[0.05] border border-mail-line/15 text-left w-[calc(100%-2rem)]">
@@ -1816,6 +1862,7 @@ export default function AdminInbox() {
         const note = folder === "trash" ? `Deleted for good ${TRASH_DAYS} days after being put here. To rescue one, open it and tap To Inbox.`
           : folder === "spam" ? `Junk and blocked senders. Deleted for good after ${SPAM_DAYS} days. Not junk? Open it and tap To Inbox.`
           : folder === "archive" ? "Put away, kept forever. Search finds it here."
+          : folder === "all" ? "Every email in this mailbox from every folder, newest first. Spam and Trash are left out."
           : folder === "starred" ? "Everything you starred, wherever it is filed."
           : folder === "drafts" ? "Emails saved to finish later. Open one to finish and send it."
           : cf ? `Your folder for ${mailboxNames(cf.accounts)}. ${cf.notify ? "Phone alerts on." : "Filed quietly, no phone alerts."}`

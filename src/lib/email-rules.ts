@@ -16,7 +16,7 @@ import { createAdminClient } from '@/lib/supabase/server';
  */
 const KEY = 'email_rules';
 
-export const SYSTEM_FOLDERS = new Set(['inbox', 'sent', 'drafts', 'starred', 'trash', 'spam', 'archive']);
+export const SYSTEM_FOLDERS = new Set(['inbox', 'all', 'sent', 'drafts', 'starred', 'trash', 'spam', 'archive']);
 /** targets a filter may use besides custom folders */
 export const SYSTEM_TARGETS = new Set(['spam', 'archive']);
 
