@@ -62,6 +62,20 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
     const viewLink = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/estimate/${shareToken}`;
 
+    // The whole gold button is the link (not just the words), and the plain
+    // address sits right under it — some mail apps (Yahoo, AOL) switch off
+    // buttons and links, and the customer must still be able to get in.
+    const linkButton = (label: string) => `
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0 10px;">
+        <tr>
+          <td align="center" bgcolor="#C9A84C" style="background-color:#C9A84C;border-radius:10px;">
+            <a href="${viewLink}?from=email" target="_blank" style="display:block;padding:16px 36px;color:#000000;text-decoration:none;font-size:17px;font-weight:700;border-radius:10px;">${label}</a>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 20px;color:#bbbbbb;font-size:14px;line-height:1.6;">Button not working? Copy this address into your browser:<br>
+        <a href="${viewLink}?from=email" target="_blank" style="color:#E5C76B;text-decoration:underline;word-break:break-all;">${viewLink}</a></p>`;
+
     // The LINK is the estimate. It's where they review, pick options, sign,
     // and later follow the whole job — so the email points at exactly one
     // thing. No PDF attached; the download lives behind the link.
@@ -71,13 +85,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const jobBody = `
       ${message ? `<p>${message}</p>` : ''}
       <p style="font-size:16px;">Here's your Project Page for <strong>${projName}</strong> — progress, what's coming up, permits and inspections, updates with photos, and your documents, all in one place.</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0;">
-        <tr>
-          <td style="background-color:#C9A84C;border-radius:10px;padding:16px 36px;">
-            <a href="${viewLink}?from=email" style="color:#000;text-decoration:none;font-size:17px;font-weight:700;display:inline-block;">Open Your Project Page</a>
-          </td>
-        </tr>
-      </table>
+      ${linkButton(`Open Your Project Page`)}
       <p style="color:#bbb;font-size:14px;">Bookmark it — it stays with your project from the first day to the last. You can also sign in any time at rounlimited.com/my.</p>
     `;
     const bodyContent = isSigned ? jobBody : `
@@ -85,13 +93,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       <p style="font-size:16px;">Your ${docWord} for
         <strong>${estimate.project_name || estimate.estimate_number}</strong> is ready.
         Review it, choose your options, and sign — all from your secure link:</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0;">
-        <tr>
-          <td style="background-color:#C9A84C;border-radius:10px;padding:16px 36px;">
-            <a href="${viewLink}?from=email" style="color:#000;text-decoration:none;font-size:17px;font-weight:700;display:inline-block;">View &amp; Sign Your ${docWord.charAt(0).toUpperCase() + docWord.slice(1)}</a>
-          </td>
-        </tr>
-      </table>
+      ${linkButton(`View &amp; Sign Your ${docWord.charAt(0).toUpperCase() + docWord.slice(1)}`)}
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 20px;width:100%;">
         <tr>
           <td style="padding:8px 0;color:#999;font-size:13px;width:140px;">${docWord.charAt(0).toUpperCase() + docWord.slice(1)} #</td>
