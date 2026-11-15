@@ -135,6 +135,22 @@ export default function EmailBody({ html, dark, original, className, hideQuotes 
         else lastTap = now;
       }
     };
+    // Links and buttons inside the email: the sandboxed frame can't reliably open a new tab by itself
+    // (installed phone app, in-app browsers), so the tap is caught here and opened by the app itself.
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a) return;
+      const href = a.getAttribute("href") || "";
+      if (!href || href.startsWith("#")) return;
+      e.preventDefault();
+      if (/^https?:/i.test(href)) {
+        const w = window.open(href, "_blank");
+        if (w) { try { w.opener = null; } catch { /* cross-origin */ } }
+        else window.location.assign(href);
+      } else if (/^(mailto|tel|sms):/i.test(href)) {
+        window.location.href = href;
+      }
+    };
     let wiredDoc: Document | null = null;
     const wire = () => {
       const x = inner(); if (!x || wiredDoc === x.d) return;
@@ -142,10 +158,11 @@ export default function EmailBody({ html, dark, original, className, hideQuotes 
       x.d.addEventListener("touchstart", onStart, { passive: false });
       x.d.addEventListener("touchmove", onMove, { passive: false });
       x.d.addEventListener("touchend", onEnd, { passive: false });
+      x.d.addEventListener("click", onClick);
     };
     const unwire = () => {
       if (!wiredDoc) return;
-      wiredDoc.removeEventListener("touchstart", onStart); wiredDoc.removeEventListener("touchmove", onMove); wiredDoc.removeEventListener("touchend", onEnd);
+      wiredDoc.removeEventListener("touchstart", onStart); wiredDoc.removeEventListener("touchmove", onMove); wiredDoc.removeEventListener("touchend", onEnd); wiredDoc.removeEventListener("click", onClick);
       wiredDoc = null;
     };
 

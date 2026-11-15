@@ -62,19 +62,15 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
     const viewLink = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://rounlimited.com'}/estimate/${shareToken}`;
 
-    // The whole gold button is the link (not just the words), and the plain
-    // address sits right under it — some mail apps (Yahoo, AOL) switch off
-    // buttons and links, and the customer must still be able to get in.
+    // The whole gold button is the link, padding included — not just the words.
     const linkButton = (label: string) => `
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0 10px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0;">
         <tr>
           <td align="center" bgcolor="#C9A84C" style="background-color:#C9A84C;border-radius:10px;">
             <a href="${viewLink}?from=email" target="_blank" style="display:block;padding:16px 36px;color:#000000;text-decoration:none;font-size:17px;font-weight:700;border-radius:10px;">${label}</a>
           </td>
         </tr>
-      </table>
-      <p style="margin:0 0 20px;color:#bbbbbb;font-size:14px;line-height:1.6;">Button not working? Copy this address into your browser:<br>
-        <a href="${viewLink}?from=email" target="_blank" style="color:#E5C76B;text-decoration:underline;word-break:break-all;">${viewLink}</a></p>`;
+      </table>`;
 
     // The LINK is the estimate. It's where they review, pick options, sign,
     // and later follow the whole job — so the email points at exactly one
