@@ -1,21 +1,33 @@
 import type { Metadata } from 'next';
+import JsonLd from '@/components/seo/JsonLd';
+import { pageMeta, breadcrumbLd, serviceLd } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Plumbing Services — Repairs, Water Heaters, Drains & More | RO Unlimited',
-  description: 'Licensed plumbing services in Upstate SC by RO Unlimited. Pipe repair & re-piping, water heater installation, drain cleaning, gas lines, water filtration, emergency plumbing. Call (864) 304-0139.',
-  openGraph: {
-    title: 'Plumbing Services — RO Unlimited',
-    description: 'Pipe repair, water heaters, drain cleaning, gas lines, water filtration, renovation plumbing, and 24hr emergency service — fast response, honest pricing.',
-    url: 'https://rounlimited.com/services/plumbing',
-    siteName: 'RO Unlimited',
-    type: 'website',
-    images: [{ url: 'https://rounlimited.com/images/services/plumbing/plumbing-hero.jpg', width: 1200, height: 630 }],
-  },
-  alternates: {
-    canonical: 'https://rounlimited.com/services/plumbing',
-  },
-};
+const DESCRIPTION = 'Licensed plumbing services in Upstate SC: pipe repair and re-piping, water heaters, drain cleaning, gas lines, water filtration and emergency plumbing.';
+
+export const metadata: Metadata = pageMeta({
+  title: 'Plumbing Services | Greenville & Upstate SC',
+  description: DESCRIPTION,
+  path: '/services/plumbing',
+  image: '/images/services/plumbing/plumbing-hero.jpg',
+  imageAlt: 'Plumbing work by RO Unlimited',
+});
+
+const structuredData = [
+  serviceLd({
+    name: 'Plumbing Services',
+    description: DESCRIPTION,
+    path: '/services/plumbing',
+    serviceType: ['Plumbing', 'Pipe repair and re-piping', 'Water heater installation', 'Drain cleaning', 'Gas line services'],
+    image: '/images/services/plumbing/plumbing-hero.jpg',
+  }),
+  breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'Services', path: '/services' }, { name: 'Plumbing', path: '/services/plumbing' }]),
+];
 
 export default function PlumbingLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <JsonLd data={structuredData} onlyPath="/services/plumbing" />
+      {children}
+    </>
+  );
 }

@@ -1,18 +1,24 @@
 import type { Metadata } from 'next';
+import JsonLd from '@/components/seo/JsonLd';
+import { pageMeta, breadcrumbLd } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Contact RO Unlimited — Get a Quote in Upstate SC',
-  description: 'Contact RO Unlimited for commercial construction, site work, utilities, roofing, electrical, plumbing, septic, or general repair work in Upstate SC. Call (864) 304-0139 or request a quote online. Honest pricing, fast response.',
-  alternates: { canonical: 'https://rounlimited.com/contact' },
-  openGraph: {
-    title: 'Contact RO Unlimited',
-    description: 'Reach RO Unlimited for any construction, repair, or service work across Upstate SC and GA. Honest answers, fast quotes.',
-    url: 'https://rounlimited.com/contact',
-    siteName: 'RO Unlimited',
-    type: 'website',
-  },
-};
+const DESCRIPTION = 'Send RO Unlimited your plans or request a quote for commercial construction, site work or utilities in Upstate SC and Northeast Georgia. Call (864) 304-0139.';
+
+export const metadata: Metadata = pageMeta({
+  title: 'Contact & Quotes | Upstate SC General Contractor',
+  description: DESCRIPTION,
+  path: '/contact',
+});
+
+const structuredData = [
+  breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'Contact', path: '/contact' }]),
+];
 
 export default function ContactLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <JsonLd data={structuredData} onlyPath="/contact" />
+      {children}
+    </>
+  );
 }

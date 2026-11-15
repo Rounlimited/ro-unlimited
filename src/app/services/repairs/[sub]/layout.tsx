@@ -1,31 +1,30 @@
 import type { Metadata } from 'next';
 import { REPAIRS_SUB_SERVICES } from '@/lib/repairs-data';
+import { pageMeta, subServiceTitle } from '@/lib/seo';
 
-type Props = { params: Promise<{ sub: string }> };
+type Props = { params: { sub: string } };
+
+// Only the slugs in the data file exist. Anything else is a real 404, not a
+// "Service Not Found" screen served with a 200 (which Google files as a
+// soft 404 and keeps re-crawling).
+export const dynamicParams = false;
 
 export function generateStaticParams() {
   return REPAIRS_SUB_SERVICES.map(s => ({ sub: s.slug }));
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { sub } = await params;
-  const svc = REPAIRS_SUB_SERVICES.find(s => s.slug === sub);
+export function generateMetadata({ params }: Props): Metadata {
+  const svc = REPAIRS_SUB_SERVICES.find(s => s.slug === params.sub);
+  if (!svc) return { title: 'Service Not Found', robots: { index: false, follow: true } };
 
-  if (!svc) return { title: 'Service Not Found — RO Unlimited' };
-
-  return {
-    title: `${svc.title} — Repair Services | RO Unlimited`,
+  return pageMeta({
+    title: subServiceTitle(svc.title, 'Repairs', ['repair', 'handyman']),
     description: svc.heroDescription,
+    path: `/services/repairs/${svc.slug}`,
+    image: svc.heroImage,
+    imageAlt: `${svc.title} by RO Unlimited`,
     keywords: svc.seoKeywords,
-    alternates: { canonical: `https://rounlimited.com/services/repairs/${svc.slug}` },
-    openGraph: {
-      title: `${svc.title} — RO Unlimited Repairs`,
-      description: svc.heroDescription,
-      url: `https://rounlimited.com/services/repairs/${svc.slug}`,
-      type: 'website',
-      images: [{ url: `https://rounlimited.com${svc.heroImage}`, width: 1200, height: 630 }],
-    },
-  };
+  });
 }
 
 export default function RepairsSubLayout({ children }: { children: React.ReactNode }) {

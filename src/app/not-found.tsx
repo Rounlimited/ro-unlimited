@@ -4,7 +4,7 @@ import { COMPANY } from '@/lib/constants';
 import { ArrowRight, Phone, Home } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: `Page Not Found — ${COMPANY.name}`,
+  title: 'Page Not Found', // root template appends the brand
   description: `The page you're looking for doesn't exist. Browse our construction, roofing, electrical, plumbing, septic, and repair services.`,
   robots: { index: false, follow: true },
 };

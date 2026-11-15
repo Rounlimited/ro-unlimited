@@ -1,18 +1,24 @@
 import type { Metadata } from 'next';
+import JsonLd from '@/components/seo/JsonLd';
+import { pageMeta, breadcrumbLd } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'The Build Process — How We Take Projects from Start to Finish',
-  description: 'See how RO Unlimited takes projects from raw land to finished product. Architectural design, planning, permitting, construction management, quality assurance, and final delivery.',
-  alternates: { canonical: 'https://rounlimited.com/process' },
-  openGraph: {
-    title: 'The Build Process — RO Unlimited',
-    description: 'Our full build process — every phase, every detail, from concept to final walkthrough.',
-    url: 'https://rounlimited.com/process',
-    siteName: 'RO Unlimited',
-    type: 'website',
-  },
-};
+const DESCRIPTION = 'How RO Unlimited takes a project from raw land to final walkthrough: design, planning, permitting, site work, construction management and quality checks.';
+
+export const metadata: Metadata = pageMeta({
+  title: 'Our Construction Process | Upstate SC Contractor',
+  description: DESCRIPTION,
+  path: '/process',
+});
+
+const structuredData = [
+  breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'Our Process', path: '/process' }]),
+];
 
 export default function ProcessLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <JsonLd data={structuredData} onlyPath="/process" />
+      {children}
+    </>
+  );
 }

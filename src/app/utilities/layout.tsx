@@ -1,22 +1,37 @@
 import type { Metadata } from 'next';
+import JsonLd from '@/components/seo/JsonLd';
+import { pageMeta, breadcrumbLd, serviceLd } from '@/lib/seo';
 
 // The hub page is a client component, so its metadata lives here. Without
-// this, /utilities inherited the ROOT metadata — including a canonical of
-// rounlimited.com, which told Google the division's money page was a
-// duplicate of the homepage.
-export const metadata: Metadata = {
-  title: 'Underground Utilities — Water, Sewer, Storm & Septic | Greenville SC',
-  description:
-    'Licensed underground utility contractor in the Greenville–Easley area: water main taps and hot taps, ductile iron and C900 water lines, sanitary sewer, storm drainage, Tier 2 septic, and grease interceptors. Licensed in SC & GA.',
-  alternates: { canonical: 'https://rounlimited.com/utilities' },
-  openGraph: {
-    title: 'RO Unlimited Utility Division — From the Underground Up',
-    description:
-      'Water main taps, sewer, storm drainage, Tier 2 septic, and grease interceptors — licensed in SC & GA.',
-    url: 'https://rounlimited.com/utilities',
-  },
-};
+// this, /utilities inherited the ROOT metadata and Google read the
+// division's money page as a duplicate of the homepage.
+const DESCRIPTION = 'Licensed underground utility contractor serving Greenville, Easley, Spartanburg and Anderson, SC: water taps, water lines, sewer, storm drainage and septic.';
+
+export const metadata: Metadata = pageMeta({
+  title: 'Underground Utility Contractor | Greenville, SC',
+  description: DESCRIPTION,
+  path: '/utilities',
+  image: '/images/utilities/jr-hot-tap.jpg',
+  imageAlt: 'RO Unlimited hot tap on a live water main',
+  keywords: ['underground utility contractor Greenville SC', 'underground utilities Upstate SC', 'water main tap contractor SC', 'sanitary sewer contractor Easley SC', 'storm drainage contractor Spartanburg SC', 'water line installation Anderson SC', 'commercial septic contractor SC'],
+});
+
+const structuredData = [
+  serviceLd({
+    name: 'Underground Utilities',
+    description: DESCRIPTION,
+    path: '/utilities',
+    serviceType: ['Underground utility construction', 'Water main taps and hot taps', 'Water line installation', 'Sanitary sewer installation', 'Storm drainage', 'Commercial septic systems', 'Grease interceptors'],
+    image: '/images/utilities/jr-hot-tap.jpg',
+  }),
+  breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'Underground Utilities', path: '/utilities' }]),
+];
 
 export default function UtilitiesLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <JsonLd data={structuredData} onlyPath="/utilities" />
+      {children}
+    </>
+  );
 }

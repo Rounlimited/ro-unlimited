@@ -193,19 +193,24 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    name: `${subService.title} — RO Unlimited`,
+    name: subService.title,
+    serviceType: subService.title,
     description: subService.heroDescription,
     url: `https://rounlimited.com${parentHref}/${subService.slug}`,
+    image: `https://rounlimited.com${subService.heroImage}`,
+    // Points at the one organisation node declared in the root layout, so
+    // Google reads every service as belonging to the same business.
     provider: {
-      '@type': 'LocalBusiness',
+      '@type': 'GeneralContractor',
+      '@id': 'https://rounlimited.com/#organization',
       name: 'RO Unlimited Construction & Development',
       telephone: '(864) 304-0139',
       url: 'https://rounlimited.com',
-      areaServed: [
-        { '@type': 'State', name: 'South Carolina' },
-        { '@type': 'State', name: 'Georgia' },
-      ],
     },
+    areaServed: [
+      { '@type': 'State', name: 'South Carolina' },
+      { '@type': 'State', name: 'Georgia' },
+    ],
   };
 
   const faqJsonLd = {
@@ -221,12 +226,13 @@ export default function SubServicePage({ subService, parentSlug, parentLabel, ic
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
+    // The trail follows the real URL: /utilities/<slug> has no "Services" level.
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://rounlimited.com/' },
-      { '@type': 'ListItem', position: 2, name: 'Services', item: 'https://rounlimited.com/services' },
-      { '@type': 'ListItem', position: 3, name: parentLabel, item: `https://rounlimited.com${parentHref}` },
-      { '@type': 'ListItem', position: 4, name: subService.title, item: `https://rounlimited.com${parentHref}/${subService.slug}` },
-    ],
+      { name: 'Home', item: 'https://rounlimited.com/' },
+      ...(basePath === '/services' ? [{ name: 'Services', item: 'https://rounlimited.com/services' }] : []),
+      { name: parentLabel, item: `https://rounlimited.com${parentHref}` },
+      { name: subService.title, item: `https://rounlimited.com${parentHref}/${subService.slug}` },
+    ].map((c, i) => ({ '@type': 'ListItem', position: i + 1, ...c })),
   };
 
   // NOTE: no !mounted gate here — the full page must be in the SSR HTML for SEO.

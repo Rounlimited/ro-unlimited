@@ -141,22 +141,26 @@ export default function ServicesPage() {
 
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'LocalBusiness',
-    name: 'RO Unlimited Construction & Development',
+    // A Service that points back at the one business node in the root layout.
+    // (This used to be a second LocalBusiness with the /services URL, which
+    // reads to Google as two different businesses.)
+    '@type': 'Service',
+    '@id': 'https://rounlimited.com/services#service',
+    name: 'RO Services',
+    serviceType: ['Roofing', 'Plumbing', 'Electrical services', 'Septic systems', 'General repairs'],
     description: 'Roofing, plumbing, electrical, septic systems, and general repairs. Based in Easley, minutes from Greenville, and licensed across South Carolina and Georgia. Insured, 25+ years experience.',
-    telephone: '(864) 304-0139',
-    email: 'info@rounlimited.com',
     url: 'https://rounlimited.com/services',
+    provider: {
+      '@type': 'GeneralContractor',
+      '@id': 'https://rounlimited.com/#organization',
+      name: 'RO Unlimited Construction & Development',
+      telephone: '(864) 304-0139',
+      url: 'https://rounlimited.com',
+    },
     areaServed: [
       { '@type': 'State', name: 'South Carolina' },
       { '@type': 'State', name: 'Georgia' },
     ],
-    address: {
-      '@type': 'PostalAddress',
-      addressLocality: 'Easley',
-      addressRegion: 'SC',
-      addressCountry: 'US',
-    },
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
       name: 'RO Services',
@@ -265,7 +269,7 @@ export default function ServicesPage() {
                   {/* Hover-reveal background image */}
                   {cat.cardImage && (
                     <>
-                      <Image src={cat.cardImage} alt="" fill className="object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700" sizes="(max-width: 1023px) 100vw, 33vw" />
+                      <Image src={cat.cardImage} alt={`${cat.title} by RO Unlimited`} fill className="object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-700" sizes="(max-width: 1023px) 100vw, 33vw" />
                       <div className="absolute inset-0 bg-ro-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                     </>
                   )}

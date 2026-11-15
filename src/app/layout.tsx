@@ -23,17 +23,20 @@ export const metadata: Metadata = {
   // "From the Underground Up" lives in the meta description (CTR copy) and on
   // the page itself, where taglines belong.
   title: {
-    default: 'Commercial General Contractor | Buildings, Site Work & Utilities | Greenville–Easley SC | RO Unlimited',
+    default: 'Commercial General Contractor in Greenville, SC | RO Unlimited',
     template: `%s | ${COMPANY.name}`,
   },
   // Leads with the buildings. The underground is the reason RO is different,
   // not the thing RO is — an agent read the old copy and assumed dirt only.
-  description: 'RO Unlimited Construction & Development, providing professional full-range commercial construction — including site development and utility services — throughout South Carolina and Georgia. Licensed general contractor, 25+ years, based in Easley SC.',
+  description: 'Commercial general contractor based in Easley, SC. Ground-up buildings, site work and underground utilities across Upstate South Carolina and Northeast Georgia.',
   applicationName: COMPANY.name,
   authors: [{ name: COMPANY.fullName, url: SITE_URL }],
   creator: COMPANY.fullName,
   publisher: COMPANY.fullName,
-  alternates: { canonical: SITE_URL },
+  // NO canonical here. A canonical in the root layout is inherited by every
+  // page that does not set its own, which told Google those pages were copies
+  // of the homepage. Each public page sets its own (see src/lib/seo.ts); the
+  // homepage sets it in src/app/page.tsx.
   openGraph: {
     type: 'website',
     locale: 'en_US',

@@ -1,20 +1,34 @@
 import type { Metadata } from 'next';
+import JsonLd from '@/components/seo/JsonLd';
+import { pageMeta, breadcrumbLd, serviceLd } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Commercial Construction — Steel Builds & Retail Storefronts',
-  description: 'Commercial builder in Upstate SC by RO Unlimited. Steel and mixed-material construction, retail storefronts, complex sites, development consulting, and large-scale commercial projects. 25+ years experience. Call (864) 304-0139.',
-  keywords: ['commercial contractor Greenville SC', 'steel building construction Upstate SC', 'retail storefront builder', 'commercial development SC', 'commercial construction SC GA', 'mixed material commercial build'],
-  alternates: { canonical: 'https://rounlimited.com/commercial' },
-  openGraph: {
-    title: 'Commercial Division — RO Unlimited',
-    description: 'Steel builds, retail storefronts, and complex commercial development across South Carolina and Georgia. Built right, on schedule.',
-    url: 'https://rounlimited.com/commercial',
-    siteName: 'RO Unlimited',
-    type: 'website',
-    images: [{ url: 'https://rounlimited.com/images/divisions/commercial-building-v2.jpg', width: 1200, height: 630 }],
-  },
-};
+const DESCRIPTION = 'Ground-up commercial construction in Greenville, Spartanburg, Anderson and Upstate SC, plus Northeast Georgia: retail, offices, warehouses and steel buildings.';
+
+export const metadata: Metadata = pageMeta({
+  title: 'Commercial Construction | Greenville & Upstate SC',
+  description: DESCRIPTION,
+  path: '/commercial',
+  image: '/images/divisions/commercial-building-v2.jpg',
+  imageAlt: 'Commercial building constructed by RO Unlimited',
+  keywords: ['commercial general contractor Greenville SC', 'commercial construction Upstate SC', 'commercial contractor Spartanburg SC', 'commercial builder Anderson SC', 'steel building construction SC', 'retail construction contractor SC', 'commercial contractor Northeast Georgia'],
+});
+
+const structuredData = [
+  serviceLd({
+    name: 'Commercial Construction',
+    description: DESCRIPTION,
+    path: '/commercial',
+    serviceType: ['Commercial construction', 'General contracting', 'Ground-up commercial buildings', 'Retail and restaurant buildouts', 'Steel building construction'],
+    image: '/images/divisions/commercial-building-v2.jpg',
+  }),
+  breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'Commercial Construction', path: '/commercial' }]),
+];
 
 export default function CommercialLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <JsonLd data={structuredData} onlyPath="/commercial" />
+      {children}
+    </>
+  );
 }

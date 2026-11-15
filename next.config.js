@@ -35,6 +35,34 @@ const nextConfig = {
     });
     return config;
   },
+  // SEO: one address per page. www.rounlimited.com used to serve a full second
+  // copy of the public site. Public pages on www now go to the bare domain in
+  // one permanent redirect. Admin, API, customer links and files are left
+  // alone so sign-ins, webhooks and old emailed links keep working on www.
+  async redirects() {
+    const onWww = [{ type: 'host', value: 'www.rounlimited.com' }];
+    return [
+      { source: '/', has: onWww, destination: 'https://rounlimited.com/', permanent: true },
+      {
+        // Everything except: api, admin, build assets, customer links
+        // (my, estimate, i, r, shared, intake, proposal) and any file (a dot).
+        source: '/:path((?!api/|admin|_next/|studio|my$|my/|estimate/|i/|r/|shared/|intake/|proposal/|.*\\.).+)',
+        has: onWww,
+        destination: 'https://rounlimited.com/:path',
+        permanent: true,
+      },
+    ];
+  },
+  // SEO: private and utility pages are never indexed, whatever their own
+  // metadata says. Sent as a header so it also covers client-rendered pages.
+  async headers() {
+    const noindex = [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }];
+    return [
+      '/admin/:path*', '/my/:path*', '/estimate/:path*', '/i/:path*', '/r/:path*',
+      '/intake/:path*', '/proposal/:path*', '/shared/:path*',
+      '/licenses/card', '/licenses/og', '/maintenance',
+    ].map((source) => ({ source, headers: noindex }));
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '200mb',

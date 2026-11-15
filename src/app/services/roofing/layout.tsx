@@ -1,20 +1,33 @@
 import type { Metadata } from 'next';
+import JsonLd from '@/components/seo/JsonLd';
+import { pageMeta, breadcrumbLd, serviceLd } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Roof Repair & Replacement in Upstate SC | RO Unlimited Services',
-  description: 'Roof repair, storm damage restoration, and full roof replacement by RO Unlimited. Licensed roofing contractor serving Greenville, Spartanburg, and Upstate South Carolina. Free estimates. Call (864) 304-0139.',
-  openGraph: {
-    title: 'Roof Repair & Replacement — RO Unlimited Services',
-    description: 'From storm damage repairs to full roof replacements, RO handles residential and light commercial roofing with licensed crews and quality materials.',
-    url: 'https://rounlimited.com/services/roofing',
-    siteName: 'RO Unlimited',
-    type: 'website',
-  },
-  alternates: {
-    canonical: 'https://rounlimited.com/services/roofing',
-  },
-};
+const DESCRIPTION = 'Roof repair, storm damage restoration and roof replacement in Greenville, Spartanburg and Upstate South Carolina. Licensed and insured. Call (864) 304-0139.';
+
+export const metadata: Metadata = pageMeta({
+  title: 'Roof Repair & Replacement | Greenville & Upstate SC',
+  description: DESCRIPTION,
+  path: '/services/roofing',
+  image: '/images/services/roofing/roofing-hero.jpg',
+  imageAlt: 'Roofing work by RO Unlimited',
+});
+
+const structuredData = [
+  serviceLd({
+    name: 'Roofing Services',
+    description: DESCRIPTION,
+    path: '/services/roofing',
+    serviceType: ['Roofing', 'Roof repair', 'Roof replacement', 'Storm damage roof repair'],
+    image: '/images/services/roofing/roofing-hero.jpg',
+  }),
+  breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'Services', path: '/services' }, { name: 'Roofing', path: '/services/roofing' }]),
+];
 
 export default function RoofingLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <JsonLd data={structuredData} onlyPath="/services/roofing" />
+      {children}
+    </>
+  );
 }

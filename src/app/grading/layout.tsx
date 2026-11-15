@@ -1,19 +1,31 @@
 import type { Metadata } from 'next';
+import JsonLd from '@/components/seo/JsonLd';
+import { pageMeta, breadcrumbLd, serviceLd } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Land Grading & Site Prep — Greenville & Upstate SC',
-  description: 'Land grading, excavation, and complete site preparation in Upstate SC by RO Unlimited. Foundation work, drainage solutions, lot clearing, erosion control. 25+ years experience. Call (864) 304-0139.',
-  keywords: ['land grading Greenville SC', 'excavation Upstate SC', 'site preparation contractor', 'lot clearing SC', 'erosion control', 'foundation excavation'],
-  alternates: { canonical: 'https://rounlimited.com/grading' },
-  openGraph: {
-    title: 'Land Grading & Site Prep — RO Unlimited',
-    description: 'Excavation, grading, drainage, and full site prep across the Upstate. From raw land to ready-to-build.',
-    url: 'https://rounlimited.com/grading',
-    siteName: 'RO Unlimited',
-    type: 'website',
-  },
-};
+const DESCRIPTION = 'Site work for commercial projects in Greenville, Easley, Greer and across Upstate SC: clearing, mass grading, building pads, stormwater and erosion control.';
+
+export const metadata: Metadata = pageMeta({
+  title: 'Site Work & Land Grading Contractor | Upstate SC',
+  description: DESCRIPTION,
+  path: '/grading',
+  keywords: ['site work contractor Greenville SC', 'land grading Upstate SC', 'site development contractor SC', 'mass grading Easley SC', 'site preparation Greer SC', 'erosion control contractor SC', 'building pad grading'],
+});
+
+const structuredData = [
+  serviceLd({
+    name: 'Site Development & Grading',
+    description: DESCRIPTION,
+    path: '/grading',
+    serviceType: ['Site work', 'Land grading', 'Site preparation', 'Clearing and mass grading', 'Stormwater management', 'Erosion and sediment control'],
+  }),
+  breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'Site Development & Grading', path: '/grading' }]),
+];
 
 export default function GradingLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <JsonLd data={structuredData} onlyPath="/grading" />
+      {children}
+    </>
+  );
 }

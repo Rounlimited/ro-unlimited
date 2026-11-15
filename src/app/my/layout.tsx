@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import PortalShell from '@/components/portal/PortalShell';
 
 export const metadata: Metadata = {
-  title: 'Customer Portal — RO Unlimited',
+  title: 'Customer Portal', // root template appends the brand
   description: 'Sign in to follow your projects with RO Unlimited.',
   robots: { index: false, follow: false }, // customer area — never indexed
 };

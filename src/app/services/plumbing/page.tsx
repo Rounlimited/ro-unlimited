@@ -263,7 +263,7 @@ export default function PlumbingPage() {
 
       {/* ═══ CTA ═══ */}
       <section ref={ctaRef} className="relative min-h-[60vh] flex items-center justify-center overflow-hidden">
-        <Image src={category.heroImage} alt="" fill className="object-cover" sizes="100vw" style={{ zIndex: 0 }} />
+        <Image src={category.heroImage} alt={`${category.title} by RO Unlimited`} fill className="object-cover" sizes="100vw" style={{ zIndex: 0 }} />
         <div className="absolute inset-0 bg-ro-black/88" style={{ zIndex: 1 }} />
         <div className="absolute inset-0 forge-bg-alt" style={{ zIndex: 2, opacity: 0.6 }} />
         <div className="absolute inset-0 forge-slash pointer-events-none" style={{ zIndex: 3 }} />
