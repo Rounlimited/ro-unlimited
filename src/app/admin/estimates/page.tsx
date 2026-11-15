@@ -577,20 +577,23 @@ export default function EstimatesPage() {
                       <span className="leading-tight"><span className="block text-[18px] font-extrabold uppercase tracking-wide">Paused</span><span className="block text-[13px] font-semibold">Customer can’t see it</span></span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between mb-2" data-tour="estimate-row">
-                    <div className="flex items-center gap-2.5 flex-wrap">
+                  {/* The copy-link and delete buttons sit in the top right corner, so this row keeps clear of them. */}
+                  <div className={"flex items-center mb-2 " + (estimate.link_enabled === false ? "" : "min-h-[44px] pr-[104px]")} data-tour="estimate-row">
+                    <div className="flex items-center gap-x-2.5 gap-y-1.5 flex-wrap min-w-0">
                       <span className="text-[16px] font-bold text-[#C9A84C]">{estimate.estimate_number}</span>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>{statusCfg.label}</span>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${divCfg.bg} ${divCfg.text}`}><DivIcon size={10} />{divCfg.label}</span>
                       <JobStatusPills estimate={estimate} />
                       <WaitingPill estimate={estimate} />
                     </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 mb-1">
+                    <p className="text-[15px] font-medium text-white/80 truncate min-w-0">{estimate.project_name}</p>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-[18px] font-bold text-white">{formatCurrency(estimate.total || 0)}</span>
                       <ChevronRight size={16} className="text-white/10 group-hover:text-white/30 transition-colors" />
                     </div>
                   </div>
-                  <p className="text-[15px] font-medium text-white/80 mb-1 truncate">{estimate.project_name}</p>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                     <span className="text-[13px] text-white/30">{customerName}{companyName && <span className="text-white/15"> &mdash; {companyName}</span>}</span>
                     <span className="flex items-center gap-1 text-[12px] text-white/20"><Clock size={11} />{formatDate(estimateDisplayDate(estimate) || estimate.created_at)}</span>
