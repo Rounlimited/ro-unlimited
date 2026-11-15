@@ -909,13 +909,20 @@ body.admin-mode > div > div > div > main.min-h-screen { min-height: auto !import
 }
 .ro-mail button, .ro-mail [role="button"] { -webkit-tap-highlight-color: transparent; }
 .ro-mail select option { color: #14120e; background: #fff; }
+/* Backdrop = RO CO. mark watermark (like Den Chai's lattice). The tiles are pre-tinted, pre-faded PNGs
+   (public/ro-mail-wm-{dark,light}-v1.png: gold at 10% peak alpha on dark, dark brown at 7.5% on light, because
+   the metallic logo ghosts on white). They sit on the fixed full-screen root and on the fixed menu panel, so they
+   never scroll (no iPhone jank). List rows are 72% panels over it; message cards and the email body are opaque. */
 .ro-mail-backdrop {
   background-color: rgb(var(--m-bg));
-  background-image: radial-gradient(900px 520px at 0% -10%, rgba(201,168,76,.10), transparent 60%);
+  background-image: radial-gradient(900px 520px at 0% -10%, rgba(201,168,76,.10), transparent 60%), url("/ro-mail-wm-dark-v1.png");
+  background-size: auto, 260px 220px;
 }
 .ro-mail-light .ro-mail-backdrop, .ro-mail-light.ro-mail-backdrop {
-  background-image: radial-gradient(900px 520px at 0% -10%, rgba(201,168,76,.16), transparent 60%);
+  background-image: radial-gradient(900px 520px at 0% -10%, rgba(201,168,76,.16), transparent 60%), url("/ro-mail-wm-light-v1.png");
 }
+.ro-mail .ro-mail-wm { background-image: url("/ro-mail-wm-dark-v1.png"); background-size: 260px 220px; background-position: 130px 40px; }
+.ro-mail-light .ro-mail-wm { background-image: url("/ro-mail-wm-light-v1.png"); }
 @keyframes ro-mail-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes ro-mail-left { from { transform: translateX(-100%); } to { transform: none; } }
 .ro-mail-up { animation: ro-mail-up .2s ease-out both; }

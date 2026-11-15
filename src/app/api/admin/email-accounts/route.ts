@@ -69,7 +69,14 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       if (error.code === '23505') {
-        return NextResponse.json({ error: 'Email account already exists' }, { status: 409 });
+        // a mailbox removed earlier is only switched off (DELETE below): adding it again brings it back
+        const { data: revived } = await supabase
+          .from('email_accounts')
+          .update({ active: true, display_name, color: color || '#C9A84C', initials: initials.toUpperCase().slice(0, 2) })
+          .eq('email', email.toLowerCase()).eq('active', false)
+          .select().maybeSingle();
+        if (revived) return NextResponse.json(revived);
+        return NextResponse.json({ error: 'That mailbox is already in the list' }, { status: 409 });
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
