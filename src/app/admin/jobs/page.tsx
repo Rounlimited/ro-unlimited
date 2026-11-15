@@ -8,7 +8,7 @@ import StartProjectWizard from '@/components/admin/jobs/StartProjectWizard';
 import {
   Loader2, HardHat, ChevronRight, AlertTriangle, FileText, CalendarClock,
   Phone, CheckCircle2, CloudRain, Hammer, Sparkles, X, Search, Check, Sun,
-  Navigation, Wallet, Receipt, Route,
+  Navigation, Wallet, Receipt, Route, Trash2,
 } from 'lucide-react';
 import { SCHEDULE_META, BUDGET_META, cadenceLabel, type ScheduleStatus, type BudgetStatus } from '@/lib/reporting';
 
@@ -82,6 +82,8 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [logFor, setLogFor] = useState<Job | null>(null);
+  const [deleteFor, setDeleteFor] = useState<Job | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const router = useRouter();
 
@@ -184,6 +186,20 @@ export default function JobsPage() {
     } catch { setToast('Could not log that'); }
     setBusy(null);
     setPickJobs(false);
+  };
+
+  /** Remove a job for good (demos, examples, mistakes). Asked twice — it can't be undone. */
+  const deleteJob = async () => {
+    if (!deleteFor) return;
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/admin/estimates/' + deleteFor.id, { method: 'DELETE' });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || d.error) setToast(d.error || 'Could not delete that job');
+      else { setToast('Job deleted'); setDeleteFor(null); load(); }
+    } catch { setToast('Could not delete that job'); }
+    setDeleting(false);
+    setTimeout(() => setToast(null), 3000);
   };
 
   /** Turn earned-but-unbilled into a draft invoice. */
@@ -342,6 +358,7 @@ export default function JobsPage() {
                 onOpen={() => router.push('/admin/jobs/' + j.id)}
                 onDraft={() => draftReport(j)}
                 onLog={() => setLogFor(j)}
+                onDelete={() => setDeleteFor(j)}
               />
             ))}
           </div>
@@ -355,6 +372,31 @@ export default function JobsPage() {
           onClose={() => setPickJobs(false)}
           onConfirm={(ids) => logEverywhere(ids)}
         />
+      )}
+
+      {deleteFor && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 p-4" onClick={() => !deleting && setDeleteFor(null)}>
+          <div className="bg-[#111] border border-white/15 rounded-2xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-red-500/15 flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={26} className="text-red-400" />
+              </div>
+              <h3 className="text-[20px] font-bold text-white mb-2">Delete this job?</h3>
+              <p className="text-[17px] font-semibold text-[#D4B965]">{deleteFor.project_name || deleteFor.number}</p>
+              <p className="text-[15px] text-white/60 mt-1">{deleteFor.number}{deleteFor.customer_name ? ' · ' + deleteFor.customer_name : ''}</p>
+              <p className="text-[16px] text-red-300 mt-4 leading-snug">This removes the job, its progress, logs and reports, and the customer’s link stops working. It cannot be undone.</p>
+            </div>
+            <div className="grid grid-cols-2 border-t border-white/15">
+              <button onClick={() => setDeleteFor(null)} disabled={deleting}
+                className="min-h-[56px] text-[17px] font-semibold text-white/80 active:bg-white/5 rounded-bl-2xl">Keep it</button>
+              <button onClick={deleteJob} disabled={deleting}
+                className="min-h-[56px] text-[17px] font-bold text-red-400 border-l border-white/15 active:bg-red-500/10 rounded-br-2xl flex items-center justify-center gap-2">
+                {deleting ? <Loader2 size={17} className="animate-spin" /> : <Trash2 size={17} />}
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {logFor && (
@@ -374,9 +416,9 @@ export default function JobsPage() {
 }
 
 /* ── One job ──────────────────────────────────────────────────── */
-function JobCard({ job: j, busy, money, showMoney, onOpen, onDraft, onLog, onBill }: {
+function JobCard({ job: j, busy, money, showMoney, onOpen, onDraft, onLog, onBill, onDelete }: {
   job: Job; busy: boolean; money?: boolean; showMoney?: boolean;
-  onOpen: () => void; onDraft: () => void; onLog: () => void; onBill?: () => void;
+  onOpen: () => void; onDraft: () => void; onLog: () => void; onBill?: () => void; onDelete?: () => void;
 }) {
   const gap = Math.round(j.earned - j.billed);
   const sched = j.schedule_status ? SCHEDULE_META[j.schedule_status] : null;
@@ -538,6 +580,13 @@ function JobCard({ job: j, busy, money, showMoney, onOpen, onDraft, onLog, onBil
           style={{ color: '#35d07f' }}>
           {busy ? <Loader2 size={17} className="animate-spin" /> : <Receipt size={17} />}
           Bill {fmt$(gap)} now
+        </button>
+      )}
+
+      {onDelete && (
+        <button onClick={onDelete} disabled={busy}
+          className="w-full min-h-[48px] border-t border-white/8 flex items-center justify-center gap-2 text-[15px] font-semibold text-red-400 active:bg-red-500/10 disabled:opacity-40">
+          <Trash2 size={16} /> Delete job
         </button>
       )}
     </div>
