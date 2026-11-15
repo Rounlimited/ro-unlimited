@@ -137,6 +137,11 @@ export default function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link href="/areas" className="text-ro-gray-400 hover:text-ro-white transition-colors text-sm flex items-center gap-2">
+                  <span className="w-1 h-1 bg-ro-gold/40 rounded-full" />Service Areas
+                </Link>
+              </li>
             </ul>
           </div>
 

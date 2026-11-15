@@ -5,6 +5,7 @@ import { PLUMBING_SUB_SERVICES } from '@/lib/plumbing-data';
 import { SEPTIC_SUB_SERVICES } from '@/lib/septic-data';
 import { REPAIRS_SUB_SERVICES } from '@/lib/repairs-data';
 import { UTILITY_SUB_SERVICES } from '@/lib/utilities-data';
+import { AREA_PAGES, areaPath } from '@/lib/areas-data';
 
 const BASE = 'https://rounlimited.com';
 
@@ -54,5 +55,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...REPAIRS_SUB_SERVICES.map(s => ({ url: `${BASE}/services/repairs/${s.slug}`, lastModified, changeFrequency: 'monthly' as const, priority: 0.6 })),
   ];
 
-  return [...staticRoutes, ...utilityRoutes, ...divisionRoutes, ...subServiceRoutes];
+  // Town-and-service landing pages (src/lib/areas-data.ts) plus their hub.
+  const areaRoutes: MetadataRoute.Sitemap = [
+    { url: `${BASE}/areas`, lastModified, changeFrequency: 'monthly', priority: 0.7 },
+    ...AREA_PAGES.map(p => ({ url: `${BASE}${areaPath(p)}`, lastModified, changeFrequency: 'monthly' as const, priority: 0.8 })),
+  ];
+
+  return [...staticRoutes, ...utilityRoutes, ...areaRoutes, ...divisionRoutes, ...subServiceRoutes];
 }

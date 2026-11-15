@@ -91,7 +91,7 @@ const AREA_STATES = [
 /** Reference to the one organisation node declared in the root layout. */
 export const ORG_REF = { '@type': 'GeneralContractor', '@id': ORG_ID, name: LEGAL_NAME, url: SITE_URL };
 
-export function serviceLd(opts: { name: string; description: string; path: string; serviceType?: string | string[]; image?: string }) {
+export function serviceLd(opts: { name: string; description: string; path: string; serviceType?: string | string[]; image?: string; /** Overrides the default (both states), e.g. a single town for an area page. */ areaServed?: object | object[] }) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Service',
@@ -102,7 +102,24 @@ export function serviceLd(opts: { name: string; description: string; path: strin
     ...(opts.serviceType ? { serviceType: opts.serviceType } : {}),
     ...(opts.image ? { image: abs(opts.image) } : {}),
     provider: ORG_REF,
-    areaServed: AREA_STATES,
+    areaServed: opts.areaServed || AREA_STATES,
+  };
+}
+
+/** A town as a schema.org City inside its state, for Service.areaServed. */
+export function cityLd(name: string, state: string) {
+  return { '@type': 'City', name, containedInPlace: { '@type': 'State', name: state } };
+}
+
+export function faqLd(faq: Array<{ q: string; a: string }>) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
   };
 }
 
