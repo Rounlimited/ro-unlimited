@@ -11,8 +11,7 @@ import StartProjectWizard from '@/components/admin/jobs/StartProjectWizard';
 import {
   Plus, Search, FileText, X, ChevronRight, DollarSign, HardHat,
   Clock, AlertTriangle, Send, Eye, CheckCircle2, XCircle,
-  Home, Building2, Mountain, Filter, Trash2, Loader2, ArrowUpDown, Link2, Check, Download,
-} from 'lucide-react';
+  Home, Building2, Mountain, Filter, Trash2, Loader2, ArrowUpDown, Link2, Check, Download, PauseCircle, } from 'lucide-react';
 import { useDeviceContext } from '@/components/animations/useMediaQuery';
 
 import { SCHEDULE_META, BUDGET_META, type ScheduleStatus, type BudgetStatus } from '@/lib/reporting';
@@ -56,6 +55,7 @@ interface Estimate {
   last_viewed_location?: string | null;
   schedule_status?: string | null;
   budget_status?: string | null;
+  link_enabled?: boolean | null;
   customer: {
     first_name: string;
     last_name: string;
@@ -505,7 +505,7 @@ export default function EstimatesPage() {
                   const href = `/admin/estimates/${estimate.id}`;
                   return (
                     <tr key={estimate.id} onClick={() => router.push(href)}
-                      className="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer transition-colors group">
+                      className={"border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer transition-colors group" + (estimate.link_enabled === false ? " bg-[#f0a04b]/[0.07] shadow-[inset_4px_0_0_#f0a04b]" : "")}>
                       <td className="px-4 py-3.5 text-[14px] font-bold text-[#C9A84C]">{estimate.estimate_number}</td>
                       <td className="px-4 py-3.5 text-[14px] text-white/80 font-medium truncate max-w-[200px]">{estimate.project_name}</td>
                       <td className="px-4 py-3.5 text-[13px] text-white/40">{customerName}</td>
@@ -516,6 +516,11 @@ export default function EstimatesPage() {
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="flex flex-col gap-1 items-start">
+                          {estimate.link_enabled === false && (
+                            <span title="The customer link is paused. They see the “please contact RO Unlimited” page." className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[14px] font-extrabold uppercase tracking-wide bg-[#f0a04b] text-black">
+                              <PauseCircle size={16} /> Paused
+                            </span>
+                          )}
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
                             {statusCfg.label}
                           </span>
@@ -564,8 +569,14 @@ export default function EstimatesPage() {
                 <div key={estimate.id} className="relative group">
                 <Link
                   href={`/admin/estimates/${estimate.id}`}
-                  className="block bg-[#111] border border-white/5 rounded-xl p-4 hover:border-white/10 hover:bg-[#141414] transition-all"
+                  className={"block bg-[#111] border rounded-xl p-4 hover:bg-[#141414] transition-all " + (estimate.link_enabled === false ? "border-[#f0a04b]/70" : "border-white/5 hover:border-white/10")}
                 >
+                  {estimate.link_enabled === false && (
+                    <div className="flex items-center gap-2 mb-3 mr-[104px] min-h-[44px] px-3 rounded-lg bg-[#f0a04b] text-black">
+                      <PauseCircle size={22} className="shrink-0" />
+                      <span className="leading-tight"><span className="block text-[18px] font-extrabold uppercase tracking-wide">Paused</span><span className="block text-[13px] font-semibold">Customer can’t see it</span></span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between mb-2" data-tour="estimate-row">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <span className="text-[16px] font-bold text-[#C9A84C]">{estimate.estimate_number}</span>
