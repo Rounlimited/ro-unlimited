@@ -285,7 +285,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
           return;
         }
         if (res.status === 423) {
-          setError({ message: 'We\u2019re making some updates to your document right now. Give us a call at (864) 304-0139 \u2014 we\u2019ll have it back shortly.', paused: true });
+          setError({ message: 'Please contact RO Unlimited at (864) 304-0139 if there\u2019s anything we can do for you.', paused: true });
           return;
         }
         if (!res.ok) {
@@ -402,7 +402,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
             )}
           </div>
           <h1 className="text-[22px] font-bold text-gray-900 mb-2">
-            {error.paused ? 'Back Shortly' : error.expired ? 'Link Expired' : 'Estimate Not Found'}
+            {error.paused ? 'Great to See You Again' : error.expired ? 'Link Expired' : 'Estimate Not Found'}
           </h1>
           <p className="text-[15px] text-gray-500 mb-6">{error.message}</p>
           <a

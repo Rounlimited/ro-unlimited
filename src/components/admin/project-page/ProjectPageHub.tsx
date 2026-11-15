@@ -266,7 +266,7 @@ export default function ProjectPageHub({ estimateId, onClose, initialTab = 'shar
                 <>
                   {!d.link.enabled && (
                     <div data-anim className="rounded-2xl p-4 flex items-center justify-between gap-3" style={{ background: 'rgba(240,160,75,0.1)', border: '1px solid rgba(240,160,75,0.45)' }}>
-                      <p className="text-[16px] text-[#f5c08a] leading-snug"><strong>Paused.</strong> {d.owner.first} sees a “we’re making updates” page.</p>
+                      <p className="text-[16px] text-[#f5c08a] leading-snug"><strong>Paused.</strong> {d.owner.first} sees a “great to see you again, please contact RO Unlimited” page.</p>
                       <button onClick={() => linkAct('on', {}, 'Back on ✓')} disabled={!!busy} className="min-h-[48px] px-4 rounded-xl text-[15px] font-bold text-black flex-shrink-0" style={{ background: '#f0a04b' }}>{busy === 'on' ? '…' : 'Turn on'}</button>
                     </div>
                   )}
@@ -434,9 +434,9 @@ export default function ProjectPageHub({ estimateId, onClose, initialTab = 'shar
           ) : (
             <>
               {d.link.has_link && (
-                <button data-anim onClick={() => linkAct(d.link.enabled ? 'off' : 'on', {}, d.link.enabled ? 'Paused — they see “making updates”' : 'Back on ✓')} disabled={!!busy} className="w-full rounded-2xl px-4 py-4 flex items-center gap-3 text-left active:scale-[0.99] transition" style={{ ...glass, borderColor: d.link.enabled ? 'rgba(255,255,255,0.09)' : 'rgba(240,160,75,0.5)' }}>
+                <button data-anim onClick={() => linkAct(d.link.enabled ? 'off' : 'on', {}, d.link.enabled ? 'Paused — they see “please contact us”' : 'Back on ✓')} disabled={!!busy} className="w-full rounded-2xl px-4 py-4 flex items-center gap-3 text-left active:scale-[0.99] transition" style={{ ...glass, borderColor: d.link.enabled ? 'rgba(255,255,255,0.09)' : 'rgba(240,160,75,0.5)' }}>
                   <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(240,160,75,0.15)' }}>{d.link.enabled ? <Pause size={19} className="text-[#f0a04b]" /> : <Play size={19} className="text-[#f0a04b]" />}</span>
-                  <span className="min-w-0 flex-1"><span className="block text-[16px] font-bold">{d.link.enabled ? 'Pause the page' : 'Paused — turn it back on'}</span><span className="block text-[14px] text-white/45 leading-snug">For a phone call or edits. Everyone sees “we’re making updates” until you turn it back on. Same links come back.</span></span>
+                  <span className="min-w-0 flex-1"><span className="block text-[16px] font-bold">{d.link.enabled ? 'Pause the page' : 'Paused — turn it back on'}</span><span className="block text-[14px] text-white/45 leading-snug">For a phone call or edits. Everyone sees “great to see you again, please contact RO Unlimited” until you turn it back on. Same links come back.</span></span>
                   <Switch on={!d.link.enabled} busy={busy === 'off' || busy === 'on'} />
                 </button>
               )}
