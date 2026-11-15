@@ -2,10 +2,23 @@
 import { trackEvent } from '@/components/analytics/SiteAnalytics';
 import { useState } from 'react';
 import { COMPANY } from '@/lib/constants';
-import { Phone, Mail, MapPin, Send, Facebook, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Phone, Mail, MapPin, Send, Facebook, CheckCircle, AlertCircle, Loader2, Clock, FileText, CalendarDays, Ruler } from 'lucide-react';
 import SubPageAnimator from '@/components/animations/SubPageAnimator';
 
 type FormStatus = 'idle' | 'submitting' | 'success' | 'error';
+
+const WHAT_TO_SEND = [
+  { icon: MapPin, title: 'The Address', text: 'Street address or parcel number of the property, and the county or city it sits in.' },
+  { icon: FileText, title: 'Plans or Drawings', text: 'Architectural plans, civil drawings, a survey or a sketch. Whatever stage they are in is fine, and so is no plans yet.' },
+  { icon: Ruler, title: 'The Scope', text: 'What you want built or done: a new building, site work and grading, utilities, a build-out or a repair.' },
+  { icon: CalendarDays, title: 'Your Timeline', text: 'When you want to start and any date the work has to be finished by.' },
+];
+
+const NEXT_STEPS = [
+  { num: '01', title: 'We Call You Back', text: 'Your message goes straight to our office. We call the number you give us to talk through the project.' },
+  { num: '02', title: 'We Look at the Site', text: 'For most projects we visit the property and review your plans before pricing anything.' },
+  { num: '03', title: 'You Get a Written Estimate', text: 'The scope and the price in writing, with what is included and what is not.' },
+];
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', projectType: '', message: '' });
@@ -77,6 +90,10 @@ export default function ContactPage() {
                   <div className="flex items-center gap-4 text-ro-gray-300">
                     <div className="w-10 h-10 border border-ro-gray-700 flex items-center justify-center"><MapPin size={16} className="text-ro-gold/60" /></div>
                     <div><div className="text-xs text-ro-gray-500 uppercase tracking-wider">Service Area</div><div className="text-sm">{COMPANY.serviceArea}</div></div>
+                  </div>
+                  <div className="flex items-center gap-4 text-ro-gray-300">
+                    <div className="w-10 h-10 border border-ro-gray-700 flex items-center justify-center"><Clock size={16} className="text-ro-gold/60" /></div>
+                    <div><div className="text-xs text-ro-gray-500 uppercase tracking-wider">Hours</div><div className="text-sm">{COMPANY.hours}</div></div>
                   </div>
                   <a href={COMPANY.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 text-ro-gray-300 hover:text-ro-gold transition-colors group">
                     <div className="w-10 h-10 border border-ro-gray-700 group-hover:border-ro-gold/30 flex items-center justify-center transition-colors"><Facebook size={16} className="text-ro-gold/60" /></div>
@@ -157,6 +174,57 @@ export default function ContactPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="py-20 sm:py-24 relative border-t border-ro-gray-800">
+        <div className="absolute inset-0 blueprint-overlay opacity-20" />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <span className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-4 block">For a Faster, Tighter Number</span>
+            <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">What to Send for an Estimate</h2>
+            <div className="mx-auto w-24 gold-line mt-4" />
+            <p className="text-ro-gray-300 text-base sm:text-lg leading-relaxed mt-5 max-w-2xl mx-auto">You do not need all of this to reach out. The more of it we have, the sooner we can give you a real number. Put it in the form above, or email files to <a href={`mailto:${COMPANY.email}`} className="text-ro-gold underline underline-offset-4">{COMPANY.email}</a>.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {WHAT_TO_SEND.map(({ icon: Ic, title, text }) => (
+              <div key={title} className="p-6 border border-ro-gray-800 bg-ro-black/50">
+                <div className="w-11 h-11 flex items-center justify-center border border-ro-gold/30 bg-ro-gold/5 mb-4"><Ic size={20} className="text-ro-gold" /></div>
+                <h3 className="text-ro-white font-heading text-xl tracking-wider uppercase mb-2">{title}</h3>
+                <p className="text-ro-gray-300 text-base leading-relaxed">{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 sm:py-24 relative border-t border-ro-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <span className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-4 block">After You Hit Send</span>
+            <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">What Happens Next</h2>
+            <div className="mx-auto w-24 gold-line mt-4" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {NEXT_STEPS.map((n) => (
+              <div key={n.num} className="p-6 border border-ro-gray-800 bg-ro-black/50">
+                <div className="w-12 h-12 flex items-center justify-center border border-ro-gold/40 text-ro-gold font-heading text-lg mb-4">{n.num}</div>
+                <h3 className="text-ro-white font-heading text-xl tracking-wider uppercase mb-2">{n.title}</h3>
+                <p className="text-ro-gray-300 text-base leading-relaxed">{n.text}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-ro-gray-400 text-base mt-8">Want the whole sequence? <a href="/process" className="text-ro-gold underline underline-offset-4">See how a project runs from first call to final inspection</a>.</p>
+        </div>
+      </section>
+
+      <section className="py-16 sm:py-20 relative border-t border-ro-gray-800">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <span className="text-ro-gold text-xs font-mono tracking-[0.3em] uppercase mb-4 block">Service Area</span>
+          <h2 className="text-ro-white font-heading text-3xl sm:text-4xl tracking-tight uppercase">Upstate South Carolina &amp; Northeast Georgia</h2>
+          <div className="mx-auto w-24 gold-line mt-4 mb-6" />
+          <p className="text-ro-gray-300 text-base sm:text-lg leading-relaxed mb-4">RO Unlimited is based in Easley, South Carolina. We build and do site work and underground utilities across the Upstate, including Greenville, Greer, Spartanburg and Anderson, and into Northeast Georgia. We are licensed in South Carolina and Georgia.</p>
+          <p className="text-ro-gray-300 text-base sm:text-lg leading-relaxed">Office hours are {COMPANY.hours}. Call <a href={`tel:${COMPANY.phone.replace(/[^0-9]/g, '')}`} className="text-ro-gold underline underline-offset-4 whitespace-nowrap">{COMPANY.phone}</a> or email <a href={`mailto:${COMPANY.email}`} className="text-ro-gold underline underline-offset-4">{COMPANY.email}</a>.</p>
         </div>
       </section>
     </SubPageAnimator>
