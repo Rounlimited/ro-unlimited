@@ -159,12 +159,24 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     const { id } = params;
     const supabase = createAdminClient();
 
+    // Invoices are money records and are never removed as a side effect: say
+    // so plainly instead of failing with a database error nobody sees.
+    const { data: invs } = await supabase.from('invoices').select('invoice_number').eq('estimate_id', id);
+    if (invs && invs.length) {
+      const nums = invs.map((i) => i.invoice_number).filter(Boolean).join(', ');
+      return NextResponse.json({
+        error: `This one has ${invs.length === 1 ? 'an invoice' : invs.length + ' invoices'} on it (${nums}). Delete ${invs.length === 1 ? 'that invoice' : 'those invoices'} first, then delete this.`,
+      }, { status: 409 });
+    }
+    // A revision made from this one keeps living; it just loses the pointer back.
+    await supabase.from('estimates').update({ parent_estimate_id: null }).eq('parent_estimate_id', id);
+
     const { error } = await supabase
       .from('estimates')
       .delete()
       .eq('id', id);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: 'Could not delete it: ' + error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[estimates/[id]] DELETE error:', err);

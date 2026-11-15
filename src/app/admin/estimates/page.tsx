@@ -179,16 +179,21 @@ export default function EstimatesPage() {
   const [sortBy, setSortBy] = useState<'created_at' | 'total' | 'estimate_number' | 'project_name'>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
       const res = await fetch(`/api/admin/estimates/${deleteTarget.id}`, { method: 'DELETE' });
       if (res.ok) {
         setEstimates(prev => prev.filter(e => e.id !== deleteTarget.id));
         setDeleteTarget(null);
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setDeleteError(d.error || 'Could not delete it. Try again.');
       }
-    } catch {}
+    } catch { setDeleteError('Could not delete it. Check your connection and try again.'); }
     setDeleting(false);
   };
 
@@ -614,7 +619,7 @@ export default function EstimatesPage() {
                       + 'min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border active:scale-95 transition-all'}>
                     {copiedId === estimate.id ? <Check size={17} /> : <Link2 size={17} />}
                   </button>
-                  <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(estimate); }}
+                  <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteError(null); setDeleteTarget(estimate); }}
                     className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 active:bg-red-500/30 transition-colors"
                     title="Delete estimate"><Trash2 size={16} /></button>
                 </div>
@@ -644,6 +649,9 @@ export default function EstimatesPage() {
                 <p className="text-[13px] text-red-400/70 mt-3">
                   This action cannot be undone.
                 </p>
+                {deleteError && (
+                  <p className="mt-4 rounded-lg bg-red-500/15 border border-red-500/40 px-3 py-3 text-[16px] font-semibold text-red-200 leading-snug">{deleteError}</p>
+                )}
               </div>
               <div className="flex border-t border-white/10">
                 <button
