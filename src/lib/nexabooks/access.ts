@@ -13,12 +13,12 @@ export const NEXABOOKS_ROLE_MAP: Record<string, NexaBooksRole | undefined> = {
 };
 
 /**
- * Master switch. NexaBooks is installed and ready but NOT offered to RO yet (owner decision 2026-11-15:
+ * Master switch. NexaBooks is offered to RO as a premium module he can open and preview (owner decision 2026-11-15:
  * Den Chai is the only live client for now). While false, the Bookkeeping entry is hidden everywhere and
  * /admin/nexabooks sends everyone back. The sales/jobs adapter stays up; it is signature-only and invisible.
  * Set to true to switch it on.
  */
-export const NEXABOOKS_LIVE = false;
+export const NEXABOOKS_LIVE = true;
 
 /** `role` is the user's role as roleOf() reports it ('admin' when unset). */
 export function nexaBooksRoleFor(role: string | null | undefined): NexaBooksRole | null {
