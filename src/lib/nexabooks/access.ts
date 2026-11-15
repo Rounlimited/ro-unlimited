@@ -10,6 +10,8 @@ import type { NexaBooksRole } from './token';
 
 export const NEXABOOKS_ROLE_MAP: Record<string, NexaBooksRole | undefined> = {
   admin: 'owner',
+  // NexaVision (admin@nexavisiongroup.com) sees it too, to demo and set it up for RO (user request 2026-11-15).
+  super_admin: 'owner',
 };
 
 /**
