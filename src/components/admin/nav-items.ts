@@ -2,7 +2,7 @@ import {
   LayoutDashboard, HardDrive, ClipboardList, Pencil, Camera, Settings,
   MessageCircle, FileText, Users, LifeBuoy, Briefcase, TrendingUp,
   HardHat, CalendarDays, FileCheck, Receipt, BarChart3, CreditCard,
-  Clock, Shield, Wrench, Package, Truck, Building2, PieChart, Mail, Newspaper,
+  Clock, Shield, Wrench, Package, Truck, Building2, PieChart, Mail, Newspaper, BookOpen,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -15,6 +15,8 @@ export interface NavItem {
   bg: string;
   badge?: string;
   group?: string;
+  /** Nexa module (drawn in Nexa's premium look, opened with a full page load) shown to RO's admin role only. */
+  nexaModule?: boolean;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -25,6 +27,8 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'portfolio', label: 'Projects', icon: Camera, href: '/admin/projects', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'main' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/admin/analytics', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', group: 'main' },
   { id: 'news', label: 'Industry News', icon: Newspaper, href: '/admin/news', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'main' },
+  // NexaBooks (Nexa module, admin role only): server route that signs the person in to NexaBooks.
+  { id: 'nexabooks', label: 'Bookkeeping', icon: BookOpen, href: '/admin/nexabooks', active: true, color: '#7dd3fc', bg: 'rgba(125,211,252,0.15)', group: 'main', nexaModule: true },
 
   // Files & Data
   { id: 'drive', label: 'RO Drive', icon: HardDrive, href: '/admin/drive', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', group: 'files' },

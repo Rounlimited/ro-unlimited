@@ -6,6 +6,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { gsap } from 'gsap';
 import { createClient } from '@/lib/supabase/client';
 import NotificationBell from '@/components/admin/NotificationBell';
+import NexaBooksEntry from '@/components/admin/NexaBooksEntry';
+import { canSeeNexaBooks } from '@/lib/nexabooks/access';
 
 const BUILD_TIMESTAMP = new Date().toISOString();
 import {
@@ -14,7 +16,7 @@ import {
   Users, FileText, Clock, Wrench, Package, TrendingUp,
   Settings, LifeBuoy, Lock, Search, X, ChevronDown, ChevronLeft,
   Briefcase, Shield, UserPlus, Truck, FileCheck, Target,
-  Megaphone, CreditCard, PieChart, Building2, Bell, Sparkles, Zap, LogOut, HardDrive, CheckSquare, Newspaper, DoorOpen, Star } from 'lucide-react';
+  Megaphone, CreditCard, PieChart, Building2, Bell, Sparkles, Zap, LogOut, HardDrive, CheckSquare, Newspaper, DoorOpen, Star, BookOpen } from 'lucide-react';
 
 interface AppIcon {
   id: string;
@@ -25,6 +27,8 @@ interface AppIcon {
   color: string;
   bg: string;
   badge?: string;
+  /** Nexa module: drawn as a premium Nexa card above the grid, admin role only, full page load. */
+  nexaModule?: boolean;
 }
 
 // Feature descriptions for every coming soon + active app
@@ -242,6 +246,8 @@ const APP_ICONS: AppIcon[] = [
   { id: 'dailylogs', label: 'Daily Logs', icon: FileCheck, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'documents', label: 'Letters', icon: FileText, href: '/admin/letters', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'invoicing', label: 'Invoices', icon: Receipt, href: '/admin/invoices', active: true, color: '#35d07f', bg: 'rgba(53,208,127,0.15)', badge: 'NEW' },
+  // NexaBooks (Nexa module, admin role only): /admin/nexabooks signs the person in to NexaBooks.
+  { id: 'nexabooks', label: 'Bookkeeping', icon: BookOpen, href: '/admin/nexabooks', active: true, color: '#7dd3fc', bg: 'rgba(125,211,252,0.15)', nexaModule: true },
   { id: 'budgets', label: 'Budgets', icon: BarChart3, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'payments', label: 'Payments', icon: CreditCard, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
   { id: 'expenses', label: 'Expenses', icon: Receipt, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
@@ -661,12 +667,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  // Nexa modules (NexaBooks) stay hidden until the role is known, then show for RO's admin role only.
+  const [showNexa, setShowNexa] = useState(false);
 
   // Fetch user email + role for dev detection
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
       setUserEmail(data?.user?.email || null);
       setUserRole(data?.user?.user_metadata?.role || null);
+      const u = data?.user;
+      setShowNexa(!!u && canSeeNexaBooks(u.user_metadata?.role || u.app_metadata?.role));
     });
   }, []);
 
@@ -858,7 +868,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   // Dev-only apps — injected for super_admin (NexaVision) accounts only.
   const appIcons = useMemo(() => {
-    if (!isSuperAdmin) return APP_ICONS;
+    const base = showNexa ? APP_ICONS : APP_ICONS.filter(a => !a.nexaModule);
+    if (!isSuperAdmin) return base;
     const devApps: AppIcon[] = [
       {
         id: 'dev-proposals', label: 'Dev Proposals', icon: Sparkles,
@@ -871,8 +882,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         color: '#D4772C', bg: 'rgba(212,119,44,0.15)', badge: 'DEV',
       },
     ];
-    return [...devApps, ...APP_ICONS];
-  }, [isSuperAdmin]);
+    return [...devApps, ...base];
+  }, [isSuperAdmin, showNexa]);
 
   const filtered = useMemo(() => drawerSearch
     ? appIcons.filter(a => a.label.toLowerCase().includes(drawerSearch.toLowerCase()))
@@ -1037,8 +1048,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="overflow-y-auto px-4 pb-8 relative" style={{ maxHeight: 'calc(85vh - 100px)', zIndex: 2 }}>
           <p className="text-[10px] text-white/30 uppercase tracking-wider mb-3 px-1">Available</p>
           <div className="relative">
+          {filtered.some(a => a.nexaModule) && (
+            <NexaBooksEntry variant="drawer" onOpen={() => closeDrawer()} />
+          )}
           <div className="grid grid-cols-4 md:grid-cols-6 gap-y-5 gap-x-2 mb-6 relative">
-            {filtered.filter(a => a.active).map(app => {
+            {filtered.filter(a => a.active && !a.nexaModule).map(app => {
               const Icon = app.icon;
               return (
                 <button

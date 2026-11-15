@@ -6,13 +6,19 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Lock, Sparkles, BarChart3 } from 'lucide-react';
 import { NAV_ITEMS, NAV_GROUPS, type NavItem } from '../nav-items';
 import { createClient } from '@/lib/supabase/client';
+import { canSeeNexaBooks } from '@/lib/nexabooks/access';
+import NexaBooksEntry from '../NexaBooksEntry';
 
 export default function DesktopSidebar() {
   const pathname = usePathname();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  // Nexa modules (NexaBooks) stay hidden until the role is known, then show for RO's admin role only.
+  const [showNexa, setShowNexa] = useState(false);
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
-      setIsSuperAdmin(data?.user?.user_metadata?.role === 'super_admin');
+      const u = data?.user;
+      setIsSuperAdmin(u?.user_metadata?.role === 'super_admin');
+      setShowNexa(!!u && canSeeNexaBooks(u.user_metadata?.role || u.app_metadata?.role));
     });
   }, []);
   const [collapsed, setCollapsed] = useState(() => {
@@ -35,7 +41,7 @@ export default function DesktopSidebar() {
     { id: 'dev-proposals', label: 'Dev Proposals', icon: Sparkles, href: '/admin/dev/proposals', active: true, color: '#D4772C', bg: 'rgba(212,119,44,0.15)', group: 'dev' },
     { id: 'dev-activity', label: 'Activity', icon: BarChart3, href: '/admin/activity', active: true, color: '#D4772C', bg: 'rgba(212,119,44,0.15)', group: 'dev' },
   ] : [];
-  const activeItems = [...NAV_ITEMS.filter(i => i.active), ...devItems];
+  const activeItems = [...NAV_ITEMS.filter(i => i.active && (!i.nexaModule || showNexa)), ...devItems];
   const navGroups = isSuperAdmin ? [...NAV_GROUPS, { key: 'dev', label: 'NexaVision Dev' }] : NAV_GROUPS;
   const comingSoonItems = NAV_ITEMS.filter(i => !i.active);
 
@@ -75,6 +81,9 @@ export default function DesktopSidebar() {
               )}
               {group.label && collapsed && <div className="mx-3 my-2 h-px bg-white/5" />}
               {items.map(item => {
+                if (item.nexaModule) {
+                  return <NexaBooksEntry key={item.id} variant={collapsed ? 'sidebar-collapsed' : 'sidebar'} />;
+                }
                 const active = isActive(item);
                 const Icon = item.icon;
                 return (
