@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Trash2, Loader2, Pencil, Send, AlertTriangle, Maximize, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Trash2, Loader2, Pencil, Send, AlertTriangle, Maximize, Minimize, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   type Pt, type TakeoffData, type TakeoffItem, type TakeoffKind, type TakeoffUnit,
   TAKEOFF_COLORS, UNITS_FOR, KIND_LABEL, PRINTED_SCALES, emptyTakeoff, normalizeTakeoff, itemQuantity, fmtQty, money,
-  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines,
+  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales,
 } from '@/lib/takeoff';
 
 /**
@@ -38,6 +38,8 @@ export default function TakeoffPage() {
   const [editing, setEditing] = useState<TakeoffItem | null>(null);
   const [saved, setSaved] = useState<'saved' | 'saving' | 'error'>('saved');
   const [panelOpen, setPanelOpen] = useState(true);
+  const [big, setBig] = useState(false);          // the sheet takes the whole screen, the list is put away
+  const [found, setFound] = useState<{ label: string; feetPerInch: number; times: number }[]>([]);   // scales this sheet prints on itself
 
   const boxRef = useRef<HTMLDivElement>(null);
   const baseRef = useRef<HTMLCanvasElement>(null);
@@ -106,6 +108,8 @@ export default function TakeoffPage() {
       const pg = await doc.getPage(page);
       if (dead) return;
       pageRef.current = pg;
+      setFound([]);
+      pg.getTextContent().then((tc: any) => { if (!dead) setFound(findPrintedScales((tc.items || []).map((i: any) => String(i.str || '')))); }).catch(() => null);
       const v1 = pg.getViewport({ scale: 1 });
       setSize({ w: v1.width, h: v1.height });
       fit(v1.width, v1.height);
@@ -310,7 +314,15 @@ export default function TakeoffPage() {
               </>)}
             </svg>
           )}
-          {size && <button onClick={() => fit(size.w, size.h)} onPointerDown={(e) => e.stopPropagation()} aria-label="Fit the whole sheet" className="absolute right-3 top-3 w-12 h-12 rounded-xl bg-black/75 border border-white/25 flex items-center justify-center"><Maximize size={22} /></button>}
+          {size && (
+            <div className="absolute right-2 top-2 flex flex-col items-end gap-2" onPointerDown={(e) => e.stopPropagation()}>
+              <button onClick={() => { setBig((v) => !v); setTimeout(() => fit(size.w, size.h), 80); }}
+                className="min-h-[48px] px-3.5 rounded-xl bg-black/85 border border-white/35 text-[16px] font-bold flex items-center gap-2">
+                {big ? <Minimize size={20} /> : <Maximize size={20} />}{big ? 'Show the list' : 'Full screen'}
+              </button>
+              <button onClick={() => fit(size.w, size.h)} className="min-h-[48px] px-3.5 rounded-xl bg-black/85 border border-white/35 text-[16px] font-bold">Whole sheet</button>
+            </div>
+          )}
 
         </div>
 
@@ -336,9 +348,9 @@ export default function TakeoffPage() {
               </div>
             </div>
           )}
-          <div className={`${mode !== 'move' ? 'hidden lg:flex' : 'flex'} flex-col flex-1 min-h-0`}>
+          <div className={`${big ? 'hidden' : mode !== 'move' ? 'hidden lg:flex' : 'flex'} flex-col flex-1 min-h-0`}>
           <div className="flex items-center gap-2 px-3 pt-2.5 pb-2">
-            <button onClick={() => { setDraft([]); setScalePts([]); setMode('scale'); }}
+            <button onClick={() => { setDraft([]); setScalePts([]); setMode('move'); setSheet('scale'); }}
               className={`flex-1 min-h-[52px] rounded-xl px-3 text-left flex items-center gap-2.5 border ${ftPerPt ? 'border-white/20 bg-white/5' : 'border-[#f0a04b] bg-[#f0a04b]/15'}`}>
               <Ruler size={22} className={ftPerPt ? 'text-[#E5C76B] shrink-0' : 'text-[#f0a04b] shrink-0'} />
               <span className="min-w-0">
@@ -387,7 +399,8 @@ export default function TakeoffPage() {
       </div>
 
       {sheet === 'scale' && (
-        <ScaleSheet pts={scalePts} current={ftPerPt} pages={pages}
+        <ScaleSheet pts={scalePts} current={ftPerPt} pages={pages} found={found}
+          onMeasure={() => { setSheet(null); setDraft([]); setScalePts([]); setMode('scale'); }}
           onClose={() => { setSheet(null); stop(); }}
           onSet={(v, note, all) => {
             change((d) => {
@@ -428,39 +441,82 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-function ScaleSheet({ pts, current, pages, onSet, onClose }: { pts: Pt[]; current: number; pages: number; onSet: (ftPerPt: number, note: string, all: boolean) => void; onClose: () => void }) {
+function ScaleSheet({ pts, current, pages, found, onSet, onMeasure, onClose }: {
+  pts: Pt[]; current: number; pages: number; found: { label: string; feetPerInch: number; times: number }[];
+  onSet: (ftPerPt: number, note: string, all: boolean) => void; onMeasure: () => void; onClose: () => void;
+}) {
   const [feet, setFeet] = useState('');
   const [all, setAll] = useState(false);
   const [err, setErr] = useState('');
+  const [more, setMore] = useState(false);
   const known = () => {
     const f = parseFeet(feet);
     const v = f && pts.length === 2 ? scaleFromKnown(pts[0], pts[1], f) : null;
     if (!v) { setErr('Type the length in feet, like 40 or 40 6 for 40 feet 6 inches.'); return; }
     onSet(v, `Set from a ${feet.trim()} ft line you tapped`, all);
   };
-  return (
-    <Sheet title="Set the scale" onClose={onClose}>
-      {pts.length === 2 ? (<>
-        <label className={labelCls}>How long is the line you tapped, in real life?</label>
-        <input autoFocus inputMode="decimal" value={feet} onChange={(e) => { setFeet(e.target.value); setErr(''); }} onKeyDown={(e) => e.key === 'Enter' && known()} placeholder="Feet, like 40 or 40 6" className={inputCls} />
+  const allBox = pages > 1 && (
+    <button type="button" role="switch" aria-checked={all} onClick={() => setAll((a) => !a)} className="mt-4 w-full min-h-[52px] rounded-xl border border-white/20 px-3 flex items-center gap-3 text-left">
+      <span className={`w-7 h-7 rounded-md border-2 flex items-center justify-center shrink-0 ${all ? 'bg-[#C9A84C] border-[#C9A84C] text-black' : 'border-white/50 text-transparent'}`}><Check size={18} /></span>
+      <span className="text-[16px] leading-snug">Also use it on the other sheets that have no scale yet</span>
+    </button>
+  );
+
+  // He has tapped the two ends of a line: all that is left is how long it really is.
+  if (pts.length === 2) {
+    return (
+      <Sheet title="How long is that line?" onClose={onClose}>
+        <label className={labelCls}>The real length of the line you tapped, in feet</label>
+        <input autoFocus inputMode="decimal" value={feet} onChange={(e) => { setFeet(e.target.value); setErr(''); }} onKeyDown={(e) => e.key === 'Enter' && known()} placeholder="Like 40, or 40 6 for 40 feet 6 inches" className={inputCls} />
         {err && <p className="text-[16px] text-red-200 mt-2">{err}</p>}
-        <p className="text-[15px] text-white/75 mt-2 leading-snug">Best is a long dimension printed on the sheet. The longer the line, the truer the scale.</p>
-      </>) : <p className="text-[17px] text-white/85">Tap two ends of a known length on the sheet first.</p>}
-      {pages > 1 && (
-        <button type="button" role="switch" aria-checked={all} onClick={() => setAll((a) => !a)} className="mt-3 w-full min-h-[52px] rounded-xl border border-white/20 px-3 flex items-center gap-3 text-left">
-          <span className={`w-7 h-7 rounded-md border-2 flex items-center justify-center shrink-0 ${all ? 'bg-[#C9A84C] border-[#C9A84C] text-black' : 'border-white/50 text-transparent'}`}><Check size={18} /></span>
-          <span className="text-[16px] leading-snug">Also use it on the other sheets that have no scale yet</span>
-        </button>
+        {allBox}
+        <button onClick={known} className="mt-3 w-full min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold">Set the scale</button>
+      </Sheet>
+    );
+  }
+
+  const printed = (label: string, fpi: number) => onSet(scaleFromPrinted(fpi)!, `Printed scale ${label}. Check it against a dimension.`, all);
+  return (
+    <Sheet title="Set this sheet’s scale" onClose={onClose}>
+      <p className="text-[17px] text-white/90 leading-relaxed">The scale tells the app how big things on this sheet really are. Pick one of these ways.</p>
+
+      {found.length > 0 && (
+        <div className="mt-4 rounded-xl border border-[#4ade80]/60 bg-[#4ade80]/10 p-3">
+          <p className="text-[17px] font-bold leading-snug">{found.length === 1 ? 'This sheet says its scale is' : 'This sheet prints these scales'}</p>
+          <div className="mt-2 space-y-2">
+            {found.map((s) => (
+              <button key={s.label} onClick={() => printed(s.label, s.feetPerInch)} className="w-full min-h-[58px] rounded-xl bg-[#4ade80] text-black text-[20px] font-extrabold px-4 flex items-center justify-between gap-3">
+                <span>{s.label}</span><span className="text-[16px] font-bold">Use this</span>
+              </button>
+            ))}
+          </div>
+          {found.length > 1 && <p className="text-[15px] text-white/80 leading-snug mt-2">Use the one written under the drawing you are measuring.</p>}
+        </div>
       )}
-      {pts.length === 2 && <button onClick={known} className="mt-3 w-full min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold">Set the scale</button>}
-      <p className="text-[15px] font-semibold text-white/80 mt-5 mb-2">Or use the scale printed on the sheet</p>
-      <div className="grid grid-cols-3 gap-2">
-        {PRINTED_SCALES.map((p) => (
-          <button key={p.label} onClick={() => onSet(scaleFromPrinted(p.feetPerInch)!, 'Printed scale. Check it against a dimension.', all)}
-            className={`min-h-[48px] rounded-lg border text-[16px] font-semibold ${current && Math.abs(current * 72 - p.feetPerInch) < 0.01 ? 'border-[#C9A84C] bg-[#C9A84C]/15' : 'border-white/25'}`}>{p.label}</button>
-        ))}
+
+      <div className="mt-4 rounded-xl border border-white/20 bg-white/[0.04] p-3">
+        <p className="text-[17px] font-bold leading-snug">{found.length ? 'Or measure a line you know' : '1. Measure a line you know (most exact)'}</p>
+        <p className="text-[16px] text-white/85 leading-snug mt-1">Find a dimension printed on the sheet, like a wall marked 40 feet. Tap one end of it, tap the other end, then type 40.</p>
+        <button onClick={onMeasure} className="mt-2.5 w-full min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold flex items-center justify-center gap-2"><Ruler size={22} /> Tap the two ends on the sheet</button>
       </div>
-      <p className="text-[15px] text-[#f0a04b] mt-2 leading-snug">A printed scale is only right if the PDF is at full size. Measure one dimension you know to check it.</p>
+
+      <div className="mt-4 rounded-xl border border-white/20 bg-white/[0.04] p-3">
+        <button onClick={() => setMore((m) => !m)} className="w-full min-h-[48px] text-left flex items-center gap-2">
+          <span className="flex-1 text-[17px] font-bold leading-snug">{found.length ? 'Or pick a scale from the list' : '2. Pick the scale written on the sheet'}</span>
+          {more ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+        </button>
+        {(more || !found.length) && (<>
+          <p className="text-[16px] text-white/85 leading-snug mb-2">It is usually written under the drawing’s title or in the corner box, like SCALE: 1" = 20'.</p>
+          <div className="grid grid-cols-3 gap-2">
+            {PRINTED_SCALES.map((p) => (
+              <button key={p.label} onClick={() => printed(p.label, p.feetPerInch)}
+                className={`min-h-[52px] rounded-lg border text-[17px] font-semibold ${current && Math.abs(current * 72 - p.feetPerInch) < 0.01 ? 'border-[#C9A84C] bg-[#C9A84C]/15' : 'border-white/25'}`}>{p.label}</button>
+            ))}
+          </div>
+        </>)}
+      </div>
+      {allBox}
+      <p className="text-[15px] text-[#f0a04b] mt-3 leading-snug">A printed scale is only right if the PDF is at full size. After setting it, measure one dimension you know to check.</p>
     </Sheet>
   );
 }

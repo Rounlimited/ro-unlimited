@@ -138,3 +138,26 @@ export function takeoffLines(data: TakeoffData, phase = 'From plans'): TakeoffLi
     return { description: it.name.trim() || 'Unnamed item', quantity: lineQty(quantity, it.unit), unit: it.unit, unit_cost: Math.max(0, Number(it.unitCost) || 0), phase, category: 'other' };
   }).filter((l) => l.quantity > 0);
 }
+
+/**
+ * Scales printed on a sheet, read from its text: 1" = 40', 1/4" = 1'-0", 1 1/2" = 1'-0", 3" = 1'-0".
+ * Most common first. A sheet of details can print several; a plan sheet usually prints one.
+ */
+export function findPrintedScales(words: string[]): { label: string; feetPerInch: number; times: number }[] {
+  const text = words.join(' ').replace(/[\u201d\u2033]/g, '"').replace(/[\u2019\u2032]/g, "'").replace(/\s+/g, ' ');
+  const hits = new Map<string, { label: string; feetPerInch: number; times: number }>();
+  const add = (label: string, fpi: number) => {
+    if (!(fpi > 0.01 && fpi < 2000)) return;
+    const key = fpi.toFixed(4); const h = hits.get(key);
+    if (h) h.times++; else hits.set(key, { label, feetPerInch: fpi, times: 1 });
+  };
+  // 1" = 40'   1 inch = 40 ft   1 IN = 40 FEET
+  for (const m of Array.from(text.matchAll(/\b1\s*(?:"|in\.?|inch)\s*=\s*(\d+(?:\.\d+)?)\s*(?:'|ft\.?|feet)(?!\s*-?\s*\d)/gi))) add(`1" = ${m[1]}'`, Number(m[1]));
+  // 1/4" = 1'-0"   1 1/2" = 1'-0"   3" = 1'-0"
+  for (const m of Array.from(text.matchAll(/(?:(\d+)\s+)?(\d+)\s*\/\s*(\d+)\s*"\s*=\s*1\s*'\s*(?:-\s*0\s*"?)?/g))) {
+    const inches = (Number(m[1]) || 0) + Number(m[2]) / Number(m[3]);
+    if (inches > 0) add(`${m[1] ? m[1] + ' ' : ''}${m[2]}/${m[3]}" = 1'`, 1 / inches);
+  }
+  for (const m of Array.from(text.matchAll(/(?<![\/\d])(\d+(?:\.\d+)?)\s*"\s*=\s*1\s*'\s*-\s*0\s*"?/g))) add(`${m[1]}" = 1'`, 1 / Number(m[1]));
+  return Array.from(hits.values()).sort((a, b) => b.times - a.times).slice(0, 5);
+}
