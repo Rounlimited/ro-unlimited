@@ -271,12 +271,12 @@ function findPattern(v: SheetVectors, segs: number[], r: number): Pt[] {
         if (out.some((o) => Math.hypot(o[0] - cx, o[1] - cy) < Math.max(2.5, r * 0.5))) continue;
         // how much of the pattern's line is drawn here, by length
         let got = 0; let lost = 0;
-        for (let i = 0; i < n && lost <= total * 0.1; i++) {
+        for (let i = 0; i < n && lost <= total * 0.2; i++) {
           const px = cx + segs[i * 4] * co - segs[i * 4 + 1] * si, py = cy + segs[i * 4] * si + segs[i * 4 + 1] * co;
           const qx = cx + segs[i * 4 + 2] * co - segs[i * 4 + 3] * si, qy = cy + segs[i * 4 + 2] * si + segs[i * 4 + 3] * co;
           if (hasSeg(px, py, qx, qy)) got += lens[i]; else lost += lens[i];
         }
-        if (got < total * 0.9) continue;
+        if (got < total * 0.8) continue;
         // a place with a lot more line drawn wholly inside it is a different symbol (a square with an X in it)
         let inLen = 0;
         for (const o of near(v, [cx, cy], r)) { const [p1, p2] = seg(v, o); if (Math.hypot(p1[0] - cx, p1[1] - cy) <= r && Math.hypot(p2[0] - cx, p2[1] - cy) <= r) inLen += Math.hypot(p2[0] - p1[0], p2[1] - p1[1]); }
@@ -329,6 +329,35 @@ export function symbolAt(v: SheetVectors | null, pt: Pt, r: number): { key: Symb
     if (!out || pts.length > out.pts.length) out = { key: c.key, pts };
   }
   return out;
+}
+
+/**
+ * He drew a box around ONE symbol (two taps, corner to corner). Everything drawn wholly inside the box is the symbol,
+ * so there is no guessing where it ends. Returns its description and every match on the sheet, boxed one first.
+ */
+export function symbolInBox(v: SheetVectors | null, a: Pt, b: Pt): { key: SymbolKey; pts: Pt[] } | null {
+  if (!v) return null;
+  const x1 = Math.min(a[0], b[0]), x2 = Math.max(a[0], b[0]), y1 = Math.min(a[1], b[1]), y2 = Math.max(a[1], b[1]);
+  if (x2 - x1 < 3 || y2 - y1 < 3 || x2 - x1 > 160 || y2 - y1 > 160) return null;
+  const c: Pt = [(x1 + x2) / 2, (y1 + y2) / 2]; const reach = Math.hypot(x2 - x1, y2 - y1) / 2 + 1;
+  const segs: number[] = []; let far = 0;
+  for (const sg of near(v, c, reach)) {
+    const [p, q] = seg(v, sg);
+    if (p[0] < x1 || p[0] > x2 || q[0] < x1 || q[0] > x2 || p[1] < y1 || p[1] > y2 || q[1] < y1 || q[1] > y2) continue;
+    segs.push(p[0], p[1], q[0], q[1]); far = Math.max(far, Math.hypot(p[0] - c[0], p[1] - c[1]), Math.hypot(q[0] - c[0], q[1] - c[1]));
+  }
+  if (segs.length < 8 || segs.length > 4 * 300) return null;                    // fewer than 2 pieces, or far too many
+  // measure the pieces from the middle of what was actually boxed
+  let bx1 = Infinity, by1 = Infinity, bx2 = -Infinity, by2 = -Infinity;
+  for (let i = 0; i < segs.length; i += 2) { bx1 = Math.min(bx1, segs[i]); bx2 = Math.max(bx2, segs[i]); by1 = Math.min(by1, segs[i + 1]); by2 = Math.max(by2, segs[i + 1]); }
+  const m: Pt = [(bx1 + bx2) / 2, (by1 + by2) / 2];
+  const rel = segs.map((x, i) => Math.round((x - (i % 2 ? m[1] : m[0])) * 100) / 100);
+  let rad = 0; for (let i = 0; i < rel.length; i += 2) rad = Math.max(rad, Math.hypot(rel[i], rel[i + 1]));
+  const key: SymbolKey = { how: 'pattern', segs: rel, r: Math.round((rad + 0.6) * 100) / 100 };
+  const all = findSymbols(v, key);
+  if (!all.length) return { key, pts: [m] };
+  const mine = all.reduce((bi, p, i) => (Math.hypot(p[0] - m[0], p[1] - m[1]) < Math.hypot(all[bi][0] - m[0], all[bi][1] - m[1]) ? i : bi), 0);
+  return { key, pts: [all[mine], ...all.filter((_, i) => i !== mine)] };
 }
 
 /** Tap one symbol: the middle of every matching symbol on the sheet (the tapped one first), or null. */

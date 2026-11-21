@@ -2,13 +2,13 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Trash2, Loader2, Pencil, Send, AlertTriangle, Maximize, Minimize, ChevronDown, ChevronUp, Sparkles, List, HelpCircle } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Trash2, Loader2, Pencil, Send, AlertTriangle, Maximize, Minimize, ChevronDown, ChevronUp, Sparkles, List, HelpCircle, MessageCircle } from 'lucide-react';
 import {
   type Pt, type TakeoffData, type TakeoffItem, type TakeoffKind, type TakeoffUnit,
   TAKEOFF_COLORS, UNITS_FOR, KIND_LABEL, PRINTED_SCALES, emptyTakeoff, normalizeTakeoff, itemQuantity, fmtQty, money,
   pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, bidTotals, itemCost, labelPoints, type SheetWord, type ItemPart, type AiRead, type AiSheet, type BidPricing, type AiDraft, type DraftItem,
 } from '@/lib/takeoff';
-import { readSheetVectors, snapPoint, traceRun, shapeAt, symbolAt, findSymbols, type SheetVectors, type SymbolKey } from '@/lib/takeoff-vectors';
+import { readSheetVectors, snapPoint, traceRun, shapeAt, symbolAt, symbolInBox, findSymbols, type SheetVectors, type SymbolKey } from '@/lib/takeoff-vectors';
 
 /**
  * Bid from Plans: the measuring screen. The plan sheet is drawn from the PDF; what he measures is drawn on top
@@ -40,7 +40,7 @@ export default function TakeoffPage() {
   const [activeId, setActiveId] = useState('');
   const [draft, setDraft] = useState<Pt[]>([]);
   const [scalePts, setScalePts] = useState<Pt[]>([]);
-  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai' | 'bid' | 'draft' | 'others' | 'help'>(null);
+  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai' | 'bid' | 'draft' | 'others' | 'help' | 'ask'>(null);
   // What the AI read off the sheets (names, scales, schedules, notes), and whether this sign-in may start a read
   const [ai, setAi] = useState<AiRead | null>(null);
   const [canRead, setCanRead] = useState(false);
@@ -61,6 +61,12 @@ export default function TakeoffPage() {
   const [others, setOthers] = useState<{ page: number; pts: Pt[]; on: boolean }[]>([]);
   const [searching, setSearching] = useState('');
   const [moveStep, setMoveStep] = useState<null | 'pick' | { shape: string; idx: number }>(null);
+  const [boxStart, setBoxStart] = useState<Pt | null>(null);          // first corner of the box drawn around one symbol
+  // Ask the AI: his questions about this bid and its answers
+  const [askJob, setAskJob] = useState('');
+  const [askLabel, setAskLabel] = useState('');
+  const [askErr, setAskErr] = useState('');
+  const [askAbout, setAskAbout] = useState<null | { name: string; note: string }>(null);
   const [snapMark, setSnapMark] = useState<null | { pt: Pt; kind: string }>(null);
   const [foundNote, setFoundNote] = useState('');
   const [erase, setErase] = useState(false);     // the next tap removes the measurement under it
@@ -281,6 +287,32 @@ export default function TakeoffPage() {
   const active = data.items.find((i) => i.id === activeId) || null;
   const ftPerPt = Number(data.scales[String(page)]) || 0;
 
+  /* ── Ask the AI ── */
+  const ask = async (text: string, about?: { name: string; note: string } | null) => {
+    const q = text.trim(); if (!q || askJob) return;
+    setAskErr('');
+    const msgs = [...(data.chat || []), { role: 'user' as const, content: q }];
+    change((d) => ({ ...d, chat: msgs.slice(-40) }));
+    const r = await fetch('/api/admin/takeoffs/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ask', page, messages: msgs, item: about || askAbout || undefined }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    if (!r || !r.ok || !d.job) { setAskErr(d.error || 'Could not reach the AI. Try again.'); return; }
+    setAskLabel('Looking at the sheet…'); setAskJob(d.job);
+  };
+  useEffect(() => {
+    if (!askJob) return;
+    const t0 = Date.now();
+    const t = setInterval(async () => {
+      const r = await fetch('/api/admin/takeoffs/' + id + '?job=' + askJob).catch(() => null);
+      const d = r && r.ok ? await r.json().catch(() => null) : null;
+      if (d?.status === 'done') { clearInterval(t); setAskJob(''); change((x) => ({ ...x, chat: [...(x.chat || []), { role: 'assistant' as const, content: String(d.result || '') }].slice(-40) })); }
+      else if (d?.status === 'error') { clearInterval(t); setAskJob(''); setAskErr('The AI could not answer that: ' + String(d.result || 'try again.').slice(0, 160)); }
+      else if (Date.now() - t0 > 300000) { clearInterval(t); setAskJob(''); setAskErr('That took too long. Try again.'); }
+      else if (d?.label) setAskLabel(Date.now() - t0 > 20000 ? 'Still looking. It studies the drawing before it answers.' : d.label);
+    }, 3000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [askJob, id]);
+
   /* ── counting helpers ── */
   const addCountPoints = (itemId: string, pageNo: number, pts: Pt[]) => {
     change((d) => ({ ...d, items: d.items.map((it) => {
@@ -333,16 +365,18 @@ export default function TakeoffPage() {
       const pts = (m.points || []).map(([fx, fy]) => [fx * size.w, fy * size.h] as Pt);
       let shapePts: Pt[] = []; let note = m.saw || '';
       if (it.kind === 'count') {
-        const byTag = m.tag ? labelPoints(wordsRef.current, m.tag) : [];
-        if (byTag.length) { shapePts = byTag; note = `It counted the tag "${m.tag}" printed beside each one.`; }
+        const byTag = m.tag && !m.counted ? labelPoints(wordsRef.current, m.tag) : [];
+        if (m.counted && pts.length) { shapePts = pts; note = m.says || `It counted the tag "${m.tag}" and checked each one.`; }
+        else if (byTag.length) { shapePts = byTag; note = `It counted the tag "${m.tag}" printed beside each one.`; }
         else { const sym = pts[0] ? symbolAt(vecRef.current, pts[0], 16) : null; shapePts = sym ? sym.pts : pts.slice(0, 1); if (!sym) note = 'It found one but could not match the rest. Count the others yourself.'; }
       } else {
         let sn = pts.map((p) => snapPoint(vecRef.current, p, 10).pt);
         if (sn.length > 2 && Math.hypot(sn[0][0] - sn[sn.length - 1][0], sn[0][1] - sn[sn.length - 1][1]) < 3) sn = sn.slice(0, -1);
         if (sn.length >= (it.kind === 'area' ? 3 : 2)) shapePts = sn;
+        if (m.says) note = m.says;
       }
       const sid = uid();
-      change((d) => ({ ...d, items: d.items.map((x) => (x.id !== it.id ? x : { ...x, aiAt: m.updated_at, aiNote: note.slice(0, 220), aiCheck: shapePts.length > 0, aiShape: shapePts.length ? sid : undefined, shapes: shapePts.length ? [...x.shapes, { id: sid, page, pts: shapePts }] : x.shapes })) }));
+      change((d) => ({ ...d, items: d.items.map((x) => (x.id !== it.id ? x : { ...x, aiAt: m.updated_at, aiNote: ((m.checked ? '' : 'Not double-checked. ') + note + (m.confidence ? ` (It is ${m.confidence === 'high' ? 'sure' : m.confidence === 'medium' ? 'fairly sure' : 'not sure'}.)` : '')).slice(0, 460), aiCheck: shapePts.length > 0, aiShape: shapePts.length ? sid : undefined, shapes: shapePts.length ? [...x.shapes, { id: sid, page, pts: shapePts }] : x.shapes })) }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ai, page, size, vecState, wordsPage, data.items]);
@@ -385,9 +419,12 @@ export default function TakeoffPage() {
     // One tap takes a whole line run (length) or a whole outline (area), straight from the drawing
     if (mode === 'draw' && active && pickMode === 'whole' && active.kind === 'count') {
       // Tap one symbol and every matching one on the sheet is counted
-      const sym = symbolAt(vecRef.current, raw, r); const found = sym ? sym.pts : null;
+      // two taps draw a box around one symbol, so the app knows exactly what the symbol is
+      if (!boxStart) { setBoxStart(raw); setSnapMark({ pt: raw, kind: 'corner' }); setFoundNote('Good. Now tap the opposite corner, so the box is around just that one.'); return; }
+      const sym = symbolInBox(vecRef.current, boxStart, raw) || symbolAt(vecRef.current, [(boxStart[0] + raw[0]) / 2, (boxStart[1] + raw[1]) / 2], r); const found = sym ? sym.pts : null;
+      setBoxStart(null); setSnapMark(null);
       if (sym) setLastSearch({ how: 'symbol', key: sym.key });
-      if (!found) { setSnapMark({ pt: raw, kind: 'miss' }); setTimeout(() => setSnapMark(null), 900); setFoundNote('No symbol there. Tap right on one, or switch to tapping each one.'); return; }
+      if (!found) { setSnapMark({ pt: raw, kind: 'miss' }); setTimeout(() => setSnapMark(null), 900); setFoundNote('Nothing like it was found. Try again with the box snug around one, or use Count a tag.'); return; }
       let added = 0;
       change((d) => ({ ...d, items: d.items.map((it) => {
         if (it.id !== active.id) return it;
@@ -397,7 +434,7 @@ export default function TakeoffPage() {
         added = fresh.length;
         return { ...it, shapes: has ? it.shapes.map((s) => (s === has ? { ...s, pts: [...s.pts, ...fresh] } : s)) : [...it.shapes, { id: uid(), page, pts: fresh }] };
       }) }));
-      setFoundNote(`Found ${found.length} like it on this sheet. Check the green marks and undo any that are wrong.`);
+      setFoundNote(`Found ${found.length} like it on this sheet. It can miss ones that are drawn a little differently: look over the sheet and tap any it missed.`);
       return;
     }
     if (mode === 'draw' && active && pickMode === 'whole' && active.kind !== 'count') {
@@ -443,11 +480,11 @@ export default function TakeoffPage() {
       return { ...it, shapes: it.shapes.slice(0, -1) };
     }) }));
   };
-  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setFoundNote(''); setErase(false); setMoveStep(null); setLastSearch(null);
+  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setFoundNote(''); setErase(false); setMoveStep(null); setLastSearch(null); setBoxStart(null);
     // an item that came from a table says which tag to count: start there
     const it = data.items.find((x) => x.id === itemId); const tg = it && it.kind === 'count' ? /marked (\S+) on the drawings/.exec(it.hint || '') : null;
     if (tg) { setTagText(tg[1]); setPickMode('tag'); } else setPickMode('points'); };
-  const stop = () => { setDraft([]); setScalePts([]); setMode('move'); setErase(false); setMoveStep(null); };
+  const stop = () => { setDraft([]); setScalePts([]); setMode('move'); setErase(false); setMoveStep(null); setBoxStart(null); };
 
   const draftReadout = useMemo(() => {
     if (!active || active.kind === 'count' || draft.length < 2) return '';
@@ -526,6 +563,7 @@ export default function TakeoffPage() {
                 <polyline points={draft.map((p) => p.join(',')).join(' ')} fill="none" stroke={active.color} strokeWidth={sw * 1.6} strokeDasharray={`${sw * 4} ${sw * 3}`} strokeLinejoin="round" />
                 {draft.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={dot} fill="#fff" stroke={active.color} strokeWidth={sw} />)}
               </>)}
+              {boxStart && <circle cx={boxStart[0]} cy={boxStart[1]} r={dot * 1.2} fill="#4ade80" />}
               {snapMark && <circle cx={snapMark.pt[0]} cy={snapMark.pt[1]} r={dot * 2.2} fill="none" stroke={snapMark.kind === 'miss' ? '#f87171' : '#4ade80'} strokeWidth={sw * 1.4} />}
               {scalePts.length > 0 && (<>
                 {scalePts.length === 2 && <line x1={scalePts[0][0]} y1={scalePts[0][1]} x2={scalePts[1][0]} y2={scalePts[1][1]} stroke="#FF2D95" strokeWidth={sw * 1.6} />}
@@ -563,7 +601,7 @@ export default function TakeoffPage() {
                 <div className="mt-2">
                   <div className="grid grid-cols-3 gap-1.5">
                     <button onClick={() => { setPickMode('points'); setFoundNote(''); }} className={`min-h-[52px] rounded-xl border text-[15px] font-bold leading-tight px-1 ${pickMode === 'points' ? 'border-[#C9A84C] bg-[#C9A84C]/20' : 'border-white/30'}`}>Tap each one</button>
-                    <button disabled={vecState !== 'ready'} onClick={() => { setPickMode('whole'); setFoundNote(''); }} className={`min-h-[52px] rounded-xl border text-[15px] font-bold leading-tight px-1 disabled:opacity-40 ${pickMode === 'whole' ? 'border-[#4ade80] bg-[#4ade80]/15' : 'border-white/30'}`}>Tap one, find the rest</button>
+                    <button disabled={vecState !== 'ready'} onClick={() => { setPickMode('whole'); setBoxStart(null); setFoundNote('Tap one corner of a box around ONE of them, then the opposite corner.'); }} className={`min-h-[52px] rounded-xl border text-[15px] font-bold leading-tight px-1 disabled:opacity-40 ${pickMode === 'whole' ? 'border-[#4ade80] bg-[#4ade80]/15' : 'border-white/30'}`}>Box one, find the rest</button>
                     <button onClick={() => { setPickMode('tag'); setFoundNote(''); }} className={`min-h-[52px] rounded-xl border text-[15px] font-bold leading-tight px-1 ${pickMode === 'tag' ? 'border-[#4ade80] bg-[#4ade80]/15' : 'border-white/30'}`}>Count a tag</button>
                   </div>
                   {pickMode === 'tag' && (
@@ -612,6 +650,12 @@ export default function TakeoffPage() {
           </div>
           <div className={`${panelOpen ? '' : 'hidden lg:block'} flex-1 min-h-0 overflow-y-auto px-3 pb-2 space-y-2`}>
             <AiCard ai={ai} busy={aiBusy} canRead={canRead} pages={pages} sheet={aiPage} note={aiNote} onStart={startRead} onOpen={() => setSheet('ai')} />
+            {canRead && pages > 0 && (
+              <button onClick={() => { setAskAbout(null); setSheet('ask'); }} className="w-full text-left rounded-xl border border-[#7dd3fc]/60 bg-[#7dd3fc]/10 px-3 py-2.5 flex items-center gap-3">
+                <MessageCircle size={22} className="text-[#7dd3fc] shrink-0" />
+                <span className="flex-1 min-w-0"><span className="block text-[17px] font-bold leading-snug">Ask the AI about this sheet</span><span className="block text-[15px] text-white/85 leading-snug">{(data.chat || []).length ? 'Carry on the conversation' : 'What to check, what is missing, how sure it is'}</span></span>
+              </button>
+            )}
             {ai?.status === 'done' && <DraftCard draft={bidDraft} busy={draftBusy} canRead={canRead} taken={!!data.draftTaken} onStart={startDraft} onOpen={() => setSheet('draft')} />}
             {data.items.length === 0 && <p className="text-[16px] text-white/80 leading-snug px-1">Add what you want to measure: a pipe run, a slab, catch basins. Then tap it out on the sheet.</p>}
             {data.items.length > 8 && <p className="text-[15px] text-white/80 px-1">{readyCount} of {data.items.length} have a quantity. {data.items.length - readyCount} still to measure.</p>}
@@ -654,7 +698,8 @@ export default function TakeoffPage() {
                     if (it.aiCheck) return (
                       <div className="mx-3 mb-2.5 rounded-lg border border-[#a78bfa]/70 bg-[#a78bfa]/12 p-2.5">
                         <p className="text-[16px] font-bold leading-snug">The AI measured this. Check it on the sheet.</p>
-                        {it.aiNote && <p className="text-[14px] text-white/80 leading-snug mt-0.5">{it.aiNote}</p>}
+                        {it.aiNote && <p className="text-[15px] text-white/90 leading-snug mt-0.5">{it.aiNote}</p>}
+                        {canRead && <button onClick={() => { const about = { name: it.name, note: it.aiNote || '' }; setAskAbout(about); setSheet('ask'); ask(`How sure are you about "${it.name}"? What exactly should I check on the sheet?`, about); }} className="mt-2 w-full min-h-[44px] rounded-lg border border-[#a78bfa]/70 text-[15px] font-semibold flex items-center justify-center gap-2"><MessageCircle size={18} /> Ask the AI about this</button>}
                         <div className="grid grid-cols-2 gap-2 mt-2">
                           <button onClick={() => change((d) => ({ ...d, items: d.items.map((x) => (x.id === it.id ? { ...x, aiCheck: false } : x)) }))} className="min-h-[48px] rounded-lg bg-[#4ade80] text-black text-[16px] font-bold">Looks right</button>
                           <button onClick={() => change((d) => ({ ...d, items: d.items.map((x) => (x.id === it.id ? { ...x, aiCheck: false, shapes: x.shapes.filter((sh) => sh.id !== x.aiShape), aiShape: undefined } : x)) }))} className="min-h-[48px] rounded-lg border border-white/30 text-[16px] font-semibold">Throw it away</button>
@@ -761,6 +806,8 @@ export default function TakeoffPage() {
             hint: x.quantity ? undefined : (x.measure || undefined), hintPage: x.quantity ? undefined : (x.page || undefined), shapes: [] }; })] })); setSheet(null); }} />
       )}
       {sheet === 'help' && <HelpSheet onClose={() => setSheet(null)} />}
+      {sheet === 'ask' && <AskSheet chat={data.chat || []} busy={!!askJob} label={askLabel} error={askErr} where={sheetLabel(page) || `sheet ${page}`} about={askAbout}
+        onAsk={(t) => ask(t)} onClear={() => { change((d) => ({ ...d, chat: [] })); setAskAbout(null); }} onClose={() => setSheet(null)} />}
       {sheet === 'others' && active && (
         <Sheet title="Found on other sheets" onClose={() => setSheet(null)}>
           {others.length === 0 ? <p className="text-[17px] text-white/90 leading-relaxed">Nothing like it is drawn on the other sheets.</p> : (<>
@@ -798,15 +845,52 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
+/** A conversation with the AI about this bid. It looks at the sheet he is on, and says how sure it is. */
+function AskSheet({ chat, busy, label, error, where, about, onAsk, onClear, onClose }: { chat: { role: 'user' | 'assistant'; content: string }[]; busy: boolean; label: string; error: string; where: string; about: { name: string; note: string } | null; onAsk: (t: string) => void; onClear: () => void; onClose: () => void }) {
+  const [text, setText] = useState('');
+  const endRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [chat.length, busy]);
+  const send = () => { const t = text.trim(); if (!t || busy) return; setText(''); onAsk(t); };
+  const ideas = ['What should I double-check on this sheet?', 'What on this sheet is missing from my list?', 'How sure are you about what you measured here?', 'Is anything here supplied by the owner?'];
+  return (
+    <Sheet title="Ask the AI" onClose={onClose}>
+      <p className="text-[15px] text-white/80 leading-snug">It looks at <b className="text-white">{where}</b> and at your list before it answers{about ? <>, and knows you are asking about <b className="text-white">{about.name}</b></> : null}. It takes about 30 seconds. It can be wrong: treat what it says as a second opinion.</p>
+      <div className="mt-3 space-y-2.5">
+        {chat.length === 0 && !busy && (
+          <div className="space-y-2">
+            {ideas.map((q) => <button key={q} onClick={() => onAsk(q)} className="w-full min-h-[52px] text-left rounded-xl border border-[#7dd3fc]/50 bg-[#7dd3fc]/10 px-3 py-2 text-[17px] font-semibold leading-snug">{q}</button>)}
+          </div>
+        )}
+        {chat.map((m, i) => (
+          <div key={i} className={`rounded-2xl px-3.5 py-2.5 ${m.role === 'user' ? 'ml-8 bg-[#C9A84C]/20 border border-[#C9A84C]/50' : 'mr-4 bg-white/[0.06] border border-white/15'}`}>
+            <p className="text-[13px] font-bold uppercase tracking-wide text-white/60 mb-0.5">{m.role === 'user' ? 'You' : 'The AI'}</p>
+            <p className="text-[17px] leading-relaxed whitespace-pre-line break-words">{m.content}</p>
+          </div>
+        ))}
+        {busy && <p className="text-[16px] text-[#7dd3fc] flex items-center gap-2 px-1"><Loader2 size={20} className="animate-spin shrink-0" /> {label || 'Looking at the sheet…'}</p>}
+        {error && <p className="text-[16px] text-red-200 px-1">{error}</p>}
+        <div ref={endRef} />
+      </div>
+      <div className="sticky bottom-0 -mx-4 px-4 pt-3 pb-1 mt-3 bg-[#141414]">
+        <div className="flex gap-2">
+          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} placeholder="Type your question" className="flex-1 min-w-0 min-h-[54px] px-4 rounded-xl bg-white/5 border border-white/25 text-[18px] text-white placeholder:text-white/40 focus:outline-none focus:border-[#7dd3fc]" />
+          <button onClick={send} disabled={busy || !text.trim()} className="min-h-[54px] px-5 rounded-xl bg-[#7dd3fc] text-black text-[17px] font-bold disabled:opacity-40">Ask</button>
+        </div>
+        {chat.length > 0 && !busy && <button onClick={onClear} className="mt-2 w-full min-h-[44px] rounded-lg text-[15px] text-white/70 font-semibold">Start a new conversation</button>}
+      </div>
+    </Sheet>
+  );
+}
+
 /** A short guide in plain words, for someone who has never measured a plan on a screen. */
 function HelpSheet({ onClose }: { onClose: () => void }) {
   const steps: [string, string][] = [
     ['Set the scale', 'A plan is a small drawing of a big thing. Tap the orange "Set this sheet’s scale" button. If the app shows a green scale, tap "Use this". Do it once on each sheet you measure.'],
     ['Add what you want to measure', 'Tap "Add something to measure" and give it a name, like "Sidewalk". Pick how it is measured: a length, an area, or a count.'],
     ['Tap it out on the sheet', 'Drag with one finger to move the sheet. Pinch with two fingers to zoom in. A quick tap puts down a point. Zoom in before you tap: it is more exact. Tap "Finish this one" when you have gone all the way around.'],
-    ['Let the app do more of it', '"Tap a whole line" takes a whole line in one tap. "Tap one, find the rest" counts every matching symbol. "Count a tag" counts every place a tag like A or P-1 is printed.'],
+    ['Let the app do more of it', '"Tap a whole line" takes a whole line in one tap. "Box one, find the rest": tap two corners of a box around one symbol and every matching one is counted. "Count a tag" counts every place a tag like A or P-1 is printed.'],
     ['Made a mistake?', '"Undo" takes back the last tap. "Remove one" takes away a measurement you tap. "Move a corner" lets you fix one corner.'],
-    ['Let the AI help', 'The purple button has the AI read every sheet and draft the list of things to price. On an item, "Let the AI try it" has the AI mark it for you. Always look at what it marked before you keep it.'],
+    ['Let the AI help', 'The purple button has the AI read every sheet and draft the list of things to price. On an item, "Let the AI try it" has the AI mark it for you and then check its own marks. Always look at what it marked before you keep it. "Ask the AI" lets you ask it anything about the sheet, and it tells you how sure it is.'],
     ['Price it and send it', 'Type your price on each item. Tap the "Cost → Bid" bar to add overhead and profit. Then "Send to an estimate".'],
   ];
   return (

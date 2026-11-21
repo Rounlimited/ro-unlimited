@@ -42,6 +42,7 @@ export type TakeoffData = {
   items: TakeoffItem[];
   pricing?: BidPricing;                // overhead, profit, contingency and the floor he will not bid under
   draftTaken?: boolean;                // he has been through the AI's draft list once
+  chat?: { role: 'user' | 'assistant'; content: string }[];   // his questions to the AI about this bid, and its answers
 };
 
 export const TAKEOFF_COLORS = ['#E5484D', '#3B8DD4', '#35D07F', '#F0A04B', '#B57BEE', '#12B5CB', '#E93D82', '#C9A84C'];
@@ -58,6 +59,7 @@ export function normalizeTakeoff(raw: unknown): TakeoffData {
     items: Array.isArray(d.items) ? d.items.filter((i) => i && Array.isArray(i.shapes)) : [],
     pricing: cleanPricing(d.pricing),
     draftTaken: !!d.draftTaken,
+    chat: Array.isArray(d.chat) ? d.chat.filter((m) => m && typeof m.content === 'string').slice(-40) : undefined,
   };
 }
 
@@ -218,7 +220,11 @@ export type AiSheet = {
 export type DraftItem = { name: string; group: string; unit: string; quantity: number | null; source: 'table' | 'printed' | 'measure' | 'lump'; page: number; sheet: string; measure: string; note: string };
 export type AiDraft = { status: 'queued' | 'working' | 'done' | 'error'; summary?: string; items?: DraftItem[]; watch_outs?: string[]; error?: string; updated_at?: string };
 /** The AI's answer for one item: where it is on a sheet (fractions of the sheet from its top-left), never a quantity. */
-export type AiMeasure = { status: 'queued' | 'working' | 'done' | 'error'; page?: number; found?: boolean; tag?: string; points?: [number, number][]; confidence?: string; saw?: string; error?: string; updated_at?: string };
+export type AiMeasure = { status: 'queued' | 'working' | 'done' | 'error'; page?: number; found?: boolean; tag?: string; points?: [number, number][]; confidence?: string; saw?: string;
+  says?: string;        // what the AI tells him after looking at its own marks a second time
+  counted?: boolean;    // the points ARE the count (it checked every tag itself); nothing more to match
+  checked?: boolean;    // it looked at its marks drawn on the sheet and corrected them
+  error?: string; updated_at?: string };
 export type AiRead = { status: 'queued' | 'working' | 'done' | 'error'; draft?: AiDraft; measures?: Record<string, AiMeasure>; done?: number; total?: number; sheets?: Record<string, AiSheet>; error?: string; started_at?: string; finished_at?: string; updated_at?: string };
 
 /** Which of our units a printed unit maps to. */

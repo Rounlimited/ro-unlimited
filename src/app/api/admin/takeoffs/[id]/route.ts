@@ -15,6 +15,13 @@ const fail = (error: string, status = 400) => NextResponse.json({ error }, { sta
 
 export async function GET(req: NextRequest, { params }: Ctx) {
   const admin = createAdminClient();
+  // The answer to a question he asked the AI about this bid (see action 'ask')
+  const jobId = req.nextUrl.searchParams.get('job');
+  if (jobId) {
+    const { data: j } = await admin.from('ai_sub_jobs').select('status, status_label, result, payload').eq('id', jobId).maybeSingle();
+    if (!j || (j.payload as any)?.takeoff_id !== params.id) return fail('Not found.', 404);
+    return NextResponse.json({ status: j.status, label: j.status_label, result: j.status === 'done' || j.status === 'error' ? j.result : null });
+  }
   if (!(await nexaBidsAccess(admin)).active) return NextResponse.json({ error: NEXABIDS_LOCKED, locked: true }, { status: 402 });
   const { data: row, error } = await admin.from('takeoffs').select('*, estimate:estimates(id, estimate_number, project_name)').eq('id', params.id).maybeSingle();
   if (error) return fail(error.message, 500);
@@ -57,6 +64,20 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const ai = { status: 'queued', done: 0, total: 0, sheets: {}, updated_at: now, draft: { status: 'queued', updated_at: now } };
     await admin.from('takeoffs').update({ ai }).eq('id', t.id);
     return NextResponse.json({ ok: true, ai });
+  }
+  // A question to the AI about this bid, answered while it looks at the sheet he is on
+  if (body.action === 'ask') {
+    const user = await getServerUser(req).catch(() => null);
+    if (!mayRead(user?.email)) return fail('The AI is not switched on for this sign-in yet.', 403);
+    const { data: t } = await admin.from('takeoffs').select('id, file_path').eq('id', params.id).maybeSingle();
+    if (!t?.file_path) return fail('Those plans are not here any more.', 404);
+    const msgs = (Array.isArray(body.messages) ? body.messages : []).filter((m: any) => m && typeof m.content === 'string' && m.content.trim()).slice(-10).map((m: any) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: String(m.content).slice(0, 1500) }));
+    const page = Math.floor(Number(body.page)) || 1;
+    if (!msgs.length || msgs[msgs.length - 1].role !== 'user') return fail('Type a question first.');
+    const { data: job, error: jErr } = await admin.from('ai_sub_jobs').insert({ user_id: user!.id, user_email: user!.email || null, status: 'queued', status_label: 'Looking at the sheet…',
+      payload: { kind: 'bid_ask', takeoff_id: t.id, file_path: t.file_path, page, messages: msgs, item: body.item ? { name: String(body.item.name || '').slice(0, 140), what_the_ai_said: String(body.item.note || '').slice(0, 400) } : undefined } }).select('id').single();
+    if (jErr || !job) return fail('Could not start that. Try again.', 500);
+    return NextResponse.json({ ok: true, job: job.id });
   }
   // The AI marks where one item is on a sheet; the app then measures it from the drawing's own lines
   if (body.action === 'measure') {
