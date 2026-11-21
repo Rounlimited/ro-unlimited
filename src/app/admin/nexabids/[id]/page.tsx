@@ -6,7 +6,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Tra
 import {
   type Pt, type TakeoffData, type TakeoffItem, type TakeoffKind, type TakeoffUnit,
   TAKEOFF_COLORS, UNITS_FOR, KIND_LABEL, PRINTED_SCALES, emptyTakeoff, normalizeTakeoff, itemQuantity, fmtQty, money,
-  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, bidTotals, type AiRead, type AiSheet, type BidPricing,
+  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, bidTotals, type AiRead, type AiSheet, type BidPricing, type AiDraft, type DraftItem,
 } from '@/lib/takeoff';
 import { readSheetVectors, snapPoint, traceRun, shapeAt, matchSymbols, type SheetVectors } from '@/lib/takeoff-vectors';
 
@@ -35,7 +35,7 @@ export default function TakeoffPage() {
   const [activeId, setActiveId] = useState('');
   const [draft, setDraft] = useState<Pt[]>([]);
   const [scalePts, setScalePts] = useState<Pt[]>([]);
-  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai' | 'bid'>(null);
+  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai' | 'bid' | 'draft'>(null);
   // What the AI read off the sheets (names, scales, schedules, notes), and whether this sign-in may start a read
   const [ai, setAi] = useState<AiRead | null>(null);
   const [canRead, setCanRead] = useState(false);
@@ -112,15 +112,24 @@ export default function TakeoffPage() {
   // 'Busy' only while the worker keeps reporting in; if it has gone quiet for 5 minutes the read is treated as stopped
   const aiFresh = !!ai?.updated_at && Date.now() - new Date(ai.updated_at).getTime() < 5 * 60000;
   const aiBusy = (ai?.status === 'queued' || ai?.status === 'working') && aiFresh;
+  const bidDraft: AiDraft | null = ai?.draft || null;
+  const draftBusy = !!bidDraft && (bidDraft.status === 'queued' || bidDraft.status === 'working') && ai?.status !== 'error' && Date.now() - Math.max(new Date(bidDraft.updated_at || 0).getTime(), new Date(ai?.updated_at || 0).getTime()) < 12 * 60000;
   useEffect(() => {
-    if (!aiBusy) return;
+    if (!aiBusy && !draftBusy) return;
     const t = setInterval(async () => {
       const r = await fetch('/api/admin/takeoffs/' + id).catch(() => null);
       const row = r && r.ok ? await r.json().catch(() => null) : null;
       if (row?.ai) setAi(row.ai);
     }, 4000);
     return () => clearInterval(t);
-  }, [aiBusy, id]);
+  }, [aiBusy, draftBusy, id]);
+  const startDraft = async () => {
+    setAiNote('');
+    const r = await fetch('/api/admin/takeoffs/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'draft' }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    if (!r || !r.ok) { setAiNote(d.error || 'Could not start that. Try again.'); return; }
+    setAi(d.ai);
+  };
   const startRead = async () => {
     setAiNote('');
     const r = await fetch('/api/admin/takeoffs/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'read' }) }).catch(() => null);
@@ -462,6 +471,7 @@ export default function TakeoffPage() {
           </div>
           <div className={`${panelOpen ? '' : 'hidden lg:block'} flex-1 min-h-0 overflow-y-auto px-3 pb-2 space-y-2`}>
             <AiCard ai={ai} busy={aiBusy} canRead={canRead} pages={pages} sheet={aiPage} note={aiNote} onStart={startRead} onOpen={() => setSheet('ai')} />
+            {ai?.status === 'done' && <DraftCard draft={bidDraft} busy={draftBusy} canRead={canRead} taken={!!data.draftTaken} onStart={startDraft} onOpen={() => setSheet('draft')} />}
             {data.items.length === 0 && <p className="text-[16px] text-white/80 leading-snug px-1">Add what you want to measure: a pipe run, a slab, catch basins. Then tap it out on the sheet.</p>}
             {data.items.map((it) => {
               const q = itemQuantity(it, data.scales);
@@ -476,6 +486,7 @@ export default function TakeoffPage() {
                         {fmtQty(q.quantity, it.unit)} {it.unit}{it.unitCost > 0 ? ` × ${money(it.unitCost)} = ${money(q.quantity * it.unitCost)}` : ' · no price yet'}
                       </span>
                       {q.unscaled > 0 && <span className="block text-[14px] text-[#f0a04b] leading-snug">{q.unscaled} left out: that sheet has no scale</span>}
+                      {!!it.hint && !it.shapes.length && !it.printedQty && <span className="block text-[14px] text-[#f0a04b] leading-snug">To measure: {it.hint}</span>}
                       {!!it.printedQty && !it.shapes.length && <span className="block text-[14px] text-[#9ecbff] leading-snug">From the plans{it.printedNote ? `: ${it.printedNote}` : ''}. Not measured.</span>}
                       {(() => { const ag = qtyAgreement(it, data.scales); if (!ag) return null; return ag.state === 'match'
                         ? <span className="block text-[14px] font-semibold text-[#4ade80] leading-snug">Matches the plans ({fmtQty(ag.printed, it.unit)} {it.unit} printed)</span>
@@ -483,6 +494,11 @@ export default function TakeoffPage() {
                     </span>
                     <span className="text-[14px] font-bold text-[#E5C76B] shrink-0">{on ? 'Measuring' : 'Measure'}</span>
                   </button>
+                  {!!it.hintPage && !it.shapes.length && !it.printedQty && (
+                    <div className="px-3 pb-2.5">
+                      <button onClick={() => { if (it.hintPage !== page) setPage(it.hintPage!); pick(it.id); }} className="w-full min-h-[48px] rounded-lg bg-[#f0a04b]/20 border border-[#f0a04b]/70 text-[16px] font-bold">Measure it on {sheetLabel(it.hintPage) || `sheet ${it.hintPage}`}</button>
+                    </div>
+                  )}
                   {it.id === activeId && (
                     <div className="flex gap-2 px-3 pb-2.5">
                       <button onClick={() => { setEditing(it); setSheet('item'); }} className="flex-1 min-h-[48px] rounded-lg border border-white/25 text-[16px] font-semibold flex items-center justify-center gap-1.5"><Pencil size={18} /> Name and price</button>
@@ -557,6 +573,12 @@ export default function TakeoffPage() {
           onScale={(fpi, label) => { change((d) => ({ ...d, scales: { ...d.scales, [String(page)]: scaleFromPrinted(fpi)! }, scaleNotes: { ...(d.scaleNotes || {}), [String(page)]: `Printed scale ${label}, read by the AI. Check it against a dimension.` } })); }}
           onAdd={addFromPlans} />
       )}
+      {sheet === 'draft' && bidDraft?.status === 'done' && (
+        <DraftSheet draft={bidDraft} have={data.items.map((i) => i.name.toLowerCase())} onClose={() => setSheet(null)}
+          onAdd={(list) => { change((d) => ({ ...d, draftTaken: true, items: [...d.items, ...list.map((x, k) => { const u = unitFromPrinted(x.unit); return { id: uid(), name: x.name, kind: u.kind, unit: u.unit, color: TAKEOFF_COLORS[(d.items.length + k) % TAKEOFF_COLORS.length], unitCost: 0, group: x.group,
+            printedQty: x.quantity || undefined, printedNote: x.quantity ? (x.source === 'table' ? `a table on ${x.sheet || 'the plans'}` : x.source === 'lump' ? 'priced as one lump' : `printed on ${x.sheet || 'the plans'}`) : undefined,
+            hint: x.quantity ? undefined : (x.measure || undefined), hintPage: x.quantity ? undefined : (x.page || undefined), shapes: [] }; })] })); setSheet(null); }} />
+      )}
       {sheet === 'bid' && <BidSheet takeoffId={id} data={data} onChange={(p) => change((d) => ({ ...d, pricing: p }))} onClose={() => setSheet(null)} />}
       {sheet === 'send' && <SendSheet takeoffId={id} data={data} planName={name} onClose={() => setSheet(null)} />}
     </div>
@@ -616,6 +638,90 @@ function AiCard({ ai, busy, canRead, pages, sheet, note, onStart, onOpen }: { ai
       </button>
       {note && <p className="text-[15px] text-red-200 mt-1.5 px-1">{note}</p>}
     </div>
+  );
+}
+
+/** The AI's draft list of everything to price: start it, watch it, open it. */
+function DraftCard({ draft, busy, canRead, taken, onStart, onOpen }: { draft: AiDraft | null; busy: boolean; canRead: boolean; taken: boolean; onStart: () => void; onOpen: () => void }) {
+  if (busy) {
+    return (
+      <div className="rounded-xl border border-[#4ade80]/50 bg-[#4ade80]/10 px-3 py-3">
+        <p className="text-[17px] font-bold leading-snug flex items-center gap-2"><Loader2 size={20} className="animate-spin text-[#8fe3a8] shrink-0" /> Drafting the list of things to price</p>
+        <p className="text-[15px] text-white/85 leading-snug mt-0.5">The AI is going through everything it read. About a minute.</p>
+      </div>
+    );
+  }
+  if (draft?.status === 'done' && draft.items?.length) {
+    const withQty = draft.items.filter((i) => i.quantity).length;
+    return (
+      <button onClick={onOpen} className={`w-full text-left rounded-xl border px-3 py-2.5 flex items-center gap-3 ${taken ? 'border-white/20 bg-white/[0.04]' : 'border-[#4ade80]/70 bg-[#4ade80]/12'}`}>
+        <List size={22} className="text-[#8fe3a8] shrink-0" />
+        <span className="flex-1 min-w-0">
+          <span className="block text-[17px] font-bold leading-snug">{taken ? 'Open the AI’s list again' : `The AI drafted ${draft.items.length} things to price`}</span>
+          <span className="block text-[15px] text-white/85 leading-snug">{withQty} with a quantity from the plans · {draft.items.length - withQty} to measure</span>
+        </span>
+        <ChevronDown size={22} className="-rotate-90 text-white/70 shrink-0" />
+      </button>
+    );
+  }
+  if (!canRead) return null;
+  return (
+    <button onClick={onStart} className="w-full text-left rounded-xl border border-[#4ade80]/50 bg-[#4ade80]/10 px-3 py-2.5 flex items-center gap-3">
+      <List size={22} className="text-[#8fe3a8] shrink-0" />
+      <span className="flex-1 min-w-0">
+        <span className="block text-[17px] font-bold leading-snug">{draft?.status === 'error' || draft ? 'Try drafting the list again' : 'Have the AI draft the list of things to price'}</span>
+        <span className="block text-[15px] text-white/85 leading-snug">{draft?.error || 'Everything in the plans, by trade, with a quantity or where to measure it.'}</span>
+      </span>
+    </button>
+  );
+}
+
+/** Review the draft: pick what to bring in. Quantities are only ones the plans state; the rest say where to measure. */
+function DraftSheet({ draft, have, onAdd, onClose }: { draft: AiDraft; have: string[]; onAdd: (items: DraftItem[]) => void; onClose: () => void }) {
+  const items = draft.items || [];
+  const [on, setOn] = useState<boolean[]>(() => items.map((i) => !have.includes(i.name.toLowerCase())));
+  const [showWatch, setShowWatch] = useState(false);
+  const groups = useMemo(() => { const m = new Map<string, number[]>(); items.forEach((it, i) => { m.set(it.group, [...(m.get(it.group) || []), i]); }); return Array.from(m.entries()); }, [items]);
+  const count = on.filter(Boolean).length;
+  return (
+    <Sheet title="The AI’s list of things to price" onClose={onClose}>
+      {draft.summary && <p className="text-[17px] text-white/90 leading-relaxed">{draft.summary}</p>}
+      <p className="text-[15px] text-[#f0a04b] leading-snug mt-1.5">Drafted by the AI from what the plans print. Check it against the sheets: it can miss things. It never guesses a quantity.</p>
+      {(draft.watch_outs || []).length > 0 && (
+        <div className="mt-3 rounded-xl border border-[#f0a04b]/60 bg-[#f0a04b]/10">
+          <button onClick={() => setShowWatch((v) => !v)} className="w-full min-h-[48px] px-3 text-left flex items-center gap-2"><AlertTriangle size={20} className="text-[#f0a04b] shrink-0" /><span className="flex-1 text-[16px] font-bold">{draft.watch_outs!.length} things to watch out for</span>{showWatch ? <ChevronUp size={22} /> : <ChevronDown size={22} />}</button>
+          {showWatch && <ul className="px-3 pb-3 space-y-1.5">{draft.watch_outs!.map((w, i) => <li key={i} className="text-[16px] text-white/90 leading-snug">• {w}</li>)}</ul>}
+        </div>
+      )}
+      <div className="flex gap-2 mt-3">
+        <button onClick={() => setOn(items.map(() => true))} className="flex-1 min-h-[44px] rounded-lg border border-white/25 text-[15px] font-semibold">Pick all</button>
+        <button onClick={() => setOn(items.map(() => false))} className="flex-1 min-h-[44px] rounded-lg border border-white/25 text-[15px] font-semibold">Pick none</button>
+      </div>
+      {groups.map(([name, idx]) => (
+        <div key={name}>
+          <p className="text-[14px] font-bold uppercase tracking-wide text-[#E5C76B] mt-4 mb-1.5">{name} ({idx.length})</p>
+          <div className="space-y-1.5">
+            {idx.map((i) => { const it = items[i]; const dup = have.includes(it.name.toLowerCase()); return (
+              <button key={i} type="button" role="switch" aria-checked={!!on[i]} onClick={() => setOn((v) => v.map((x, k) => (k === i ? !x : x)))}
+                className={`w-full text-left rounded-xl border px-3 py-2.5 flex items-start gap-3 ${on[i] ? 'border-[#C9A84C]/60 bg-[#C9A84C]/10' : 'border-white/15 bg-white/[0.03]'}`}>
+                <span className={`shrink-0 mt-0.5 w-7 h-7 rounded-md border-2 flex items-center justify-center ${on[i] ? 'bg-[#C9A84C] border-[#C9A84C] text-black' : 'border-white/40 text-transparent'}`}><Check size={18} /></span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[17px] font-semibold leading-snug break-words">{it.name}</span>
+                  {it.quantity
+                    ? <span className="block text-[15px] font-semibold text-[#8fe3a8] leading-snug">{it.quantity.toLocaleString('en-US')} {it.unit} · {it.source === 'table' ? `from a table on ${it.sheet || 'the plans'}` : it.source === 'lump' ? 'one lump' : `printed on ${it.sheet || 'the plans'}`}</span>
+                    : <span className="block text-[15px] text-[#f0a04b] leading-snug">Measure{it.sheet ? ` on ${it.sheet}` : ''}: {it.measure || 'not stated on the plans'}</span>}
+                  {it.note && <span className="block text-[14px] text-white/70 leading-snug">{it.note}</span>}
+                  {dup && <span className="block text-[14px] text-white/60 leading-snug">Already on your list</span>}
+                </span>
+              </button>
+            ); })}
+          </div>
+        </div>
+      ))}
+      <div className="sticky bottom-0 -mx-4 px-4 pt-3 pb-1 mt-4 bg-[#141414]">
+        <button disabled={!count} onClick={() => onAdd(items.filter((_, i) => on[i]))} className="w-full min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold disabled:opacity-40">Add {count} to my list</button>
+      </div>
+    </Sheet>
   );
 }
 

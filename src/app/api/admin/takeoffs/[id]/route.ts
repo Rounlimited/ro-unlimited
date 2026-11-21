@@ -52,10 +52,24 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const busy = cur && (cur.status === 'queued' || cur.status === 'working') && Date.now() - new Date(cur.updated_at || 0).getTime() < 10 * 60000;
     if (busy) return NextResponse.json({ ok: true, already: true, ai: cur });
     const now = new Date().toISOString();
-    const { error: jErr } = await admin.from('ai_sub_jobs').insert({ user_id: user!.id, user_email: user!.email || null, status: 'queued', status_label: 'Waiting to read the plans…', payload: { kind: 'read_plans', takeoff_id: t.id, file_path: t.file_path } });
+    const { error: jErr } = await admin.from('ai_sub_jobs').insert({ user_id: user!.id, user_email: user!.email || null, status: 'queued', status_label: 'Waiting to read the plans…', payload: { kind: 'read_plans', takeoff_id: t.id, file_path: t.file_path, then_draft: true } });
     if (jErr) return fail('Could not start that. Try again.', 500);
-    const ai = { status: 'queued', done: 0, total: 0, sheets: {}, updated_at: now };
+    const ai = { status: 'queued', done: 0, total: 0, sheets: {}, updated_at: now, draft: { status: 'queued', updated_at: now } };
     await admin.from('takeoffs').update({ ai }).eq('id', t.id);
+    return NextResponse.json({ ok: true, ai });
+  }
+  // Draft (or re-draft) the list of things to price from a set that has already been read
+  if (body.action === 'draft') {
+    const user = await getServerUser(req).catch(() => null);
+    if (!mayRead(user?.email)) return fail('The AI is not switched on for this sign-in yet.', 403);
+    const { data: t } = await admin.from('takeoffs').select('id, ai').eq('id', params.id).maybeSingle();
+    const cur = (t?.ai || null) as any;
+    if (!cur || cur.status !== 'done') return fail('Have the AI read the plans first.');
+    const now = new Date().toISOString();
+    const { error: jErr } = await admin.from('ai_sub_jobs').insert({ user_id: user!.id, user_email: user!.email || null, status: 'queued', status_label: 'Drafting the list…', payload: { kind: 'draft_bid', takeoff_id: t!.id } });
+    if (jErr) return fail('Could not start that. Try again.', 500);
+    const ai = { ...cur, updated_at: now, draft: { status: 'queued', updated_at: now } };
+    await admin.from('takeoffs').update({ ai }).eq('id', t!.id);
     return NextResponse.json({ ok: true, ai });
   }
   // Remembers what he charges for something, so the next bid can fill it in

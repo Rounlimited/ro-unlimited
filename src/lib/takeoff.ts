@@ -21,6 +21,9 @@ export type TakeoffItem = {
   wastePct?: number;         // extra added on top of what was measured
   printedQty?: number;       // a quantity the plans themselves state (read by the AI or typed), in this item's unit
   printedNote?: string;      // where that came from, e.g. "Sheet E.1, light fixture schedule"
+  group?: string;            // the trade it belongs to (becomes the phase on the estimate)
+  hint?: string;             // what to measure for it, in words (from the AI's draft list)
+  hintPage?: number;         // the sheet to measure it on
   shapes: TakeoffShape[];
 };
 export type TakeoffData = {
@@ -28,6 +31,7 @@ export type TakeoffData = {
   scaleNotes?: Record<string, string>; // page number -> how the scale was set, in words
   items: TakeoffItem[];
   pricing?: BidPricing;                // overhead, profit, contingency and the floor he will not bid under
+  draftTaken?: boolean;                // he has been through the AI's draft list once
 };
 
 export const TAKEOFF_COLORS = ['#E5484D', '#3B8DD4', '#35D07F', '#F0A04B', '#B57BEE', '#12B5CB', '#E93D82', '#C9A84C'];
@@ -43,6 +47,7 @@ export function normalizeTakeoff(raw: unknown): TakeoffData {
     scaleNotes: d.scaleNotes && typeof d.scaleNotes === 'object' ? d.scaleNotes : {},
     items: Array.isArray(d.items) ? d.items.filter((i) => i && Array.isArray(i.shapes)) : [],
     pricing: cleanPricing(d.pricing),
+    draftTaken: !!d.draftTaken,
   };
 }
 
@@ -142,7 +147,7 @@ export type TakeoffLine = { description: string; quantity: number; unit: string;
 export function takeoffLines(data: TakeoffData, phase = 'From plans'): TakeoffLine[] {
   return data.items.map((it) => {
     const { quantity } = itemQuantity(it, data.scales);
-    return { description: it.name.trim() || 'Unnamed item', quantity: lineQty(quantity, it.unit), unit: it.unit, unit_cost: Math.max(0, Number(it.unitCost) || 0), phase, category: 'other' };
+    return { description: it.name.trim() || 'Unnamed item', quantity: lineQty(quantity, it.unit), unit: it.unit, unit_cost: Math.max(0, Number(it.unitCost) || 0), phase: it.group ? it.group.slice(0, 60) : phase, category: 'other' };
   }).filter((l) => l.quantity > 0);
 }
 
@@ -188,7 +193,10 @@ export type AiSheet = {
   quantities: { item: string; quantity: number; unit: string; printed: string }[];
   notes: string[]; scanned?: boolean; error?: string;
 };
-export type AiRead = { status: 'queued' | 'working' | 'done' | 'error'; done?: number; total?: number; sheets?: Record<string, AiSheet>; error?: string; started_at?: string; finished_at?: string; updated_at?: string };
+/** The AI's draft of everything to price, built from what it read off the sheets. A quantity is only ever one the plans state. */
+export type DraftItem = { name: string; group: string; unit: string; quantity: number | null; source: 'table' | 'printed' | 'measure' | 'lump'; page: number; sheet: string; measure: string; note: string };
+export type AiDraft = { status: 'queued' | 'working' | 'done' | 'error'; summary?: string; items?: DraftItem[]; watch_outs?: string[]; error?: string; updated_at?: string };
+export type AiRead = { status: 'queued' | 'working' | 'done' | 'error'; draft?: AiDraft; done?: number; total?: number; sheets?: Record<string, AiSheet>; error?: string; started_at?: string; finished_at?: string; updated_at?: string };
 
 /** Which of our units a printed unit maps to. */
 export function unitFromPrinted(u: string): { kind: TakeoffKind; unit: TakeoffUnit } {
