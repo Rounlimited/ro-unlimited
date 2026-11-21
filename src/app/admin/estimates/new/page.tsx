@@ -928,7 +928,7 @@ export default function NewEstimateWizard() {
             />
           )}
           {currentStep === 3 && (
-            <div className="space-y-8">
+            <div className="space-y-8 min-w-0 max-w-full">
               <WizardStep3
                 content={scopeHtml}
                 onSave={html => { setScopeHtml(html); queueScopeSave(html); }}

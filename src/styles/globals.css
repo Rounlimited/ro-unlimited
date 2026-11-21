@@ -930,7 +930,8 @@ body.admin-mode > div > div > div > main.min-h-screen { min-height: auto !import
 @media (prefers-reduced-motion: reduce) { .ro-mail-up, .ro-mail-left { animation: none; } }
 
 /* ── Scope of Work editor: sections, sub-headings and tables ── */
-.scope-editor .ProseMirror { min-height: 260px; outline: none; color: #ece4d8; line-height: 1.7; padding: 18px; }
+.scope-editor { min-width: 0; max-width: 100%; overflow: hidden; }
+.scope-editor .ProseMirror { min-height: 260px; outline: none; color: #ece4d8; line-height: 1.7; padding: 18px; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
 .scope-editor .ProseMirror > * + * { margin-top: 0.75em; }
 .scope-editor .ProseMirror h2 { font-size: 1.3em; font-weight: 700; color: #fff; margin-top: 1.5em; padding-bottom: 0.3em; border-bottom: 2px solid rgba(201,168,76,0.55); line-height: 1.3; }
 .scope-editor .ProseMirror h2:first-child { margin-top: 0; }
@@ -941,8 +942,8 @@ body.admin-mode > div > div > div > main.min-h-screen { min-height: auto !import
 .scope-editor .ProseMirror blockquote { border-left: 4px solid rgba(255,255,255,0.25); padding-left: 1em; }
 .scope-editor .ProseMirror a { color: #D4B965; text-decoration: underline; }
 .scope-editor .ProseMirror .tableWrapper { overflow-x: auto; margin: 1em 0; }
-.scope-editor .ProseMirror table { border-collapse: collapse; width: max-content; min-width: 100%; max-width: none; table-layout: auto; }
-.scope-editor .ProseMirror th, .scope-editor .ProseMirror td { border: 1px solid rgba(255,255,255,0.22); padding: 9px 11px; vertical-align: top; text-align: left; min-width: 96px; max-width: 280px; position: relative; }
+.scope-editor .ProseMirror table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; border-collapse: collapse; width: 100%; max-width: 100%; table-layout: auto; margin: 1em 0; }
+.scope-editor .ProseMirror th, .scope-editor .ProseMirror td { border: 1px solid rgba(255,255,255,0.22); padding: 9px 11px; vertical-align: top; text-align: left; min-width: 110px; max-width: 260px; position: relative; overflow-wrap: break-word; word-break: normal; }
 .scope-editor .ProseMirror th { background: rgba(201,168,76,0.16); color: #fff; font-weight: 700; }
 .scope-editor .ProseMirror td > p, .scope-editor .ProseMirror th > p { margin: 0; }
 .scope-editor .ProseMirror .selectedCell::after { content: ""; position: absolute; inset: 0; background: rgba(201,168,76,0.22); pointer-events: none; }

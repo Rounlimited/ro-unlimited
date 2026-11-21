@@ -143,7 +143,7 @@ export default function WizardStep3({ content, onSave }: Props) {
   const Sep = () => <span className="shrink-0 w-px h-7 bg-white/15 mx-1" />;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0 max-w-full">
       <p className="text-[17px] text-white/75 leading-relaxed">
         What the job includes. This is what the customer reads, so sections and tables make it easy to follow.
       </p>
@@ -217,8 +217,8 @@ export default function WizardStep3({ content, onSave }: Props) {
         </div>
       )}
 
-      <div className="border border-white/15 rounded-xl overflow-hidden bg-[#111]">
-        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-white/10 bg-[#0d0d0d]">
+      <div className="border border-white/15 rounded-xl overflow-hidden bg-[#111] min-w-0 max-w-full">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-white/10 bg-[#0d0d0d]">
           <div className="inline-flex rounded-lg bg-white/5 p-1">
             <button type="button" onClick={() => setPreview(false)} aria-pressed={!preview}
               className={`min-h-[44px] px-3.5 rounded-md text-[16px] font-semibold flex items-center gap-2 ${!preview ? 'bg-[#C9A84C] text-black' : 'text-white/80'}`}><Pencil size={17} /> Write</button>
