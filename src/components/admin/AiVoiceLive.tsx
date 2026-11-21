@@ -68,6 +68,10 @@ export default function AiVoiceLive({ ctx, history, currentPage, onNavigate, onC
   onOutOfCredit: () => void;
   onFallback: (byChoice: boolean) => void;   // switch to the standard voice (ctx is still open and handed over)
 }) {
+  const greetedRef = useRef(false);
+  const micSinceRef = useRef(0);        // when microphone sound first arrived
+  const micHeardRef = useRef(0);        // last time the microphone was anything but dead silent
+  const [micSilent, setMicSilent] = useState(false);
   const [phase, setPhaseState] = useState<Phase>('starting');
   const [err, setErr] = useState('');
   const [muted, setMuted] = useState(false);
@@ -193,6 +197,14 @@ export default function AiVoiceLive({ ctx, history, currentPage, onNavigate, onC
         for (const f of q) send({ type: 'input_audio_buffer.append', audio: b64FromPcm(f) });
         touch();
         if (phaseRef.current === 'connecting') setPhase(q.length ? 'hearing' : 'listening');
+        // First time the line comes up and he has not said anything yet: it speaks first, so he knows it is on
+        // and that sound is coming out. (People waited in silence for it to say something.)
+        if (!greetedRef.current && !q.length && turnsRef.current.length === 0) {
+          greetedRef.current = true;
+          send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text: '(The call just connected. Say only this, warmly: "I\'m here. Go ahead.")' }] } });
+          send({ type: 'response.create' });
+        }
+        greetedRef.current = true;
         break;
       }
       case 'input_audio_buffer.speech_started':
@@ -285,6 +297,8 @@ export default function AiVoiceLive({ ctx, history, currentPage, onNavigate, onC
   // Every chunk of microphone sound comes through here
   const onMic = (f24: Float32Array, rms: number) => {
     levelRef.current = Math.min(1, rms * 6);
+    if (!micSinceRef.current) micSinceRef.current = Date.now();
+    if (rms > 0.004) micHeardRef.current = Date.now();
     if (mutedRef.current) { prerollRef.current = []; return; }
     // Without the neural detector, plain loudness decides when to wake the line
     if (!hasNeuralRef.current) { loudMsRef.current = rms > 0.03 ? loudMsRef.current + 80 : 0; if (loudMsRef.current >= 240) onLocalSpeech(); }
@@ -419,6 +433,9 @@ export default function AiVoiceLive({ ctx, history, currentPage, onNavigate, onC
     const tick = setInterval(() => {
       if (endedRef.current) return;
       setLiveSecs(Math.round(totalConnectedMs() / 1000));
+      // The microphone is connected but has given nothing but silence since it started: tell him, in words.
+      const dead = !mutedRef.current && !micHeardRef.current && ((micSinceRef.current && Date.now() - micSinceRef.current > 7000) || (!micSinceRef.current && readyRef.current && Date.now() - connectedAtRef.current > 7000));
+      setMicSilent(!!dead);
       const quietFor = Date.now() - lastActiveRef.current;
       if (wsRef.current && readyRef.current && !playing() && !curRespRef.current && busyToolsRef.current === 0 && quietFor > IDLE_HANGUP_MS) hangUp();
     }, 1000);
@@ -446,6 +463,7 @@ export default function AiVoiceLive({ ctx, history, currentPage, onNavigate, onC
   const toggleBarge = () => { const v = !bargeIn; setBargeIn(v); ls.set('nxa-voice-barge', v ? '1' : '0'); };
 
   const label = err ? err
+    : micSilent ? 'I can’t hear your microphone. Check that the microphone is allowed for this app and that nothing else is using it, then tap End and try Talk again.'
     : phase === 'starting' ? 'Getting ready…'
     : muted ? 'Microphone is off'
     : phase === 'resting' ? (toolLabel || 'Resting. Just start talking.')
@@ -491,7 +509,7 @@ export default function AiVoiceLive({ ctx, history, currentPage, onNavigate, onC
           }}>
           <div className="nxv-orb" ref={orbRef} />
         </button>
-        <div className={'nxv-label' + (err ? ' bad' : '')}>{label}</div>
+        <div className={'nxv-label' + (err || micSilent ? ' bad' : '')}>{label}</div>
         <div className="nxv-caps">
           {youSaid && <p className="you">{youSaid}</p>}
           {aiSaying && <p className="ai">{aiSaying}</p>}
