@@ -881,6 +881,9 @@ for (const t of ALL_TOOLS as any[]) {
 }
 const SIGNED_ASK_MINUTES = 30;
 
+/** Look-up tools offered to the Claude app through the RO connector (test). Nothing here changes data. */
+const MCP_READ_TOOLS = ['search_customers', 'search_estimates', 'get_estimate_details', 'get_estimate_scope', 'search_invoices', 'get_invoice_details', 'get_ar_summary', 'list_tasks', 'get_business_stats', 'get_customer_activity', 'search_cost_library', 'get_job_weather', 'list_open_questions'];
+
 /* ── Claude through the owner's own subscription (TEST) ───────────────
    Model 'claude-sub' does not call any pay-per-use service. The question is put in a queue (ai_sub_jobs) and a
    worker on NexaVision's rack answers it with the Claude command-line tool, signed in with the owner's own
@@ -3467,6 +3470,17 @@ export async function POST(req: NextRequest) {
     if (workerSecret && process.env.PUSH_SECRET && workerSecret === process.env.PUSH_SECRET) {
       // The rack worker asking for one tool to be run for a queued subscription job. Nothing else is allowed this way.
       const b = await req.json().catch(() => ({}));
+      // The RO connector for the Claude app (TEST): only look-up tools, never anything that changes data.
+      if (b.mode === 'mcp_list') return NextResponse.json({ tools: ALL_TOOLS.filter((t) => MCP_READ_TOOLS.includes(t.name)).map((t) => ({ name: t.name, description: t.description, input_schema: t.input_schema })) });
+      if (b.mode === 'mcp_tool') {
+        const name = typeof b.tool?.name === 'string' ? b.tool.name : '';
+        if (!MCP_READ_TOOLS.includes(name)) return NextResponse.json({ result: JSON.stringify({ error: 'That tool is not available through the connector.' }) });
+        try {
+          const { result } = await executeTool(name, b.tool?.args && typeof b.tool.args === 'object' ? b.tool.args : {}, createAdminClient(), 'mcp');
+          const body = typeof result === 'string' ? result : JSON.stringify(result);
+          return NextResponse.json({ result: body.length > 40000 ? body.slice(0, 40000) + '\n…(cut short; ask for a narrower search)' : body });
+        } catch (e: any) { return NextResponse.json({ result: JSON.stringify({ error: 'Tool failed: ' + (e?.message || 'unknown') }) }); }
+      }
       if (b.mode !== 'sub_tool') return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
       const admin = createAdminClient();
       const { data: job } = await admin.from('ai_sub_jobs').select('id, status, payload, actions').eq('id', String(b.job_id || '')).maybeSingle();
