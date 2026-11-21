@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Sparkles, Upload, FileText, Check, RotateCcw, Loader2, ClipboardPaste, AlertTriangle, Table2 } from 'lucide-react';
 import ScopeView from '@/components/estimates/ScopeView';
 import { cleanScopeHtml, scopeStats, scopeText } from '@/lib/scope-doc';
+import { createClient as createBrowserSupabase } from '@/lib/supabase/client';
 
 /**
  * Full-screen sheet that turns a messy scope into an organized one.
@@ -18,7 +19,8 @@ import { cleanScopeHtml, scopeStats, scopeText } from '@/lib/scope-doc';
 type Mode = 'tidy' | 'import';
 type Phase = 'input' | 'working' | 'done' | 'error';
 
-const MAX_FILE = 3_200_000;
+const MAX_INLINE = 3_000_000;    // above this the file goes to storage first, then is read from there
+const MAX_FILE = 20_000_000;
 
 const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
   const r = new FileReader();
@@ -36,6 +38,7 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
   const [seconds, setSeconds] = useState(0);
+  const [sending, setSending] = useState(false);
   const pastedHtml = useRef('');           // the rich version of what was pasted (keeps real tables)
   const abort = useRef<AbortController | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -104,9 +107,26 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
   const startImport = async (direct: boolean) => {
     const payload: Record<string, unknown> = { direct };
     if (file) {
-      if (file.size > MAX_FILE) { setError('That file is over 3 MB. Send only the scope pages, or paste the text instead.'); setPhase('error'); return; }
-      try { payload.file = { name: file.name, mime: file.type, data: await toBase64(file) }; }
-      catch { setError('Could not read that file from this phone.'); setPhase('error'); return; }
+      if (file.size > MAX_FILE) { setError('That file is over 20 MB. Send only the scope pages, or paste the text instead.'); setPhase('error'); return; }
+      try {
+        if (file.size > MAX_INLINE) {
+          // Too big to travel inside the request: put it in storage, then tell the server where it is.
+          setPhase('working'); setResult(''); setError(''); setSending(true);
+          const u = await fetch('/api/admin/estimates/scope-organize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'upload_url', name: file.name }) });
+          const d = await u.json().catch(() => ({}));
+          if (!u.ok || !d.path) throw new Error(d.error || 'upload');
+          const up = await createBrowserSupabase().storage.from(d.bucket).uploadToSignedUrl(d.path, d.token, file, { contentType: file.type || 'application/octet-stream' });
+          if (up.error) throw new Error('upload');
+          payload.file = { name: file.name, mime: file.type, stored: d.path };
+        } else {
+          payload.file = { name: file.name, mime: file.type, data: await toBase64(file) };
+        }
+      } catch (e) {
+        setSending(false);
+        setError(e instanceof Error && e.message && e.message !== 'upload' && e.message !== 'read' ? e.message : 'Could not send that file from this phone. Check the connection and try again.');
+        setPhase('error'); return;
+      }
+      setSending(false);
     } else {
       payload.text = text;
       if (pastedHtml.current) payload.html = pastedHtml.current;
@@ -163,7 +183,7 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
                     <FileText size={22} className="text-[#D4B965] shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-[17px] font-semibold text-white truncate">{file.name}</p>
-                      <p className="text-[15px] text-white/65">{(file.size / 1024 / 1024).toFixed(file.size > 1_000_000 ? 1 : 2)} MB{file.size > MAX_FILE ? ' — too big, 3 MB is the limit' : ''}</p>
+                      <p className="text-[15px] text-white/65">{(file.size / 1024 / 1024).toFixed(file.size > 1_000_000 ? 1 : 2)} MB{file.size > MAX_FILE ? ' — too big, 20 MB is the limit' : ''}</p>
                     </div>
                     <button type="button" onClick={() => setFile(null)} aria-label="Remove file" className="w-12 h-12 rounded-xl flex items-center justify-center text-white/80 active:bg-white/10"><X size={22} /></button>
                   </div>
@@ -173,7 +193,7 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
                     <Upload size={21} /> Pick a file
                   </button>
                 )}
-                <p className="mt-2 text-[15px] text-white/60">Word (.docx), PDF, a photo of the page, or a text file. Up to 3 MB.</p>
+                <p className="mt-2 text-[15px] text-white/60">Word (.docx), PDF, a photo of the page, or a text file. Up to 20 MB.</p>
               </div>
             </div>
           )}
@@ -184,7 +204,7 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
                 <Loader2 size={22} className="animate-spin text-[#D4B965] shrink-0" />
                 <div className="flex-1">
                   <p className="text-[17px] font-semibold text-white">
-                    {result ? 'Building the sections and tables…' : seconds < 6 ? 'Reading it…' : 'Working out the sections and tables…'}
+                    {sending ? 'Sending the file…' : result ? 'Building the sections and tables…' : seconds < 6 ? 'Reading it…' : 'Working out the sections and tables…'}
                   </p>
                   <p className="text-[15px] text-white/65">
                     {result ? `${stats.sections} section${stats.sections === 1 ? '' : 's'}, ${stats.tables} table${stats.tables === 1 ? '' : 's'} so far` : 'A long scope can take a minute or two. Keep this screen open.'}
