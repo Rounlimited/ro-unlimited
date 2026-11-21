@@ -323,8 +323,9 @@ export default function AiVoice({ ctx, history, currentPage, onNavigate, onClose
         const isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
         try { const as: any = (navigator as any).audioSession; if (as) as.type = 'play-and-record'; } catch { /* older iOS */ }
         if (isIOS) {
-          const dest = ctx.createMediaStreamDestination(); out.connect(dest);
-          const el = document.createElement('audio'); el.setAttribute('playsinline', ''); el.autoplay = true; el.srcObject = dest.stream;
+          const pre = (ctx as any).nxaOut as { dest: MediaStreamAudioDestinationNode; el: HTMLAudioElement } | undefined;   // started in the Talk tap
+          const dest = pre?.dest || ctx.createMediaStreamDestination(); out.connect(dest);
+          const el = pre?.el || document.createElement('audio'); el.setAttribute('playsinline', ''); el.autoplay = true; el.srcObject = dest.stream;
           audioElRef.current = el; el.play().catch(() => { /* retried once the mic is live */ });
         } else out.connect(ctx.destination);
         const mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } as any });

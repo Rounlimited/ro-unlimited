@@ -22,7 +22,7 @@ import type { VoiceTurn } from './AiVoice';
 
 type Phase = 'starting' | 'resting' | 'connecting' | 'listening' | 'hearing' | 'thinking' | 'speaking' | 'ended';
 const RATE = 24000;
-const IDLE_HANGUP_MS = 20000;
+const IDLE_HANGUP_MS = 8000;     // the paid line closes after this much quiet; it reopens by itself when he talks
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const ls = {
   get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } },
@@ -347,7 +347,8 @@ export default function AiVoiceLive({ ctx, history, currentPage, onNavigate, onC
     let dead = false;
     (async () => {
       try {
-        await ctx.resume();
+        // On an iPhone this can sit forever if the sound system is not awake yet; never let it hold up the start.
+        await Promise.race([ctx.resume().catch(() => {}), new Promise((res) => setTimeout(res, 1200))]);
         // 1. Can the live service start at all? (Before touching the microphone.)
         const r = await api({ mode: 'voice_live_start', messages: history.slice(-12), currentPage });
         const d = await r.json().catch(() => ({}));
@@ -367,8 +368,9 @@ export default function AiVoiceLive({ ctx, history, currentPage, onNavigate, onC
         const isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
         try { const as: any = (navigator as any).audioSession; if (as) as.type = 'play-and-record'; } catch { /* older iOS */ }
         if (isIOS) {
-          const dest = ctx.createMediaStreamDestination(); out.connect(dest);
-          const el = document.createElement('audio'); el.setAttribute('playsinline', ''); el.autoplay = true; el.srcObject = dest.stream;
+          const pre = (ctx as any).nxaOut as { dest: MediaStreamAudioDestinationNode; el: HTMLAudioElement } | undefined;   // started in the Talk tap
+          const dest = pre?.dest || ctx.createMediaStreamDestination(); out.connect(dest);
+          const el = pre?.el || document.createElement('audio'); el.setAttribute('playsinline', ''); el.autoplay = true; el.srcObject = dest.stream;
           audioElRef.current = el; el.play().catch(() => {});
         } else out.connect(ctx.destination);
 

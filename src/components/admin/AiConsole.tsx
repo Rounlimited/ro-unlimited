@@ -379,6 +379,18 @@ export default function AiConsole() {
       let c: AudioContext;
       try { c = new AC({ sampleRate: 24000 }); } catch { c = new AC(); }
       c.resume().catch(() => {});
+      // iPhone: sound may only be started from inside a tap. The voice screen needs the server first, and by
+      // then the tap is over and the iPhone refuses to play. So the speaker is started here, silent, and reused.
+      try {
+        const ua = navigator.userAgent;
+        if (/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
+          try { const as: any = (navigator as any).audioSession; if (as) as.type = 'play-and-record'; } catch { /* older iOS */ }
+          const dest = c.createMediaStreamDestination();
+          const el = document.createElement('audio'); el.setAttribute('playsinline', ''); el.autoplay = true; el.srcObject = dest.stream;
+          el.play().catch(() => {});
+          (c as any).nxaOut = { dest, el };
+        }
+      } catch { /* the voice screen sets sound up itself */ }
       setVoiceEngine(ls.get('nxa-voice-engine') === 'standard' ? 'standard' : 'live');
       setVoiceCtx(c);
     } catch { say('This browser cannot do voice.'); }
