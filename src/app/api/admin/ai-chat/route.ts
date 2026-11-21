@@ -22,6 +22,39 @@ import { LICENSES, STATES_LICENSED, LICENSE_CLASSIFICATION_COUNT } from '@/lib/l
 import { headers as nextHeaders } from 'next/headers';
 import { hostedModel, estimateCost, AI_MARKUP } from '@/lib/ai-models';
 import { getBalance, maybeAutoTopUp, walletConfigured } from '@/lib/ai-wallet';
+import { applyScopeOps, cleanScopeHtml, diffScope, looksLikeMarkdown, markdownToScopeHtml, scopeBlocks, scopeText, sectionRanges, type ScopeOp } from '@/lib/scope-doc';
+
+/* ── Scope of work, as the assistant handles it ───────────────────────
+   The scope is stored as laid-out HTML (sections, real tables). The assistant never swaps a laid-out scope
+   for a run of text: it reads the numbered blocks and changes only the ones it names, and the scope as it
+   was is kept so one step can be put back. */
+const scopeTables = (html: string) => (String(html || '').match(/<table\b/gi) || []).length;
+const scopeIsLaidOut = (html: string) => scopeTables(html) > 0 || sectionRanges(html).length >= 2;
+const scopeEsc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/** Whatever the model hands over (HTML, Markdown or plain text) becomes clean scope HTML. */
+function scopeFromModel(input: unknown): string {
+  const t = String(input ?? '').trim();
+  if (!t) return '';
+  if (/<(p|h[1-6]|table|ul|ol|li|br|strong|em)\b/i.test(t)) return cleanScopeHtml(t);
+  if (looksLikeMarkdown(t)) return cleanScopeHtml(markdownToScopeHtml(t));
+  return t.split(/\n{2,}/).map((p) => '<p>' + scopeEsc(p.trim()).replace(/\n/g, '<br>') + '</p>').join('');
+}
+function scopeOutline(html: string) {
+  const text = scopeText(html);
+  return {
+    laid_out: scopeIsLaidOut(html),
+    sections: sectionRanges(html).map((r, i) => (i + 1) + '. ' + r.title),
+    tables: scopeTables(html),
+    blocks: scopeBlocks(html).length,
+    words: text ? text.split(/\s+/).length : 0,
+  };
+}
+const scopeUndoKey = (estimateId: string) => 'scope_undo_' + estimateId;
+async function keepScopeForUndo(supabase: any, estimateId: string, html: string) {
+  if (!scopeText(html)) return;
+  const { error } = await supabase.from('app_settings').upsert({ key: scopeUndoKey(estimateId), value: { html, at: new Date().toISOString() } }, { onConflict: 'key' });
+  if (error) console.error('[ai-chat] scope undo copy', error);
+}
 
 /**
  * Tool calls that go back through our own admin API must carry the caller's
@@ -483,7 +516,7 @@ const WRITE_TOOLS = [
         estimate_type: { type: 'string', description: 'Estimate type (exact value): quick_quote, preliminary, detailed, change_order, time_materials' },
         contract_type: { type: 'string', description: 'Contract type (exact value): fixed_price, cost_plus, time_materials, unit_price' },
         document_mode: { type: 'string', description: 'Document mode: estimate, contract, change_order, quick_quote' },
-        scope_of_work: { type: 'string', description: 'Scope of work text (maps to project_description)' },
+        scope_of_work: { type: 'string', description: 'Whole new scope of work. Only for an estimate whose scope is empty or plain text. If the scope is already laid out in sections or tables this is refused: use get_estimate_scope + edit_estimate_scope instead.' },
         project_address: { type: 'string', description: 'Project street address' },
         project_city: { type: 'string', description: 'Project city' },
         project_state: { type: 'string', description: 'Project state' },
@@ -506,6 +539,43 @@ const WRITE_TOOLS = [
         adjustment_label: { type: 'string', description: 'What the credit/charge is for — "Permit fees paid by owner", "Extra rock removal".' },
       },
       required: ['id'],
+    },
+  },
+  {
+    name: 'get_estimate_scope',
+    description: 'Read an estimate\'s scope of work as numbered blocks (each heading, paragraph, list or table is one block, shown as HTML). ALWAYS call this before edit_estimate_scope. On a long scope pass "section" to read one section only.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        estimate_id: { type: 'string', description: 'Estimate UUID' },
+        estimate_number: { type: 'string', description: 'Estimate number, if the UUID is not known' },
+        section: { type: 'number', description: 'Optional: section number from the outline, to read only that section' },
+      },
+    },
+  },
+  {
+    name: 'edit_estimate_scope',
+    description: 'Change parts of an estimate\'s scope of work without touching the rest: sections and tables you do not name stay exactly as they are. Block numbers come from the get_estimate_scope call you just made; all ops in one call use those numbers. After a call the numbers change, so read again before editing again. To change a table, replace that block with the whole corrected <table>. Pass undo: true (no ops) to put the scope back the way it was before the last change.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        estimate_id: { type: 'string', description: 'Estimate UUID (required)' },
+        ops: {
+          type: 'array',
+          description: 'The changes, by block number',
+          items: {
+            type: 'object',
+            properties: {
+              op: { type: 'string', description: 'replace | delete | insert_after | insert_before' },
+              block: { type: 'number', description: 'Block number from get_estimate_scope' },
+              html: { type: 'string', description: 'New content for replace/insert. HTML using only p, h2 (section heading), h3, ul, ol, li, strong, em, table/thead/tbody/tr/th/td. A Markdown table is also accepted.' },
+            },
+            required: ['op', 'block'],
+          },
+        },
+        undo: { type: 'boolean', description: 'true = put back the scope as it was before the last change' },
+      },
+      required: ['estimate_id'],
     },
   },
   {
@@ -843,7 +913,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
     case 'get_estimate_details': {
       let estimateQuery = supabase
         .from('estimates')
-        .select('id, estimate_number, project_name, project_address, project_city, project_state, project_zip, status, document_mode, division, estimate_type, contract_type, subtotal, overhead_percent, overhead_amount, markup_percent, markup_amount, tax_percent, tax_amount, contingency_percent, contingency_amount, permit_fees, total_override, adjustment_amount, adjustment_label, selections_total, total, signed_at, valid_until, notes, customer:customers(first_name, last_name, company_name, email, phone)');
+        .select('id, estimate_number, project_name, project_address, project_city, project_state, project_zip, status, document_mode, division, estimate_type, contract_type, subtotal, overhead_percent, overhead_amount, markup_percent, markup_amount, tax_percent, tax_amount, contingency_percent, contingency_amount, permit_fees, total_override, adjustment_amount, adjustment_label, selections_total, total, signed_at, valid_until, notes, project_description, customer:customers(first_name, last_name, company_name, email, phone)');
       if (input.estimate_id) {
         estimateQuery = estimateQuery.eq('id', input.estimate_id);
       } else if (input.estimate_number) {
@@ -863,6 +933,8 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       return {
         result: JSON.stringify({
           ...estimate,
+          project_description: undefined,
+          scope_of_work: scopeOutline(String((estimate as any).project_description || '')),
           line_items: lineItems || [],
           payment_schedule: payments || [],
           status_history: history || [],
@@ -1743,7 +1815,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
           estimate_type: input.estimate_type || null,
           contract_type: input.contract_type || null,
           division: input.division || null,
-          project_description: input.scope_of_work || null,
+          project_description: scopeFromModel(input.scope_of_work) || null,
           overhead_percent: input.overhead_percent ?? 0,
           markup_percent: input.markup_percent ?? 0,
           tax_percent: input.tax_percent ?? 0,
@@ -1770,8 +1842,16 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
 
       // Map scope_of_work to project_description
       if (fields.scope_of_work !== undefined) {
-        fields.project_description = fields.scope_of_work;
+        const next = scopeFromModel(fields.scope_of_work);
         delete fields.scope_of_work;
+        const { data: cur } = await supabase.from('estimates').select('project_description').eq('id', id).maybeSingle();
+        const was = String(cur?.project_description || '');
+        if (scopeIsLaidOut(was) && (scopeTables(next) < scopeTables(was) || sectionRanges(next).length < sectionRanges(was).length)) {
+          const o = scopeOutline(was);
+          return { result: `NOT CHANGED. This scope is laid out in ${o.sections.length} sections with ${o.tables} tables, and replacing it whole would lose ${o.tables - scopeTables(next)} tables and ${o.sections.length - sectionRanges(next).length} sections. Nothing was saved. Call get_estimate_scope, then edit_estimate_scope to change only the blocks that need changing.` };
+        }
+        await keepScopeForUndo(supabase, id, was);
+        fields.project_description = next || null;
       }
 
       if (Object.keys(fields).length === 0) return { result: 'Error: no fields provided to update.' };
@@ -1807,6 +1887,71 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       if (!data) return { result: 'Estimate not found.' };
       if (financialChanged) await syncScheduleAmounts(supabase, id, Number(data.total) || 0);
       return { result: `Estimate updated successfully. ${JSON.stringify({ success: true, id: data.id, estimate_number: data.estimate_number, subtotal: data.subtotal, total: data.total })}` };
+    }
+
+    case 'get_estimate_scope': {
+      let q = supabase.from('estimates').select('id, estimate_number, project_name, status, signed_at, project_description');
+      if (input.estimate_id || input.id) q = q.eq('id', input.estimate_id || input.id);
+      else if (input.estimate_number) q = q.eq('estimate_number', input.estimate_number);
+      else return { result: 'Please provide an estimate_id or estimate_number.' };
+      const { data: est } = await q.maybeSingle();
+      if (!est) return { result: 'Estimate not found.' };
+      const html = String(est.project_description || '');
+      const blocks = scopeBlocks(html);
+      if (!blocks.length) return { result: JSON.stringify({ id: est.id, estimate_number: est.estimate_number, scope: 'empty', note: 'No scope yet. Write one with update_estimate { id, scope_of_work }.' }) };
+      const ranges = sectionRanges(html);
+      const head = { id: est.id, estimate_number: est.estimate_number, project_name: est.project_name, status: est.status, signed: !!est.signed_at, outline: scopeOutline(html) };
+      let from = 0; let to = blocks.length;
+      const sec = Math.floor(Number(input.section));
+      if (sec >= 1 && ranges[sec - 1]) { from = ranges[sec - 1].start; to = ranges[sec - 1].end; }
+      else if (html.length > 60000) {
+        return { result: JSON.stringify({ ...head, note: 'This scope is long. Call get_estimate_scope again with "section" set to the section number you need.', section_blocks: ranges.map((r, i) => `${i + 1}. ${r.title}: blocks ${r.start + 1}-${r.end}`) }) };
+      }
+      const lines = blocks.slice(from, to).map((b, i) => `[${from + i + 1}] ${b}`).join('\n');
+      return { result: JSON.stringify(head) + '\nBLOCKS (use these numbers in edit_estimate_scope):\n' + lines };
+    }
+
+    case 'edit_estimate_scope': {
+      const estId = input.estimate_id || input.id;
+      if (!estId) return { result: 'Error: estimate_id is required.' };
+      const { data: est } = await supabase.from('estimates').select('id, estimate_number, project_description').eq('id', estId).maybeSingle();
+      if (!est) return { result: 'Estimate not found.' };
+      const was = String(est.project_description || '');
+
+      if (input.undo) {
+        const { data: kept } = await supabase.from('app_settings').select('value').eq('key', scopeUndoKey(est.id)).maybeSingle();
+        const back = String((kept?.value as { html?: string } | null)?.html || '');
+        if (!scopeText(back)) return { result: 'There is no earlier copy of this scope to put back.' };
+        const { error } = await supabase.from('estimates').update({ project_description: back, updated_at: new Date().toISOString() }).eq('id', est.id);
+        if (error) return { result: `Error putting the scope back: ${error.message}` };
+        await keepScopeForUndo(supabase, est.id, was);
+        return { result: `Scope put back the way it was. ${JSON.stringify({ success: true, estimate_number: est.estimate_number, outline: scopeOutline(back) })}` };
+      }
+
+      const total = scopeBlocks(was).length;
+      if (!total) return { result: 'This estimate has no scope yet. Write one with update_estimate { id, scope_of_work }.' };
+      const bad: string[] = [];
+      const ops: ScopeOp[] = [];
+      for (const o of Array.isArray(input.ops) ? input.ops : []) {
+        const block = Math.floor(Number(o?.block));
+        const op = String(o?.op || '');
+        if (!['replace', 'delete', 'insert_after', 'insert_before'].includes(op)) { bad.push(`unknown op "${op}"`); continue; }
+        if (!(block >= 1 && block <= total)) { bad.push(`block ${o?.block} does not exist (the scope has ${total} blocks)`); continue; }
+        if (op === 'delete') { ops.push({ op: 'delete', block }); continue; }
+        const html = scopeFromModel(o?.html);
+        if (!html) { bad.push(`${op} on block ${block} had no content`); continue; }
+        ops.push({ op: op as ScopeOp['op'], block, html });
+      }
+      if (bad.length) return { result: `NOT CHANGED: ${bad.join('; ')}. Call get_estimate_scope again and use its block numbers.` };
+      if (!ops.length) return { result: 'Error: give at least one op, or undo: true.' };
+
+      const next = applyScopeOps(was, ops);
+      if (!scopeText(next)) return { result: 'NOT CHANGED: that would leave the scope empty. If he really wants it cleared, he can use Clear all on the Scope step.' };
+      await keepScopeForUndo(supabase, est.id, was);
+      const { error } = await supabase.from('estimates').update({ project_description: next, updated_at: new Date().toISOString() }).eq('id', est.id);
+      if (error) return { result: `Error saving the scope: ${error.message}` };
+      const d = diffScope(scopeText(was), next);
+      return { result: `Scope changed. ${JSON.stringify({ success: true, estimate_number: est.estimate_number, blocks_changed: ops.length, tables_before: scopeTables(was), tables_after: scopeTables(next), sections_before: sectionRanges(was).length, sections_after: sectionRanges(next).length, words_removed: d.removed.slice(0, 25), words_added: d.added.slice(0, 25), note: 'Block numbers have changed: read the scope again before another edit. He can say "put it back" to undo this.' })}` };
     }
 
     case 'add_line_items': {
@@ -2840,6 +2985,7 @@ Document lifecycle: every doc is born a Quote, Estimate, or Proposal (its docume
 Progress views: the Progress tab and the Jobs board both have a "Show $" button that flips percent-complete displays to dollars earned (earned of contract value, per phase too). The Progress tab also has "Email Customer This Update" — one tap sends the customer a short branded email (current %, latest log line, link to their live project page); it warns before sending twice in one day. Scheduled progress reports are separate and still go through Reports.
 The Job Room (/admin/jobs/<id>, tap any job on the Jobs board) is JR's behind-the-scenes view of one job — internal only, the customer never sees any of it: money position (contract / earned / SPENT / billed / paid) with a live margin (earned minus spent), tap-in job costs by category (materials, sub, labor, equipment, hauling, fuel, permits), the full job log including internal-only entries, private notes, days-on-job and rain days, how many times the customer has opened their page, a "See What They See" button, and the email-update button. Costs are the new piece: logging spends there is what makes the margin and Over Budget real numbers.
 Link controls: every customer link can be paused ('off' \u2014 for phone-call edits; same link resumes with 'on'), replaced ('new' \u2014 old dies instantly, CONFIRM with the user first), killed, or extended 60 days \u2014 set_link_status, or the Project Page button on the estimate page / Job Room (tabs: Share, People, What they see, Activity, More). Vocabulary for JR: the customer's page is their “Project Page”; a shared person's link is “their link”; the portal email is a “sign-in link”. People on this project: each shared person has Can view or Can approve; only the owner signs; “Let the customer invite people” is a per-job switch.
+SCOPE OF WORK: a scope can be laid out in numbered sections with real tables (he builds it on the Scope step of the estimate). get_estimate_details shows its outline. To change a scope that already exists: get_estimate_scope, then edit_estimate_scope naming only the blocks that change — never retype the whole scope, and never send a laid-out scope back through update_estimate (it is refused). Change only what he asked for; do not reword, reorder or "tidy" anything else, and never change a number he did not mention. Afterwards say in one or two plain lines what changed (use words_removed / words_added) and that he can say "put it back". "Put it back" / "undo that" → edit_estimate_scope { estimate_id, undo: true }. A brand-new or empty scope: update_estimate { id, scope_of_work } (plain text, or Markdown with ## headings and | tables for a laid-out one). A full rebuild from a PDF or a messy paste is done on the Scope step ("Reorganize the whole scope"), not here — point him there.
 FIXED PRICE — THE FAST PATH (how JR usually bids; default to this):
 When he gives a job and a price in one breath — "estimate for Miller, septic and drive, 42,500" — build it in ONE go with NO follow-up questions:
   1. search_customers with the name. Exactly one match → use it. Several → pick the obvious one and say which you used. None → create_customer { name } with the name exactly as he said it and continue — NO questions. Mention it in the reply ("new customer — add their phone/email whenever") and move on.
@@ -2979,7 +3125,7 @@ const OPTIONS_TOOL_NAMES = new Set(['get_estimate_options','list_option_presets'
 
 const INVOICE_TOOL_NAMES = new Set(['search_invoices','get_invoice_details','get_ar_summary','create_invoice','update_invoice','record_invoice_payment','send_invoice']);
 
-const ESTIMATE_TOOL_NAMES = new Set(['create_estimate','get_estimate_details','search_estimates','add_line_items','update_line_items','delete_line_items','update_estimate','update_estimate_status','set_payment_schedule','send_estimate','duplicate_estimate','check_estimate_pricing','set_link_status','search_cost_library','search_templates','search_disclaimers','generate_share_link']);
+const ESTIMATE_TOOL_NAMES = new Set(['create_estimate','get_estimate_details','search_estimates','add_line_items','update_line_items','delete_line_items','update_estimate','get_estimate_scope','edit_estimate_scope','update_estimate_status','set_payment_schedule','send_estimate','duplicate_estimate','check_estimate_pricing','set_link_status','search_cost_library','search_templates','search_disclaimers','generate_share_link']);
 const TASK_TOOL_NAMES = new Set(['create_task','list_tasks','complete_task','snooze_task','update_task','delete_task','get_daily_briefing']);
 
 const ANALYTICS_TOOL_NAMES = new Set(['get_customer_activity', 'get_analytics_overview', 'get_website_traffic', 'get_industry_news', 'get_material_prices', 'get_alert_routing', 'refresh_news', 'get_ai_balance']);
@@ -3033,6 +3179,7 @@ const TOOL_STATUS_LABELS: Record<string, string> = {
   list_tasks: 'Checking your tasks…', get_daily_briefing: 'Building your briefing…',
   create_customer: 'Creating the customer…', update_customer: 'Updating the customer…',
   create_estimate: 'Creating the estimate…', update_estimate: 'Updating the estimate…',
+  get_estimate_scope: 'Reading the scope…', edit_estimate_scope: 'Changing the scope…',
   add_line_items: 'Adding line items…', update_line_items: 'Updating line items…',
   delete_line_items: 'Removing line items…', set_payment_schedule: 'Setting the payment schedule…',
   update_estimate_status: 'Updating status…', send_estimate: 'Sending the estimate…',
