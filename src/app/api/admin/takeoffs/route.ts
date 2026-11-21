@@ -16,6 +16,13 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient();
   const access = await nexaBidsAccess(admin);
   if (!access.active) return NextResponse.json({ error: NEXABIDS_LOCKED, locked: true, access, bids: [] }, { status: 402 });
+  // Prices he has charged before whose name matches what he is typing
+  if (req.nextUrl.searchParams.has('prices')) {
+    const q = (req.nextUrl.searchParams.get('prices') || '').trim().replace(/[%_,()]/g, ' ').slice(0, 60);
+    if (q.length < 3) return NextResponse.json([]);
+    const { data } = await admin.from('cost_items').select('id, name, unit, default_cost').ilike('name', '%' + q + '%').eq('is_active', true).gt('default_cost', 0).order('updated_at', { ascending: false }).limit(6);
+    return NextResponse.json(data || []);
+  }
   // Estimates a takeoff can be sent to: anything not signed, newest first.
   if (req.nextUrl.searchParams.get('estimates')) {
     const q = (req.nextUrl.searchParams.get('q') || '').trim().replace(/[%,()]/g, ' ');

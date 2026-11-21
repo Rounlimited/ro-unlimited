@@ -6,7 +6,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Tra
 import {
   type Pt, type TakeoffData, type TakeoffItem, type TakeoffKind, type TakeoffUnit,
   TAKEOFF_COLORS, UNITS_FOR, KIND_LABEL, PRINTED_SCALES, emptyTakeoff, normalizeTakeoff, itemQuantity, fmtQty, money,
-  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, type AiRead, type AiSheet,
+  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, bidTotals, type AiRead, type AiSheet, type BidPricing,
 } from '@/lib/takeoff';
 import { readSheetVectors, snapPoint, traceRun, shapeAt, matchSymbols, type SheetVectors } from '@/lib/takeoff-vectors';
 
@@ -35,7 +35,7 @@ export default function TakeoffPage() {
   const [activeId, setActiveId] = useState('');
   const [draft, setDraft] = useState<Pt[]>([]);
   const [scalePts, setScalePts] = useState<Pt[]>([]);
-  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai'>(null);
+  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai' | 'bid'>(null);
   // What the AI read off the sheets (names, scales, schedules, notes), and whether this sign-in may start a read
   const [ai, setAi] = useState<AiRead | null>(null);
   const [canRead, setCanRead] = useState(false);
@@ -80,6 +80,8 @@ export default function TakeoffPage() {
         if (!r.ok) throw new Error(row.error || 'Could not open those plans.');
         if (!row.file_url) throw new Error('The plan file is missing. Delete this one and bring the PDF in again.');
         setName(row.name || 'Plans'); setData(normalizeTakeoff(row.data)); setAi(row.ai || null); setCanRead(!!row.can_read);
+        // A new bid starts with his usual overhead and profit
+        if (!normalizeTakeoff(row.data).pricing) fetch('/api/admin/takeoffs/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'pricing_defaults' }) }).then((x) => x.json()).then((d) => { if (!dead && d?.pricing) setData((cur) => (cur.pricing ? cur : { ...cur, pricing: d.pricing })); }).catch(() => null);
         // @ts-ignore pdf.js is served from /public so the bundler leaves it alone
         const pdfjs = await import(/* webpackIgnore: true */ '/pdfjs/pdf.min.mjs');
         pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.mjs';
@@ -324,7 +326,8 @@ export default function TakeoffPage() {
     return draft.length >= 3 ? `${fmtQty(polygonArea(draft) * ftPerPt * ftPerPt, 'SF')} SF so far` : '';
   }, [active, draft, ftPerPt]);
 
-  const total = useMemo(() => data.items.reduce((t, it) => t + itemQuantity(it, data.scales).quantity * (Number(it.unitCost) || 0), 0), [data]);
+  const bid = useMemo(() => bidTotals(data), [data]);
+  const total = bid.price;
   const linesReady = useMemo(() => takeoffLines(data).length, [data]);
   const sw = 2.2 / view.k;   // line weight that stays the same on screen at any zoom
   const dot = 6 / view.k;
@@ -492,6 +495,15 @@ export default function TakeoffPage() {
             <button onClick={() => { setEditing(null); setSheet('item'); }} className="w-full min-h-[52px] rounded-xl border-2 border-dashed border-white/30 text-[17px] font-semibold flex items-center justify-center gap-2"><Plus size={22} /> Add something to measure</button>
           </div>
           <div className="px-3 pt-2 pb-2.5 border-t border-white/10">
+            {data.items.length > 0 && (
+              <button onClick={() => setSheet('bid')} className={`w-full min-h-[52px] mb-2 rounded-xl border px-3 text-left flex items-center gap-3 ${bid.belowFloor ? 'border-red-400 bg-red-500/15' : 'border-white/20 bg-white/5'}`}>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[16px] font-bold leading-tight">Cost {money(bid.cost)} → Bid {money(bid.price)}</span>
+                  <span className={`block text-[14px] leading-tight ${bid.belowFloor ? 'text-red-200 font-semibold' : 'text-white/75'}`}>{bid.belowFloor ? `Below your floor of ${bid.pricing.floorPct}% profit` : bid.pricing.overheadPct || bid.pricing.profitPct ? `Overhead ${bid.pricing.overheadPct}% · Profit ${bid.pricing.profitPct}%${bid.unpriced ? ` · ${bid.unpriced} not priced` : ''}` : 'Tap to add overhead and profit'}</span>
+                </span>
+                <ChevronDown size={22} className="-rotate-90 text-white/70 shrink-0" />
+              </button>
+            )}
             <button onClick={() => setSheet('send')} disabled={!linesReady} className="w-full min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold flex items-center justify-center gap-2 disabled:opacity-40">
               <Send size={20} /> Send to an estimate{total > 0 ? ` · ${money(total)}` : ''}
             </button>
@@ -545,6 +557,7 @@ export default function TakeoffPage() {
           onScale={(fpi, label) => { change((d) => ({ ...d, scales: { ...d.scales, [String(page)]: scaleFromPrinted(fpi)! }, scaleNotes: { ...(d.scaleNotes || {}), [String(page)]: `Printed scale ${label}, read by the AI. Check it against a dimension.` } })); }}
           onAdd={addFromPlans} />
       )}
+      {sheet === 'bid' && <BidSheet takeoffId={id} data={data} onChange={(p) => change((d) => ({ ...d, pricing: p }))} onClose={() => setSheet(null)} />}
       {sheet === 'send' && <SendSheet takeoffId={id} data={data} planName={name} onClose={() => setSheet(null)} />}
     </div>
   );
@@ -777,12 +790,14 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
   const save = () => {
     if (!name.trim()) { setErr('Give it a name, like 8 inch water main.'); return; }
     if (unit === 'CY' && !(Number(depth) > 0)) { setErr('Cubic yards needs the thickness in inches.'); return; }
+    if (Number(price) > 0) fetch('/api/admin/takeoffs/' + (typeof window !== 'undefined' ? location.pathname.split('/').pop() : ''), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'remember_price', name: name.trim(), unit, price: Number(price) }) }).catch(() => null);
     onSave({ id: item?.id || uid(), name: name.trim().slice(0, 120), kind, unit, color, unitCost: Math.max(0, Number(price) || 0), depthIn: unit === 'CY' ? Number(depth) : undefined, wastePct: Number(waste) > 0 ? Number(waste) : undefined, shapes: item?.shapes || [] });
   };
   return (
     <Sheet title={item ? 'Name and price' : 'What are you measuring?'} onClose={onClose}>
       <label className={labelCls}>Name</label>
       <input autoFocus={!item} value={name} onChange={(e) => { setName(e.target.value); setErr(''); }} placeholder="8 inch water main, building slab, catch basins" className={inputCls} />
+      <SavedPrices q={name} onPick={(c) => { setName(c.name); setPrice(String(c.default_cost)); if (!item) { const u = String(c.unit || '').toUpperCase(); const k: TakeoffKind | null = u === 'LF' ? 'length' : u === 'EA' ? 'count' : ['SF', 'SY', 'CY'].includes(u) ? 'area' : null; if (k) { setKind(k); setUnit(u as TakeoffUnit); } } }} />
       {!item && (<>
         <label className={`${labelCls} mt-3`}>How is it measured?</label>
         <div className="grid grid-cols-3 gap-2">
@@ -881,6 +896,68 @@ function NewEstimateBox({ planName, busy, onMade }: { planName: string; busy: bo
   );
 }
 
+/** Remembered prices that match what he is typing. */
+function SavedPrices({ q, onPick }: { q: string; onPick: (c: { name: string; unit: string; default_cost: number }) => void }) {
+  const [list, setList] = useState<{ id: string; name: string; unit: string; default_cost: number }[]>([]);
+  useEffect(() => {
+    const t = q.trim(); if (t.length < 3) { setList([]); return; }
+    const h = setTimeout(async () => {
+      const r = await fetch('/api/admin/takeoffs?prices=' + encodeURIComponent(t)).catch(() => null);
+      const d = r && r.ok ? await r.json().catch(() => []) : [];
+      setList((Array.isArray(d) ? d : []).filter((c: any) => Number(c.default_cost) > 0 && c.name.toLowerCase() !== t.toLowerCase()).slice(0, 4));
+    }, 300);
+    return () => clearTimeout(h);
+  }, [q]);
+  if (!list.length) return null;
+  return (
+    <div className="mt-2 space-y-1.5">
+      <p className="text-[14px] font-semibold text-white/75">Your saved prices</p>
+      {list.map((c) => (
+        <button key={c.id} type="button" onClick={() => { onPick(c); setList([]); }} className="w-full min-h-[48px] text-left rounded-lg border border-white/20 bg-white/[0.04] px-3 py-1.5 flex items-center gap-2">
+          <span className="flex-1 min-w-0 text-[16px] font-semibold leading-snug break-words">{c.name}</span>
+          <span className="text-[15px] text-[#E5C76B] font-bold shrink-0">{money(Number(c.default_cost))} / {c.unit}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Cost of the work, then his overhead, profit and contingency on top, with the floor he will not bid under. */
+function BidSheet({ takeoffId, data, onChange, onClose }: { takeoffId: string; data: TakeoffData; onChange: (p: BidPricing) => void; onClose: () => void }) {
+  const b = bidTotals(data); const p = b.pricing;
+  const [saved, setSaved] = useState(false);
+  const set = (k: keyof BidPricing, v: string) => { setSaved(false); onChange({ ...p, [k]: Math.max(0, Number(v) || 0) }); };
+  const row = (label: string, k: keyof BidPricing, amount: number | null, hint: string) => (
+    <div className="flex items-center gap-3 py-2 border-t border-white/10">
+      <span className="flex-1 min-w-0"><span className="block text-[17px] font-semibold leading-snug">{label}</span><span className="block text-[14px] text-white/70 leading-snug">{hint}</span></span>
+      <span className="flex items-center gap-1.5 shrink-0"><input inputMode="decimal" defaultValue={p[k] ? String(p[k]) : ''} onChange={(e) => set(k, e.target.value)} placeholder="0" className="w-[84px] min-h-[52px] px-3 rounded-xl bg-white/5 border border-white/25 text-[19px] font-bold text-right focus:outline-none focus:border-[#C9A84C]" /><span className="text-[18px] font-bold">%</span></span>
+      {amount !== null && <span className="w-[96px] text-right text-[16px] font-semibold text-white/85 shrink-0">{money(amount)}</span>}
+    </div>
+  );
+  const useAlways = async () => {
+    await fetch('/api/admin/takeoffs/' + takeoffId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'pricing_defaults', pricing: p }) }).catch(() => null);
+    setSaved(true);
+  };
+  return (
+    <Sheet title="Price the bid" onClose={onClose}>
+      <div className="flex items-center justify-between py-2"><span className="text-[17px] font-semibold">Cost of the work</span><span className="text-[19px] font-bold">{money(b.cost)}</span></div>
+      {b.unpriced > 0 && <p className="text-[15px] text-[#f0a04b] leading-snug -mt-1 mb-1">{b.unpriced} item{b.unpriced === 1 ? ' has' : 's have'} no price yet, so the cost is too low.</p>}
+      {row('Overhead', 'overheadPct', b.overhead, 'Office, trucks, insurance')}
+      {row('Profit', 'profitPct', b.profit, 'What you keep')}
+      {row('Contingency', 'contingencyPct', b.contingency, 'Room for surprises')}
+      <div className={`mt-2 rounded-xl px-4 py-3 ${b.belowFloor ? 'bg-red-500/20 border border-red-400' : 'bg-[#C9A84C]/15 border border-[#C9A84C]/60'}`}>
+        <div className="flex items-center justify-between"><span className="text-[18px] font-bold">Bid price</span><span className="text-[24px] font-extrabold">{money(b.price)}</span></div>
+        <p className="text-[15px] text-white/85 leading-snug mt-0.5">Profit is {money(b.profit)}, which is {b.marginOfPrice.toFixed(1)}% of the bid price.</p>
+        {b.belowFloor && <p className="text-[16px] font-bold text-red-100 leading-snug mt-1">This is below your floor of {p.floorPct}% profit. Raise the profit, or change the floor.</p>}
+      </div>
+      <p className="text-[15px] font-bold uppercase tracking-wide text-[#E5C76B] mt-5">Your floor</p>
+      {row('Lowest profit you will bid at', 'floorPct', null, 'You get a red warning below this')}
+      <button onClick={useAlways} className={`mt-4 w-full min-h-[52px] rounded-xl border text-[17px] font-semibold ${saved ? 'border-[#4ade80] text-[#8fe3a8]' : 'border-white/30'}`}>{saved ? 'Saved. New bids start with these.' : 'Use these numbers on every new bid'}</button>
+      <button onClick={onClose} className="mt-2 w-full min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold">Done</button>
+    </Sheet>
+  );
+}
+
 function SendSheet({ takeoffId, data, planName, onClose }: { takeoffId: string; data: TakeoffData; planName: string; onClose: () => void }) {
   const router = useRouter();
   const [q, setQ] = useState('');
@@ -890,6 +967,8 @@ function SendSheet({ takeoffId, data, planName, onClose }: { takeoffId: string; 
   const [warn, setWarn] = useState('');      // the estimate he tapped that a customer already has
   const [done, setDone] = useState<null | { added: number; estimate_id: string; estimate_number: string; total: number; fixed_price: boolean }>(null);
   const lines = useMemo(() => takeoffLines(data), [data]);
+  const pr = data.pricing; const hasPricing = !!pr && (pr.overheadPct > 0 || pr.profitPct > 0 || pr.contingencyPct > 0);
+  const [applyPricing, setApplyPricing] = useState(true);
   const unpriced = lines.filter((l) => !(l.unit_cost > 0)).length;
   const unscaled = data.items.reduce((n, it) => n + itemQuantity(it, data.scales).unscaled, 0);
   useEffect(() => {
@@ -904,7 +983,7 @@ function SendSheet({ takeoffId, data, planName, onClose }: { takeoffId: string; 
     setBusy(e.id); setErr('');
     // The measuring is saved first so the server works from exactly what is on screen.
     await fetch('/api/admin/takeoffs/' + takeoffId, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data }) }).catch(() => null);
-    const r = await fetch('/api/admin/takeoffs/' + takeoffId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'export', estimate_id: e.id, customer_sees_ok: e.status !== 'draft' }) }).catch(() => null);
+    const r = await fetch('/api/admin/takeoffs/' + takeoffId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'export', estimate_id: e.id, customer_sees_ok: e.status !== 'draft', apply_pricing: hasPricing && applyPricing }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(''); setWarn('');
     if (!r || !r.ok) { setErr(d.error || 'That did not go through. Try again.'); return; }
@@ -929,6 +1008,12 @@ function SendSheet({ takeoffId, data, planName, onClose }: { takeoffId: string; 
       <p className="text-[17px] leading-relaxed">{lines.length} line{lines.length === 1 ? '' : 's'} will be added. A draft is the safe place: no customer sees a draft.</p>
       {unpriced > 0 && <p className="text-[16px] text-[#f0a04b] leading-snug mt-1.5">{unpriced} {unpriced === 1 ? 'has' : 'have'} no price yet and will go in at $0 for you to price on the estimate.</p>}
       {unscaled > 0 && <p className="text-[16px] text-[#f0a04b] leading-snug mt-1.5">{unscaled} measurement{unscaled === 1 ? ' is' : 's are'} left out because the sheet has no scale.</p>}
+      {hasPricing && pr && (
+        <button type="button" role="switch" aria-checked={applyPricing} onClick={() => setApplyPricing((v) => !v)} className="mt-3 w-full min-h-[52px] rounded-xl border border-white/20 px-3 flex items-center gap-3 text-left">
+          <span className={`w-7 h-7 rounded-md border-2 flex items-center justify-center shrink-0 ${applyPricing ? 'bg-[#C9A84C] border-[#C9A84C] text-black' : 'border-white/50 text-transparent'}`}><Check size={18} /></span>
+          <span className="text-[16px] leading-snug">Put my overhead {pr.overheadPct}%, profit {pr.profitPct}%{pr.contingencyPct ? ` and contingency ${pr.contingencyPct}%` : ''} on the estimate</span>
+        </button>
+      )}
       <NewEstimateBox planName={planName} busy={!!busy} onMade={(e) => send(e)} />
       <p className="text-[15px] font-semibold text-white/80 mt-5">Or add to an estimate you already started</p>
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find the estimate by name or number" className={`${inputCls} mt-2`} />

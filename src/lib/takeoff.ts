@@ -27,6 +27,7 @@ export type TakeoffData = {
   scales: Record<string, number>;      // page number -> feet per point
   scaleNotes?: Record<string, string>; // page number -> how the scale was set, in words
   items: TakeoffItem[];
+  pricing?: BidPricing;                // overhead, profit, contingency and the floor he will not bid under
 };
 
 export const TAKEOFF_COLORS = ['#E5484D', '#3B8DD4', '#35D07F', '#F0A04B', '#B57BEE', '#12B5CB', '#E93D82', '#C9A84C'];
@@ -41,6 +42,7 @@ export function normalizeTakeoff(raw: unknown): TakeoffData {
     scales: d.scales && typeof d.scales === 'object' ? d.scales : {},
     scaleNotes: d.scaleNotes && typeof d.scaleNotes === 'object' ? d.scaleNotes : {},
     items: Array.isArray(d.items) ? d.items.filter((i) => i && Array.isArray(i.shapes)) : [],
+    pricing: cleanPricing(d.pricing),
   };
 }
 
@@ -196,4 +198,23 @@ export function unitFromPrinted(u: string): { kind: TakeoffKind; unit: TakeoffUn
   if (t === 'SY') return { kind: 'area', unit: 'SY' };
   if (t === 'CY') return { kind: 'area', unit: 'CY' };
   return { kind: 'count', unit: 'EA' };
+}
+
+/* ── Pricing the bid ──────────────────────────────────────────────────
+   Same arithmetic as the estimate itself: overhead, profit and contingency are each a percent of the cost of the
+   work, added on top. The floor is the lowest profit percent he is willing to bid at. */
+export type BidPricing = { overheadPct: number; profitPct: number; contingencyPct: number; floorPct: number };
+const pct = (v: unknown) => Math.min(500, Math.max(0, Math.round((Number(v) || 0) * 100) / 100));
+export function cleanPricing(p: unknown): BidPricing | undefined {
+  if (!p || typeof p !== 'object') return undefined;
+  const q = p as Partial<BidPricing>;
+  return { overheadPct: pct(q.overheadPct), profitPct: pct(q.profitPct), contingencyPct: pct(q.contingencyPct), floorPct: pct(q.floorPct) };
+}
+export function bidTotals(data: TakeoffData) {
+  const p = data.pricing || { overheadPct: 0, profitPct: 0, contingencyPct: 0, floorPct: 0 };
+  let cost = 0; let unpriced = 0;
+  for (const it of data.items) { const q = itemQuantity(it, data.scales).quantity; if (q > 0 && !(it.unitCost > 0)) unpriced++; cost += lineQty(q, it.unit) * (Number(it.unitCost) || 0); }
+  const overhead = (cost * p.overheadPct) / 100, profit = (cost * p.profitPct) / 100, contingency = (cost * p.contingencyPct) / 100;
+  const price = cost + overhead + profit + contingency;
+  return { cost, overhead, profit, contingency, price, unpriced, marginOfPrice: price > 0 ? (profit / price) * 100 : 0, belowFloor: p.floorPct > 0 && cost > 0 && p.profitPct < p.floorPct, pricing: p };
 }

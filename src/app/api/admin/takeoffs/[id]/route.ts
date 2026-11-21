@@ -58,6 +58,20 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     await admin.from('takeoffs').update({ ai }).eq('id', t.id);
     return NextResponse.json({ ok: true, ai });
   }
+  // Remembers what he charges for something, so the next bid can fill it in
+  if (body.action === 'remember_price') {
+    const name = String(body.name || '').trim().slice(0, 120); const price = Number(body.price) || 0; const unit = String(body.unit || 'EA').slice(0, 8);
+    if (!name || !(price > 0)) return fail('Nothing to remember.');
+    const { data: have } = await admin.from('cost_items').select('id').ilike('name', name.replace(/[%_]/g, ' ')).eq('unit', unit).limit(1);
+    if (have?.length) await admin.from('cost_items').update({ default_cost: price, is_active: true }).eq('id', have[0].id);
+    else { const { error } = await admin.from('cost_items').insert({ name, category: 'material', trade: 'NexaBids', unit, default_cost: price, default_markup_percent: 0, is_active: true }); if (error) return fail(error.message, 500); }
+    return NextResponse.json({ ok: true });
+  }
+  if (body.action === 'pricing_defaults') {
+    if (body.pricing) await admin.from('app_settings').upsert({ key: 'nexabids_pricing', value: body.pricing }, { onConflict: 'key' });
+    const { data: d } = await admin.from('app_settings').select('value').eq('key', 'nexabids_pricing').maybeSingle();
+    return NextResponse.json({ pricing: d?.value || null });
+  }
   if (body.action !== 'export') return fail('Unknown action.');
   if (!(await nexaBidsAccess(admin)).active) return NextResponse.json({ error: NEXABIDS_LOCKED, locked: true }, { status: 402 });
 
@@ -83,6 +97,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const { error } = await admin.from('estimate_line_items').insert(rows);
   if (error) return fail(error.message, 500);
 
+  // His overhead, profit and contingency go onto the estimate when he asks for that (same percents, same arithmetic)
+  const pr = normalizeTakeoff(row.data).pricing;
+  if (body.apply_pricing === true && pr) await admin.from('estimates').update({ overhead_percent: pr.overheadPct, markup_percent: pr.profitPct, contingency_percent: pr.contingencyPct }).eq('id', est.id);
   const [{ data: full }, { data: all }] = await Promise.all([
     admin.from('estimates').select('*').eq('id', est.id).single(),
     admin.from('estimate_line_items').select('*').eq('estimate_id', est.id),
