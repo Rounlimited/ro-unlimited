@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, getServerUser } from '@/lib/supabase/server';
 import { recalcEstimateTotals, syncScheduleAmounts } from '@/lib/estimates';
 import { normalizeTakeoff, takeoffLines } from '@/lib/takeoff';
 import { nexaBidsAccess, NEXABIDS_LOCKED } from '@/lib/nexabids';
@@ -8,9 +8,12 @@ import { nexaBidsAccess, NEXABIDS_LOCKED } from '@/lib/nexabids';
 export const dynamic = 'force-dynamic';
 const BUCKET = 'plans';
 type Ctx = { params: { id: string } };
+// The plan reader runs on NexaVision's worker with the owner's own Claude subscription (test), so for now only the
+// sign-ins in CLAUDE_SUB_TESTERS may start it. Everyone can see what it read.
+const mayRead = (email?: string | null) => !!email && (process.env.CLAUDE_SUB_TESTERS || 'admin@nexavisiongroup.com').split(',').map((s) => s.trim().toLowerCase()).includes(email.toLowerCase());
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
-export async function GET(_req: NextRequest, { params }: Ctx) {
+export async function GET(req: NextRequest, { params }: Ctx) {
   const admin = createAdminClient();
   if (!(await nexaBidsAccess(admin)).active) return NextResponse.json({ error: NEXABIDS_LOCKED, locked: true }, { status: 402 });
   const { data: row, error } = await admin.from('takeoffs').select('*, estimate:estimates(id, estimate_number, project_name)').eq('id', params.id).maybeSingle();
@@ -21,7 +24,8 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     const { data: signed } = await admin.storage.from(BUCKET).createSignedUrl(row.file_path, 60 * 60 * 6);
     file_url = signed?.signedUrl || null;
   }
-  return NextResponse.json({ ...row, data: normalizeTakeoff(row.data), file_url });
+  const user = await getServerUser(req).catch(() => null);
+  return NextResponse.json({ ...row, data: normalizeTakeoff(row.data), file_url, can_read: mayRead(user?.email) });
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
@@ -39,6 +43,21 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 export async function POST(req: NextRequest, { params }: Ctx) {
   const body = await req.json().catch(() => ({}));
   const admin = createAdminClient();
+  if (body.action === 'read') {
+    const user = await getServerUser(req).catch(() => null);
+    if (!mayRead(user?.email)) return fail('The AI plan reader is not switched on for this sign-in yet.', 403);
+    const { data: t } = await admin.from('takeoffs').select('id, file_path, ai').eq('id', params.id).maybeSingle();
+    if (!t?.file_path) return fail('Those plans are not here any more.', 404);
+    const cur = (t.ai || null) as { status?: string; updated_at?: string } | null;
+    const busy = cur && (cur.status === 'queued' || cur.status === 'working') && Date.now() - new Date(cur.updated_at || 0).getTime() < 10 * 60000;
+    if (busy) return NextResponse.json({ ok: true, already: true, ai: cur });
+    const now = new Date().toISOString();
+    const { error: jErr } = await admin.from('ai_sub_jobs').insert({ user_id: user!.id, user_email: user!.email || null, status: 'queued', status_label: 'Waiting to read the plans…', payload: { kind: 'read_plans', takeoff_id: t.id, file_path: t.file_path } });
+    if (jErr) return fail('Could not start that. Try again.', 500);
+    const ai = { status: 'queued', done: 0, total: 0, sheets: {}, updated_at: now };
+    await admin.from('takeoffs').update({ ai }).eq('id', t.id);
+    return NextResponse.json({ ok: true, ai });
+  }
   if (body.action !== 'export') return fail('Unknown action.');
   if (!(await nexaBidsAccess(admin)).active) return NextResponse.json({ error: NEXABIDS_LOCKED, locked: true }, { status: 402 });
 

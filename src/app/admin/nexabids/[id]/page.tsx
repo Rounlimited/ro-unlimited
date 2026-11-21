@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Trash2, Loader2, Pencil, Send, AlertTriangle, Maximize, Minimize, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Trash2, Loader2, Pencil, Send, AlertTriangle, Maximize, Minimize, ChevronDown, ChevronUp, Sparkles, List } from 'lucide-react';
 import {
   type Pt, type TakeoffData, type TakeoffItem, type TakeoffKind, type TakeoffUnit,
   TAKEOFF_COLORS, UNITS_FOR, KIND_LABEL, PRINTED_SCALES, emptyTakeoff, normalizeTakeoff, itemQuantity, fmtQty, money,
-  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales,
+  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, type AiRead, type AiSheet,
 } from '@/lib/takeoff';
 import { readSheetVectors, snapPoint, traceRun, shapeAt, matchSymbols, type SheetVectors } from '@/lib/takeoff-vectors';
 
@@ -35,7 +35,11 @@ export default function TakeoffPage() {
   const [activeId, setActiveId] = useState('');
   const [draft, setDraft] = useState<Pt[]>([]);
   const [scalePts, setScalePts] = useState<Pt[]>([]);
-  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send'>(null);
+  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai'>(null);
+  // What the AI read off the sheets (names, scales, schedules, notes), and whether this sign-in may start a read
+  const [ai, setAi] = useState<AiRead | null>(null);
+  const [canRead, setCanRead] = useState(false);
+  const [aiNote, setAiNote] = useState('');
   const [editing, setEditing] = useState<TakeoffItem | null>(null);
   const [saved, setSaved] = useState<'saved' | 'saving' | 'error'>('saved');
   const [panelOpen, setPanelOpen] = useState(true);
@@ -75,7 +79,7 @@ export default function TakeoffPage() {
         const row = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(row.error || 'Could not open those plans.');
         if (!row.file_url) throw new Error('The plan file is missing. Delete this one and bring the PDF in again.');
-        setName(row.name || 'Plans'); setData(normalizeTakeoff(row.data));
+        setName(row.name || 'Plans'); setData(normalizeTakeoff(row.data)); setAi(row.ai || null); setCanRead(!!row.can_read);
         // @ts-ignore pdf.js is served from /public so the bundler leaves it alone
         const pdfjs = await import(/* webpackIgnore: true */ '/pdfjs/pdf.min.mjs');
         pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.mjs';
@@ -101,6 +105,40 @@ export default function TakeoffPage() {
     }, 900);
     return () => clearTimeout(t);
   }, [data, id]);
+
+  /* ── the AI plan reader ── */
+  // 'Busy' only while the worker keeps reporting in; if it has gone quiet for 5 minutes the read is treated as stopped
+  const aiFresh = !!ai?.updated_at && Date.now() - new Date(ai.updated_at).getTime() < 5 * 60000;
+  const aiBusy = (ai?.status === 'queued' || ai?.status === 'working') && aiFresh;
+  useEffect(() => {
+    if (!aiBusy) return;
+    const t = setInterval(async () => {
+      const r = await fetch('/api/admin/takeoffs/' + id).catch(() => null);
+      const row = r && r.ok ? await r.json().catch(() => null) : null;
+      if (row?.ai) setAi(row.ai);
+    }, 4000);
+    return () => clearInterval(t);
+  }, [aiBusy, id]);
+  const startRead = async () => {
+    setAiNote('');
+    const r = await fetch('/api/admin/takeoffs/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'read' }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    if (!r || !r.ok) { setAiNote(d.error || 'Could not start that. Try again.'); return; }
+    setAi(d.ai);
+  };
+  const aiPage: AiSheet | null = (ai?.sheets && ai.sheets[String(page)]) || null;
+  const sheetLabel = (p: number) => { const a = ai?.sheets?.[String(p)]; return a && (a.number || a.title) ? [a.number, a.title].filter(Boolean).join(' · ') : ''; };
+  // Scales for this sheet: the ones found in the file's text, plus the ones the AI read from the drawing
+  const foundAll = useMemo(() => {
+    const out = [...found];
+    for (const x of findPrintedScales((aiPage?.scales || []).map((q) => q.scale))) if (!out.some((o) => Math.abs(o.feetPerInch - x.feetPerInch) < 0.001)) out.push(x);
+    return out;
+  }, [found, aiPage]);
+  const barScale = !foundAll.length && (aiPage?.scales || []).some((q) => /bar|graphic/i.test(q.scale + ' ' + q.applies_to));
+  const addFromPlans = (nameIn: string, qty: number, unitIn: string, note: string) => {
+    const u = unitFromPrinted(unitIn);
+    change((d) => ({ ...d, items: [...d.items, { id: uid(), name: nameIn.slice(0, 120), kind: u.kind, unit: u.unit, color: TAKEOFF_COLORS[d.items.length % TAKEOFF_COLORS.length], unitCost: 0, printedQty: qty, printedNote: note, shapes: [] }] }));
+  };
 
   /* ── draw the sheet ── */
   const fit = useCallback((w: number, h: number) => {
@@ -313,7 +351,10 @@ export default function TakeoffPage() {
         {pages > 0 && (
           <div className="flex items-center shrink-0">
             <button disabled={page <= 1} onClick={() => { stop(); setPage((p) => p - 1); }} aria-label="Sheet before" className="w-12 h-12 rounded-xl flex items-center justify-center disabled:opacity-30 active:bg-white/10"><ChevronLeft size={26} /></button>
-            <span className="text-[16px] font-semibold whitespace-nowrap px-1">Sheet {page} of {pages}</span>
+            <button onClick={() => setSheet('sheets')} className="min-h-[48px] px-2 rounded-xl active:bg-white/10 text-center max-w-[46vw]">
+              <span className="block text-[16px] font-semibold whitespace-nowrap">Sheet {page} of {pages}</span>
+              {sheetLabel(page) && <span className="block text-[13px] text-[#E5C76B] leading-tight truncate">{sheetLabel(page)}</span>}
+            </button>
             <button disabled={page >= pages} onClick={() => { stop(); setPage((p) => p + 1); }} aria-label="Next sheet" className="w-12 h-12 rounded-xl flex items-center justify-center disabled:opacity-30 active:bg-white/10"><ChevronRight size={26} /></button>
           </div>
         )}
@@ -417,6 +458,7 @@ export default function TakeoffPage() {
             <button onClick={() => setPanelOpen((o) => !o)} aria-label={panelOpen ? 'Hide the list' : 'Show the list'} className="lg:hidden w-12 h-12 rounded-xl border border-white/20 flex items-center justify-center shrink-0">{panelOpen ? <ChevronDown size={24} /> : <ChevronUp size={24} />}</button>
           </div>
           <div className={`${panelOpen ? '' : 'hidden lg:block'} flex-1 min-h-0 overflow-y-auto px-3 pb-2 space-y-2`}>
+            <AiCard ai={ai} busy={aiBusy} canRead={canRead} pages={pages} sheet={aiPage} note={aiNote} onStart={startRead} onOpen={() => setSheet('ai')} />
             {data.items.length === 0 && <p className="text-[16px] text-white/80 leading-snug px-1">Add what you want to measure: a pipe run, a slab, catch basins. Then tap it out on the sheet.</p>}
             {data.items.map((it) => {
               const q = itemQuantity(it, data.scales);
@@ -431,6 +473,10 @@ export default function TakeoffPage() {
                         {fmtQty(q.quantity, it.unit)} {it.unit}{it.unitCost > 0 ? ` × ${money(it.unitCost)} = ${money(q.quantity * it.unitCost)}` : ' · no price yet'}
                       </span>
                       {q.unscaled > 0 && <span className="block text-[14px] text-[#f0a04b] leading-snug">{q.unscaled} left out: that sheet has no scale</span>}
+                      {!!it.printedQty && !it.shapes.length && <span className="block text-[14px] text-[#9ecbff] leading-snug">From the plans{it.printedNote ? `: ${it.printedNote}` : ''}. Not measured.</span>}
+                      {(() => { const ag = qtyAgreement(it, data.scales); if (!ag) return null; return ag.state === 'match'
+                        ? <span className="block text-[14px] font-semibold text-[#4ade80] leading-snug">Matches the plans ({fmtQty(ag.printed, it.unit)} {it.unit} printed)</span>
+                        : <span className="block text-[14px] font-semibold text-[#f0a04b] leading-snug">Check this: the plans say {fmtQty(ag.printed, it.unit)} {it.unit}, you measured {fmtQty(ag.measured, it.unit)} ({ag.offPct}% apart)</span>; })()}
                     </span>
                     <span className="text-[14px] font-bold text-[#E5C76B] shrink-0">{on ? 'Measuring' : 'Measure'}</span>
                   </button>
@@ -455,7 +501,7 @@ export default function TakeoffPage() {
       </div>
 
       {sheet === 'scale' && (
-        <ScaleSheet pts={scalePts} current={ftPerPt} pages={pages} found={found}
+        <ScaleSheet pts={scalePts} current={ftPerPt} pages={pages} found={foundAll} bar={barScale}
           onMeasure={() => { setSheet(null); setDraft([]); setScalePts([]); setMode('scale'); }}
           onClose={() => { setSheet(null); stop(); }}
           onSet={(v, note, all) => {
@@ -473,10 +519,31 @@ export default function TakeoffPage() {
           onClose={() => setSheet(null)}
           onDelete={editing ? () => { change((d) => ({ ...d, items: d.items.filter((i) => i.id !== editing.id) })); setSheet(null); stop(); setActiveId(''); } : undefined}
           onSave={(it) => {
-            change((d) => ({ ...d, items: d.items.some((i) => i.id === it.id) ? d.items.map((i) => (i.id === it.id ? { ...it, shapes: i.shapes } : i)) : [...d.items, it] }));
+            change((d) => ({ ...d, items: d.items.some((i) => i.id === it.id) ? d.items.map((i) => (i.id === it.id ? { ...i, ...it, shapes: i.shapes } : i)) : [...d.items, it] }));
             setSheet(null);
             if (!editing) pick(it.id);
           }} />
+      )}
+      {sheet === 'sheets' && (
+        <Sheet title="Sheets in this set" onClose={() => setSheet(null)}>
+          {!ai?.sheets && <p className="text-[16px] text-white/80 mb-2 leading-snug">Sheet names show here after the AI has read the plans.</p>}
+          <div className="space-y-1.5">
+            {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+              <button key={p} onClick={() => { stop(); setPage(p); setSheet(null); }} className={`w-full min-h-[52px] text-left rounded-xl border px-3 py-2 flex items-center gap-3 ${p === page ? 'border-[#C9A84C] bg-[#C9A84C]/15' : 'border-white/15 bg-white/[0.04]'}`}>
+                <span className="w-9 text-[17px] font-bold text-white/80 shrink-0">{p}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[16px] font-semibold leading-snug break-words">{sheetLabel(p) || `Sheet ${p}`}</span>
+                  <span className="block text-[14px] text-white/70 leading-snug">{[ai?.sheets?.[String(p)]?.discipline, data.scales[String(p)] ? `scale ${scaleWords(Number(data.scales[String(p)]))}` : 'no scale yet', data.items.some((it) => it.shapes.some((sh) => sh.page === p)) ? 'measured' : ''].filter(Boolean).join(' · ')}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </Sheet>
+      )}
+      {sheet === 'ai' && aiPage && (
+        <AiSheetView s={aiPage} page={page} onClose={() => setSheet(null)}
+          onScale={(fpi, label) => { change((d) => ({ ...d, scales: { ...d.scales, [String(page)]: scaleFromPrinted(fpi)! }, scaleNotes: { ...(d.scaleNotes || {}), [String(page)]: `Printed scale ${label}, read by the AI. Check it against a dimension.` } })); }}
+          onAdd={addFromPlans} />
       )}
       {sheet === 'send' && <SendSheet takeoffId={id} data={data} planName={name} onClose={() => setSheet(null)} />}
     </div>
@@ -497,8 +564,126 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-function ScaleSheet({ pts, current, pages, found, onSet, onMeasure, onClose }: {
-  pts: Pt[]; current: number; pages: number; found: { label: string; feetPerInch: number; times: number }[];
+/** The AI reader's place in the list: start it, watch it, or open what it read on this sheet. */
+function AiCard({ ai, busy, canRead, pages, sheet, note, onStart, onOpen }: { ai: AiRead | null; busy: boolean; canRead: boolean; pages: number; sheet: AiSheet | null; note: string; onStart: () => void; onOpen: () => void }) {
+  const stopped = ai?.status === 'error' || ((ai?.status === 'queued' || ai?.status === 'working') && !busy);
+  if (busy) {
+    const pct = ai?.total ? Math.round(((ai.done || 0) / ai.total) * 100) : 0;
+    return (
+      <div className="rounded-xl border border-[#a78bfa]/60 bg-[#a78bfa]/10 px-3 py-3">
+        <p className="text-[17px] font-bold leading-snug flex items-center gap-2"><Loader2 size={20} className="animate-spin text-[#c4b5fd] shrink-0" /> The AI is reading the plans</p>
+        <p className="text-[15px] text-white/85 leading-snug mt-0.5">{ai?.total ? `Sheet ${Math.min((ai.done || 0) + 1, ai.total)} of ${ai.total}. You can keep measuring while it works.` : 'Getting the plans ready…'}</p>
+        <div className="mt-2 h-2.5 rounded-full bg-white/15 overflow-hidden"><div className="h-full bg-[#a78bfa]" style={{ width: `${pct}%` }} /></div>
+      </div>
+    );
+  }
+  if (ai?.status === 'done' || (!stopped && ai?.sheets && Object.keys(ai.sheets).length)) {
+    if (!sheet) return null;
+    const bits = [sheet.schedules.length ? `${sheet.schedules.length} table${sheet.schedules.length === 1 ? '' : 's'}` : '', sheet.quantities.length ? `${sheet.quantities.length} quantit${sheet.quantities.length === 1 ? 'y' : 'ies'}` : '', sheet.legend.length ? `${sheet.legend.length} symbols` : '', sheet.notes.length ? `${sheet.notes.length} notes` : ''].filter(Boolean);
+    return (
+      <button onClick={onOpen} className="w-full text-left rounded-xl border border-[#a78bfa]/60 bg-[#a78bfa]/10 px-3 py-2.5 flex items-center gap-3">
+        <Sparkles size={22} className="text-[#c4b5fd] shrink-0" />
+        <span className="flex-1 min-w-0">
+          <span className="block text-[17px] font-bold leading-snug">What the AI read on this sheet</span>
+          <span className="block text-[15px] text-white/85 leading-snug">{bits.join(' · ') || 'Nothing to price is printed on this sheet'}</span>
+        </span>
+        <ChevronDown size={22} className="-rotate-90 text-white/70 shrink-0" />
+      </button>
+    );
+  }
+  if (!canRead) return null;
+  return (
+    <div>
+      <button onClick={onStart} className="w-full text-left rounded-xl border border-[#a78bfa]/60 bg-[#a78bfa]/10 px-3 py-2.5 flex items-center gap-3">
+        <Sparkles size={22} className="text-[#c4b5fd] shrink-0" />
+        <span className="flex-1 min-w-0">
+          <span className="block text-[17px] font-bold leading-snug">{stopped ? 'Try the AI read again' : 'Have the AI read these plans'}</span>
+          <span className="block text-[15px] text-white/85 leading-snug">{stopped ? (ai?.error || 'It stopped before finishing.') : `Sheet names, scales, schedules and notes. About ${Math.max(1, Math.ceil((pages * 16) / 120))} min.`}</span>
+        </span>
+      </button>
+      {note && <p className="text-[15px] text-red-200 mt-1.5 px-1">{note}</p>}
+    </div>
+  );
+}
+
+/** Everything the AI read on one sheet, each thing with a way to use it. */
+function AiSheetView({ s, page, onScale, onAdd, onClose }: { s: AiSheet; page: number; onScale: (feetPerInch: number, label: string) => void; onAdd: (name: string, qty: number, unit: string, note: string) => void; onClose: () => void }) {
+  const [open, setOpen] = useState(-1);
+  const [added, setAdded] = useState<string[]>([]);
+  const [scaled, setScaled] = useState('');
+  const where = [s.number, s.title].filter(Boolean).join(' ') || `Sheet ${page}`;
+  const add = (key: string, name: string, qty: number, unit: string, note: string) => { onAdd(name, qty, unit, note); setAdded((a) => [...a, key]); };
+  const head = 'text-[15px] font-bold uppercase tracking-wide text-[#c4b5fd] mt-5 mb-2';
+  return (
+    <Sheet title={where} onClose={onClose}>
+      <p className="text-[15px] text-[#f0a04b] leading-snug">Read by the AI. Check anything you use against the sheet itself.</p>
+      {s.scanned && <p className="text-[15px] text-white/80 leading-snug mt-1">This sheet is a scanned picture, so it was read from the image only.</p>}
+
+      {s.scales.length > 0 && (<>
+        <p className={head}>Scales</p>
+        <div className="space-y-2">
+          {s.scales.map((q, i) => { const p = findPrintedScales([q.scale])[0]; return (
+            <div key={i} className="rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2.5 flex items-center gap-3">
+              <span className="flex-1 min-w-0"><span className="block text-[17px] font-bold leading-snug">{q.scale}</span>{q.applies_to && <span className="block text-[15px] text-white/75 leading-snug">{q.applies_to}</span>}</span>
+              {p && <button onClick={() => { onScale(p.feetPerInch, p.label); setScaled(q.scale); }} className={`min-h-[48px] px-3 rounded-lg text-[16px] font-bold shrink-0 ${scaled === q.scale ? 'bg-[#4ade80] text-black' : 'bg-[#C9A84C] text-black'}`}>{scaled === q.scale ? 'Set' : 'Use it'}</button>}
+            </div>
+          ); })}
+        </div>
+      </>)}
+
+      {s.quantities.length > 0 && (<>
+        <p className={head}>Quantities printed on the sheet</p>
+        <div className="space-y-2">
+          {s.quantities.map((q, i) => (
+            <div key={i} className="rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2.5 flex items-center gap-3">
+              <span className="flex-1 min-w-0"><span className="block text-[17px] font-bold leading-snug break-words">{q.quantity.toLocaleString('en-US')} {q.unit} · {q.item}</span>{q.printed && <span className="block text-[14px] text-white/70 leading-snug break-words">Printed: “{q.printed}”</span>}</span>
+              <button disabled={added.includes('q' + i)} onClick={() => add('q' + i, q.item, q.quantity, q.unit, where)} className="min-h-[48px] px-3 rounded-lg bg-[#C9A84C] text-black text-[16px] font-bold shrink-0 disabled:bg-[#4ade80]">{added.includes('q' + i) ? 'Added' : 'Add'}</button>
+            </div>
+          ))}
+        </div>
+      </>)}
+
+      {s.schedules.length > 0 && (<>
+        <p className={head}>Tables on the sheet</p>
+        <div className="space-y-2">
+          {s.schedules.map((t, i) => (
+            <div key={i} className="rounded-xl border border-white/15 bg-white/[0.04]">
+              <div className="px-3 py-2.5 flex items-center gap-3">
+                <button onClick={() => setOpen(open === i ? -1 : i)} className="flex-1 min-w-0 text-left min-h-[44px]">
+                  <span className="block text-[17px] font-bold leading-snug break-words">{t.name}</span>
+                  <span className="block text-[15px] text-white/75 leading-snug">{t.rows.length} row{t.rows.length === 1 ? '' : 's'} · tap to {open === i ? 'hide' : 'see'}</span>
+                </button>
+                <button disabled={added.includes('t' + i) || !t.rows.length} onClick={() => add('t' + i, t.name.replace(/\s*schedule\b/i, '').trim() || t.name, t.rows.length, 'EA', `${where}, ${t.name}: one per row. Check the count.`)} className="min-h-[48px] px-3 rounded-lg border border-[#C9A84C] text-[#E5C76B] text-[15px] font-bold shrink-0 disabled:opacity-50">{added.includes('t' + i) ? 'Added' : `Add ${t.rows.length} to list`}</button>
+              </div>
+              {open === i && (
+                <div className="overflow-x-auto border-t border-white/10">
+                  <table className="text-[14px] min-w-full">
+                    {t.columns.length > 0 && <thead><tr>{t.columns.map((c, k) => <th key={k} className="text-left font-bold px-2.5 py-2 whitespace-nowrap bg-white/5">{c}</th>)}</tr></thead>}
+                    <tbody>{t.rows.map((r, k) => <tr key={k} className="border-t border-white/10">{r.map((c, m) => <td key={m} className="px-2.5 py-2 align-top min-w-[90px]">{c}</td>)}</tr>)}</tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </>)}
+
+      {s.notes.length > 0 && (<>
+        <p className={head}>Notes that can change the price</p>
+        <ul className="space-y-1.5">{s.notes.map((n, i) => <li key={i} className="text-[16px] text-white/90 leading-snug rounded-lg bg-white/[0.04] border border-white/10 px-3 py-2">{n}</li>)}</ul>
+      </>)}
+
+      {s.legend.length > 0 && (<>
+        <p className={head}>Symbols ({s.legend.length})</p>
+        <ul className="space-y-1">{s.legend.slice(0, 40).map((l, i) => <li key={i} className="text-[15px] text-white/85 leading-snug"><b className="text-white">{l.symbol || 'Symbol'}</b>: {l.meaning}</li>)}</ul>
+      </>)}
+      {!s.scales.length && !s.quantities.length && !s.schedules.length && !s.notes.length && !s.legend.length && <p className="text-[17px] text-white/85 mt-3">Nothing to price is printed on this sheet.</p>}
+    </Sheet>
+  );
+}
+
+function ScaleSheet({ pts, current, pages, found, bar, onSet, onMeasure, onClose }: {
+  pts: Pt[]; current: number; pages: number; found: { label: string; feetPerInch: number; times: number }[]; bar?: boolean;
   onSet: (ftPerPt: number, note: string, all: boolean) => void; onMeasure: () => void; onClose: () => void;
 }) {
   const [feet, setFeet] = useState('');
@@ -553,6 +738,7 @@ function ScaleSheet({ pts, current, pages, found, onSet, onMeasure, onClose }: {
       <div className="mt-4 rounded-xl border border-white/20 bg-white/[0.04] p-3">
         <p className="text-[17px] font-bold leading-snug">{found.length ? 'Or measure a line you know' : '1. Measure a line you know (most exact)'}</p>
         <p className="text-[16px] text-white/85 leading-snug mt-1">Find a dimension printed on the sheet, like a wall marked 40 feet. Tap one end of it, tap the other end, then type 40.</p>
+        {bar && <p className="text-[16px] font-semibold text-[#8fe3a8] leading-snug mt-1.5">This sheet has a scale bar instead of a written scale. Tap the two ends of the bar, then type the number printed at its far end.</p>}
         <button onClick={onMeasure} className="mt-2.5 w-full min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold flex items-center justify-center gap-2"><Ruler size={22} /> Tap the two ends on the sheet</button>
       </div>
 

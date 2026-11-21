@@ -19,6 +19,8 @@ export type TakeoffItem = {
   unitCost: number;          // his price per unit; 0 until he prices it
   depthIn?: number;          // area items in CY: thickness in inches
   wastePct?: number;         // extra added on top of what was measured
+  printedQty?: number;       // a quantity the plans themselves state (read by the AI or typed), in this item's unit
+  printedNote?: string;      // where that came from, e.g. "Sheet E.1, light fixture schedule"
   shapes: TakeoffShape[];
 };
 export type TakeoffData = {
@@ -81,6 +83,9 @@ export function itemQuantity(item: TakeoffItem, scales: Record<string, number>):
   if (item.kind === 'area' && item.unit === 'SY') q = base / 9;
   if (item.kind === 'area' && item.unit === 'CY') q = (base * (Math.max(0, Number(item.depthIn) || 0) / 12)) / 27;
   const measured = q;
+  // Nothing measured yet: the quantity the plans print stands in, so the item can be priced straight away.
+  const printed = Math.max(0, Number(item.printedQty) || 0);
+  if (!item.shapes.length && printed > 0) q = printed;
   q = q * (1 + Math.max(0, Number(item.wastePct) || 0) / 100);
   return { quantity: q, measured, unscaled };
 }
@@ -160,4 +165,35 @@ export function findPrintedScales(words: string[]): { label: string; feetPerInch
   }
   for (const m of Array.from(text.matchAll(/(?<![\/\d])(\d+(?:\.\d+)?)\s*"\s*=\s*1\s*'\s*-\s*0\s*"?/g))) add(`${m[1]}" = 1'`, 1 / Number(m[1]));
   return Array.from(hits.values()).sort((a, b) => b.times - a.times).slice(0, 5);
+}
+
+/** Measured against what the plans print: 'match' within 5%, 'differ' beyond, null when there are not both. */
+export function qtyAgreement(item: TakeoffItem, scales: Record<string, number>): { state: 'match' | 'differ'; measured: number; printed: number; offPct: number } | null {
+  const printed = Math.max(0, Number(item.printedQty) || 0);
+  if (!(printed > 0) || !item.shapes.length) return null;
+  const { measured } = itemQuantity(item, scales);
+  if (!(measured > 0)) return null;
+  const offPct = Math.round((Math.abs(measured - printed) / printed) * 1000) / 10;
+  return { state: offPct <= 5 ? 'match' : 'differ', measured, printed, offPct };
+}
+
+/* ── What the AI read off the sheets (filled in by the plan reader on the worker machine) ── */
+export type AiSheet = {
+  number: string; title: string; discipline: string;
+  scales: { scale: string; applies_to: string }[];
+  legend: { symbol: string; meaning: string }[];
+  schedules: { name: string; columns: string[]; rows: string[][] }[];
+  quantities: { item: string; quantity: number; unit: string; printed: string }[];
+  notes: string[]; scanned?: boolean; error?: string;
+};
+export type AiRead = { status: 'queued' | 'working' | 'done' | 'error'; done?: number; total?: number; sheets?: Record<string, AiSheet>; error?: string; started_at?: string; finished_at?: string; updated_at?: string };
+
+/** Which of our units a printed unit maps to. */
+export function unitFromPrinted(u: string): { kind: TakeoffKind; unit: TakeoffUnit } {
+  const t = String(u || '').toUpperCase();
+  if (t === 'LF') return { kind: 'length', unit: 'LF' };
+  if (t === 'SF') return { kind: 'area', unit: 'SF' };
+  if (t === 'SY') return { kind: 'area', unit: 'SY' };
+  if (t === 'CY') return { kind: 'area', unit: 'CY' };
+  return { kind: 'count', unit: 'EA' };
 }
