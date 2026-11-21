@@ -347,6 +347,14 @@ export default function NewEstimateWizard() {
     }
   };
 
+  // The scope is saved a moment after typing stops, not only on "Next" —
+  // a long paste must survive the phone locking or the app being closed.
+  const scopeSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queueScopeSave = (html: string) => {
+    if (scopeSaveTimer.current) clearTimeout(scopeSaveTimer.current);
+    scopeSaveTimer.current = setTimeout(() => { patchEstimate({ scope_of_work: html }).catch(() => {}); }, 1800);
+  };
+
   const patchEstimate = async (fields: Record<string, any>) => {
     if (!estimateId || !draftReadyRef.current) return;
     try {
@@ -923,7 +931,7 @@ export default function NewEstimateWizard() {
             <div className="space-y-8">
               <WizardStep3
                 content={scopeHtml}
-                onSave={html => setScopeHtml(html)}
+                onSave={html => { setScopeHtml(html); queueScopeSave(html); }}
               />
               <div>
                 <div className="text-[17px] font-semibold text-white mb-3">Job-Site Photos</div>

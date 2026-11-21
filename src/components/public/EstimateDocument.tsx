@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState, useEffect } from 'react';
+import ScopeView from '@/components/estimates/ScopeView';
 import PortalGuide from '@/components/portal/PortalGuide';
 import SignaturePad from '@/components/public/SignaturePad';
 import CustomerFeedbackCard from '@/components/public/CustomerFeedbackCard';
@@ -763,10 +764,7 @@ export default function EstimateDocument({ token, inPortal = false }: { token: s
         {scopeHtml && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
             <h2 className="text-[13px] font-semibold text-[#C9A84C] uppercase tracking-wider mb-4" data-track="scope">Scope of Work</h2>
-            <div
-              className="text-[14px] text-gray-700 leading-relaxed prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: scopeHtml }}
-            />
+            <ScopeView html={scopeHtml} theme="light" size={15} />
           </div>
         )}
 

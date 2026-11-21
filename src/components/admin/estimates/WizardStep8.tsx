@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ScopeView from '@/components/estimates/ScopeView';
 import {
   FileText, User, MapPin, DollarSign, ClipboardList,
   Send, Eye, Save, Loader2, X, CheckCircle2, Link2, Check,
@@ -264,10 +265,7 @@ export default function WizardStep8({
       {scopeHtml && scopeHtml !== '<p></p>' && (
         <div className="bg-[#111] border border-white/10 rounded-xl p-5">
           <SectionTitle icon={ClipboardList} title="Scope of Work" />
-          <div
-            className="prose prose-invert prose-sm max-w-none text-[14px] text-white/70 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: scopeHtml }}
-          />
+          <ScopeView html={scopeHtml} theme="dark" size={16} />
         </div>
       )}
 

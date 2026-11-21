@@ -5,6 +5,7 @@ import { reportingClause } from '@/lib/reporting';
 import { docStage } from './doc-stage';
 import React from 'react';
 import { estimateDisplayDate } from './estimates';
+import { cleanScopeHtml, parseScope, scopeText as scopePlain } from './scope-doc';
 
 /* react-pdf hyphenates by default (Knuth-Liang, English). In a construction
    document that produces "con-struc-tion"-style breaks mid-word that read as
@@ -151,6 +152,72 @@ function RichText({ html, fontSize = 10, color = '#333333', lineHeight = 1.6 }: 
           <Text key={i} style={{ fontSize, color, lineHeight, marginBottom: 5 }}>{runs}</Text>
         );
       })}
+    </View>
+  );
+}
+
+/**
+ * The Scope of Work as a document: numbered section headings and real tables
+ * (the same reading of the HTML the customer's page uses).
+ */
+function ScopeDoc({ html, fontSize = 10, color = '#333333', lineHeight = 1.6 }: { html: string; fontSize?: number; color?: string; lineHeight?: number }) {
+  const sections = parseScope(cleanScopeHtml(html));
+  const structured = sections.some((sec) => sec.title || sec.blocks.some((b) => b.kind !== 'html'));
+  if (!structured) return <RichText html={html} fontSize={fontSize} color={color} lineHeight={lineHeight} />;
+  const cellText = (h: string) => scopePlain(h);
+  let n = 0;
+  return (
+    <View>
+      {sections.map((sec, si) => (
+        <View key={si} style={{ marginBottom: 10 }}>
+          {sec.title ? (
+            <View wrap={false} minPresenceAhead={90} style={{ flexDirection: 'row', alignItems: 'center', marginTop: si === 0 ? 0 : 6, marginBottom: 6, paddingBottom: 4, borderBottomWidth: 1, borderBottomColor: '#d4d4d4' }}>
+              <Text style={{ width: 20, fontSize: fontSize + 2, fontFamily: 'Inter', fontWeight: 700, color: '#D4772C' }}>{++n}</Text>
+              <Text style={{ flex: 1, fontSize: fontSize + 2, fontFamily: 'Inter', fontWeight: 700, color: '#1B2A4A', lineHeight: 1.3 }}>{sec.title}</Text>
+            </View>
+          ) : null}
+          {sec.blocks.map((b, bi) => {
+            if (b.kind === 'sub') {
+              return <Text key={bi} minPresenceAhead={36} style={{ fontSize: fontSize + 0.5, fontFamily: 'Inter', fontWeight: 700, color: '#1B2A4A', marginTop: 5, marginBottom: 4 }}>{cellText(b.html)}</Text>;
+            }
+            if (b.kind === 'html') return <View key={bi} style={{ marginBottom: 4 }}><RichText html={b.html} fontSize={fontSize} color={color} lineHeight={lineHeight} /></View>;
+            const { head, rows, cols } = b.table;
+            const fs = cols >= 6 ? fontSize - 2.5 : cols >= 4 ? fontSize - 1.5 : fontSize - 1;
+            // Wider columns for the ones holding the most text.
+            const weights = Array.from({ length: cols }, (_, ci) => {
+              const longest = Math.max(head ? cellText(head[ci] || '').length : 0, ...rows.filter((r) => !r.group).map((r) => cellText(r.cells[ci] || '').length));
+              return Math.max(1, Math.min(4, Math.sqrt(Math.max(longest, 4)) / 2.4));
+            });
+            const cell = { paddingVertical: 4, paddingHorizontal: 5, borderRightWidth: 0.5, borderRightColor: '#d4d4d4' } as const;
+            return (
+              <View key={bi} style={{ marginTop: 3, marginBottom: 9, borderWidth: 0.5, borderColor: '#d4d4d4' }}>
+                {head ? (
+                  <View wrap={false} style={{ flexDirection: 'row', backgroundColor: '#f5f2ed', borderBottomWidth: 0.5, borderBottomColor: '#d4d4d4' }}>
+                    {head.map((h, ci) => (
+                      <View key={ci} style={{ ...cell, flex: weights[ci], ...(ci === cols - 1 ? { borderRightWidth: 0 } : {}) }}>
+                        <Text style={{ fontSize: fs, fontFamily: 'Inter', fontWeight: 700, color: '#1B2A4A', lineHeight: 1.35 }}>{cellText(h)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+                {rows.map((r, ri) => r.group ? (
+                  <View key={ri} wrap={false} style={{ backgroundColor: '#f7f7f5', paddingVertical: 4, paddingHorizontal: 5, borderTopWidth: ri === 0 ? 0 : 0.5, borderTopColor: '#d4d4d4' }}>
+                    <Text style={{ fontSize: fs, fontFamily: 'Inter', fontWeight: 700, color: '#1B2A4A' }}>{cellText(r.cells[0])}</Text>
+                  </View>
+                ) : (
+                  <View key={ri} wrap={false} style={{ flexDirection: 'row', borderTopWidth: ri === 0 ? 0 : 0.5, borderTopColor: '#e8e8e8' }}>
+                    {r.cells.map((cHtml, ci) => (
+                      <View key={ci} style={{ ...cell, flex: weights[ci], ...(ci === cols - 1 ? { borderRightWidth: 0 } : {}) }}>
+                        <Text style={{ fontSize: fs, fontFamily: 'Inter', color, lineHeight: 1.4, ...(!head && ci === 0 && cols === 2 ? { fontWeight: 700 } : {}) }}>{cellText(cHtml)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            );
+          })}
+        </View>
+      ))}
     </View>
   );
 }
@@ -564,7 +631,7 @@ function EstimatePDFDocument({ estimate, lineItems, paymentSchedule, disclaimers
         {scopeText && stripHtml(scopeText) && (
           <View style={{ marginBottom: sectionGap }}>
             <Text style={s.sectionLabel} minPresenceAhead={60}>Scope of Work</Text>
-            <RichText html={scopeText} fontSize={10} color={c.textMed} lineHeight={1.6} />
+            <ScopeDoc html={scopeText} fontSize={10} color={c.textMed} lineHeight={1.6} />
           </View>
         )}
 

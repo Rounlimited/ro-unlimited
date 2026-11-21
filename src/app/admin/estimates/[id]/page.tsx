@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import ScopeView from '@/components/estimates/ScopeView';
 import { useRouter, useParams } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import UndoRedoButtons from '@/components/admin/UndoRedoButtons';
@@ -880,10 +881,7 @@ export default function EstimateDetailPage() {
             {estimate.scope_of_work && (
               <div className="bg-[#111] border border-white/5 rounded-xl p-5">
                 <h3 className="text-[15px] font-semibold text-white mb-3">Scope of Work</h3>
-                <div
-                  className="prose prose-invert prose-sm max-w-none text-[14px] text-white/70 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: estimate.scope_of_work }}
-                />
+                <ScopeView html={estimate.scope_of_work} theme="dark" size={16} />
               </div>
             )}
 
