@@ -881,6 +881,14 @@ for (const t of ALL_TOOLS as any[]) {
 }
 const SIGNED_ASK_MINUTES = 30;
 
+/* ── Claude through the owner's own subscription (TEST) ───────────────
+   Model 'claude-sub' does not call any pay-per-use service. The question is put in a queue (ai_sub_jobs) and a
+   worker on NexaVision's rack answers it with the Claude command-line tool, signed in with the owner's own
+   Claude subscription; the worker calls back here for each tool it needs. A subscription covers its owner's own
+   use, so this is limited to the sign-ins listed in CLAUDE_SUB_TESTERS and is not offered to anyone else. */
+const subTesters = () => (process.env.CLAUDE_SUB_TESTERS || 'admin@nexavisiongroup.com').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+const mayUseSub = (email?: string | null) => !!email && subTesters().includes(email.toLowerCase());
+
 async function executeTool(name: string, input: any, supabase: ReturnType<typeof createAdminClient>, turnKey?: string): Promise<{ result: string; action?: { type: string; path: string; description: string } }> {
   const idOf = SIGNED_GUARD[name];
   let note = '';
@@ -3455,6 +3463,27 @@ async function claudeStreamRound(
 export async function POST(req: NextRequest) {
   try {
     // This route has service-role DB access + can send email — never serve anonymous callers
+    const workerSecret = req.headers.get('x-push-secret');
+    if (workerSecret && process.env.PUSH_SECRET && workerSecret === process.env.PUSH_SECRET) {
+      // The rack worker asking for one tool to be run for a queued subscription job. Nothing else is allowed this way.
+      const b = await req.json().catch(() => ({}));
+      if (b.mode !== 'sub_tool') return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
+      const admin = createAdminClient();
+      const { data: job } = await admin.from('ai_sub_jobs').select('id, status, payload, actions').eq('id', String(b.job_id || '')).maybeSingle();
+      if (!job || job.status !== 'working') return NextResponse.json({ result: JSON.stringify({ error: 'That job is not running.' }) });
+      const name = typeof b.tool?.name === 'string' ? b.tool.name : '';
+      if (!ALL_TOOLS.some((t) => t.name === name)) return NextResponse.json({ result: JSON.stringify({ error: 'Unknown tool' }) });
+      await admin.from('ai_sub_jobs').update({ status_label: TOOL_STATUS_LABELS[name] || 'Working on it…', updated_at: new Date().toISOString() }).eq('id', job.id);
+      try {
+        const { result, action } = await executeTool(name, b.tool?.args && typeof b.tool.args === 'object' ? b.tool.args : {}, admin, String((job.payload as any)?.turnKey || job.id));
+        if (action) await admin.from('ai_sub_jobs').update({ actions: [...(Array.isArray(job.actions) ? job.actions : []), action] }).eq('id', job.id);
+        const body = typeof result === 'string' ? result : JSON.stringify(result);
+        return NextResponse.json({ result: body.length > 60000 ? body.slice(0, 60000) + '\n…(cut short; ask for a narrower search)' : body });
+      } catch (e: any) {
+        return NextResponse.json({ result: JSON.stringify({ error: 'Tool failed: ' + (e?.message || 'unknown') }) });
+      }
+    }
+
     const user = await getServerUser(req);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -3685,6 +3714,43 @@ export async function POST(req: NextRequest) {
           resumption: { enabled: true },
         },
       });
+    }
+
+    if (reqBody.model === 'claude-sub') {
+      if (!mayUseSub(user.email)) return NextResponse.json({ error: 'That model is not available on this sign-in.' }, { status: 403 });
+      const asked = (messages as any[]).filter((m) => m && typeof m.content === 'string' && m.content.trim()).slice(-30).map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: String(m.content).slice(0, 12000) }));
+      const lastAsk = asked.filter((m) => m.role === 'user').pop()?.content || '';
+      const { data: job, error: jobErr } = await supabase.from('ai_sub_jobs').insert({
+        user_id: user.id, user_email: user.email || null, status: 'queued', status_label: 'Waiting for the rack…',
+        payload: {
+          instructions: buildSystemPrompt(ALL_TOOLS, dynamicContext),
+          tools: ALL_TOOLS.map((t) => ({ name: t.name, description: t.description, input_schema: t.input_schema })),
+          messages: asked,
+          turnKey: `${asked.filter((m) => m.role === 'user').length}:${lastAsk.length}:${lastAsk.slice(0, 60)}`,
+        },
+      }).select('id').single();
+      if (jobErr || !job) return NextResponse.json({ error: 'Could not queue that for the rack.' }, { status: 500 });
+      const enc = new TextEncoder();
+      const body = new ReadableStream({
+        async start(ctrl) {
+          const send = (o: unknown) => ctrl.enqueue(enc.encode(JSON.stringify(o) + '\n'));
+          let label = ''; const t0 = Date.now();
+          try {
+            for (;;) {
+              await new Promise((r) => setTimeout(r, 900));
+              const { data: j } = await supabase.from('ai_sub_jobs').select('status, status_label, result, actions').eq('id', job.id).maybeSingle();
+              if (!j) { send({ type: 'error', error: 'The job was lost. Try again.' }); break; }
+              if (j.status === 'done') { send({ type: 'delta', text: j.result || '' }); send({ type: 'done', actions: Array.isArray(j.actions) ? j.actions : [], model: 'claude-sub' }); break; }
+              if (j.status === 'error') { send({ type: 'error', error: j.result || 'The rack could not answer that.' }); break; }
+              const now = j.status === 'queued' && Date.now() - t0 > 12000 ? 'Still waiting for the rack. Is the worker running?' : (j.status_label || 'Thinking…');
+              if (now !== label) { label = now; send({ type: 'status', label }); }
+              if (Date.now() - t0 > 285000) { await supabase.from('ai_sub_jobs').update({ status: 'error', result: 'Timed out.' }).eq('id', job.id).in('status', ['queued', 'working']); send({ type: 'error', error: 'That took too long. Try again.' }); break; }
+            }
+          } catch { /* the reader went away */ }
+          try { ctrl.close(); } catch { /* closed */ }
+        },
+      });
+      return new Response(body, { headers: { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     let content = '';

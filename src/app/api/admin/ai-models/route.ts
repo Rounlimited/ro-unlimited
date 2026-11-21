@@ -19,6 +19,12 @@ export async function GET(req: NextRequest) {
     price_in: Math.round(m.in * AI_MARKUP * 100) / 100,
     price_out: Math.round(m.out * AI_MARKUP * 100) / 100,
   }));
+  // TEST, owner's sign-in only: Claude answered on NexaVision's rack through the owner's own Claude subscription.
+  const testers = (process.env.CLAUDE_SUB_TESTERS || 'admin@nexavisiongroup.com').split(',').map((s) => s.trim().toLowerCase());
+  if (user.email && testers.includes(user.email.toLowerCase())) {
+    models.unshift({ key: 'claude-sub', label: 'Claude Sonnet (my subscription, test)', short: 'Sub', group: 'recommended', vision: false, price_in: 0, price_out: 0,
+      best: 'Answered on the rack through your Claude subscription. No per-use charge. Slower to start. Only your sign-in sees this.' });
+  }
 
   // Rack (self-hosted) models are optional. If the rack is off or not set up,
   // the hosted models above keep working on their own.
