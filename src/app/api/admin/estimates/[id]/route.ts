@@ -65,6 +65,15 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     const body = await req.json();
     const supabase = createAdminClient();
 
+    // He chose to change a contract the customer already signed (asked on the edit screen): keep a record of it.
+    if (body.signed_edit_ack) {
+      const { data: cur } = await supabase.from('estimates').select('status, signed_at').eq('id', id).maybeSingle();
+      if (cur && (cur.signed_at || cur.status === 'accepted')) {
+        await supabase.from('estimate_status_history').insert({ estimate_id: id, old_status: cur.status, new_status: cur.status, notes: "Opened for changes after signing, on the owner's say-so (edit screen)" });
+      }
+      return NextResponse.json({ ok: true });
+    }
+
     // Check for status change to insert history
     const oldStatusChanged = body.status !== undefined;
     let oldStatus: string | null = null;

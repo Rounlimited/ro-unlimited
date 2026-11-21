@@ -160,6 +160,9 @@ export default function NewEstimateWizard() {
   // needs it so the total and milestones it shows match the customer's.
   const [adjustment, setAdjustment] = useState<{ amount: number; label: string }>({ amount: 0, label: '' });
   const loadedStatusRef = useRef<string | null>(null);
+  // A signed contract: nothing can be touched until he has been told and has chosen to change it anyway.
+  const [signedGate, setSignedGate] = useState<null | { number: string; name: string; at: string }>(null);
+  const [signedSure, setSignedSure] = useState(false);
 
   useEffect(() => {
     if (!editId) { draftReadyRef.current = true; return; }
@@ -171,6 +174,9 @@ export default function NewEstimateWizard() {
         if (!res.ok) throw new Error('Failed to load estimate');
         const data = await res.json();
         if (cancelled) return;
+        if (data.signed_at || data.status === 'accepted') {
+          setSignedGate({ number: data.estimate_number || '', name: data.signed_name && data.signed_name !== 'On file' ? data.signed_name : '', at: data.signed_at || '' });
+        }
 
         // Populate Step 1
         setStep1({
@@ -815,6 +821,35 @@ export default function NewEstimateWizard() {
         <div className="flex flex-col items-center gap-3">
           <Loader2 size={28} className="animate-spin text-[#C9A84C]" />
           <span className="text-[14px] text-white/40">Loading estimate...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (signedGate) {
+    const when = signedGate.at ? new Date(signedGate.at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+    return (
+      <div className="h-full overflow-y-auto bg-[#0a0a0a] text-white flex items-center justify-center p-4">
+        <div className="w-full max-w-lg rounded-2xl bg-[#111] border-2 border-[#f0a04b]/70 p-5">
+          <p className="text-[23px] font-bold leading-snug">This contract is signed</p>
+          <p className="text-[18px] text-white/90 leading-relaxed mt-2">
+            {signedGate.number}{when ? ` was signed ${when}` : ' is signed'}{signedGate.name ? ` by ${signedGate.name}` : ''}. The customer agreed to it as it stands and sees it on their Project Page.
+          </p>
+          <p className="text-[18px] text-white/90 leading-relaxed mt-2">
+            Anything you change here changes what they see, right away. For added work or a different price, a change order the customer approves is the usual way.
+          </p>
+          <button type="button" onClick={() => router.push(`/admin/estimates/${editId}`)}
+            className="mt-5 w-full min-h-[58px] rounded-xl bg-[#C9A84C] text-black text-[19px] font-bold">Go back, leave it as signed</button>
+          <button type="button"
+            onClick={() => {
+              if (!signedSure) { setSignedSure(true); return; }
+              fetch(`/api/admin/estimates/${editId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ signed_edit_ack: true }) }).catch(() => null);
+              setSignedGate(null);
+            }}
+            className={`mt-2.5 w-full min-h-[56px] rounded-xl border text-[18px] font-semibold ${signedSure ? 'border-red-400 bg-red-500/20 text-red-100' : 'border-white/30 text-white'}`}>
+            {signedSure ? 'Tap again to change the signed contract' : 'Change the signed contract anyway'}
+          </button>
+          <p className="text-[15px] text-white/70 leading-snug mt-3">If you go on, it is noted in this contract’s history.</p>
         </div>
       </div>
     );
