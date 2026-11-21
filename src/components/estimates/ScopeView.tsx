@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ListTree } from 'lucide-react';
 import { cleanScopeHtml, parseScope, scopeText, type ScopeBlock, type ScopeSection, type ScopeTable } from '@/lib/scope-doc';
 
@@ -22,6 +22,7 @@ const T = {
     th: 'bg-[#f5f2ed] text-gray-900', td: 'text-gray-700', tBorder: 'border-gray-200', zebra: 'even:bg-gray-50/70',
     group: 'bg-gray-100 text-gray-900', card: 'bg-white border-gray-200', label: 'text-gray-500', link: '[&_a]:text-[#9a7b1f]',
     muted: 'text-gray-500', quote: '[&_blockquote]:border-gray-300',
+    bar: 'bg-white/95 border-gray-200', chipOn: 'bg-[#C9A84C] text-black border-[#C9A84C]',
   },
   dark: {
     text: 'text-white/80', strong: '[&_strong]:text-white', sub: 'text-white',
@@ -30,6 +31,7 @@ const T = {
     th: 'bg-white/10 text-white', td: 'text-white/80', tBorder: 'border-white/12', zebra: 'even:bg-white/[0.03]',
     group: 'bg-white/10 text-white', card: 'bg-white/[0.03] border-white/12', label: 'text-white/55', link: '[&_a]:text-[#D4B965]',
     muted: 'text-white/55', quote: '[&_blockquote]:border-white/25',
+    bar: 'bg-[#0d0d0d]/95 border-white/15', chipOn: 'bg-[#C9A84C] text-black border-[#C9A84C]',
   },
 } as const;
 
@@ -40,6 +42,72 @@ export default function ScopeView({ html, theme = 'light', size = 15, className 
   const t = T[theme];
   const titled = sections.filter((s) => s.title);
   const [closed, setClosed] = useState<Record<string, boolean>>({});
+  const rootRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [stickTop, setStickTop] = useState(0);      // where the page's own fixed header ends, so the bar sits just under it
+  const [barH, setBarH] = useState(60);
+  const [active, setActive] = useState('');
+  const showBar = titled.length >= 3;
+
+  // The section bar stays at the top of the screen while the reader is inside the scope, and marks the
+  // section being read. The page above it may have its own fixed header; its height is measured, not assumed.
+  useEffect(() => {
+    if (!showBar) return;
+    const root = rootRef.current;
+    if (!root) return;
+    let raf = 0;
+    const headerBottom = () => {
+      let top = 0;
+      for (const x of [window.innerWidth / 2, 24, window.innerWidth - 24]) {
+        let y = 2;
+        for (let k = 0; k < 5; k++) {
+          const el = document.elementFromPoint(x, y);
+          if (!el || root.contains(el)) break;
+          let p: Element | null = el; let hit: Element | null = null;
+          while (p && p !== document.body) {
+            const pos = getComputedStyle(p).position;
+            if (pos === 'fixed' || pos === 'sticky') hit = p;
+            p = p.parentElement;
+          }
+          if (!hit) break;
+          const b = hit.getBoundingClientRect().bottom;
+          if (b <= y || b > window.innerHeight * 0.35) break;
+          top = Math.max(top, b); y = b + 2;
+        }
+      }
+      return Math.round(top);
+    };
+    const update = () => {
+      raf = 0;
+      const r = root.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > window.innerHeight) return;
+      const top = headerBottom();
+      setStickTop((v) => (Math.abs(v - top) > 1 ? top : v));
+      const h = barRef.current?.offsetHeight || 60;
+      setBarH((v) => (Math.abs(v - h) > 1 ? h : v));
+      const line = top + h + 28;
+      let cur = '';
+      for (const el of Array.from(root.querySelectorAll<HTMLElement>('section[data-scope-section]'))) {
+        if (el.getBoundingClientRect().top <= line) cur = el.id; else break;
+      }
+      setActive((v) => (v === cur ? v : cur));
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true, capture: true });
+    window.addEventListener('resize', onScroll);
+    return () => { if (raf) cancelAnimationFrame(raf); window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', onScroll); };
+  }, [showBar, sections.length]);
+
+  // Keep the chip for the section being read in view inside the bar.
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row || !active) return;
+    const chip = row.querySelector<HTMLElement>('[data-chip="' + active + '"]');
+    if (chip) row.scrollTo({ left: Math.max(0, chip.offsetLeft - 16), behavior: 'smooth' });
+  }, [active]);
+
   if (!sections.length) return null;
 
   const jump = (id: string) => {
@@ -50,10 +118,10 @@ export default function ScopeView({ html, theme = 'light', size = 15, className 
   let n = 0;
 
   return (
-    <div className={`${t.text} ${className}`} style={{ fontSize: size, lineHeight: 1.65 }}>
-      {titled.length >= 3 && (
-        <div className="mb-5">
-          <div className="flex items-center justify-between gap-3 mb-2">
+    <div ref={rootRef} className={`${t.text} ${className}`} style={{ fontSize: size, lineHeight: 1.65 }}>
+      {showBar && (
+        <>
+          <div className="flex items-center justify-between gap-3 mb-1">
             <span className={`inline-flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wide ${t.muted}`}>
               <ListTree size={15} /> {titled.length} sections
             </span>
@@ -62,16 +130,18 @@ export default function ScopeView({ html, theme = 'light', size = 15, className 
               {allClosed ? 'Open all' : 'Close all'}
             </button>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {titled.map((s, i) => (
-              <button key={s.id} type="button" onClick={() => jump(s.id)}
-                className={`shrink-0 max-w-[240px] min-h-[44px] px-3.5 rounded-full border text-[14px] font-medium flex items-center gap-2 ${t.chip}`}>
-                <span className={`font-bold ${t.chipNum}`}>{i + 1}</span>
-                <span className="truncate">{s.title}</span>
-              </button>
-            ))}
+          <div ref={barRef} className={`sticky z-20 -mx-2 px-2 py-2 mb-4 border-b backdrop-blur ${t.bar}`} style={{ top: stickTop }}>
+            <div ref={rowRef} className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {titled.map((s, i) => (
+                <button key={s.id} type="button" data-chip={s.id} onClick={() => jump(s.id)} aria-current={active === s.id ? 'true' : undefined}
+                  className={`shrink-0 max-w-[240px] min-h-[44px] px-3.5 rounded-full border text-[14px] font-medium flex items-center gap-2 transition-colors ${active === s.id ? t.chipOn : t.chip}`}>
+                  <span className={`font-bold ${active === s.id ? '' : t.chipNum}`}>{i + 1}</span>
+                  <span className="truncate">{s.title}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       <div className="space-y-6">
@@ -79,7 +149,7 @@ export default function ScopeView({ html, theme = 'light', size = 15, className 
           const num = s.title ? ++n : 0;
           const isClosed = !!closed[s.id];
           return (
-            <section key={s.id} id={s.id} className="scroll-mt-24">
+            <section key={s.id} id={s.id} data-scope-section="" style={{ scrollMarginTop: (showBar ? stickTop + barH : 0) + 12 }}>
               {s.title && (
                 <button type="button" aria-expanded={!isClosed}
                   onClick={() => setClosed((c) => ({ ...c, [s.id]: !c[s.id] }))}
