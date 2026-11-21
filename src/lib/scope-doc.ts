@@ -396,3 +396,31 @@ export function markdownToScopeHtml(md: string): string {
   flush();
   return out.join('');
 }
+
+/**
+ * Markdown that was pasted into the scope box as plain lines: every line became its own paragraph
+ * ("## 1. Overview", "| Item | Basis |", "| --- | --- |" ...). Returns the Markdown back, or '' if the
+ * scope isn't that.
+ */
+export function markdownFromPlainParagraphs(html: string): string {
+  const src = String(html || '');
+  if (!src || /<(table|h[1-6]|ul|ol)\b/i.test(src)) return '';
+  const lines: string[] = [];
+  for (const m of Array.from(src.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi))) {
+    for (const part of m[1].split(/<br\s*\/?>/i)) {
+      const t = decodeEntities(part.replace(/<[^>]+>/g, '')).replace(/\u00a0/g, ' ').trimEnd();
+      if (t.trim()) lines.push(t);
+    }
+  }
+  if (lines.length < 3) return '';
+  const isRow = (l: string) => /^\s*\|/.test(l);
+  const isItem = (l: string) => /^\s*(?:[-*+]|\d+[.)])\s+/.test(l);
+  let md = '';
+  for (let i = 0; i < lines.length; i++) {
+    md += lines[i];
+    if (i === lines.length - 1) break;
+    const a = lines[i]; const b = lines[i + 1];
+    md += (isRow(a) && isRow(b)) || (isItem(a) && isItem(b)) ? '\n' : '\n\n';
+  }
+  return looksLikeMarkdown(md) ? md : '';
+}

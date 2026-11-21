@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import ScopeView from '@/components/estimates/ScopeView';
 import ScopeOrganizer from '@/components/admin/estimates/ScopeOrganizer';
-import { cleanScopeHtml, couldUseOrganizing, looksScrambled, scopeStats, scopeText } from '@/lib/scope-doc';
+import { cleanScopeHtml, couldUseOrganizing, looksLikeMarkdown, looksScrambled, markdownFromPlainParagraphs, markdownToScopeHtml, scopeStats, scopeText } from '@/lib/scope-doc';
 
 interface Props {
   content: string;
@@ -50,6 +50,7 @@ export default function WizardStep3({ content, onSave }: Props) {
     if (now) send(); else saveTimer.current = setTimeout(send, 500);
   };
 
+  const editorRef = useRef<ReturnType<typeof useEditor> | null>(null);
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -64,6 +65,23 @@ export default function WizardStep3({ content, onSave }: Props) {
     content: content || '',
     editorProps: {
       attributes: { class: 'focus:outline-none', style: 'font-size:17px;' },
+      // Markdown (what an AI or a notes app hands over: # headings, | tables) is laid out as it is pasted.
+      handlePaste: (view, event) => {
+        try {
+          const cd = event.clipboardData; if (!cd) return false;
+          const rich = cd.getData('text/html') || '';
+          if (/<(table|h[1-6])\b/i.test(rich)) return false;      // real tables / headings came with it: the normal paste keeps them
+          const plain = cd.getData('text/plain') || '';
+          if (!looksLikeMarkdown(plain)) return false;
+          const laidOut = cleanScopeHtml(markdownToScopeHtml(plain));
+          if (!scopeText(laidOut)) return false;
+          event.preventDefault();
+          editorRef.current?.chain().focus().insertContent(laidOut).run();
+          const tables = (laidOut.match(/<table/g) || []).length;
+          setPasteNote(tables ? `Laid out as you pasted it: ${tables} table${tables === 1 ? '' : 's'}, with headings.` : 'Laid out as you pasted it, with headings.');
+          return true;
+        } catch { return false; }
+      },
       // Word, Google Docs and web pages bring a lot of junk; keep the words, headings, lists and tables.
       transformPastedHTML: (pasted) => {
         try {
@@ -78,6 +96,8 @@ export default function WizardStep3({ content, onSave }: Props) {
     onBlur: ({ editor: e }) => push(e.getHTML(), true),
     onSelectionUpdate: () => force((n) => n + 1),
   });
+
+  editorRef.current = editor;
 
   // Content arriving from outside (a template being filled in) replaces the editor's.
   useEffect(() => {
@@ -94,6 +114,7 @@ export default function WizardStep3({ content, onSave }: Props) {
   const scrambled = useMemo(() => looksScrambled(html), [html]);
   const flat = useMemo(() => !scrambled && couldUseOrganizing(html), [html, scrambled]);
   const hasText = useMemo(() => !!scopeText(html), [html]);
+  const rawMarkdown = useMemo(() => markdownFromPlainParagraphs(html), [html]);
   useEffect(() => { if (!scrambled && !flat) setDismissed(false); }, [scrambled, flat]);
 
   if (!editor) return null;
@@ -136,7 +157,16 @@ export default function WizardStep3({ content, onSave }: Props) {
         </button>
       </div>
 
-      {(scrambled || flat) && !dismissed && (
+      {rawMarkdown && (
+        <div className="rounded-xl border border-[#35d07f]/50 bg-[#35d07f]/10 px-4 py-3.5">
+          <p className="text-[17px] font-semibold text-white leading-snug">This came in as plain text with the layout marks showing.</p>
+          <p className="text-[16px] text-white/80 mt-1 leading-snug">The # and | marks are headings and tables. One tap turns them into real sections and tables. Your wording stays exactly the same, and it does not use AI credit.</p>
+          <button type="button" onClick={() => replaceAll(cleanScopeHtml(markdownToScopeHtml(rawMarkdown)), true)}
+            className="mt-3 min-h-[52px] px-5 rounded-lg bg-[#35d07f] text-black text-[17px] font-bold flex items-center gap-2"><Check size={20} /> Lay it out</button>
+        </div>
+      )}
+
+      {(scrambled || flat) && !dismissed && !rawMarkdown && (
         <div className="rounded-xl border border-[#f0a04b]/60 bg-[#f0a04b]/12 px-4 py-3.5">
           <p className="text-[17px] font-semibold text-white leading-snug">
             {scrambled ? 'This looks like a table that lost its columns.' : 'This is one long run of text.'}
