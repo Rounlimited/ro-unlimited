@@ -459,3 +459,141 @@ export function diffScope(beforeText: string, afterHtml: string): { removed: str
   const bt = [...numbersOf(b), ...wordsOf(b)]; const at = [...numbersOf(a), ...wordsOf(a)];
   return { removed: tally(minus(bt, at), 60), added: tally(minus(at, bt), 60) };
 }
+
+/* ── Sections as units: move, rename, delete, edit one at a time ───── */
+
+export type SectionRange = { title: string; start: number; end: number };   // block positions, end exclusive
+
+/** The titled sections and which blocks each one owns (same reading of headings as parseScope). */
+export function sectionRanges(html: string): SectionRange[] {
+  const tops = topLevel(String(html || ''));
+  const out: SectionRange[] = [];
+  tops.forEach((el, i) => {
+    if (el.tag !== 'h1' && el.tag !== 'h2') return;
+    const title = stripNumber(scopeText(el.inner).replace(/\s+/g, ' '));
+    if (!title) return;
+    if (out.length) out[out.length - 1].end = i;
+    out.push({ title, start: i, end: tops.length });
+  });
+  return out;
+}
+
+const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+export function sectionHtml(html: string, index: number): string {
+  const r = sectionRanges(html)[index];
+  return r ? scopeBlocks(html).slice(r.start, r.end).join('') : '';
+}
+export function replaceSection(html: string, index: number, next: string): string {
+  const r = sectionRanges(html)[index];
+  if (!r) return html;
+  const b = scopeBlocks(html);
+  return b.slice(0, r.start).join('') + next + b.slice(r.end).join('');
+}
+export function deleteSection(html: string, index: number): string { return replaceSection(html, index, ''); }
+export function renameSection(html: string, index: number, title: string): string {
+  const r = sectionRanges(html)[index];
+  const t = title.replace(/\s+/g, ' ').trim();
+  if (!r || !t) return html;
+  const b = scopeBlocks(html);
+  b[r.start] = '<h2>' + escHtml(t) + '</h2>';
+  return b.join('');
+}
+/** dir -1 moves the section up one place, +1 down. */
+export function moveSection(html: string, index: number, dir: -1 | 1): string {
+  const rs = sectionRanges(html);
+  const a = rs[Math.min(index, index + dir)]; const z = rs[Math.max(index, index + dir)];
+  if (!a || !z || a === z) return html;
+  const b = scopeBlocks(html);
+  return b.slice(0, a.start).join('') + b.slice(z.start, z.end).join('') + b.slice(a.start, a.end).join('') + b.slice(z.end).join('');
+}
+/** Removes whole blocks by their 1-based numbers. */
+export function removeBlocks(html: string, numbers: number[]): string {
+  const drop = new Set(numbers);
+  return scopeBlocks(html).filter((_, i) => !drop.has(i + 1)).join('');
+}
+
+/* ── Before it goes to a customer: a free scan for leftovers ───────── */
+
+export type ScopeWarningKind = 'raw_marks' | 'author_tag' | 'date_line' | 'page_number' | 'check_note' | 'placeholder' | 'empty_section';
+export type ScopeWarning = {
+  kind: ScopeWarningKind;
+  label: string;             // what it is, in plain words
+  sample: string;            // the text involved
+  block: number;             // 1-based block number, 0 when it is about the whole scope
+  fix: 'remove' | 'layout' | 'look';
+};
+
+const DATE_ONLY = /^(?:(?:mon|tue|wed|thu|fri|sat|sun)[a-z]*,?\s+)?(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4})$/i;
+
+/** Things a customer should not see: export leftovers, unfinished notes, layout marks. Plain code, no AI. */
+export function scopeWarnings(html: string): ScopeWarning[] {
+  const src = String(html || '');
+  const out: ScopeWarning[] = [];
+  if (!scopeText(src)) return out;
+  const tops = topLevel(src);
+  const rawMd = !!markdownFromPlainParagraphs(src);
+  if (rawMd) out.push({ kind: 'raw_marks', label: 'The layout marks are showing', sample: 'Lines with # and | are headings and tables that have not been laid out yet.', block: 0, fix: 'layout' });
+  tops.forEach((el, i) => {
+    const t = scopeText(el.html).replace(/\s+/g, ' ').trim();
+    if (!t) return;
+    const short = (el.tag === 'p' || el.tag === null) && t.length <= 80;
+    const n = i + 1;
+    const clip = t.length > 90 ? t.slice(0, 88) + '…' : t;
+    if (short && /(^|[\s·|,-])@[A-Za-z][\w.-]{1,30}(?=$|[\s·|,.])/.test(t) && !/[\w.-]+@[\w-]+\.[a-z]{2,}/i.test(t)) {
+      out.push({ kind: 'author_tag', label: 'A name tag from the writing app', sample: clip, block: n, fix: 'remove' }); return;
+    }
+    if (short && i < 6 && DATE_ONLY.test(t)) { out.push({ kind: 'date_line', label: 'A date stamp from the writing app', sample: clip, block: n, fix: 'remove' }); return; }
+    if (short && /^(?:page\s+)?\d+\s*(?:of|\/)\s*\d+$|^page\s+\d+$/i.test(t)) { out.push({ kind: 'page_number', label: 'A page number', sample: clip, block: n, fix: 'remove' }); return; }
+    if (/\bCHECK:/.test(t)) out.push({ kind: 'check_note', label: 'A CHECK note is still in the text', sample: clip, block: n, fix: 'look' });
+    if (/\b(?:TBD|TBA|XXX+)\b|lorem ipsum|\[\s*\]|\[(?:insert|fill|name|date|amount)[^\]]*\]|_{4,}/i.test(t)) out.push({ kind: 'placeholder', label: 'Something is not filled in', sample: clip, block: n, fix: 'look' });
+    if (!rawMd && el.tag === 'p' && (/^#{1,6}\s+\S/.test(t) || (t.match(/\|/g) || []).length >= 3 || /\*\*[^*]{2,}\*\*/.test(t))) {
+      out.push({ kind: 'raw_marks', label: 'Layout marks are showing in this line', sample: clip, block: n, fix: 'look' });
+    }
+  });
+  const rs = sectionRanges(src);
+  for (const r of rs) {
+    const body = tops.slice(r.start + 1, r.end).map((b) => scopeText(b.html)).join('').trim();
+    if (!body) out.push({ kind: 'empty_section', label: 'A section with nothing under it', sample: r.title, block: r.start + 1, fix: 'remove' });
+  }
+  return out.slice(0, 30);
+}
+
+/* ── Saved rules: what he always fixes is fixed for him next time ──── */
+
+export type ScopeRule =
+  | { kind: 'drop'; what: 'author_tag' | 'date_line' | 'page_number' | 'empty_section' }
+  | { kind: 'rename_section'; from: string; to: string };
+
+export function ruleLabel(r: ScopeRule): string {
+  if (r.kind === 'rename_section') return `Rename the section “${r.from}” to “${r.to}”`;
+  return ({ author_tag: 'Take out name tags from the writing app', date_line: 'Take out the date stamp at the top', page_number: 'Take out page numbers', empty_section: 'Take out sections with nothing under them' } as const)[r.what];
+}
+
+export function sameRule(a: ScopeRule, b: ScopeRule): boolean {
+  if (a.kind === 'drop' && b.kind === 'drop') return a.what === b.what;
+  if (a.kind === 'rename_section' && b.kind === 'rename_section') return a.from.toLowerCase() === b.from.toLowerCase();
+  return false;
+}
+
+/** Applies the saved rules to a scope that just came in. `applied` says, in plain words, what was done. */
+export function applyScopeRules(html: string, rules: ScopeRule[]): { html: string; applied: string[] } {
+  let cur = String(html || '');
+  const applied: string[] = [];
+  if (!rules.length || !scopeText(cur)) return { html: cur, applied };
+  for (const r of rules) {
+    if (r.kind !== 'rename_section') continue;
+    const i = sectionRanges(cur).findIndex((s) => s.title.toLowerCase() === r.from.toLowerCase());
+    if (i >= 0) { cur = renameSection(cur, i, r.to); applied.push(`Renamed “${r.from}” to “${r.to}”`); }
+  }
+  const drops = new Set(rules.filter((r): r is Extract<ScopeRule, { kind: 'drop' }> => r.kind === 'drop').map((r) => r.what as string));
+  if (drops.size) {
+    for (let pass = 0; pass < 3; pass++) {
+      const hits = scopeWarnings(cur).filter((w) => w.fix === 'remove' && w.block > 0 && drops.has(w.kind));
+      if (!hits.length) break;
+      for (const h of hits) applied.push(`Took out ${h.kind === 'empty_section' ? 'the empty section' : 'the line'} “${h.sample}”`);
+      cur = removeBlocks(cur, hits.map((h) => h.block));
+    }
+  }
+  return { html: cur, applied };
+}

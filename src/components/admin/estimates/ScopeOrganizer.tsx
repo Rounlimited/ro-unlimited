@@ -29,10 +29,14 @@ const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
   r.readAsDataURL(file);
 });
 
-export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
-  mode: Mode; currentHtml: string; onUse: (html: string) => void; onClose: () => void;
+/** A document handed over by the scope box, with the route already chosen: 'exact' (no AI) or 'ai'. */
+export type Intake = { file?: File; text?: string; html?: string; route: 'exact' | 'ai' };
+
+export default function ScopeOrganizer({ mode, currentHtml, initial, onUse, onClose }: {
+  mode: Mode; currentHtml: string; initial?: Intake; onUse: (html: string) => void; onClose: () => void;
 }) {
-  const [phase, setPhase] = useState<Phase>(mode === 'tidy' ? 'working' : 'input');
+  const [phase, setPhase] = useState<Phase>(mode === 'tidy' || initial ? 'working' : 'input');
+  const [pending, setPending] = useState<null | boolean>(null);      // an Intake waiting for its file/text to be in state
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState('');
@@ -116,9 +120,17 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
     }
   };
 
-  // "Tidy up" starts working the moment the sheet opens.
+  // "Tidy up" starts working the moment the sheet opens. So does a document handed over by the scope box.
   useEffect(() => {
-    if (mode === 'tidy' && !started.current) { started.current = true; run({ html: currentHtml }); }
+    if (started.current) return;
+    if (mode === 'tidy') { started.current = true; run({ html: currentHtml }); return; }
+    if (initial) {
+      started.current = true;
+      if (initial.file) setFile(initial.file);
+      if (initial.text) setText(initial.text);
+      pastedHtml.current = initial.html || '';
+      setPending(initial.route === 'exact');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -151,6 +163,13 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
     }
     run(payload);
   };
+
+  useEffect(() => {
+    if (pending === null) return;
+    const direct = pending; setPending(null);
+    startImport(direct);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending]);
 
   const retry = () => (mode === 'tidy' ? run({ html: currentHtml }) : setPhase('input'));
   const canGo = !!file || text.trim().length > 0;

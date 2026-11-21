@@ -12,6 +12,7 @@ import {
 import WizardStep1 from '@/components/admin/estimates/WizardStep1';
 import WizardStep2 from '@/components/admin/estimates/WizardStep2';
 import WizardStep3 from '@/components/admin/estimates/WizardStep3';
+import { scopeWarnings, type ScopeWarning } from '@/lib/scope-doc';
 import EstimatePhotos, { EstimatePhoto } from '@/components/admin/estimates/EstimatePhotos';
 import OptionsBuilder from '@/components/admin/estimates/OptionsBuilder';
 import WizardStep4 from '@/components/admin/estimates/WizardStep4';
@@ -494,7 +495,16 @@ export default function NewEstimateWizard() {
     }, 3000);
   };
 
+  // Leaving the scope step: anything a customer should not see (an export's name tag, a CHECK note, layout
+  // marks) is shown once before moving on. He can go back and fix it or carry on.
+  const [scopeGuard, setScopeGuard] = useState<ScopeWarning[] | null>(null);
+  const scopeGuardPassed = useRef('');
+
   const handleNext = async () => {
+    if (currentStep === 3 && scopeGuardPassed.current !== scopeHtml) {
+      const found = scopeWarnings(scopeHtml);
+      if (found.length) { setScopeGuard(found); return; }
+    }
     if (!canProceed(currentStep)) {
       const missing = getFirstMissingField(currentStep);
       if (missing) highlightMissingField(missing);
@@ -932,7 +942,33 @@ export default function NewEstimateWizard() {
               <WizardStep3
                 content={scopeHtml}
                 onSave={html => { setScopeHtml(html); queueScopeSave(html); }}
+                onAddLines={(items) => setLineItems((prev) => [...prev, ...items.map((it, idx) => ({
+                  _key: `scope-${Date.now()}-${idx}`, phase: it.phase || 'Other', description: it.description, category: it.category || 'other',
+                  quantity: it.quantity || 1, unit: it.unit || 'lot', unit_cost: 0, markup_percent: 0, total: 0, sort_order: prev.length + idx,
+                }))])}
               />
+              {scopeGuard && (
+                <div className="fixed inset-0 z-[200] bg-black/75 flex items-end sm:items-center justify-center p-3" onClick={() => setScopeGuard(null)}>
+                  <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl bg-[#111] border border-[#f0a04b]/50 p-5" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-[21px] font-bold text-white leading-snug">Before you go on</p>
+                    <p className="text-[17px] text-white/80 mt-1 leading-snug">{scopeGuard.length === 1 ? 'There is one thing in the scope a customer probably should not see.' : `There are ${scopeGuard.length} things in the scope a customer probably should not see.`}</p>
+                    <ul className="mt-3 space-y-2.5">
+                      {scopeGuard.slice(0, 6).map((w, i) => (
+                        <li key={i} className="rounded-lg bg-white/5 border border-white/12 px-3.5 py-2.5">
+                          <p className="text-[16px] font-semibold text-white leading-snug">{w.label}</p>
+                          <p className="text-[15px] text-white/75 leading-snug break-words">“{w.sample}”</p>
+                        </li>
+                      ))}
+                    </ul>
+                    {scopeGuard.length > 6 && <p className="mt-2 text-[15px] text-white/70">and {scopeGuard.length - 6} more.</p>}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4">
+                      <button type="button" onClick={() => setScopeGuard(null)} className="min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold">Go back and fix</button>
+                      <button type="button" onClick={() => { scopeGuardPassed.current = scopeHtml; setScopeGuard(null); setTimeout(() => handleNext(), 0); }}
+                        className="min-h-[56px] rounded-xl border border-white/25 text-white text-[17px] font-semibold">Go on anyway</button>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div>
                 <div className="text-[17px] font-semibold text-white mb-3">Job-Site Photos</div>
                 <EstimatePhotos

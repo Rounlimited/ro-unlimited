@@ -37,7 +37,11 @@ const T = {
 
 const RICH = '[&_p]:mb-3 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-3 [&_li]:mb-1.5 [&_li>p]:mb-0 [&_ul_ul]:mt-1.5 [&_ul_ul]:mb-0 [&_strong]:font-semibold [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:pl-4 [&_blockquote]:my-3 break-words';
 
-export default function ScopeView({ html, theme = 'light', size = 15, className = '' }: { html: string; theme?: Theme; size?: number; className?: string }) {
+export default function ScopeView({ html, theme = 'light', size = 15, className = '', sectionTools }: {
+  html: string; theme?: Theme; size?: number; className?: string;
+  /** Admin only: controls shown under a section's heading. `index` counts titled sections from 0. */
+  sectionTools?: (index: number, title: string, total: number) => React.ReactNode;
+}) {
   const sections = useMemo(() => parseScope(cleanScopeHtml(html)), [html]);
   const t = T[theme];
   const titled = sections.filter((s) => s.title);
@@ -159,6 +163,7 @@ export default function ScopeView({ html, theme = 'light', size = 15, className 
                   <ChevronDown size={20} className={`shrink-0 transition-transform ${t.muted} ${isClosed ? '-rotate-90' : ''}`} />
                 </button>
               )}
+              {s.title && sectionTools ? sectionTools(num - 1, s.title, titled.length) : null}
               {!isClosed && (
                 <div className="space-y-4">
                   {s.blocks.map((b, i) => <Block key={i} block={b} theme={theme} size={size} />)}
