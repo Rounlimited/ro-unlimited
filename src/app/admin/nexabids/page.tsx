@@ -50,10 +50,20 @@ export default function NexaBidsPage() {
       const r = await fetch('/api/admin/takeoffs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create', file_name: file.name, file_size: file.size }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.id) throw new Error(d.error || 'Could not start that. Try again.');
-      const up = await createBrowserSupabase().storage.from(d.bucket).uploadToSignedUrl(d.path, d.token, file, { contentType: 'application/pdf' });
+      let up: { error: unknown } = { error: null };
+      if (Array.isArray(d.parts)) {
+        // a big set goes up in pieces; a piece that fails is tried once more before giving up
+        const sb = createBrowserSupabase();
+        for (let i = 0; i < d.parts.length && !up.error; i++) {
+          const p = d.parts[i]; setBusy(`Bringing in ${file.name}: part ${i + 1} of ${d.parts.length}. Keep this screen open.`);
+          let one = await sb.storage.from(d.bucket).uploadToSignedUrl(p.path, p.token, file.slice(p.from, p.to), { contentType: 'application/octet-stream', upsert: true });
+          if (one.error) one = await sb.storage.from(d.bucket).uploadToSignedUrl(p.path, p.token, file.slice(p.from, p.to), { contentType: 'application/octet-stream', upsert: true });
+          if (one.error) up = { error: one.error };
+        }
+      } else up = await createBrowserSupabase().storage.from(d.bucket).uploadToSignedUrl(d.path, d.token, file, { contentType: 'application/pdf' });
       if (up.error) {
         await fetch('/api/admin/takeoffs/' + d.id, { method: 'DELETE' }).catch(() => null);
-        throw new Error('The file did not finish uploading. Check the signal and try again. A very large plan set may need to be split into smaller PDFs.');
+        throw new Error('The file did not finish uploading. Check the signal and try again. Big plan sets take a few minutes on a phone signal; Wi-Fi is much quicker.');
       }
       router.push('/admin/nexabids/' + d.id);
     } catch (e) {

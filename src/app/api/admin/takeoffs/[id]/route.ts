@@ -33,7 +33,15 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     file_url = signed?.signedUrl || null;
   }
   const user = await getServerUser(req).catch(() => null);
-  return NextResponse.json({ ...row, data: normalizeTakeoff(row.data), file_url, can_read: mayRead(user?.email) });
+  // a big plan set is stored in pieces: hand back each piece, in order, with its size
+  let file_parts: { url: string; size: number }[] | null = null;
+  const { data: listed } = await admin.storage.from(BUCKET).list(params.id, { limit: 100, sortBy: { column: 'name', order: 'asc' } });
+  const pieces = (listed || []).filter((o: any) => /^part-\d+$/.test(o.name)).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  if (pieces.length) {
+    const { data: urls } = await admin.storage.from(BUCKET).createSignedUrls(pieces.map((o: any) => `${params.id}/${o.name}`), 60 * 60 * 6);
+    if (urls && urls.length === pieces.length && urls.every((u: any) => u.signedUrl)) { file_parts = pieces.map((o: any, i: number) => ({ url: urls[i].signedUrl, size: Number(o.metadata?.size) || 0 })); file_url = null; }
+  }
+  return NextResponse.json({ ...row, data: normalizeTakeoff(row.data), file_url, file_parts, can_read: mayRead(user?.email) });
 }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
@@ -184,6 +192,8 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
   const admin = createAdminClient();
   const { data: row } = await admin.from('takeoffs').select('file_path').eq('id', params.id).maybeSingle();
   if (row?.file_path) await admin.storage.from(BUCKET).remove([row.file_path]).catch(() => null);
+  const { data: left } = await admin.storage.from(BUCKET).list(params.id, { limit: 100 });
+  if (left && left.length) await admin.storage.from(BUCKET).remove(left.map((o: any) => `${params.id}/${o.name}`)).catch(() => null);
   const { error } = await admin.from('takeoffs').delete().eq('id', params.id);
   if (error) return fail(error.message, 500);
   return NextResponse.json({ ok: true });

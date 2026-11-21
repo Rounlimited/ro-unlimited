@@ -99,14 +99,35 @@ export default function TakeoffPage() {
         const r = await fetch('/api/admin/takeoffs/' + id);
         const row = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(row.error || 'Could not open those plans.');
-        if (!row.file_url) throw new Error('The plan file is missing. Delete this one and bring the PDF in again.');
+        if (!row.file_url && !row.file_parts) throw new Error('The plan file is missing. Delete this one and bring the PDF in again.');
         setName(row.name || 'Plans'); setData(normalizeTakeoff(row.data)); setAi(row.ai || null); setCanRead(!!row.can_read);
         // A new bid starts with his usual overhead and profit
         if (!normalizeTakeoff(row.data).pricing) fetch('/api/admin/takeoffs/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'pricing_defaults' }) }).then((x) => x.json()).then((d) => { if (!dead && d?.pricing) setData((cur) => (cur.pricing ? cur : { ...cur, pricing: d.pricing })); }).catch(() => null);
         // @ts-ignore pdf.js is served from /public so the bundler leaves it alone
         const pdfjs = await import(/* webpackIgnore: true */ '/pdfjs/pdf.min.mjs');
         pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.mjs';
-        const doc = await pdfjs.getDocument({ url: row.file_url }).promise;
+        let source: any = { url: row.file_url };
+        if (row.file_parts) {
+          // A big set is stored in pieces. Only the bytes of the sheet being looked at are fetched, from whichever pieces hold them.
+          const parts: { url: string; size: number }[] = row.file_parts; const starts: number[] = []; let total = 0;
+          for (const p of parts) { starts.push(total); total += p.size; }
+          if (!total || parts.some((p) => !p.size)) throw new Error('The plan file did not finish uploading. Delete this one and bring the PDF in again.');
+          const grab = async (begin: number, end: number) => {
+            const out = new Uint8Array(end - begin);
+            await Promise.all(parts.map(async (p, i) => {
+              const a = Math.max(begin, starts[i]), b = Math.min(end, starts[i] + p.size); if (b <= a) return;
+              let buf: ArrayBuffer | null = null;
+              for (let attempt = 0; attempt < 3 && !buf; attempt++) { const r2 = await fetch(p.url, { headers: { Range: `bytes=${a - starts[i]}-${b - starts[i] - 1}` } }).catch(() => null); if (r2 && (r2.status === 206 || r2.status === 200)) { const all = await r2.arrayBuffer(); buf = r2.status === 200 ? all.slice(a - starts[i], b - starts[i]) : all; } }
+              if (!buf) throw new Error('range');
+              out.set(new Uint8Array(buf), a - begin);
+            }));
+            return out;
+          };
+          const transport = new pdfjs.PDFDataRangeTransport(total, null);
+          transport.requestDataRange = (begin: number, end: number) => { grab(begin, end).then((chunk) => transport.onDataRange(begin, chunk)).catch(() => { if (!dead) setLoading('Lost the connection while opening a sheet. Check the signal and open the plans again.'); }); };
+          source = { range: transport, length: total, disableAutoFetch: true, disableStream: true, rangeChunkSize: 1024 * 1024 };
+        }
+        const doc = await pdfjs.getDocument(source).promise;
         if (dead) return;
         docRef.current = doc; opsRef.current = pdfjs.OPS; setPages(doc.numPages); setLoading('');
         if (row.page_count !== doc.numPages) fetch('/api/admin/takeoffs/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page_count: doc.numPages }) }).catch(() => null);
@@ -442,11 +463,11 @@ export default function TakeoffPage() {
     if (mode === 'draw' && active && pickMode === 'whole' && active.kind !== 'count') {
       const fill = active.kind === 'area' ? fillOptions(vecRef.current, raw) : null;
       const got = active.kind === 'length' ? traceRun(vecRef.current, raw, r) : fill ? fill.options[fill.pick].pts : shapeAt(vecRef.current, raw);
-      if (!got || got.length < (active.kind === 'area' ? 3 : 2)) { setSnapMark({ pt: raw, kind: 'miss' }); setTimeout(() => setSnapMark(null), 900); if (active.kind === 'area') setFoundNote('The app could not find the edges around that spot. Tap in open space inside it, or tap each corner yourself.'); return; }
+      if (!got || got.length < (active.kind === 'area' ? 3 : 2)) { setSnapMark({ pt: raw, kind: 'miss' }); setTimeout(() => setSnapMark(null), 900); if (active.kind === 'area') setFoundNote('The app could not find walls around that spot. Tap again on open space in the middle of the room. If it still does not work on this sheet, press "Tap the corners" and tap each corner yourself.'); return; }
       const sid = uid();
       change((d) => ({ ...d, items: d.items.map((it) => (it.id === active.id ? { ...it, shapes: [...it.shapes, { id: sid, page, pts: got, minus: minusNext || undefined }] } : it)) }));
       setMinusNext(false);
-      if (fill) { setLastFill({ item: active.id, shape: sid, options: fill.options, at: fill.pick }); setFoundNote(fill.options.length > 1 ? 'Filled to the lines around it. Look at the edges. If it took too much or too little, press Smaller or Bigger.' : 'Filled to the lines around it. Look at the edges before you keep it.'); } else setLastFill(null);
+      if (fill) { setLastFill({ item: active.id, shape: sid, options: fill.options, at: fill.pick }); setFoundNote('Colored in. Now look at it on the sheet.'); } else setLastFill(null);
       return;
     }
     const sn = snapOn ? snapPoint(vecRef.current, raw, r) : { pt: raw, kind: 'none' as const };
@@ -630,6 +651,20 @@ export default function TakeoffPage() {
                 </div>
               )}
               {mode === 'draw' && foundNote && <p className="text-[16px] font-semibold text-[#8fe3a8] mt-2 leading-snug">{foundNote}</p>}
+              {mode === 'draw' && pickMode === 'whole' && active && active.kind === 'area' && (
+                <div className="mt-2 rounded-xl border border-white/20 bg-white/[0.04] px-3 py-2.5">
+                  {active.shapes.filter((sh) => sh.page === page).length === 0 ? (
+                    <p className="text-[16px] text-white/90 leading-snug">Tap in the <b>middle</b> of the room or area, on open space, not on writing. The app colors it in out to the walls.</p>
+                  ) : (<>
+                    <p className="text-[16px] font-bold leading-snug">{active.shapes.filter((sh) => sh.page === page && !sh.minus).length} colored {active.shapes.filter((sh) => sh.page === page && !sh.minus).length === 1 ? 'piece' : 'pieces'} on this sheet · {fmtQty(itemQuantity(active, data.scales).quantity, active.unit)} {active.unit} so far</p>
+                    <ul className="mt-1.5 space-y-1.5 text-[16px] text-white/90 leading-snug">
+                      <li><b className="text-[#8fe3a8]">Part of the room still white?</b> Tap the white part. It gets colored and added to the total. Keep tapping until the whole room is colored.</li>
+                      <li><b className="text-[#8fe3a8]">Colored too much?</b> Press {lastFill && lastFill.options.length > 1 ? 'Smaller' : 'Undo'}{lastFill && lastFill.options.length > 1 ? '' : ', then zoom in and tap again'}.</li>
+                      <li><b className="text-[#8fe3a8]">Edges look wrong?</b> Press Undo, then use "Tap the corners" and tap each corner yourself. That is always exact.</li>
+                    </ul>
+                  </>)}
+                </div>
+              )}
               {mode === 'draw' && lastFill && lastFill.options.length > 1 && active && lastFill.item === active.id && active.shapes.some((sh) => sh.id === lastFill.shape) && (
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   <button disabled={lastFill.at >= lastFill.options.length - 1} onClick={() => refill(1)} className="min-h-[48px] rounded-xl border border-[#4ade80]/70 text-[16px] font-bold disabled:opacity-35">Smaller</button>
@@ -909,7 +944,7 @@ function HelpSheet({ onClose }: { onClose: () => void }) {
     ['Set the scale', 'A plan is a small drawing of a big thing. Tap the orange "Set this sheet’s scale" button. If the app shows a green scale, tap "Use this". Do it once on each sheet you measure.'],
     ['Add what you want to measure', 'Tap "Add something to measure" and give it a name, like "Sidewalk". Pick how it is measured: a length, an area, or a count.'],
     ['Tap it out on the sheet', 'Drag with one finger to move the sheet. Pinch with two fingers to zoom in. A quick tap puts down a point. Zoom in before you tap: it is more exact. Tap "Finish this one" when you have gone all the way around.'],
-    ['Let the app do more of it', '"Tap inside to fill it" measures a room or a paved area from one tap in the middle of it; Smaller and Bigger step between the outlines it found. "Tap a whole line" takes a whole line in one tap. "Box one, find the rest": tap two corners of a box around one symbol and every matching one is counted. "Count a tag" counts every place a tag like A or P-1 is printed.'],
+    ['Let the app do more of it', '"Tap inside to fill it" colors in a room or a paved area from one tap in the middle of it. If part of the room stays white, tap that part too and it is added. Smaller and Bigger change how much it took. "Tap a whole line" takes a whole line in one tap. "Box one, find the rest": tap two corners of a box around one symbol and every matching one is counted. "Count a tag" counts every place a tag like A or P-1 is printed.'],
     ['Made a mistake?', '"Undo" takes back the last tap. "Remove one" takes away a measurement you tap. "Move a corner" lets you fix one corner.'],
     ['Let the AI help', 'The purple button has the AI read every sheet and draft the list of things to price. On an item, "Let the AI try it" has the AI mark it for you and then check its own marks. Always look at what it marked before you keep it. "Ask the AI" lets you ask it anything about the sheet, and it tells you how sure it is.'],
     ['Price it and send it', 'Type your price on each item. Tap the "Cost → Bid" bar to add overhead and profit. Then "Send to an estimate".'],

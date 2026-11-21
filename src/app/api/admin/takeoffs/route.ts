@@ -9,7 +9,9 @@ import { bidStage, nexaBidsAccess, NEXABIDS_LOCKED } from '@/lib/nexabids';
  */
 export const dynamic = 'force-dynamic';
 const BUCKET = 'plans';
-const MAX_FILE_BYTES = 50_000_000;     // the storage plan this site is on takes 50 MB per file
+const MAX_FILE_BYTES = 50_000_000;     // the storage plan this site is on takes 50 MB per stored file
+const PART_BYTES = 40_000_000;         // so a bigger plan set is stored in pieces of this size
+const MAX_SET_BYTES = 600_000_000;     // the biggest plan set taken in one go
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
 export async function GET(req: NextRequest) {
@@ -57,12 +59,24 @@ export async function POST(req: NextRequest) {
     const fileName = String(body.file_name || '').slice(0, 200);
     if (!/\.pdf$/i.test(fileName)) return fail('Plans need to be a PDF file.');
     const size = Number(body.file_size) || 0;
-    if (size > MAX_FILE_BYTES) return fail('That file is over 50 MB. Split the plan set into smaller PDFs and bring them in one at a time.');
+    if (size > MAX_SET_BYTES) return fail('That file is over 600 MB. Split the plan set into two PDFs and bring them in one at a time.');
     await admin.storage.createBucket(BUCKET, { public: false, fileSizeLimit: MAX_FILE_BYTES }).catch(() => null);
     const name = String(body.name || fileName.replace(/\.pdf$/i, '')).trim().slice(0, 140) || 'Plans';
     const { data: row, error } = await admin.from('takeoffs').insert({ name, file_name: fileName, file_size: size || null }).select('id').single();
     if (error || !row) return fail(error?.message || 'Could not start that.', 500);
     const path = `${row.id}/plans.pdf`;
+    if (size > 45_000_000) {
+      // too big for one stored file: one upload ticket per piece
+      const parts: { path: string; token: string; from: number; to: number }[] = [];
+      for (let i = 0, from = 0; from < size; i++, from += PART_BYTES) {
+        const pp = `${row.id}/part-${String(i).padStart(3, '0')}`;
+        const { data: t, error: tErr } = await admin.storage.from(BUCKET).createSignedUploadUrl(pp);
+        if (tErr || !t) { await admin.from('takeoffs').delete().eq('id', row.id); return fail('Could not get ready for that file. Try again.', 502); }
+        parts.push({ path: pp, token: t.token, from, to: Math.min(size, from + PART_BYTES) });
+      }
+      await admin.from('takeoffs').update({ file_path: path }).eq('id', row.id);
+      return NextResponse.json({ id: row.id, bucket: BUCKET, parts });
+    }
     const { data: up, error: upErr } = await admin.storage.from(BUCKET).createSignedUploadUrl(path);
     if (upErr || !up) {
       await admin.from('takeoffs').delete().eq('id', row.id);
