@@ -1,5 +1,5 @@
 // RO Unlimited Admin — Service Worker
-const CACHE_NAME = 'ro-admin-v57'; // 2026-09-20: RO CO. logo // 2026-08-30: progress tracking, job log, reports, letters, tours — force fresh chunks on installed PWAs
+const CACHE_NAME = 'ro-admin-v58'; // 2026-09-20: RO CO. logo // 2026-08-30: progress tracking, job log, reports, letters, tours — force fresh chunks on installed PWAs
 const PRECACHE_URLS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',

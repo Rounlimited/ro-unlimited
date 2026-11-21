@@ -604,6 +604,8 @@ export default function TakeoffPage() {
                 {mode === 'scale'
                   ? (scalePts.length === 0 ? 'Tap one end of a line you know the length of.' : scalePts.length === 1 ? 'Now tap the other end.' : 'Type the real length.')
                   : active?.kind === 'count' ? `Tap each ${active.name}. ${active.shapes.filter((s) => s.page === page).reduce((n, s) => n + s.pts.length, 0)} on this sheet.`
+                  : active?.kind === 'area' && pickMode === 'whole' ? `Tap once inside the ${active.name}.`
+                  : active?.kind === 'length' && pickMode === 'whole' ? `Tap on the line for the ${active?.name}.`
                   : active?.kind === 'area' ? `Tap each corner of the ${active.name}, then Finish.` : `Tap along the ${active?.name}, then Finish.`}
                 {draftReadout && <span className="text-[#E5C76B]"> {draftReadout}</span>}
               </p>
@@ -648,7 +650,7 @@ export default function TakeoffPage() {
                 {mode === 'draw' && <button onClick={undo} className="min-h-[52px] px-4 rounded-xl border border-white/30 text-[17px] font-semibold flex items-center gap-2"><Undo2 size={20} /> Undo</button>}
                 {mode === 'draw' && active && active.kind !== 'count' && <button onClick={() => { setMinusNext((v) => !v); setFoundNote(minusNext ? '' : 'The next one you mark will be taken away from the total, like a door opening or a planter.'); }} className={`min-h-[52px] px-3 rounded-xl border text-[15px] font-bold leading-tight ${minusNext ? 'border-red-400 bg-red-500/25' : 'border-white/30'}`}>{minusNext ? 'Taking away' : 'Take away'}</button>}
                 {mode === 'draw' && active && active.kind !== 'count' && (
-                  <button onClick={finishShape} disabled={draft.length < (active.kind === 'area' ? 3 : 2)} className="flex-1 min-h-[52px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold flex items-center justify-center gap-2 disabled:opacity-40"><Check size={22} /> Finish this one</button>
+                  <button onClick={finishShape} disabled={draft.length < (active.kind === 'area' ? 3 : 2)} className="flex-1 min-h-[52px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold flex items-center justify-center gap-2 disabled:opacity-40"><Check size={22} /> {pickMode === 'whole' ? 'Finish' : 'Finish this one'}</button>
                 )}
                 <button onClick={stop} className={`min-h-[52px] px-5 rounded-xl text-[17px] font-semibold ${mode === 'draw' && active?.kind === 'count' ? 'flex-1 bg-[#C9A84C] text-black font-bold' : 'border border-white/30'}`}>{mode === 'scale' ? 'Cancel' : 'Done'}</button>
               </div>
