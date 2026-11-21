@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Trash2, Loader2, Pencil, Send, AlertTriangle, Maximize, Minimize, ChevronDown, ChevronUp, Sparkles, List } from 'lucide-react';
 import {
@@ -336,6 +336,12 @@ export default function TakeoffPage() {
   }, [active, draft, ftPerPt]);
 
   const bid = useMemo(() => bidTotals(data), [data]);
+  // A long list (the AI's draft can be 100+ items) is shown by trade, each trade folding shut
+  const hasGroups = data.items.some((i) => i.group);
+  const orderedItems = useMemo(() => (hasGroups ? data.items.map((it, i) => ({ it, i })).sort((a, b) => (a.it.group || '').localeCompare(b.it.group || '') || a.i - b.i).map((x) => x.it) : data.items), [data.items, hasGroups]);
+  const groupInfo = useMemo(() => { const m: Record<string, { n: number; ready: number }> = {}; for (const it of data.items) { const g = it.group || ''; m[g] = m[g] || { n: 0, ready: 0 }; m[g].n++; if (itemQuantity(it, data.scales).quantity > 0) m[g].ready++; } return m; }, [data]);
+  const [closedGroups, setClosedGroups] = useState<string[]>([]);
+  const readyCount = Object.values(groupInfo).reduce((n, g) => n + g.ready, 0);
   const total = bid.price;
   const linesReady = useMemo(() => takeoffLines(data).length, [data]);
   const sw = 2.2 / view.k;   // line weight that stays the same on screen at any zoom
@@ -473,11 +479,22 @@ export default function TakeoffPage() {
             <AiCard ai={ai} busy={aiBusy} canRead={canRead} pages={pages} sheet={aiPage} note={aiNote} onStart={startRead} onOpen={() => setSheet('ai')} />
             {ai?.status === 'done' && <DraftCard draft={bidDraft} busy={draftBusy} canRead={canRead} taken={!!data.draftTaken} onStart={startDraft} onOpen={() => setSheet('draft')} />}
             {data.items.length === 0 && <p className="text-[16px] text-white/80 leading-snug px-1">Add what you want to measure: a pipe run, a slab, catch basins. Then tap it out on the sheet.</p>}
-            {data.items.map((it) => {
+            {data.items.length > 8 && <p className="text-[15px] text-white/80 px-1">{readyCount} of {data.items.length} have a quantity. {data.items.length - readyCount} still to measure.</p>}
+            {orderedItems.map((it, idx) => {
               const q = itemQuantity(it, data.scales);
               const on = it.id === activeId && mode === 'draw';
+              const g = it.group || ''; const head = hasGroups && (idx === 0 || (orderedItems[idx - 1].group || '') !== g);
+              const shut = hasGroups && closedGroups.includes(g) && !on;
               return (
-                <div key={it.id} className={`rounded-xl border ${on ? 'border-[#C9A84C] bg-[#C9A84C]/12' : 'border-white/15 bg-white/[0.04]'}`}>
+                <Fragment key={it.id}>
+                {head && (
+                  <button onClick={() => setClosedGroups((c) => (c.includes(g) ? c.filter((x) => x !== g) : [...c, g]))} className="w-full min-h-[44px] px-1 pt-1 flex items-center gap-2 text-left">
+                    <span className="flex-1 text-[14px] font-bold uppercase tracking-wide text-[#E5C76B]">{g || 'Your own items'} · {groupInfo[g]?.ready || 0} of {groupInfo[g]?.n || 0} ready</span>
+                    {closedGroups.includes(g) ? <ChevronDown size={20} className="text-white/70" /> : <ChevronUp size={20} className="text-white/70" />}
+                  </button>
+                )}
+                {!shut && (
+                <div className={`rounded-xl border ${on ? 'border-[#C9A84C] bg-[#C9A84C]/12' : 'border-white/15 bg-white/[0.04]'}`}>
                   <button onClick={() => (on ? stop() : pick(it.id))} className="w-full text-left px-3 py-2.5 flex items-center gap-3">
                     <span className="w-5 h-5 rounded-full shrink-0 border-2 border-white/70" style={{ background: it.color }} />
                     <span className="flex-1 min-w-0">
@@ -506,6 +523,8 @@ export default function TakeoffPage() {
                     </div>
                   )}
                 </div>
+                )}
+                </Fragment>
               );
             })}
             <button onClick={() => { setEditing(null); setSheet('item'); }} className="w-full min-h-[52px] rounded-xl border-2 border-dashed border-white/30 text-[17px] font-semibold flex items-center justify-center gap-2"><Plus size={22} /> Add something to measure</button>
@@ -689,7 +708,7 @@ function DraftSheet({ draft, have, onAdd, onClose }: { draft: AiDraft; have: str
       <p className="text-[15px] text-[#f0a04b] leading-snug mt-1.5">Drafted by the AI from what the plans print. Check it against the sheets: it can miss things. It never guesses a quantity.</p>
       {(draft.watch_outs || []).length > 0 && (
         <div className="mt-3 rounded-xl border border-[#f0a04b]/60 bg-[#f0a04b]/10">
-          <button onClick={() => setShowWatch((v) => !v)} className="w-full min-h-[48px] px-3 text-left flex items-center gap-2"><AlertTriangle size={20} className="text-[#f0a04b] shrink-0" /><span className="flex-1 text-[16px] font-bold">{draft.watch_outs!.length} things to watch out for</span>{showWatch ? <ChevronUp size={22} /> : <ChevronDown size={22} />}</button>
+          <button onClick={() => setShowWatch((v) => !v)} className="w-full min-h-[48px] px-3 text-left flex items-center gap-2"><AlertTriangle size={20} className="text-[#f0a04b] shrink-0" /><span className="flex-1 text-[16px] font-bold">{draft.watch_outs!.length === 1 ? "1 thing" : `${draft.watch_outs!.length} things`} to watch out for</span>{showWatch ? <ChevronUp size={22} /> : <ChevronDown size={22} />}</button>
           {showWatch && <ul className="px-3 pb-3 space-y-1.5">{draft.watch_outs!.map((w, i) => <li key={i} className="text-[16px] text-white/90 leading-snug">• {w}</li>)}</ul>}
         </div>
       )}
