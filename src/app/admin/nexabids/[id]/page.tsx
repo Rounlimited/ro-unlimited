@@ -6,7 +6,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Tra
 import {
   type Pt, type TakeoffData, type TakeoffItem, type TakeoffKind, type TakeoffUnit,
   TAKEOFF_COLORS, UNITS_FOR, KIND_LABEL, PRINTED_SCALES, emptyTakeoff, normalizeTakeoff, itemQuantity, fmtQty, money,
-  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, bidTotals, itemCost, labelPoints, type SheetWord, type ItemPart, type AiRead, type AiSheet, type BidPricing, type AiDraft, type DraftItem,
+  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, bidTotals, itemCost, bidCsv, labelPoints, type SheetWord, type ItemPart, type AiRead, type AiSheet, type BidPricing, type AiDraft, type DraftItem,
 } from '@/lib/takeoff';
 import { readSheetVectors, snapPoint, traceRun, shapeAt, symbolAt, symbolInBox, findSymbols, type SheetVectors, type SymbolKey } from '@/lib/takeoff-vectors';
 
@@ -61,6 +61,7 @@ export default function TakeoffPage() {
   const [others, setOthers] = useState<{ page: number; pts: Pt[]; on: boolean }[]>([]);
   const [searching, setSearching] = useState('');
   const [moveStep, setMoveStep] = useState<null | 'pick' | { shape: string; idx: number }>(null);
+  const [minusNext, setMinusNext] = useState(false);                  // the next shape is a take-away (an opening)
   const [boxStart, setBoxStart] = useState<Pt | null>(null);          // first corner of the box drawn around one symbol
   // Ask the AI: his questions about this bid and its answers
   const [askJob, setAskJob] = useState('');
@@ -288,15 +289,15 @@ export default function TakeoffPage() {
   const ftPerPt = Number(data.scales[String(page)]) || 0;
 
   /* ── Ask the AI ── */
-  const ask = async (text: string, about?: { name: string; note: string } | null) => {
+  const ask = async (text: string, about?: { name: string; note: string } | null, whole?: boolean) => {
     const q = text.trim(); if (!q || askJob) return;
     setAskErr('');
     const msgs = [...(data.chat || []), { role: 'user' as const, content: q }];
     change((d) => ({ ...d, chat: msgs.slice(-40) }));
-    const r = await fetch('/api/admin/takeoffs/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ask', page, messages: msgs, item: about || askAbout || undefined }) }).catch(() => null);
+    const r = await fetch('/api/admin/takeoffs/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ask', page, messages: msgs, whole: !!whole, item: about || askAbout || undefined }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     if (!r || !r.ok || !d.job) { setAskErr(d.error || 'Could not reach the AI. Try again.'); return; }
-    setAskLabel('Looking at the sheet…'); setAskJob(d.job);
+    setAskLabel(whole ? 'Going through your whole bid…' : 'Looking at the sheet…'); setAskJob(d.job);
   };
   useEffect(() => {
     if (!askJob) return;
@@ -440,7 +441,8 @@ export default function TakeoffPage() {
     if (mode === 'draw' && active && pickMode === 'whole' && active.kind !== 'count') {
       const got = active.kind === 'length' ? traceRun(vecRef.current, raw, r) : shapeAt(vecRef.current, raw);
       if (!got || got.length < (active.kind === 'area' ? 3 : 2)) { setSnapMark({ pt: raw, kind: 'miss' }); setTimeout(() => setSnapMark(null), 900); return; }
-      change((d) => ({ ...d, items: d.items.map((it) => (it.id === active.id ? { ...it, shapes: [...it.shapes, { id: uid(), page, pts: got }] } : it)) }));
+      change((d) => ({ ...d, items: d.items.map((it) => (it.id === active.id ? { ...it, shapes: [...it.shapes, { id: uid(), page, pts: got, minus: minusNext || undefined }] } : it)) }));
+      setMinusNext(false);
       return;
     }
     const sn = snapOn ? snapPoint(vecRef.current, raw, r) : { pt: raw, kind: 'none' as const };
@@ -464,8 +466,8 @@ export default function TakeoffPage() {
   const finishShape = () => {
     if (!active || active.kind === 'count') return;
     const need = active.kind === 'area' ? 3 : 2;
-    if (draft.length >= need) change((d) => ({ ...d, items: d.items.map((it) => (it.id === active.id ? { ...it, shapes: [...it.shapes, { id: uid(), page, pts: draft }] } : it)) }));
-    setDraft([]);
+    if (draft.length >= need) change((d) => ({ ...d, items: d.items.map((it) => (it.id === active.id ? { ...it, shapes: [...it.shapes, { id: uid(), page, pts: draft, minus: minusNext || undefined }] } : it)) }));
+    setDraft([]); setMinusNext(false);
   };
   const undo = () => {
     if (draft.length) { setDraft((p) => p.slice(0, -1)); return; }
@@ -480,7 +482,7 @@ export default function TakeoffPage() {
       return { ...it, shapes: it.shapes.slice(0, -1) };
     }) }));
   };
-  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setFoundNote(''); setErase(false); setMoveStep(null); setLastSearch(null); setBoxStart(null);
+  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setFoundNote(''); setErase(false); setMoveStep(null); setLastSearch(null); setBoxStart(null); setMinusNext(false);
     // an item that came from a table says which tag to count: start there
     const it = data.items.find((x) => x.id === itemId); const tg = it && it.kind === 'count' ? /marked (\S+) on the drawings/.exec(it.hint || '') : null;
     if (tg) { setTagText(tg[1]); setPickMode('tag'); } else setPickMode('points'); };
@@ -555,7 +557,7 @@ export default function TakeoffPage() {
                 it.kind === 'count'
                   ? s.pts.map((p, i) => (<g key={s.id + i}><circle cx={p[0]} cy={p[1]} r={dot * 1.5} fill={it.color} fillOpacity={0.35} stroke={it.color} strokeWidth={sw} /><circle cx={p[0]} cy={p[1]} r={dot * 0.4} fill={it.color} /></g>))
                   : it.kind === 'area'
-                    ? <polygon key={s.id} points={s.pts.map((p) => p.join(',')).join(' ')} fill={it.color} fillOpacity={it.id === activeId ? 0.34 : 0.22} stroke={it.color} strokeWidth={sw} strokeLinejoin="round" />
+                    ? <polygon key={s.id} points={s.pts.map((p) => p.join(',')).join(' ')} fill={s.minus ? '#000' : it.color} fillOpacity={s.minus ? 0.5 : it.id === activeId ? 0.34 : 0.22} stroke={s.minus ? '#fff' : it.color} strokeWidth={sw} strokeDasharray={s.minus ? `${sw * 3} ${sw * 2}` : undefined} strokeLinejoin="round" />
                     : <polyline key={s.id} points={s.pts.map((p) => p.join(',')).join(' ')} fill="none" stroke={it.color} strokeWidth={sw * (it.id === activeId ? 2 : 1.5)} strokeLinejoin="round" strokeLinecap="round" />
               )))}
               {active && draft.length > 0 && (<>
@@ -629,6 +631,7 @@ export default function TakeoffPage() {
               {vecState === 'none' && <p className="text-[15px] text-[#f0a04b] mt-1">This sheet is a picture (scanned), so there are no drawing lines to snap to.</p>}
               <div className="flex gap-2 mt-2.5">
                 {mode === 'draw' && <button onClick={undo} className="min-h-[52px] px-4 rounded-xl border border-white/30 text-[17px] font-semibold flex items-center gap-2"><Undo2 size={20} /> Undo</button>}
+                {mode === 'draw' && active && active.kind !== 'count' && <button onClick={() => { setMinusNext((v) => !v); setFoundNote(minusNext ? '' : 'The next one you mark will be taken away from the total, like a door opening or a planter.'); }} className={`min-h-[52px] px-3 rounded-xl border text-[15px] font-bold leading-tight ${minusNext ? 'border-red-400 bg-red-500/25' : 'border-white/30'}`}>{minusNext ? 'Taking away' : 'Take away'}</button>}
                 {mode === 'draw' && active && active.kind !== 'count' && (
                   <button onClick={finishShape} disabled={draft.length < (active.kind === 'area' ? 3 : 2)} className="flex-1 min-h-[52px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold flex items-center justify-center gap-2 disabled:opacity-40"><Check size={22} /> Finish this one</button>
                 )}
@@ -679,7 +682,7 @@ export default function TakeoffPage() {
                     <span className="flex-1 min-w-0">
                       <span className="block text-[17px] font-bold leading-snug break-words">{it.name}</span>
                       <span className="block text-[15px] text-white/80 leading-snug">
-                        {it.alt && <b className="text-[#c4b5fd]">Alternate · </b>}{fmtQty(q.quantity, it.unit)} {it.unit}{(() => { const c = itemCost(it, data.scales); return c.parts.length && !(c.qty > 0) ? ' · build-up, nothing measured yet' : c.parts.length ? (c.total > 0 ? ` · build-up of ${c.parts.length + (it.unitCost > 0 ? 1 : 0)} = ${money(c.total)}` : ` · build-up of ${c.parts.length}, no prices yet`) : it.unitCost > 0 ? ` × ${money(it.unitCost)} = ${money(c.total)}` : ' · no price yet'; })()}
+                        {it.alt && <b className="text-[#c4b5fd]">Alternate · </b>}{Number(it.times) > 1 && <b className="text-[#E5C76B]">× {it.times} · </b>}{fmtQty(q.quantity, it.unit)} {it.unit}{(() => { const c = itemCost(it, data.scales); return c.parts.length && !(c.qty > 0) ? ' · build-up, nothing measured yet' : c.parts.length ? (c.total > 0 ? ` · build-up of ${c.parts.length + (it.unitCost > 0 ? 1 : 0)} = ${money(c.total)}` : ` · build-up of ${c.parts.length}, no prices yet`) : it.unitCost > 0 ? ` × ${money(it.unitCost)} = ${money(c.total)}` : ' · no price yet'; })()}
                       </span>
                       {q.unscaled > 0 && <span className="block text-[14px] text-[#f0a04b] leading-snug">{q.unscaled} left out: that sheet has no scale</span>}
                       {!!it.hint && !it.shapes.length && !it.printedQty && <span className="block text-[14px] text-[#f0a04b] leading-snug">To measure: {it.hint}</span>}
@@ -807,7 +810,7 @@ export default function TakeoffPage() {
       )}
       {sheet === 'help' && <HelpSheet onClose={() => setSheet(null)} />}
       {sheet === 'ask' && <AskSheet chat={data.chat || []} busy={!!askJob} label={askLabel} error={askErr} where={sheetLabel(page) || `sheet ${page}`} about={askAbout}
-        onAsk={(t) => ask(t)} onClear={() => { change((d) => ({ ...d, chat: [] })); setAskAbout(null); }} onClose={() => setSheet(null)} />}
+        onAsk={(t) => ask(t)} onReview={() => ask('Check my whole bid. What is missing, what looks doubled, and what looks too low or too high?', null, true)} onClear={() => { change((d) => ({ ...d, chat: [] })); setAskAbout(null); }} onClose={() => setSheet(null)} />}
       {sheet === 'others' && active && (
         <Sheet title="Found on other sheets" onClose={() => setSheet(null)}>
           {others.length === 0 ? <p className="text-[17px] text-white/90 leading-relaxed">Nothing like it is drawn on the other sheets.</p> : (<>
@@ -846,7 +849,7 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 /** A conversation with the AI about this bid. It looks at the sheet he is on, and says how sure it is. */
-function AskSheet({ chat, busy, label, error, where, about, onAsk, onClear, onClose }: { chat: { role: 'user' | 'assistant'; content: string }[]; busy: boolean; label: string; error: string; where: string; about: { name: string; note: string } | null; onAsk: (t: string) => void; onClear: () => void; onClose: () => void }) {
+function AskSheet({ chat, busy, label, error, where, about, onAsk, onReview, onClear, onClose }: { onReview: () => void; chat: { role: 'user' | 'assistant'; content: string }[]; busy: boolean; label: string; error: string; where: string; about: { name: string; note: string } | null; onAsk: (t: string) => void; onClear: () => void; onClose: () => void }) {
   const [text, setText] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [chat.length, busy]);
@@ -856,6 +859,7 @@ function AskSheet({ chat, busy, label, error, where, about, onAsk, onClear, onCl
     <Sheet title="Ask the AI" onClose={onClose}>
       <p className="text-[15px] text-white/80 leading-snug">It looks at <b className="text-white">{where}</b> and at your list before it answers{about ? <>, and knows you are asking about <b className="text-white">{about.name}</b></> : null}. It takes about 30 seconds. It can be wrong: treat what it says as a second opinion.</p>
       <div className="mt-3 space-y-2.5">
+        {!busy && <button onClick={onReview} className="w-full min-h-[56px] text-left rounded-xl border border-[#4ade80]/70 bg-[#4ade80]/12 px-3 py-2"><span className="block text-[17px] font-bold leading-snug">Check my whole bid</span><span className="block text-[15px] text-white/85 leading-snug">It goes through your list against everything it read off the plans: what is missing, doubled, or looks off. About a minute.</span></button>}
         {chat.length === 0 && !busy && (
           <div className="space-y-2">
             {ideas.map((q) => <button key={q} onClick={() => onAsk(q)} className="w-full min-h-[52px] text-left rounded-xl border border-[#7dd3fc]/50 bg-[#7dd3fc]/10 px-3 py-2 text-[17px] font-semibold leading-snug">{q}</button>)}
@@ -1211,7 +1215,9 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
   const [height, setHeight] = useState(item?.heightFt ? String(item.heightFt) : '');
   const [width, setWidth] = useState(item?.widthFt ? String(item.widthFt) : '');
   const [alt, setAlt] = useState(!!item?.alt);
-  const [parts, setParts] = useState<{ id: string; name: string; unit: string; per: string; unitCost: string }[]>(() => (item?.parts || []).map((p) => ({ id: p.id, name: p.name, unit: p.unit, per: String(p.per), unitCost: p.unitCost ? String(p.unitCost) : '' })));
+  const [times, setTimes] = useState(item?.times && item.times !== 1 ? String(item.times) : '');
+  const [pitch, setPitch] = useState(item?.pitch ? String(item.pitch) : '');
+  const [parts, setParts] = useState<{ id: string; name: string; unit: string; per: string; unitCost: string; basis?: 'qty' | 'edge' }[]>(() => (item?.parts || []).map((p) => ({ id: p.id, name: p.name, unit: p.unit, per: String(p.per), unitCost: p.unitCost ? String(p.unitCost) : '', basis: p.basis })));
   const [saved, setSaved] = useState<any[]>([]);
   const tid = typeof window !== 'undefined' ? location.pathname.split('/').pop() : '';
   useEffect(() => { fetch('/api/admin/takeoffs/' + tid, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'assemblies' }) }).then((r) => r.json()).then((d) => setSaved(Array.isArray(d.list) ? d.list : [])).catch(() => null); }, [tid]);
@@ -1227,11 +1233,11 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
     if (unit === 'CY' && !(Number(depth) > 0)) { setErr(kind === 'length' ? 'Volume needs the depth in inches.' : 'Cubic yards needs the thickness in inches.'); return; }
     if (kind === 'length' && unit === 'SF' && !(Number(height) > 0)) { setErr('Wall area needs the height in feet.'); return; }
     if (kind === 'length' && unit === 'CY' && !(Number(width) > 0)) { setErr('Volume needs the width in feet.'); return; }
-    const cleanParts: ItemPart[] = parts.filter((p) => p.name.trim() && Number(p.per) > 0).map((p) => ({ id: p.id, name: p.name.trim().slice(0, 80), unit: p.unit.trim().slice(0, 8) || 'EA', per: Number(p.per), unitCost: Math.max(0, Number(p.unitCost) || 0) }));
+    const cleanParts: ItemPart[] = parts.filter((p) => p.name.trim() && Number(p.per) > 0).map((p) => ({ id: p.id, name: p.name.trim().slice(0, 80), unit: p.unit.trim().slice(0, 8) || 'EA', per: Number(p.per), unitCost: Math.max(0, Number(p.unitCost) || 0), basis: kind === 'area' && p.basis === 'edge' ? 'edge' : undefined }));
     if (cleanParts.length) fetch('/api/admin/takeoffs/' + tid, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'assembly_save', assembly: { name: name.trim(), kind, unit, heightFt: Number(height) || undefined, widthFt: Number(width) || undefined, depthIn: Number(depth) || undefined, unitCost: Number(price) || 0, parts: cleanParts } }) }).catch(() => null);
     if (Number(price) > 0) fetch('/api/admin/takeoffs/' + (typeof window !== 'undefined' ? location.pathname.split('/').pop() : ''), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'remember_price', name: name.trim(), unit, price: Number(price) }) }).catch(() => null);
     onSave({ id: item?.id || uid(), name: name.trim().slice(0, 120), kind, unit, color, unitCost: Math.max(0, Number(price) || 0), depthIn: unit === 'CY' ? Number(depth) : undefined, heightFt: kind === 'length' && unit === 'SF' ? Number(height) : undefined, widthFt: kind === 'length' && unit === 'CY' ? Number(width) : undefined,
-      parts: cleanParts.length ? cleanParts : undefined, alt: alt || undefined, wastePct: Number(waste) > 0 ? Number(waste) : undefined,
+      parts: cleanParts.length ? cleanParts : undefined, alt: alt || undefined, times: Number(times) > 0 && Number(times) !== 1 ? Number(times) : undefined, pitch: kind === 'area' && Number(pitch) > 0 ? Number(pitch) : undefined, wastePct: Number(waste) > 0 ? Number(waste) : undefined,
       printedQty: Number(typed) > 0 ? Number(typed) : undefined, printedNote: Number(typed) > 0 ? (Number(typed) === item?.printedQty && item?.printedNote ? item.printedNote : 'typed in by you') : undefined, shapes: item?.shapes || [] });
   };
   return (
@@ -1282,6 +1288,11 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
         <div><label className={labelCls}>{parts.length ? `Labor or own price per ${unit}` : `Your price per ${unit}`}</label><input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Can add later" className={inputCls} /></div>
         <div><label className={labelCls}>Extra for waste, %</label><input inputMode="decimal" value={waste} onChange={(e) => setWaste(e.target.value)} placeholder="0" className={inputCls} /></div>
       </div>
+      <div className="grid grid-cols-2 gap-2 mt-3">
+        <div><label className={labelCls}>Built how many times?</label><input inputMode="decimal" value={times} onChange={(e) => setTimes(e.target.value)} placeholder="1" className={inputCls} /></div>
+        {kind === 'area' && <div><label className={labelCls}>Roof slope: rise in 12</label><input inputMode="decimal" value={pitch} onChange={(e) => setPitch(e.target.value)} placeholder="Flat" className={inputCls} /></div>}
+      </div>
+      <p className="text-[14px] text-white/70 leading-snug mt-1">Two identical buildings? Measure one and put 2.{kind === 'area' ? ' For a sloped roof measured from above, put the slope (like 4 for a 4 in 12 roof) and the app adds the extra area.' : ''}</p>
       <label className={`${labelCls} mt-3`}>Already know the quantity? Type it ({unit})</label>
       <input inputMode="decimal" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Leave empty to measure it" className={inputCls} />
       <p className="text-[14px] text-white/70 leading-snug mt-1">Used until you measure it. Once measured, the two are compared.</p>
@@ -1294,8 +1305,14 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
               <input value={p.name} onChange={(e) => setPart(p.id, 'name', e.target.value)} placeholder="What, like 8 inch block" className="flex-1 min-w-0 min-h-[48px] px-3 rounded-lg bg-white/5 border border-white/20 text-[17px] focus:outline-none focus:border-[#C9A84C]" />
               <button onClick={() => setParts((ps) => ps.filter((x) => x.id !== p.id))} aria-label="Remove this part" className="w-12 min-h-[48px] rounded-lg border border-white/20 flex items-center justify-center"><X size={20} /></button>
             </div>
+            {kind === 'area' && (
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <button type="button" onClick={() => setParts((ps) => ps.map((x) => (x.id === p.id ? { ...x, basis: undefined } : x)))} className={`min-h-[44px] rounded-lg border text-[15px] font-semibold ${p.basis !== 'edge' ? 'border-[#C9A84C] bg-[#C9A84C]/15' : 'border-white/25'}`}>Goes with the area</button>
+                <button type="button" onClick={() => setParts((ps) => ps.map((x) => (x.id === p.id ? { ...x, basis: 'edge' } : x)))} className={`min-h-[44px] rounded-lg border text-[15px] font-semibold ${p.basis === 'edge' ? 'border-[#C9A84C] bg-[#C9A84C]/15' : 'border-white/25'}`}>Goes around the edge</button>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-2 mt-2">
-              <label className="text-[13px] text-white/75">How many per {unit}<input inputMode="decimal" value={p.per} onChange={(e) => setPart(p.id, 'per', e.target.value)} placeholder="1.125" className="mt-1 w-full min-h-[48px] px-2.5 rounded-lg bg-white/5 border border-white/20 text-[17px] text-white focus:outline-none focus:border-[#C9A84C]" /></label>
+              <label className="text-[13px] text-white/75">{p.basis === 'edge' ? 'How many per foot of edge' : `How many per ${unit}`}<input inputMode="decimal" value={p.per} onChange={(e) => setPart(p.id, 'per', e.target.value)} placeholder="1.125" className="mt-1 w-full min-h-[48px] px-2.5 rounded-lg bg-white/5 border border-white/20 text-[17px] text-white focus:outline-none focus:border-[#C9A84C]" /></label>
               <label className="text-[13px] text-white/75">Its unit<input value={p.unit} onChange={(e) => setPart(p.id, 'unit', e.target.value)} placeholder="EA" className="mt-1 w-full min-h-[48px] px-2.5 rounded-lg bg-white/5 border border-white/20 text-[17px] text-white focus:outline-none focus:border-[#C9A84C]" /></label>
               <label className="text-[13px] text-white/75">Price each<input inputMode="decimal" value={p.unitCost} onChange={(e) => setPart(p.id, 'unitCost', e.target.value)} placeholder="0.00" className="mt-1 w-full min-h-[48px] px-2.5 rounded-lg bg-white/5 border border-white/20 text-[17px] text-white focus:outline-none focus:border-[#C9A84C]" /></label>
             </div>
@@ -1473,6 +1490,7 @@ function BidSheet({ takeoffId, planName, data, onChange, onClose }: { takeoffId:
       {row('Lowest profit you will bid at', 'floorPct', null, 'You get a red warning below this')}
       <button onClick={useAlways} className={`mt-4 w-full min-h-[52px] rounded-xl border text-[17px] font-semibold ${saved ? 'border-[#4ade80] text-[#8fe3a8]' : 'border-white/30'}`}>{saved ? 'Saved. New bids start with these.' : 'Use these numbers on every new bid'}</button>
       <button onClick={share} className="mt-2 w-full min-h-[52px] rounded-xl border border-white/30 text-[17px] font-semibold">Share or copy the quantity list</button>
+      <button onClick={() => { try { const blob = new Blob(['\ufeff' + bidCsv(planName, data)], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = planName.replace(/[^a-z0-9]+/gi, '-').slice(0, 60) + '-quantities.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); setShared('Saved as a spreadsheet file (opens in Excel or Google Sheets).'); } catch { setShared('This phone would not save the file. Use Share or copy instead.'); } }} className="mt-2 w-full min-h-[52px] rounded-xl border border-white/30 text-[17px] font-semibold">Download as a spreadsheet</button>
       {shared && <p className="text-[15px] text-[#8fe3a8] mt-1.5">{shared}</p>}
       <button onClick={onClose} className="mt-2 w-full min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold">Done</button>
     </Sheet>

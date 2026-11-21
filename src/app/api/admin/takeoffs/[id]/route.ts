@@ -75,7 +75,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     const page = Math.floor(Number(body.page)) || 1;
     if (!msgs.length || msgs[msgs.length - 1].role !== 'user') return fail('Type a question first.');
     const { data: job, error: jErr } = await admin.from('ai_sub_jobs').insert({ user_id: user!.id, user_email: user!.email || null, status: 'queued', status_label: 'Looking at the sheet…',
-      payload: { kind: 'bid_ask', takeoff_id: t.id, file_path: t.file_path, page, messages: msgs, item: body.item ? { name: String(body.item.name || '').slice(0, 140), what_the_ai_said: String(body.item.note || '').slice(0, 400) } : undefined } }).select('id').single();
+      payload: { kind: 'bid_ask', takeoff_id: t.id, file_path: t.file_path, page, whole: body.whole === true, messages: msgs, item: body.item ? { name: String(body.item.name || '').slice(0, 140), what_the_ai_said: String(body.item.note || '').slice(0, 400) } : undefined } }).select('id').single();
     if (jErr || !job) return fail('Could not start that. Try again.', 500);
     return NextResponse.json({ ok: true, job: job.id });
   }

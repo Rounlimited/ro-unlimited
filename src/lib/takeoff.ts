@@ -9,9 +9,9 @@
 export type Pt = [number, number];
 export type TakeoffKind = 'length' | 'area' | 'count';
 export type TakeoffUnit = 'LF' | 'SF' | 'SY' | 'CY' | 'EA';
-export type TakeoffShape = { id: string; page: number; pts: Pt[] };
+export type TakeoffShape = { id: string; page: number; pts: Pt[]; minus?: boolean };   // minus: a take-away (an opening, a cut-out)
 /** One part of a build-up: for every one unit measured on the item, `per` of this, at `unitCost` each. */
-export type ItemPart = { id: string; name: string; unit: string; per: number; unitCost: number };
+export type ItemPart = { id: string; name: string; unit: string; per: number; unitCost: number; basis?: 'qty' | 'edge' };   // edge: per foot around the measured area
 export type TakeoffItem = {
   id: string;
   name: string;
@@ -28,6 +28,8 @@ export type TakeoffItem = {
   widthFt?: number;          // a length priced as volume (trench, footing): length x width x depthIn = CY
   parts?: ItemPart[];        // build-up: other things priced off the same measurement (block, grout, rebar...)
   alt?: boolean;             // an alternate: priced, but kept out of the base bid
+  times?: number;            // built this many times (two identical buildings = 2)
+  pitch?: number;            // a sloped area (a roof): rise in inches for every 12 inches of run
   aiAt?: string;             // which AI answer was last put on the sheet for this item (its timestamp)
   aiShape?: string;          // the measurement the AI made, so it can be thrown away in one tap
   aiNote?: string;           // what the AI says it marked
@@ -92,12 +94,18 @@ export function shapeMeasure(kind: TakeoffKind, shape: TakeoffShape, scales: Rec
 }
 
 /** An item's total in its own unit, waste included. `unscaled` counts shapes left out because their sheet has no scale. */
-export function itemQuantity(item: TakeoffItem, scales: Record<string, number>): { quantity: number; measured: number; unscaled: number } {
-  let base = 0; let unscaled = 0;
+export function itemQuantity(item: TakeoffItem, scales: Record<string, number>): { quantity: number; measured: number; unscaled: number; edgeFt: number } {
+  let base = 0; let unscaled = 0; let edge = 0;
   for (const s of item.shapes) {
     const m = shapeMeasure(item.kind, s, scales);
-    if (m === null) unscaled++; else base += m;
+    if (m === null) { unscaled++; continue; }
+    base += s.minus && item.kind !== 'count' ? -m : m;                 // a take-away comes off
+    if (item.kind === 'area' && !s.minus) edge += pathLength([...s.pts, s.pts[0]]) * Number(scales[String(s.page)]);
   }
+  base = Math.max(0, base);
+  // a sloped surface is bigger than it looks from above
+  if (item.kind === 'area' && Number(item.pitch) > 0) base *= Math.sqrt(1 + (Number(item.pitch) / 12) ** 2);
+  const times = Number(item.times) > 0 ? Number(item.times) : 1;
   let q = base;
   if (item.kind === 'area' && item.unit === 'SY') q = base / 9;
   if (item.kind === 'area' && item.unit === 'CY') q = (base * (Math.max(0, Number(item.depthIn) || 0) / 12)) / 27;
@@ -108,8 +116,8 @@ export function itemQuantity(item: TakeoffItem, scales: Record<string, number>):
   // Nothing measured yet: the quantity the plans print stands in, so the item can be priced straight away.
   const printed = Math.max(0, Number(item.printedQty) || 0);
   if (!item.shapes.length && printed > 0) q = printed;
-  q = q * (1 + Math.max(0, Number(item.wastePct) || 0) / 100);
-  return { quantity: q, measured, unscaled };
+  q = q * times * (1 + Math.max(0, Number(item.wastePct) || 0) / 100);
+  return { quantity: q, measured: measured * times, unscaled, edgeFt: edge * times };
 }
 
 /** Counts are whole; everything else is shown to one decimal under 100 and whole above. */
@@ -263,13 +271,14 @@ export function bidTotals(data: TakeoffData) {
 
 /** What one item costs: its own quantity at its price, plus each part of its build-up. */
 export function itemCost(item: TakeoffItem, scales: Record<string, number>) {
-  const qty = lineQty(itemQuantity(item, scales).quantity, item.unit);
+  const iq = itemQuantity(item, scales); const edgeFt = Math.round(iq.edgeFt * 100) / 100;
+  const qty = lineQty(iq.quantity, item.unit);
   const main = qty * (Number(item.unitCost) || 0);
   const parts = (item.parts || []).filter((p) => p && p.name).map((p) => {
-    const quantity = Math.round(qty * (Number(p.per) || 0) * 100) / 100;
-    return { id: p.id, name: p.name, unit: p.unit, per: Number(p.per) || 0, unitCost: Math.max(0, Number(p.unitCost) || 0), quantity, total: quantity * Math.max(0, Number(p.unitCost) || 0) };
+    const quantity = Math.round((p.basis === 'edge' ? edgeFt : qty) * (Number(p.per) || 0) * 100) / 100;
+    return { id: p.id, name: p.name, unit: p.unit, basis: p.basis, per: Number(p.per) || 0, unitCost: Math.max(0, Number(p.unitCost) || 0), quantity, total: quantity * Math.max(0, Number(p.unitCost) || 0) };
   });
-  return { qty, main, parts, total: main + parts.reduce((t, p) => t + p.total, 0) };
+  return { qty, edgeFt, main, parts, total: main + parts.reduce((t, p) => t + p.total, 0) };
 }
 
 /* ── Counting by tag ──────────────────────────────────────────────────
@@ -281,4 +290,20 @@ export function labelPoints(words: SheetWord[], tag: string): Pt[] {
   if (!t) return [];
   const norm = (v: string) => v.trim().replace(/^[("']+|[)"'.,:;]+$/g, '');
   return words.filter((w) => norm(w.s) === t).map((w) => [w.x, w.y] as Pt);
+}
+
+/** The whole bid as a spreadsheet file (CSV): one row per item and per build-up part. */
+export function bidCsv(name: string, data: TakeoffData): string {
+  const esc = (v: unknown) => { const t = String(v ?? ''); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  const rows: unknown[][] = [['Trade', 'Item', 'Quantity', 'Unit', 'Unit price', 'Total', 'Where the quantity came from', 'Alternate']];
+  for (const it of data.items) {
+    const c = itemCost(it, data.scales); if (!(c.qty > 0)) continue;
+    const from = it.shapes.length ? 'Measured on the plans' : it.printedNote ? 'From the plans: ' + it.printedNote : '';
+    rows.push([it.group || '', it.name, c.qty, it.unit, it.unitCost || '', Math.round(c.main * 100) / 100 || '', from, it.alt ? 'yes' : '']);
+    for (const p of c.parts) rows.push([it.group || '', it.name + ': ' + p.name, p.quantity, p.unit, p.unitCost || '', Math.round(p.total * 100) / 100 || '', p.basis === 'edge' ? 'Per foot of edge' : 'Per ' + it.unit, it.alt ? 'yes' : '']);
+  }
+  const b = bidTotals(data);
+  rows.push([], ['', 'Cost of the work', '', '', '', Math.round(b.cost * 100) / 100], ['', `Overhead ${b.pricing.overheadPct}%`, '', '', '', Math.round(b.overhead * 100) / 100], ['', `Profit ${b.pricing.profitPct}%`, '', '', '', Math.round(b.profit * 100) / 100],
+    ['', `Contingency ${b.pricing.contingencyPct}%`, '', '', '', Math.round(b.contingency * 100) / 100], ['', 'Bid price', '', '', '', Math.round(b.price * 100) / 100]);
+  return [name, ...rows.map((r) => r.map(esc).join(','))].join('\r\n');
 }
