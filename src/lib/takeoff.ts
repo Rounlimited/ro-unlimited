@@ -21,6 +21,8 @@ export type TakeoffItem = {
   unitCost: number;          // his price per unit; 0 until he prices it
   depthIn?: number;          // area items in CY: thickness in inches
   wastePct?: number;         // extra added on top of what was measured
+  laborHrs?: number;         // crew hours for one unit (0.05 = three minutes a square foot)
+  laborRate?: number;        // what an hour of that labor costs him
   printedQty?: number;       // a quantity the plans themselves state (read by the AI or typed), in this item's unit
   printedNote?: string;      // where that came from, e.g. "Sheet E.1, light fixture schedule"
   group?: string;            // the trade it belongs to (becomes the phase on the estimate)
@@ -178,6 +180,7 @@ export function takeoffLines(data: TakeoffData, phase = 'From plans', includeAlt
     // the item itself, unless it is only a carrier for its build-up (no price of its own)
     if (!(c.parts.length && !(it.unitCost > 0))) out.push({ description: nm, quantity: c.qty, unit: it.unit, unit_cost: Math.max(0, Number(it.unitCost) || 0), phase: ph, category: 'other' });
     for (const p of c.parts) if (p.quantity > 0) out.push({ description: `${nm}: ${p.name}`, quantity: p.quantity, unit: p.unit || 'EA', unit_cost: p.unitCost, phase: ph, category: 'other' });
+    if (c.hours > 0) out.push({ description: `${nm}: labor`, quantity: c.hours, unit: 'HR', unit_cost: c.laborRate, phase: ph, category: 'other' });
   }
   return out;
 }
@@ -257,16 +260,16 @@ export function cleanPricing(p: unknown): BidPricing | undefined {
 }
 export function bidTotals(data: TakeoffData) {
   const p = data.pricing || { overheadPct: 0, profitPct: 0, contingencyPct: 0, floorPct: 0 };
-  let cost = 0; let unpriced = 0; const alternates: { name: string; cost: number }[] = [];
+  let cost = 0; let unpriced = 0; let hours = 0; let labor = 0; const alternates: { name: string; cost: number }[] = [];
   for (const it of data.items) {
     const c = itemCost(it, data.scales);
     if (c.qty > 0 && !(c.total > 0)) unpriced++;
-    if (it.alt) alternates.push({ name: it.name, cost: c.total }); else cost += c.total;
+    if (it.alt) alternates.push({ name: it.name, cost: c.total }); else { cost += c.total; hours += c.hours; labor += c.labor; }
   }
   const overhead = (cost * p.overheadPct) / 100, profit = (cost * p.profitPct) / 100, contingency = (cost * p.contingencyPct) / 100;
   const price = cost + overhead + profit + contingency;
   const mult = 1 + (p.overheadPct + p.profitPct + p.contingencyPct) / 100;
-  return { cost, overhead, profit, contingency, price, unpriced, alternates: alternates.map((a) => ({ ...a, price: a.cost * mult })), marginOfPrice: price > 0 ? (profit / price) * 100 : 0, belowFloor: p.floorPct > 0 && cost > 0 && p.profitPct < p.floorPct, pricing: p };
+  return { cost, hours, labor, overhead, profit, contingency, price, unpriced, alternates: alternates.map((a) => ({ ...a, price: a.cost * mult })), marginOfPrice: price > 0 ? (profit / price) * 100 : 0, belowFloor: p.floorPct > 0 && cost > 0 && p.profitPct < p.floorPct, pricing: p };
 }
 
 /** What one item costs: its own quantity at its price, plus each part of its build-up. */
@@ -278,7 +281,8 @@ export function itemCost(item: TakeoffItem, scales: Record<string, number>) {
     const quantity = Math.round((p.basis === 'edge' ? edgeFt : qty) * (Number(p.per) || 0) * 100) / 100;
     return { id: p.id, name: p.name, unit: p.unit, basis: p.basis, per: Number(p.per) || 0, unitCost: Math.max(0, Number(p.unitCost) || 0), quantity, total: quantity * Math.max(0, Number(p.unitCost) || 0) };
   });
-  return { qty, edgeFt, main, parts, total: main + parts.reduce((t, p) => t + p.total, 0) };
+  const hours = Math.round(qty * Math.max(0, Number(item.laborHrs) || 0) * 10) / 10; const laborRate = Math.max(0, Number(item.laborRate) || 0); const labor = hours * laborRate;
+  return { qty, edgeFt, main, parts, hours, laborRate, labor, total: main + labor + parts.reduce((t, p) => t + p.total, 0) };
 }
 
 /* ── Counting by tag ──────────────────────────────────────────────────
@@ -300,6 +304,7 @@ export function bidCsv(name: string, data: TakeoffData): string {
     const c = itemCost(it, data.scales); if (!(c.qty > 0)) continue;
     const from = it.shapes.length ? 'Measured on the plans' : it.printedNote ? 'From the plans: ' + it.printedNote : '';
     rows.push([it.group || '', it.name, c.qty, it.unit, it.unitCost || '', Math.round(c.main * 100) / 100 || '', from, it.alt ? 'yes' : '']);
+    if (c.hours > 0) rows.push([it.group || '', it.name + ': labor', c.hours, 'HR', c.laborRate || '', Math.round(c.labor * 100) / 100 || '', `${it.laborHrs} hours per ${it.unit}`, it.alt ? 'yes' : '']);
     for (const p of c.parts) rows.push([it.group || '', it.name + ': ' + p.name, p.quantity, p.unit, p.unitCost || '', Math.round(p.total * 100) / 100 || '', p.basis === 'edge' ? 'Per foot of edge' : 'Per ' + it.unit, it.alt ? 'yes' : '']);
   }
   const b = bidTotals(data);

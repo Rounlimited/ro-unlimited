@@ -1238,6 +1238,8 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
   useEffect(() => { fetch('/api/admin/takeoffs/' + tid, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'assemblies' }) }).then((r) => r.json()).then((d) => setSaved(Array.isArray(d.list) ? d.list : [])).catch(() => null); }, [tid]);
   const setPart = (id: string, k: 'name' | 'unit' | 'per' | 'unitCost', v: string) => setParts((ps) => ps.map((p) => (p.id === id ? { ...p, [k]: v } : p)));
   const [waste, setWaste] = useState(item?.wastePct ? String(item.wastePct) : '');
+  const [laborHrs, setLaborHrs] = useState(item?.laborHrs ? String(item.laborHrs) : '');
+  const [laborRate, setLaborRate] = useState(() => { if (item?.laborRate) return String(item.laborRate); try { return localStorage.getItem('nexabids-labor-rate') || ''; } catch { return ''; } });
   const [typed, setTyped] = useState(item?.printedQty ? String(item.printedQty) : '');
   const [color, setColor] = useState(item?.color || TAKEOFF_COLORS[colorIndex % TAKEOFF_COLORS.length]);
   const [err, setErr] = useState('');
@@ -1252,6 +1254,7 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
     if (cleanParts.length) fetch('/api/admin/takeoffs/' + tid, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'assembly_save', assembly: { name: name.trim(), kind, unit, heightFt: Number(height) || undefined, widthFt: Number(width) || undefined, depthIn: Number(depth) || undefined, unitCost: Number(price) || 0, parts: cleanParts } }) }).catch(() => null);
     if (Number(price) > 0) fetch('/api/admin/takeoffs/' + (typeof window !== 'undefined' ? location.pathname.split('/').pop() : ''), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'remember_price', name: name.trim(), unit, price: Number(price) }) }).catch(() => null);
     onSave({ id: item?.id || uid(), name: name.trim().slice(0, 120), kind, unit, color, unitCost: Math.max(0, Number(price) || 0), depthIn: unit === 'CY' ? Number(depth) : undefined, heightFt: kind === 'length' && unit === 'SF' ? Number(height) : undefined, widthFt: kind === 'length' && unit === 'CY' ? Number(width) : undefined,
+      laborHrs: Number(laborHrs) > 0 ? Number(laborHrs) : undefined, laborRate: Number(laborHrs) > 0 && Number(laborRate) > 0 ? Number(laborRate) : undefined,
       parts: cleanParts.length ? cleanParts : undefined, alt: alt || undefined, times: Number(times) > 0 && Number(times) !== 1 ? Number(times) : undefined, pitch: kind === 'area' && Number(pitch) > 0 ? Number(pitch) : undefined, wastePct: Number(waste) > 0 ? Number(waste) : undefined,
       printedQty: Number(typed) > 0 ? Number(typed) : undefined, printedNote: Number(typed) > 0 ? (Number(typed) === item?.printedQty && item?.printedNote ? item.printedNote : 'typed in by you') : undefined, shapes: item?.shapes || [] });
   };
@@ -1303,6 +1306,11 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
         <div><label className={labelCls}>{parts.length ? `Labor or own price per ${unit}` : `Your price per ${unit}`}</label><input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Can add later" className={inputCls} /></div>
         <div><label className={labelCls}>Extra for waste, %</label><input inputMode="decimal" value={waste} onChange={(e) => setWaste(e.target.value)} placeholder="0" className={inputCls} /></div>
       </div>
+      <div className="grid grid-cols-2 gap-2 mt-3">
+        <div><label className={labelCls}>Labor: hours per {unit}</label><input inputMode="decimal" value={laborHrs} onChange={(e) => setLaborHrs(e.target.value)} placeholder="0" className={inputCls} /></div>
+        <div><label className={labelCls}>Cost of one hour, $</label><input inputMode="decimal" value={laborRate} onChange={(e) => { setLaborRate(e.target.value); try { localStorage.setItem('nexabids-labor-rate', e.target.value); } catch { /* private window */ } }} placeholder="0" className={inputCls} /></div>
+      </div>
+      <p className="text-[14px] text-white/70 leading-snug mt-1">Leave these empty if your price already includes labor. If a crew lays 100 {unit} in 5 hours, that is 0.05 hours per {unit}. The app adds up the hours and the labor cost.</p>
       <div className="grid grid-cols-2 gap-2 mt-3">
         <div><label className={labelCls}>Built how many times?</label><input inputMode="decimal" value={times} onChange={(e) => setTimes(e.target.value)} placeholder="1" className={inputCls} /></div>
         {kind === 'area' && <div><label className={labelCls}>Roof slope: rise in 12</label><input inputMode="decimal" value={pitch} onChange={(e) => setPitch(e.target.value)} placeholder="Flat" className={inputCls} /></div>}
@@ -1489,6 +1497,7 @@ function BidSheet({ takeoffId, planName, data, onChange, onClose }: { takeoffId:
     <Sheet title="Price the bid" onClose={onClose}>
       <div className="flex items-center justify-between py-2"><span className="text-[17px] font-semibold">Cost of the work</span><span className="text-[19px] font-bold">{money(b.cost)}</span></div>
       {b.unpriced > 0 && <p className="text-[15px] text-[#f0a04b] leading-snug -mt-1 mb-1">{b.unpriced} item{b.unpriced === 1 ? ' has' : 's have'} no price yet, so the cost is too low.</p>}
+      {b.hours > 0 && <p className="text-[16px] text-white/90 leading-snug mt-1">Labor in this bid: <b>{Math.round(b.hours).toLocaleString()} hours</b> ({money(b.labor)}). At 8 hours a day that is about {Math.max(1, Math.round(b.hours / 8))} crew-days for one person.</p>}
       {row('Overhead', 'overheadPct', b.overhead, 'Office, trucks, insurance')}
       {row('Profit', 'profitPct', b.profit, 'What you keep')}
       {row('Contingency', 'contingencyPct', b.contingency, 'Room for surprises')}
