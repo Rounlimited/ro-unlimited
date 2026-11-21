@@ -44,6 +44,10 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const { data: est } = await admin.from('estimates').select('id, estimate_number, status, signed_at').eq('id', String(body.estimate_id || '')).maybeSingle();
   if (!est) return fail('Pick an estimate first.');
   if (est.signed_at || est.status === 'accepted') return fail(`${est.estimate_number} is a signed contract. Added work on a signed job goes on a change order.`, 409);
+  // Anything past draft is live on the customer's page: new lines and a new total would show there at once.
+  if (est.status !== 'draft' && body.customer_sees_ok !== true) {
+    return NextResponse.json({ error: `The customer already has ${est.estimate_number}. Lines added now show on their page right away.`, needs_ok: true }, { status: 409 });
+  }
 
   // Quantities are worked out here from the saved measuring, never taken from the screen.
   const lines = takeoffLines(normalizeTakeoff(row.data), `From plans: ${row.name}`.slice(0, 120));

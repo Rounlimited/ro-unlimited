@@ -23,7 +23,9 @@ export async function GET(req: NextRequest) {
     if (q) query = query.or(`project_name.ilike.%${q}%,estimate_number.ilike.%${q}%`);
     const { data, error } = await query;
     if (error) return fail(error.message, 500);
-    return NextResponse.json((data || []).filter((e: any) => !/^(EXAMPLE|DEMO)/i.test(String(e.project_name || ''))));
+    const open = (data || []).filter((e: any) => !/^(EXAMPLE|DEMO)/i.test(String(e.project_name || '')));
+    // Drafts first: they are the safe place to send measuring, because no customer is looking at them.
+    return NextResponse.json([...open.filter((e: any) => e.status === 'draft'), ...open.filter((e: any) => e.status !== 'draft')]);
   }
   const { data, error } = await admin.from('takeoffs')
     .select('id, name, file_name, file_size, page_count, estimate_id, created_at, updated_at, data, estimate:estimates(estimate_number, project_name)')

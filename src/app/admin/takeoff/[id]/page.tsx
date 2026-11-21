@@ -527,6 +527,7 @@ function SendSheet({ takeoffId, data, planName, onClose }: { takeoffId: string; 
   const [list, setList] = useState<Est[] | null>(null);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
+  const [warn, setWarn] = useState('');      // the estimate he tapped that a customer already has
   const [done, setDone] = useState<null | { added: number; estimate_id: string; estimate_number: string; total: number; fixed_price: boolean }>(null);
   const lines = useMemo(() => takeoffLines(data), [data]);
   const unpriced = lines.filter((l) => !(l.unit_cost > 0)).length;
@@ -539,12 +540,13 @@ function SendSheet({ takeoffId, data, planName, onClose }: { takeoffId: string; 
     return () => clearTimeout(t);
   }, [q]);
   const send = async (e: Est) => {
+    if (e.status !== 'draft' && warn !== e.id) { setWarn(e.id); setErr(''); return; }
     setBusy(e.id); setErr('');
     // The measuring is saved first so the server works from exactly what is on screen.
     await fetch('/api/admin/takeoffs/' + takeoffId, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data }) }).catch(() => null);
-    const r = await fetch('/api/admin/takeoffs/' + takeoffId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'export', estimate_id: e.id }) }).catch(() => null);
+    const r = await fetch('/api/admin/takeoffs/' + takeoffId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'export', estimate_id: e.id, customer_sees_ok: e.status !== 'draft' }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
-    setBusy('');
+    setBusy(''); setWarn('');
     if (!r || !r.ok) { setErr(d.error || 'That did not go through. Try again.'); return; }
     setDone(d);
   };
@@ -564,7 +566,7 @@ function SendSheet({ takeoffId, data, planName, onClose }: { takeoffId: string; 
   }
   return (
     <Sheet title="Send to an estimate" onClose={onClose}>
-      <p className="text-[17px] leading-relaxed">{lines.length} line{lines.length === 1 ? '' : 's'} will be added. Nothing is sent to a customer.</p>
+      <p className="text-[17px] leading-relaxed">{lines.length} line{lines.length === 1 ? '' : 's'} will be added. A draft is the safe place: no customer sees a draft.</p>
       {unpriced > 0 && <p className="text-[16px] text-[#f0a04b] leading-snug mt-1.5">{unpriced} {unpriced === 1 ? 'has' : 'have'} no price yet and will go in at $0 for you to price on the estimate.</p>}
       {unscaled > 0 && <p className="text-[16px] text-[#f0a04b] leading-snug mt-1.5">{unscaled} measurement{unscaled === 1 ? ' is' : 's are'} left out because the sheet has no scale.</p>}
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find the estimate by name or number" className={`${inputCls} mt-3`} />
@@ -573,10 +575,12 @@ function SendSheet({ takeoffId, data, planName, onClose }: { takeoffId: string; 
         {list === null && <p className="text-[16px] text-white/75 flex items-center gap-2"><Loader2 size={18} className="animate-spin" /> Loading…</p>}
         {list && list.length === 0 && <p className="text-[16px] text-white/85 leading-snug">No open estimate matches. Start the estimate first (Estimates, then New), then come back and send these to it.</p>}
         {(list || []).map((e) => (
-          <button key={e.id} disabled={!!busy} onClick={() => send(e)} className="w-full text-left rounded-xl border border-white/20 bg-white/[0.04] px-3.5 py-3 flex items-center gap-3 disabled:opacity-60">
+          <button key={e.id} disabled={!!busy} onClick={() => send(e)} className={`w-full text-left rounded-xl border px-3.5 py-3 flex items-center gap-3 disabled:opacity-60 ${warn === e.id ? 'border-red-400 bg-red-500/15' : e.status === 'draft' ? 'border-white/20 bg-white/[0.04]' : 'border-[#f0a04b]/60 bg-[#f0a04b]/10'}`}>
             <span className="flex-1 min-w-0">
               <span className="block text-[17px] font-bold leading-snug break-words">{e.project_name || e.estimate_number}</span>
-              <span className="block text-[15px] text-white/75 leading-snug">{[e.estimate_number, who(e), e.status].filter(Boolean).join(' · ')}</span>
+              <span className="block text-[15px] text-white/75 leading-snug">{[e.estimate_number, who(e), e.status === 'draft' ? 'Draft' : ''].filter(Boolean).join(' · ')}</span>
+              {e.status !== 'draft' && warn !== e.id && <span className="block text-[15px] font-semibold text-[#f0a04b] leading-snug">The customer already has this one</span>}
+              {warn === e.id && <span className="block text-[16px] font-semibold text-red-100 leading-snug mt-0.5">The customer will see these lines and the new total on their page right away{unpriced > 0 ? `, and ${unpriced} of them at $0` : ''}. Tap again to add them anyway.</span>}
             </span>
             {busy === e.id ? <Loader2 size={22} className="animate-spin shrink-0" /> : <Send size={20} className="text-[#E5C76B] shrink-0" />}
           </button>
