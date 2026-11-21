@@ -391,7 +391,7 @@ export default function AiConsole() {
           (c as any).nxaOut = { dest, el };
         }
       } catch { /* the voice screen sets sound up itself */ }
-      setVoiceEngine(ls.get('nxa-voice-engine') === 'standard' ? 'standard' : 'live');
+      setVoiceEngine('standard');     // the per-minute live line is switched off; Talk always uses the per-reply voice
       setVoiceCtx(c);
     } catch { say('This browser cannot do voice.'); }
   };
@@ -680,7 +680,7 @@ export default function AiConsole() {
         <AiVoice ctx={voiceCtx} history={msgs.map((m) => ({ role: m.role, content: m.content }))} currentPage={pathname}
           onNavigate={(path, d) => { say(`Opening ${d || path}…`); router.push(path); }}
           onClose={endVoice} onOutOfCredit={() => { loadWallet(); setTimeout(openWallet, 300); }}
-          onUseLive={() => { try { localStorage.setItem('nxa-voice-engine', 'live'); } catch { /* private mode */ } say('Live voice is on. Tap Talk to start it.'); }} />
+          onUseLive={() => { try { localStorage.setItem('nxa-voice-engine', 'live'); } catch { /* private mode */ } say('Live voice is switched off for now.'); }} />
       )}
       {walletOpen && (
         <>

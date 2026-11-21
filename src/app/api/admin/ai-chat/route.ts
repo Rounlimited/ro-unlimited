@@ -3491,7 +3491,7 @@ export async function POST(req: NextRequest) {
 
     // ── Live voice: a fresh short-lived token for reconnecting after a quiet hang-up ──
     if (mode === 'voice_live_token') {
-      const k = process.env.GROK_API_KEY;
+      const k = process.env.LIVE_VOICE === 'on' ? process.env.GROK_API_KEY : '';
       const { data: row } = await supabase.from('ai_usage').select('id, user_id').eq('id', Number(usage_id)).eq('source', 'voice_live').maybeSingle();
       if (!k || !row || row.user_id !== user.id) return NextResponse.json({ error: 'Unknown session' }, { status: 404 });
       const sec = await fetch('https://api.x.ai/v1/realtime/client_secrets', {
@@ -3644,7 +3644,8 @@ export async function POST(req: NextRequest) {
     // ── Live voice: start a call. The browser talks straight to the live voice
     // model with a short-lived token; our key never leaves the server. ──
     if (mode === 'voice_live_start') {
-      if (!grokKey) return NextResponse.json({ error: 'Live voice is not set up.', fallback: true }, { status: 503 });
+      // Switched off by the owner (charged by the minute on a separate account). LIVE_VOICE=on brings it back.
+      if (!grokKey || process.env.LIVE_VOICE !== 'on') return NextResponse.json({ error: 'Live voice is not set up.', fallback: true }, { status: 503 });
       if (walletConfigured()) {
         try {
           let w = await getBalance();
