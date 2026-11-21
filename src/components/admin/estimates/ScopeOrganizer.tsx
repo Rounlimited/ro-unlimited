@@ -77,9 +77,11 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
         if (done) break;
         acc += dec.decode(value, { stream: true });
         const now = Date.now();
-        if (now - lastPaint > 350) { lastPaint = now; setResult(acc.split('\u0000ERROR:')[0]); }
+        if (now - lastPaint > 350) { lastPaint = now; setResult(acc.split('\u0000')[0]); }
       }
-      const [htmlOut, err] = acc.split('\u0000ERROR:');
+      // The server ends a finished run with a DONE mark; without it the reply was cut off.
+      const htmlOut = acc.split('\u0000')[0];
+      const err = (acc.split('\u0000ERROR:')[1] || '').split('\u0000')[0] || (acc.includes('\u0000DONE') ? '' : 'It stopped part way, so the end may be missing. Tap Try again.');
       const clean = cleanScopeHtml(htmlOut.replace(/^\s*```(?:html)?/i, '').replace(/```\s*$/, ''));
       setResult(clean);
       if (err && !scopeText(clean)) throw new Error(err.trim());
