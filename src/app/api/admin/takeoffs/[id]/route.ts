@@ -10,7 +10,8 @@ const BUCKET = 'plans';
 type Ctx = { params: { id: string } };
 // The plan reader runs on NexaVision's worker with the owner's own Claude subscription (test), so for now only the
 // sign-ins in CLAUDE_SUB_TESTERS may start it. Everyone can see what it read.
-const mayRead = (email?: string | null) => !!email && (process.env.CLAUDE_SUB_TESTERS || 'admin@nexavisiongroup.com').split(',').map((s) => s.trim().toLowerCase()).includes(email.toLowerCase());
+// NEXABIDS_AI_USERS lists who may use the AI in NexaBids; without it, the assistant's test list is used.
+const mayRead = (email?: string | null) => !!email && (process.env.NEXABIDS_AI_USERS || process.env.CLAUDE_SUB_TESTERS || 'admin@nexavisiongroup.com').split(',').map((s) => s.trim().toLowerCase()).includes(email.toLowerCase());
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
 export async function GET(req: NextRequest, { params }: Ctx) {
