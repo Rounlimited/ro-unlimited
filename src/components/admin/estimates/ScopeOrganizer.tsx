@@ -41,6 +41,18 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
   const [sending, setSending] = useState(false);
   const [check, setCheck] = useState<ScopeCheck | null>(null);
   const [viaAi, setViaAi] = useState(false);
+  const [review, setReview] = useState<null | 'loading' | { verdict: 'good' | 'check'; notes: { where: string; what: string; todo: string }[] } | { failed: string }>(null);
+
+  // The AI reads over what was just put in exactly and says whether it came in clean. It reads only; it never rewrites.
+  const lookOver = async (doc: string) => {
+    setReview('loading');
+    try {
+      const r = await fetch('/api/admin/estimates/scope-organize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'review', html: doc }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.verdict) { setReview({ failed: d.error || 'The AI look-over is unavailable right now.' }); return; }
+      setReview({ verdict: d.verdict, notes: Array.isArray(d.notes) ? d.notes : [] });
+    } catch { setReview({ failed: 'The AI look-over could not be reached.' }); }
+  };
   const pastedHtml = useRef('');           // the rich version of what was pasted (keeps real tables)
   const abort = useRef<AbortController | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -60,7 +72,7 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
   useEffect(() => () => abort.current?.abort(), []);
 
   const run = async (payload: Record<string, unknown>) => {
-    setPhase('working'); setResult(''); setError(''); setCheck(null); setViaAi(!payload.direct);
+    setPhase('working'); setResult(''); setError(''); setCheck(null); setReview(null); setViaAi(!payload.direct);
     const ctl = new AbortController(); abort.current = ctl;
     try {
       const res = await fetch('/api/admin/estimates/scope-organize', {
@@ -73,7 +85,10 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
       if ((res.headers.get('content-type') || '').includes('application/json')) {
         const d = await res.json();
         if (d.error) throw new Error(d.error);
-        setResult(cleanScopeHtml(d.html || '')); setPhase('done'); return;
+        const exact = cleanScopeHtml(d.html || '');
+        setResult(exact); setPhase('done');
+        if (scopeText(exact)) lookOver(exact);
+        return;
       }
       const reader = res.body.getReader(); const dec = new TextDecoder();
       let acc = ''; let lastPaint = 0;
@@ -172,7 +187,7 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
                 {text.length > 0 && (
                   <p className="mt-1.5 text-[15px] text-white/65">
                     {text.split(/\s+/).filter(Boolean).length.toLocaleString()} words in.
-                    {pastedHasTables ? ' The tables came through with it.' : looksLikeMarkdown(text) ? ' This is already laid out (Markdown), so it can go in exactly, free.' : ''}
+                    {pastedHasTables ? ' The tables came through with it.' : looksLikeMarkdown(text) ? ' This is already laid out (Markdown), so it can go in exactly.' : ''}
                   </p>
                 )}
               </div>
@@ -260,7 +275,37 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
               {!viaAi && (
                 <div className="flex items-start gap-3 mb-4 rounded-xl bg-[#35d07f]/12 border border-[#35d07f]/45 px-4 py-3">
                   <Check size={21} className="text-[#5fe0a0] shrink-0 mt-0.5" />
-                  <p className="text-[16px] text-white leading-snug"><strong>Put in exactly as written.</strong> No AI was used, so nothing was reworded and there is no charge.</p>
+                  <p className="text-[16px] text-white leading-snug"><strong>Put in exactly as written.</strong> Nothing was reworded. The AI only reads it over, which costs a few cents.</p>
+                </div>
+              )}
+              {!viaAi && review === 'loading' && (
+                <div className="flex items-center gap-3 mb-4 rounded-xl bg-[#C9A84C]/10 border border-[#C9A84C]/30 px-4 py-3">
+                  <Loader2 size={20} className="animate-spin text-[#D4B965] shrink-0" />
+                  <p className="text-[16px] text-white">The AI is looking it over…</p>
+                </div>
+              )}
+              {!viaAi && review && review !== 'loading' && 'verdict' in review && review.verdict === 'good' && (
+                <div className="flex items-start gap-3 mb-4 rounded-xl bg-[#35d07f]/12 border border-[#35d07f]/45 px-4 py-3">
+                  <Sparkles size={20} className="text-[#5fe0a0] shrink-0 mt-0.5" />
+                  <p className="text-[16px] text-white leading-snug"><strong>AI look-over: it came in clean.</strong> The sections and tables read correctly.</p>
+                </div>
+              )}
+              {!viaAi && review && review !== 'loading' && 'verdict' in review && review.verdict === 'check' && (
+                <div className="mb-4 rounded-xl bg-[#f0a04b]/15 border border-[#f0a04b]/55 px-4 py-3">
+                  <p className="flex items-center gap-2 text-[17px] font-bold text-white"><Sparkles size={20} className="text-[#f0a04b] shrink-0" /> AI look-over: {review.notes.length || 'some'} thing{review.notes.length === 1 ? '' : 's'} to check</p>
+                  <ul className="mt-2 space-y-2">
+                    {review.notes.map((n, i) => (
+                      <li key={i} className="text-[16px] text-white leading-snug">
+                        {n.where && <strong>{n.where}: </strong>}{n.what}{n.todo && <span className="block text-white/75">{n.todo}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {!viaAi && review && review !== 'loading' && 'failed' in review && (
+                <div className="flex items-start gap-3 mb-4 rounded-xl bg-white/5 border border-white/20 px-4 py-3">
+                  <AlertTriangle size={20} className="text-white/70 shrink-0 mt-0.5" />
+                  <p className="text-[16px] text-white/85 leading-snug">{review.failed} The document itself went in exactly as written.</p>
                 </div>
               )}
               {viaAi && <p className="text-[16px] text-white/70 mb-5 leading-relaxed">The check confirms nothing was lost or added. It cannot tell if a value sits in the wrong column, so look over the tables.</p>}
@@ -284,7 +329,7 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
               {structured && (
                 <button type="button" disabled={!canGo} onClick={() => startImport(true)}
                   className="flex-1 min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold flex items-center justify-center gap-2 disabled:opacity-35 active:scale-[0.99]">
-                  <Check size={21} /> Put it in exactly (free)
+                  <Check size={21} /> Put it in exactly
                 </button>
               )}
               <button type="button" disabled={!canGo} onClick={() => startImport(false)}
