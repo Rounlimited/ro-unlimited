@@ -8,6 +8,7 @@ import {
   TAKEOFF_COLORS, UNITS_FOR, KIND_LABEL, PRINTED_SCALES, emptyTakeoff, normalizeTakeoff, itemQuantity, fmtQty, money,
   pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales,
 } from '@/lib/takeoff';
+import { readSheetVectors, snapPoint, traceRun, shapeAt, type SheetVectors } from '@/lib/takeoff-vectors';
 
 /**
  * Bid from Plans: the measuring screen. The plan sheet is drawn from the PDF; what he measures is drawn on top
@@ -38,6 +39,13 @@ export default function TakeoffPage() {
   const [editing, setEditing] = useState<TakeoffItem | null>(null);
   const [saved, setSaved] = useState<'saved' | 'saving' | 'error'>('saved');
   const [panelOpen, setPanelOpen] = useState(true);
+  // Phase 2: the sheet's own line work, for snapping and one-tap runs and outlines
+  const opsRef = useRef<any>(null);
+  const vecRef = useRef<SheetVectors | null>(null);
+  const [vecState, setVecState] = useState<'reading' | 'ready' | 'none'>('reading');
+  const [snapOn, setSnapOn] = useState(true);
+  const [pickMode, setPickMode] = useState<'points' | 'whole'>('points');
+  const [snapMark, setSnapMark] = useState<null | { pt: Pt; kind: string }>(null);
   const [big, setBig] = useState(false);          // the sheet takes the whole screen, the list is put away
   const [found, setFound] = useState<{ label: string; feetPerInch: number; times: number }[]>([]);   // scales this sheet prints on itself
 
@@ -72,7 +80,7 @@ export default function TakeoffPage() {
         pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.mjs';
         const doc = await pdfjs.getDocument({ url: row.file_url }).promise;
         if (dead) return;
-        docRef.current = doc; setPages(doc.numPages); setLoading('');
+        docRef.current = doc; opsRef.current = pdfjs.OPS; setPages(doc.numPages); setLoading('');
         if (row.page_count !== doc.numPages) fetch('/api/admin/takeoffs/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page_count: doc.numPages }) }).catch(() => null);
       } catch (e) {
         if (!dead) { setLoadError(e instanceof Error && e.message ? e.message : 'Could not open those plans.'); setLoading(''); }
@@ -108,6 +116,8 @@ export default function TakeoffPage() {
       const pg = await doc.getPage(page);
       if (dead) return;
       pageRef.current = pg;
+      vecRef.current = null; setVecState('reading');
+      readSheetVectors(pg, opsRef.current).then((v) => { if (!dead) { vecRef.current = v; setVecState(v ? 'ready' : 'none'); } }).catch(() => { if (!dead) setVecState('none'); });
       setFound([]);
       pg.getTextContent().then((tc: any) => { if (!dead) setFound(findPrintedScales((tc.items || []).map((i: any) => String(i.str || '')))); }).catch(() => null);
       const v1 = pg.getViewport({ scale: 1 });
@@ -202,8 +212,19 @@ export default function TakeoffPage() {
   const active = data.items.find((i) => i.id === activeId) || null;
   const ftPerPt = Number(data.scales[String(page)]) || 0;
 
-  const tap = (pt: Pt) => {
-    if (!size || pt[0] < 0 || pt[1] < 0 || pt[0] > size.w || pt[1] > size.h) return;
+  const tap = (raw: Pt) => {
+    if (!size || raw[0] < 0 || raw[1] < 0 || raw[0] > size.w || raw[1] > size.h) return;
+    const r = 14 / viewRef.current.k;                                   // 14 screen pixels, at any zoom
+    // One tap takes a whole line run (length) or a whole outline (area), straight from the drawing
+    if (mode === 'draw' && active && pickMode === 'whole' && active.kind !== 'count') {
+      const got = active.kind === 'length' ? traceRun(vecRef.current, raw, r) : shapeAt(vecRef.current, raw);
+      if (!got || got.length < (active.kind === 'area' ? 3 : 2)) { setSnapMark({ pt: raw, kind: 'miss' }); setTimeout(() => setSnapMark(null), 900); return; }
+      change((d) => ({ ...d, items: d.items.map((it) => (it.id === active.id ? { ...it, shapes: [...it.shapes, { id: uid(), page, pts: got }] } : it)) }));
+      return;
+    }
+    const sn = snapOn ? snapPoint(vecRef.current, raw, r) : { pt: raw, kind: 'none' as const };
+    const pt = sn.pt;
+    if (sn.kind !== 'none') { setSnapMark({ pt, kind: sn.kind }); setTimeout(() => setSnapMark(null), 700); }
     if (mode === 'scale') {
       const next = [...scalePts, pt].slice(-2);
       setScalePts(next);
@@ -238,7 +259,7 @@ export default function TakeoffPage() {
       return { ...it, shapes: it.shapes.slice(0, -1) };
     }) }));
   };
-  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); };
+  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setPickMode('points'); };
   const stop = () => { setDraft([]); setScalePts([]); setMode('move'); };
 
   const draftReadout = useMemo(() => {
@@ -308,6 +329,7 @@ export default function TakeoffPage() {
                 <polyline points={draft.map((p) => p.join(',')).join(' ')} fill="none" stroke={active.color} strokeWidth={sw * 1.6} strokeDasharray={`${sw * 4} ${sw * 3}`} strokeLinejoin="round" />
                 {draft.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={dot} fill="#fff" stroke={active.color} strokeWidth={sw} />)}
               </>)}
+              {snapMark && <circle cx={snapMark.pt[0]} cy={snapMark.pt[1]} r={dot * 2.2} fill="none" stroke={snapMark.kind === 'miss' ? '#f87171' : '#4ade80'} strokeWidth={sw * 1.4} />}
               {scalePts.length > 0 && (<>
                 {scalePts.length === 2 && <line x1={scalePts[0][0]} y1={scalePts[0][1]} x2={scalePts[1][0]} y2={scalePts[1][1]} stroke="#FF2D95" strokeWidth={sw * 1.6} />}
                 {scalePts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={dot} fill="#fff" stroke="#FF2D95" strokeWidth={sw * 1.4} />)}
@@ -338,7 +360,17 @@ export default function TakeoffPage() {
                   : active?.kind === 'area' ? `Tap each corner of the ${active.name}, then Finish.` : `Tap along the ${active?.name}, then Finish.`}
                 {draftReadout && <span className="text-[#E5C76B]"> {draftReadout}</span>}
               </p>
-              <p className="text-[15px] text-white/75">Drag to move the sheet. Two fingers to zoom.</p>
+              <p className="text-[15px] text-white/75">Drag to move the sheet. Two fingers to zoom.{vecState === 'ready' && snapOn && pickMode === 'points' ? ' Taps snap to the drawing\u2019s corners and lines.' : ''}</p>
+              {mode === 'draw' && active && active.kind !== 'count' && vecState === 'ready' && (
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <button onClick={() => { setPickMode('points'); setDraft([]); }} className={`min-h-[48px] rounded-xl border text-[16px] font-bold ${pickMode === 'points' ? 'border-[#C9A84C] bg-[#C9A84C]/20' : 'border-white/30'}`}>{active.kind === 'area' ? 'Tap the corners' : 'Tap point by point'}</button>
+                  <button onClick={() => { setPickMode('whole'); setDraft([]); }} className={`min-h-[48px] rounded-xl border text-[16px] font-bold ${pickMode === 'whole' ? 'border-[#4ade80] bg-[#4ade80]/15' : 'border-white/30'}`}>{active.kind === 'area' ? 'Tap inside a shape' : 'Tap a whole line'}</button>
+                </div>
+              )}
+              {vecState === 'ready' && !(mode === 'draw' && pickMode === 'whole') && (
+                <button onClick={() => setSnapOn((v) => !v)} className="mt-2 min-h-[44px] px-3 rounded-lg border border-white/25 text-[15px] font-semibold">Snap to the drawing: {snapOn ? 'On' : 'Off'}</button>
+              )}
+              {vecState === 'none' && <p className="text-[15px] text-[#f0a04b] mt-1">This sheet is a picture (scanned), so there are no drawing lines to snap to.</p>}
               <div className="flex gap-2 mt-2.5">
                 {mode === 'draw' && <button onClick={undo} className="min-h-[52px] px-4 rounded-xl border border-white/30 text-[17px] font-semibold flex items-center gap-2"><Undo2 size={20} /> Undo</button>}
                 {mode === 'draw' && active && active.kind !== 'count' && (
