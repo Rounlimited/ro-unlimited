@@ -27,13 +27,14 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'portfolio', label: 'Projects', icon: Camera, href: '/admin/projects', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'main' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/admin/analytics', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', group: 'main' },
   { id: 'news', label: 'Industry News', icon: Newspaper, href: '/admin/news', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'main' },
+  // NexaBids (Nexa module, everyone on the admin): bidding from plans. Drawn as a premium card by the menus.
+  { id: 'nexabids', label: 'Bid from Plans', icon: Ruler, href: '/admin/nexabids', active: true, color: '#7dd3fc', bg: 'rgba(125,211,252,0.15)', group: 'main' },
   // NexaBooks (Nexa module, admin role only): server route that signs the person in to NexaBooks.
   { id: 'nexabooks', label: 'Bookkeeping', icon: BookOpen, href: '/admin/nexabooks', active: true, color: '#7dd3fc', bg: 'rgba(125,211,252,0.15)', group: 'main', nexaModule: true },
 
   // Files & Data
   { id: 'drive', label: 'RO Drive', icon: HardDrive, href: '/admin/drive', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', group: 'files' },
   { id: 'documents', label: 'Documents', icon: FileText, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)', group: 'files' },
-  { id: 'takeoff', label: 'Bid from Plans', icon: Ruler, href: '/admin/takeoff', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW', group: 'files' },
   { id: 'materials', label: 'Cost Library', icon: Building2, href: '/admin/cost-library', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'files' },
   { id: 'suppliers', label: 'Vendors', icon: Package, href: '/admin/vendors', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'files' },
 

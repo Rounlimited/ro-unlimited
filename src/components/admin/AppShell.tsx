@@ -244,7 +244,6 @@ const APP_ICONS: AppIcon[] = [
   { id: 'portal', label: 'Customer Portal', icon: DoorOpen, href: '/admin/portal', active: true, color: '#D4B965', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'reviews', label: 'Reviews', icon: Star, href: '/admin/reviews', active: true, color: '#F5B83D', bg: 'rgba(245,184,61,0.15)', badge: 'NEW' },
   { id: 'dailylogs', label: 'Daily Logs', icon: FileCheck, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
-  { id: 'takeoff', label: 'Bid from Plans', icon: Ruler, href: '/admin/takeoff', active: true, color: '#E5C76B', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'documents', label: 'Letters', icon: FileText, href: '/admin/letters', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'invoicing', label: 'Invoices', icon: Receipt, href: '/admin/invoices', active: true, color: '#35d07f', bg: 'rgba(53,208,127,0.15)', badge: 'NEW' },
   // NexaBooks (Nexa module, admin role only): /admin/nexabooks signs the person in to NexaBooks.
@@ -1049,6 +1048,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="overflow-y-auto px-4 pb-8 relative" style={{ maxHeight: 'calc(85vh - 100px)', zIndex: 2 }}>
           <p className="text-[10px] text-white/30 uppercase tracking-wider mb-3 px-1">Available</p>
           <div className="relative">
+          <NexaBooksEntry module="bids" variant="drawer" onOpen={() => closeDrawer()} />
           {filtered.some(a => a.nexaModule) && (
             <NexaBooksEntry variant="drawer" onOpen={() => closeDrawer()} />
           )}

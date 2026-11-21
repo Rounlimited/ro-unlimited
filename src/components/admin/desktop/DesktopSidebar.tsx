@@ -81,6 +81,9 @@ export default function DesktopSidebar() {
               )}
               {group.label && collapsed && <div className="mx-3 my-2 h-px bg-white/5" />}
               {items.map(item => {
+                if (item.id === 'nexabids') {
+                  return <NexaBooksEntry key={item.id} module="bids" variant={collapsed ? 'sidebar-collapsed' : 'sidebar'} />;
+                }
                 if (item.nexaModule) {
                   return <NexaBooksEntry key={item.id} variant={collapsed ? 'sidebar-collapsed' : 'sidebar'} />;
                 }

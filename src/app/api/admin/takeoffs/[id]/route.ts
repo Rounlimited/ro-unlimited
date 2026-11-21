@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { recalcEstimateTotals, syncScheduleAmounts } from '@/lib/estimates';
 import { normalizeTakeoff, takeoffLines } from '@/lib/takeoff';
+import { nexaBidsAccess, NEXABIDS_LOCKED } from '@/lib/nexabids';
 
 /** One plan set: open it (with a short-lived link to the file), save the measuring, send it to an estimate, delete it. */
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,7 @@ const fail = (error: string, status = 400) => NextResponse.json({ error }, { sta
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
   const admin = createAdminClient();
+  if (!(await nexaBidsAccess(admin)).active) return NextResponse.json({ error: NEXABIDS_LOCKED, locked: true }, { status: 402 });
   const { data: row, error } = await admin.from('takeoffs').select('*, estimate:estimates(id, estimate_number, project_name)').eq('id', params.id).maybeSingle();
   if (error) return fail(error.message, 500);
   if (!row) return fail('Those plans are not here any more.', 404);
@@ -38,6 +40,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const body = await req.json().catch(() => ({}));
   const admin = createAdminClient();
   if (body.action !== 'export') return fail('Unknown action.');
+  if (!(await nexaBidsAccess(admin)).active) return NextResponse.json({ error: NEXABIDS_LOCKED, locked: true }, { status: 402 });
 
   const { data: row } = await admin.from('takeoffs').select('id, name, data').eq('id', params.id).maybeSingle();
   if (!row) return fail('Those plans are not here any more.', 404);

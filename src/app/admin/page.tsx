@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import IndustryPulse from '@/components/admin/IndustryPulse';
+import NexaBooksEntry from '@/components/admin/NexaBooksEntry';
 import AiCreditsRow from '@/components/admin/AiCreditsRow';
 import { gsap } from 'gsap';
 import {
@@ -508,6 +509,9 @@ export default function AdminDashboard() {
             </div>
           </Link>
         </div>
+
+        {/* NexaBids — premium Nexa module: bidding from plans */}
+        <NexaBooksEntry module="bids" variant="drawer" />
 
         {/* Row 4: Quick Actions */}
         <div data-tour="quick-actions" className="grid grid-cols-3 md:grid-cols-6 gap-1.5 md:gap-2.5 lg:gap-3 relative z-10">

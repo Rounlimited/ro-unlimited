@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { bidStage, nexaBidsAccess, NEXABIDS_LOCKED } from '@/lib/nexabids';
 
 /**
  * Bid from Plans: the list of plan sets, and getting a plan file in.
@@ -13,6 +14,8 @@ const fail = (error: string, status = 400) => NextResponse.json({ error }, { sta
 
 export async function GET(req: NextRequest) {
   const admin = createAdminClient();
+  const access = await nexaBidsAccess(admin);
+  if (!access.active) return NextResponse.json({ error: NEXABIDS_LOCKED, locked: true, access, bids: [] }, { status: 402 });
   // Estimates a takeoff can be sent to: anything not signed, newest first.
   if (req.nextUrl.searchParams.get('estimates')) {
     const q = (req.nextUrl.searchParams.get('q') || '').trim().replace(/[%,()]/g, ' ');
@@ -28,19 +31,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json([...open.filter((e: any) => e.status === 'draft'), ...open.filter((e: any) => e.status !== 'draft')]);
   }
   const { data, error } = await admin.from('takeoffs')
-    .select('id, name, file_name, file_size, page_count, estimate_id, created_at, updated_at, data, estimate:estimates(estimate_number, project_name)')
+    .select('id, name, file_name, file_size, page_count, estimate_id, created_at, updated_at, data, estimate:estimates(id, estimate_number, project_name, status, signed_at, completed_at, total)')
     .order('updated_at', { ascending: false }).limit(100);
   if (error) return fail(error.message, 500);
-  return NextResponse.json((data || []).map((t: any) => ({
-    ...t, data: undefined,
+  return NextResponse.json({ access, bids: (data || []).map((t: any) => ({
+    ...t, data: undefined, stage: bidStage(t.estimate),
     item_count: Array.isArray(t.data?.items) ? t.data.items.length : 0,
     sheets_scaled: t.data?.scales ? Object.keys(t.data.scales).length : 0,
-  })));
+  })) });
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const admin = createAdminClient();
+  if (!(await nexaBidsAccess(admin)).active) return NextResponse.json({ error: NEXABIDS_LOCKED, locked: true }, { status: 402 });
 
   if (body.action === 'create') {
     const fileName = String(body.file_name || '').slice(0, 200);

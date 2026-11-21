@@ -13,12 +13,21 @@ export const NEXABOOKS_HREF = '/admin/nexabooks';
 type Props = {
   variant: 'drawer' | 'sidebar' | 'sidebar-collapsed';
   onOpen?: () => void;
+  /** Which Nexa module this card opens. NexaBids is a normal admin page; NexaBooks signs the person in elsewhere. */
+  module?: 'books' | 'bids';
 };
 
-export default function NexaBooksEntry({ variant, onOpen }: Props) {
+const MODULES = {
+  books: { href: '/admin/nexabooks', title: 'Bookkeeping', word: 'Books', tail: 'connected to RO Unlimited by Nexa', say: 'Bookkeeping by NexaBooks, connected to RO Unlimited by Nexa' },
+  bids: { href: '/admin/nexabids', title: 'Bid from Plans', word: 'Bids', tail: 'plans in, bid out', say: 'Bid from plans with NexaBids' },
+};
+
+export default function NexaBooksEntry({ variant, onOpen, module = 'books' }: Props) {
+  const m = MODULES[module];
+  const NEXABOOKS_HREF = m.href;
   if (variant === 'sidebar-collapsed') {
     return (
-      <a href={NEXABOOKS_HREF} onClick={onOpen} className="nbx nbx-mini" aria-label="Bookkeeping by NexaBooks, connected to RO Unlimited by Nexa" title="Bookkeeping (NexaBooks)">
+      <a href={NEXABOOKS_HREF} onClick={onOpen} className="nbx nbx-mini" aria-label={m.say} title={`${m.title} (Nexa${m.word})`}>
         <span className="nbx-logo" aria-hidden="true">N</span>
         <style>{CSS}</style>
       </a>
@@ -27,15 +36,15 @@ export default function NexaBooksEntry({ variant, onOpen }: Props) {
   const compact = variant === 'sidebar';
   return (
     <a href={NEXABOOKS_HREF} onClick={onOpen} className={`nbx ${compact ? 'nbx-side' : 'nbx-drawer'}`}
-      aria-label="Bookkeeping by NexaBooks, connected to RO Unlimited by Nexa. Premium module.">
+      aria-label={`${m.say}. Premium module.`}>
       <span className="nbx-aurora" aria-hidden="true"><i /><i /><i /></span>
       <span className="nbx-shine" aria-hidden="true" />
       <span className="nbx-logo" aria-hidden="true">N</span>
       <span className="nbx-text">
-        <span className="nbx-title">Bookkeeping</span>
+        <span className="nbx-title">{m.title}</span>
         <span className="nbx-sub">
-          Nexa<span className="nbx-grad">Books</span>
-          {compact ? null : <> · connected to RO Unlimited by Nexa</>}
+          Nexa<span className="nbx-grad">{m.word}</span>
+          {compact ? null : <> · {m.tail}</>}
         </span>
       </span>
       {compact ? null : (
