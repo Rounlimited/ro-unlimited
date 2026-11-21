@@ -72,6 +72,19 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     await admin.from('takeoffs').update({ ai }).eq('id', t!.id);
     return NextResponse.json({ ok: true, ai });
   }
+  // Build-ups he has made before (a wall with its block, grout and rebar), to reuse on the next bid
+  if (body.action === 'assemblies' || body.action === 'assembly_save') {
+    const { data: d } = await admin.from('app_settings').select('value').eq('key', 'nexabids_assemblies').maybeSingle();
+    let list: any[] = Array.isArray((d?.value as any)?.list) ? (d!.value as any).list : [];
+    if (body.action === 'assembly_save' && body.assembly?.name && Array.isArray(body.assembly.parts) && body.assembly.parts.length) {
+      const a = body.assembly; const key = String(a.name).trim().toLowerCase();
+      list = [{ name: String(a.name).trim().slice(0, 120), kind: a.kind, unit: a.unit, heightFt: a.heightFt, widthFt: a.widthFt, depthIn: a.depthIn, unitCost: Number(a.unitCost) || 0,
+        parts: a.parts.slice(0, 12).map((p: any) => ({ name: String(p.name || '').slice(0, 80), unit: String(p.unit || '').slice(0, 8), per: Number(p.per) || 0, unitCost: Number(p.unitCost) || 0 })) },
+        ...list.filter((x) => String(x.name).toLowerCase() !== key)].slice(0, 60);
+      await admin.from('app_settings').upsert({ key: 'nexabids_assemblies', value: { list } }, { onConflict: 'key' });
+    }
+    return NextResponse.json({ list });
+  }
   // Remembers what he charges for something, so the next bid can fill it in
   if (body.action === 'remember_price') {
     const name = String(body.name || '').trim().slice(0, 120); const price = Number(body.price) || 0; const unit = String(body.unit || 'EA').slice(0, 8);
@@ -100,7 +113,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   }
 
   // Quantities are worked out here from the saved measuring, never taken from the screen.
-  const lines = takeoffLines(normalizeTakeoff(row.data), `From plans: ${row.name}`.slice(0, 120));
+  const lines = takeoffLines(normalizeTakeoff(row.data), `From plans: ${row.name}`.slice(0, 120), body.include_alts === true);
   if (!lines.length) return fail('Nothing has been measured yet.');
   const { data: last } = await admin.from('estimate_line_items').select('sort_order').eq('estimate_id', est.id).order('sort_order', { ascending: false }).limit(1);
   const first = (last?.[0]?.sort_order || 0) + 1;

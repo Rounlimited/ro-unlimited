@@ -10,6 +10,8 @@ export type Pt = [number, number];
 export type TakeoffKind = 'length' | 'area' | 'count';
 export type TakeoffUnit = 'LF' | 'SF' | 'SY' | 'CY' | 'EA';
 export type TakeoffShape = { id: string; page: number; pts: Pt[] };
+/** One part of a build-up: for every one unit measured on the item, `per` of this, at `unitCost` each. */
+export type ItemPart = { id: string; name: string; unit: string; per: number; unitCost: number };
 export type TakeoffItem = {
   id: string;
   name: string;
@@ -22,6 +24,10 @@ export type TakeoffItem = {
   printedQty?: number;       // a quantity the plans themselves state (read by the AI or typed), in this item's unit
   printedNote?: string;      // where that came from, e.g. "Sheet E.1, light fixture schedule"
   group?: string;            // the trade it belongs to (becomes the phase on the estimate)
+  heightFt?: number;         // a length priced as wall area: length x this height = SF
+  widthFt?: number;          // a length priced as volume (trench, footing): length x width x depthIn = CY
+  parts?: ItemPart[];        // build-up: other things priced off the same measurement (block, grout, rebar...)
+  alt?: boolean;             // an alternate: priced, but kept out of the base bid
   hint?: string;             // what to measure for it, in words (from the AI's draft list)
   hintPage?: number;         // the sheet to measure it on
   shapes: TakeoffShape[];
@@ -35,7 +41,7 @@ export type TakeoffData = {
 };
 
 export const TAKEOFF_COLORS = ['#E5484D', '#3B8DD4', '#35D07F', '#F0A04B', '#B57BEE', '#12B5CB', '#E93D82', '#C9A84C'];
-export const UNITS_FOR: Record<TakeoffKind, TakeoffUnit[]> = { length: ['LF'], area: ['SF', 'SY', 'CY'], count: ['EA'] };
+export const UNITS_FOR: Record<TakeoffKind, TakeoffUnit[]> = { length: ['LF', 'SF', 'CY'], area: ['SF', 'SY', 'CY'], count: ['EA'] };
 export const KIND_LABEL: Record<TakeoffKind, string> = { length: 'Length', area: 'Area', count: 'Count' };
 
 export const emptyTakeoff = (): TakeoffData => ({ scales: {}, scaleNotes: {}, items: [] });
@@ -89,6 +95,9 @@ export function itemQuantity(item: TakeoffItem, scales: Record<string, number>):
   let q = base;
   if (item.kind === 'area' && item.unit === 'SY') q = base / 9;
   if (item.kind === 'area' && item.unit === 'CY') q = (base * (Math.max(0, Number(item.depthIn) || 0) / 12)) / 27;
+  // A measured length can be priced as wall area (x height) or as volume (x width x depth)
+  if (item.kind === 'length' && item.unit === 'SF') q = base * Math.max(0, Number(item.heightFt) || 0);
+  if (item.kind === 'length' && item.unit === 'CY') q = (base * Math.max(0, Number(item.widthFt) || 0) * (Math.max(0, Number(item.depthIn) || 0) / 12)) / 27;
   const measured = q;
   // Nothing measured yet: the quantity the plans print stands in, so the item can be priced straight away.
   const printed = Math.max(0, Number(item.printedQty) || 0);
@@ -144,11 +153,19 @@ export function parseFeet(input: string): number | null {
 export type TakeoffLine = { description: string; quantity: number; unit: string; unit_cost: number; phase: string; category: string };
 
 /** The estimate lines a takeoff turns into. Items with nothing measured are left out. */
-export function takeoffLines(data: TakeoffData, phase = 'From plans'): TakeoffLine[] {
-  return data.items.map((it) => {
-    const { quantity } = itemQuantity(it, data.scales);
-    return { description: it.name.trim() || 'Unnamed item', quantity: lineQty(quantity, it.unit), unit: it.unit, unit_cost: Math.max(0, Number(it.unitCost) || 0), phase: it.group ? it.group.slice(0, 60) : phase, category: 'other' };
-  }).filter((l) => l.quantity > 0);
+export function takeoffLines(data: TakeoffData, phase = 'From plans', includeAlts = false): TakeoffLine[] {
+  const out: TakeoffLine[] = [];
+  for (const it of data.items) {
+    if (it.alt && !includeAlts) continue;
+    const c = itemCost(it, data.scales);
+    if (!(c.qty > 0)) continue;
+    const ph = it.alt ? 'Alternates' : it.group ? it.group.slice(0, 60) : phase;
+    const nm = (it.alt ? 'ALTERNATE: ' : '') + (it.name.trim() || 'Unnamed item');
+    // the item itself, unless it is only a carrier for its build-up (no price of its own)
+    if (!(c.parts.length && !(it.unitCost > 0))) out.push({ description: nm, quantity: c.qty, unit: it.unit, unit_cost: Math.max(0, Number(it.unitCost) || 0), phase: ph, category: 'other' });
+    for (const p of c.parts) if (p.quantity > 0) out.push({ description: `${nm}: ${p.name}`, quantity: p.quantity, unit: p.unit || 'EA', unit_cost: p.unitCost, phase: ph, category: 'other' });
+  }
+  return out;
 }
 
 /**
@@ -220,9 +237,25 @@ export function cleanPricing(p: unknown): BidPricing | undefined {
 }
 export function bidTotals(data: TakeoffData) {
   const p = data.pricing || { overheadPct: 0, profitPct: 0, contingencyPct: 0, floorPct: 0 };
-  let cost = 0; let unpriced = 0;
-  for (const it of data.items) { const q = itemQuantity(it, data.scales).quantity; if (q > 0 && !(it.unitCost > 0)) unpriced++; cost += lineQty(q, it.unit) * (Number(it.unitCost) || 0); }
+  let cost = 0; let unpriced = 0; const alternates: { name: string; cost: number }[] = [];
+  for (const it of data.items) {
+    const c = itemCost(it, data.scales);
+    if (c.qty > 0 && !(c.total > 0)) unpriced++;
+    if (it.alt) alternates.push({ name: it.name, cost: c.total }); else cost += c.total;
+  }
   const overhead = (cost * p.overheadPct) / 100, profit = (cost * p.profitPct) / 100, contingency = (cost * p.contingencyPct) / 100;
   const price = cost + overhead + profit + contingency;
-  return { cost, overhead, profit, contingency, price, unpriced, marginOfPrice: price > 0 ? (profit / price) * 100 : 0, belowFloor: p.floorPct > 0 && cost > 0 && p.profitPct < p.floorPct, pricing: p };
+  const mult = 1 + (p.overheadPct + p.profitPct + p.contingencyPct) / 100;
+  return { cost, overhead, profit, contingency, price, unpriced, alternates: alternates.map((a) => ({ ...a, price: a.cost * mult })), marginOfPrice: price > 0 ? (profit / price) * 100 : 0, belowFloor: p.floorPct > 0 && cost > 0 && p.profitPct < p.floorPct, pricing: p };
+}
+
+/** What one item costs: its own quantity at its price, plus each part of its build-up. */
+export function itemCost(item: TakeoffItem, scales: Record<string, number>) {
+  const qty = lineQty(itemQuantity(item, scales).quantity, item.unit);
+  const main = qty * (Number(item.unitCost) || 0);
+  const parts = (item.parts || []).filter((p) => p && p.name).map((p) => {
+    const quantity = Math.round(qty * (Number(p.per) || 0) * 100) / 100;
+    return { id: p.id, name: p.name, unit: p.unit, per: Number(p.per) || 0, unitCost: Math.max(0, Number(p.unitCost) || 0), quantity, total: quantity * Math.max(0, Number(p.unitCost) || 0) };
+  });
+  return { qty, main, parts, total: main + parts.reduce((t, p) => t + p.total, 0) };
 }

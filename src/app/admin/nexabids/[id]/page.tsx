@@ -6,7 +6,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Tra
 import {
   type Pt, type TakeoffData, type TakeoffItem, type TakeoffKind, type TakeoffUnit,
   TAKEOFF_COLORS, UNITS_FOR, KIND_LABEL, PRINTED_SCALES, emptyTakeoff, normalizeTakeoff, itemQuantity, fmtQty, money,
-  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, bidTotals, type AiRead, type AiSheet, type BidPricing, type AiDraft, type DraftItem,
+  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, bidTotals, itemCost, type ItemPart, type AiRead, type AiSheet, type BidPricing, type AiDraft, type DraftItem,
 } from '@/lib/takeoff';
 import { readSheetVectors, snapPoint, traceRun, shapeAt, matchSymbols, type SheetVectors } from '@/lib/takeoff-vectors';
 
@@ -51,6 +51,7 @@ export default function TakeoffPage() {
   const [pickMode, setPickMode] = useState<'points' | 'whole'>('points');
   const [snapMark, setSnapMark] = useState<null | { pt: Pt; kind: string }>(null);
   const [foundNote, setFoundNote] = useState('');
+  const [erase, setErase] = useState(false);     // the next tap removes the measurement under it
   const [big, setBig] = useState(false);          // the sheet takes the whole screen, the list is put away
   const [found, setFound] = useState<{ label: string; feetPerInch: number; times: number }[]>([]);   // scales this sheet prints on itself
 
@@ -265,6 +266,22 @@ export default function TakeoffPage() {
   const tap = (raw: Pt) => {
     if (!size || raw[0] < 0 || raw[1] < 0 || raw[0] > size.w || raw[1] > size.h) return;
     const r = 14 / viewRef.current.k;                                   // 14 screen pixels, at any zoom
+    if (mode === 'draw' && active && erase) {
+      // take away the one measurement of this item nearest the tap
+      const dSeg = (a: Pt, b: Pt) => { const dx = b[0] - a[0], dy = b[1] - a[1]; const L = dx * dx + dy * dy; const t = L ? Math.max(0, Math.min(1, ((raw[0] - a[0]) * dx + (raw[1] - a[1]) * dy) / L)) : 0; return Math.hypot(a[0] + t * dx - raw[0], a[1] + t * dy - raw[1]); };
+      let best: { shape: string; pt: number } | null = null; let bd = r * 2.5;
+      for (const sh of active.shapes) {
+        if (sh.page !== page) continue;
+        if (active.kind === 'count') sh.pts.forEach((q, i) => { const d = Math.hypot(q[0] - raw[0], q[1] - raw[1]); if (d < bd) { bd = d; best = { shape: sh.id, pt: i }; } });
+        else { const n = active.kind === 'area' ? sh.pts.length : sh.pts.length - 1; let inside = false; if (active.kind === 'area') for (let i = 0, j = sh.pts.length - 1; i < sh.pts.length; j = i++) { const [xi, yi] = sh.pts[i], [xj, yj] = sh.pts[j]; if ((yi > raw[1]) !== (yj > raw[1]) && raw[0] < ((xj - xi) * (raw[1] - yi)) / (yj - yi) + xi) inside = !inside; }
+          for (let i = 0; i < n; i++) { const d = inside ? 0 : dSeg(sh.pts[i], sh.pts[(i + 1) % sh.pts.length]); if (d < bd) { bd = d; best = { shape: sh.id, pt: -1 }; } } }
+      }
+      const hit = best as { shape: string; pt: number } | null;
+      if (!hit) { setFoundNote('Nothing of this item is there. Tap right on the one to remove.'); return; }
+      change((d) => ({ ...d, items: d.items.map((it) => (it.id !== active.id ? it : { ...it, shapes: it.shapes.map((sh) => (sh.id !== hit.shape ? sh : hit.pt < 0 ? { ...sh, pts: [] } : { ...sh, pts: sh.pts.filter((_, i) => i !== hit.pt) })).filter((sh) => sh.pts.length) })) }));
+      setErase(false); setFoundNote('Removed.');
+      return;
+    }
     // One tap takes a whole line run (length) or a whole outline (area), straight from the drawing
     if (mode === 'draw' && active && pickMode === 'whole' && active.kind === 'count') {
       // Tap one symbol and every matching one on the sheet is counted
@@ -325,8 +342,8 @@ export default function TakeoffPage() {
       return { ...it, shapes: it.shapes.slice(0, -1) };
     }) }));
   };
-  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setPickMode('points'); setFoundNote(''); };
-  const stop = () => { setDraft([]); setScalePts([]); setMode('move'); };
+  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setPickMode('points'); setFoundNote(''); setErase(false); };
+  const stop = () => { setDraft([]); setScalePts([]); setMode('move'); setErase(false); };
 
   const draftReadout = useMemo(() => {
     if (!active || active.kind === 'count' || draft.length < 2) return '';
@@ -500,7 +517,7 @@ export default function TakeoffPage() {
                     <span className="flex-1 min-w-0">
                       <span className="block text-[17px] font-bold leading-snug break-words">{it.name}</span>
                       <span className="block text-[15px] text-white/80 leading-snug">
-                        {fmtQty(q.quantity, it.unit)} {it.unit}{it.unitCost > 0 ? ` × ${money(it.unitCost)} = ${money(q.quantity * it.unitCost)}` : ' · no price yet'}
+                        {it.alt && <b className="text-[#c4b5fd]">Alternate · </b>}{fmtQty(q.quantity, it.unit)} {it.unit}{(() => { const c = itemCost(it, data.scales); return c.parts.length && !(c.qty > 0) ? ' · build-up, nothing measured yet' : c.parts.length ? (c.total > 0 ? ` · build-up of ${c.parts.length + (it.unitCost > 0 ? 1 : 0)} = ${money(c.total)}` : ` · build-up of ${c.parts.length}, no prices yet`) : it.unitCost > 0 ? ` × ${money(it.unitCost)} = ${money(c.total)}` : ' · no price yet'; })()}
                       </span>
                       {q.unscaled > 0 && <span className="block text-[14px] text-[#f0a04b] leading-snug">{q.unscaled} left out: that sheet has no scale</span>}
                       {!!it.hint && !it.shapes.length && !it.printedQty && <span className="block text-[14px] text-[#f0a04b] leading-snug">To measure: {it.hint}</span>}
@@ -520,6 +537,7 @@ export default function TakeoffPage() {
                     <div className="flex gap-2 px-3 pb-2.5">
                       <button onClick={() => { setEditing(it); setSheet('item'); }} className="flex-1 min-h-[48px] rounded-lg border border-white/25 text-[16px] font-semibold flex items-center justify-center gap-1.5"><Pencil size={18} /> Name and price</button>
                       <button onClick={undo} className="min-h-[48px] px-3 rounded-lg border border-white/25 text-[16px] font-semibold flex items-center gap-1.5"><Undo2 size={18} /> Undo last</button>
+                      <button onClick={() => { if (!(mode === 'draw' && activeId === it.id)) pick(it.id); setErase(true); setFoundNote('Tap the one to remove.'); }} className={`min-h-[48px] px-3 rounded-lg border text-[16px] font-semibold flex items-center gap-1.5 ${erase ? 'border-red-400 bg-red-500/20' : 'border-white/25'}`}><Trash2 size={18} /> Remove one</button>
                     </div>
                   )}
                 </div>
@@ -594,7 +612,7 @@ export default function TakeoffPage() {
       )}
       {sheet === 'draft' && bidDraft?.status === 'done' && (
         <DraftSheet draft={bidDraft} have={data.items.map((i) => i.name.toLowerCase())} onClose={() => setSheet(null)}
-          onAdd={(list) => { change((d) => ({ ...d, draftTaken: true, items: [...d.items, ...list.map((x, k) => { const u = unitFromPrinted(x.unit); return { id: uid(), name: x.name, kind: u.kind, unit: u.unit, color: TAKEOFF_COLORS[(d.items.length + k) % TAKEOFF_COLORS.length], unitCost: 0, group: x.group,
+          onAdd={(list) => { change((d) => ({ ...d, draftTaken: true, items: [...d.items, ...list.map((x, k) => { const u = unitFromPrinted(x.unit); return { id: uid(), name: x.name, kind: u.kind, unit: u.unit, color: TAKEOFF_COLORS[(d.items.length + k) % TAKEOFF_COLORS.length], unitCost: 0, group: x.group, alt: (x as any).alt ? true : undefined,
             printedQty: x.quantity || undefined, printedNote: x.quantity ? (x.source === 'table' ? `a table on ${x.sheet || 'the plans'}` : x.source === 'lump' ? 'priced as one lump' : `printed on ${x.sheet || 'the plans'}`) : undefined,
             hint: x.quantity ? undefined : (x.measure || undefined), hintPage: x.quantity ? undefined : (x.page || undefined), shapes: [] }; })] })); setSheet(null); }} />
       )}
@@ -729,6 +747,7 @@ function DraftSheet({ draft, have, onAdd, onClose }: { draft: AiDraft; have: str
                   {it.quantity
                     ? <span className="block text-[15px] font-semibold text-[#8fe3a8] leading-snug">{it.quantity.toLocaleString('en-US')} {it.unit} · {it.source === 'table' ? `from a table on ${it.sheet || 'the plans'}` : it.source === 'lump' ? 'one lump' : `printed on ${it.sheet || 'the plans'}`}</span>
                     : <span className="block text-[15px] text-[#f0a04b] leading-snug">Measure{it.sheet ? ` on ${it.sheet}` : ''}: {it.measure || 'not stated on the plans'}</span>}
+                  {(it as any).alt && <span className="block text-[14px] font-semibold text-[#c4b5fd] leading-snug">Alternate: kept out of the base bid</span>}
                   {it.note && <span className="block text-[14px] text-white/70 leading-snug">{it.note}</span>}
                   {dup && <span className="block text-[14px] text-white/60 leading-snug">Already on your list</span>}
                 </span>
@@ -907,6 +926,14 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
   const [unit, setUnit] = useState<TakeoffUnit>(item?.unit || 'LF');
   const [price, setPrice] = useState(item?.unitCost ? String(item.unitCost) : '');
   const [depth, setDepth] = useState(item?.depthIn ? String(item.depthIn) : '');
+  const [height, setHeight] = useState(item?.heightFt ? String(item.heightFt) : '');
+  const [width, setWidth] = useState(item?.widthFt ? String(item.widthFt) : '');
+  const [alt, setAlt] = useState(!!item?.alt);
+  const [parts, setParts] = useState<{ id: string; name: string; unit: string; per: string; unitCost: string }[]>(() => (item?.parts || []).map((p) => ({ id: p.id, name: p.name, unit: p.unit, per: String(p.per), unitCost: p.unitCost ? String(p.unitCost) : '' })));
+  const [saved, setSaved] = useState<any[]>([]);
+  const tid = typeof window !== 'undefined' ? location.pathname.split('/').pop() : '';
+  useEffect(() => { fetch('/api/admin/takeoffs/' + tid, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'assemblies' }) }).then((r) => r.json()).then((d) => setSaved(Array.isArray(d.list) ? d.list : [])).catch(() => null); }, [tid]);
+  const setPart = (id: string, k: 'name' | 'unit' | 'per' | 'unitCost', v: string) => setParts((ps) => ps.map((p) => (p.id === id ? { ...p, [k]: v } : p)));
   const [waste, setWaste] = useState(item?.wastePct ? String(item.wastePct) : '');
   const [color, setColor] = useState(item?.color || TAKEOFF_COLORS[colorIndex % TAKEOFF_COLORS.length]);
   const [err, setErr] = useState('');
@@ -914,9 +941,14 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
   const setK = (k: TakeoffKind) => { setKind(k); setUnit(UNITS_FOR[k][0]); };
   const save = () => {
     if (!name.trim()) { setErr('Give it a name, like 8 inch water main.'); return; }
-    if (unit === 'CY' && !(Number(depth) > 0)) { setErr('Cubic yards needs the thickness in inches.'); return; }
+    if (unit === 'CY' && !(Number(depth) > 0)) { setErr(kind === 'length' ? 'Volume needs the depth in inches.' : 'Cubic yards needs the thickness in inches.'); return; }
+    if (kind === 'length' && unit === 'SF' && !(Number(height) > 0)) { setErr('Wall area needs the height in feet.'); return; }
+    if (kind === 'length' && unit === 'CY' && !(Number(width) > 0)) { setErr('Volume needs the width in feet.'); return; }
+    const cleanParts: ItemPart[] = parts.filter((p) => p.name.trim() && Number(p.per) > 0).map((p) => ({ id: p.id, name: p.name.trim().slice(0, 80), unit: p.unit.trim().slice(0, 8) || 'EA', per: Number(p.per), unitCost: Math.max(0, Number(p.unitCost) || 0) }));
+    if (cleanParts.length) fetch('/api/admin/takeoffs/' + tid, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'assembly_save', assembly: { name: name.trim(), kind, unit, heightFt: Number(height) || undefined, widthFt: Number(width) || undefined, depthIn: Number(depth) || undefined, unitCost: Number(price) || 0, parts: cleanParts } }) }).catch(() => null);
     if (Number(price) > 0) fetch('/api/admin/takeoffs/' + (typeof window !== 'undefined' ? location.pathname.split('/').pop() : ''), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'remember_price', name: name.trim(), unit, price: Number(price) }) }).catch(() => null);
-    onSave({ id: item?.id || uid(), name: name.trim().slice(0, 120), kind, unit, color, unitCost: Math.max(0, Number(price) || 0), depthIn: unit === 'CY' ? Number(depth) : undefined, wastePct: Number(waste) > 0 ? Number(waste) : undefined, shapes: item?.shapes || [] });
+    onSave({ id: item?.id || uid(), name: name.trim().slice(0, 120), kind, unit, color, unitCost: Math.max(0, Number(price) || 0), depthIn: unit === 'CY' ? Number(depth) : undefined, heightFt: kind === 'length' && unit === 'SF' ? Number(height) : undefined, widthFt: kind === 'length' && unit === 'CY' ? Number(width) : undefined,
+      parts: cleanParts.length ? cleanParts : undefined, alt: alt || undefined, wastePct: Number(waste) > 0 ? Number(waste) : undefined, shapes: item?.shapes || [] });
   };
   return (
     <Sheet title={item ? 'Name and price' : 'What are you measuring?'} onClose={onClose}>
@@ -933,6 +965,28 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
           ))}
         </div>
       </>)}
+      {saved.filter((a) => !name.trim() || a.name.toLowerCase().includes(name.trim().toLowerCase())).slice(0, 4).length > 0 && !item && (
+        <div className="mt-2 space-y-1.5">
+          <p className="text-[14px] font-semibold text-white/75">Your saved build-ups</p>
+          {saved.filter((a) => !name.trim() || a.name.toLowerCase().includes(name.trim().toLowerCase())).slice(0, 4).map((a, i) => (
+            <button key={i} type="button" onClick={() => { setName(a.name); if (a.kind) setKind(a.kind); if (a.unit) setUnit(a.unit); setHeight(a.heightFt ? String(a.heightFt) : ''); setWidth(a.widthFt ? String(a.widthFt) : ''); setDepth(a.depthIn ? String(a.depthIn) : ''); setPrice(a.unitCost ? String(a.unitCost) : ''); setParts((a.parts || []).map((p: any) => ({ id: uid(), name: p.name, unit: p.unit, per: String(p.per), unitCost: p.unitCost ? String(p.unitCost) : '' }))); }}
+              className="w-full min-h-[48px] text-left rounded-lg border border-[#a78bfa]/50 bg-[#a78bfa]/10 px-3 py-1.5">
+              <span className="block text-[16px] font-semibold leading-snug break-words">{a.name}</span>
+              <span className="block text-[14px] text-white/75 leading-snug">{(a.parts || []).map((p: any) => p.name).join(', ')}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {kind === 'length' && (<>
+        <label className={`${labelCls} mt-3`}>Priced by</label>
+        <div className="grid grid-cols-1 gap-2">
+          {([['LF', 'Feet of length', 'pipe, curb, fence'], ['SF', 'Wall area: length × height', 'block wall, siding, paint'], ['CY', 'Volume: length × width × depth', 'trench, footing']] as [TakeoffUnit, string, string][]).map(([u, label, eg]) => (
+            <button key={u} onClick={() => setUnit(u)} className={`min-h-[52px] rounded-lg border px-3 text-left ${unit === u ? 'border-[#C9A84C] bg-[#C9A84C]/15' : 'border-white/25'}`}><span className="block text-[17px] font-bold leading-tight">{label}</span><span className="block text-[14px] text-white/70">{eg}</span></button>
+          ))}
+        </div>
+        {unit === 'SF' && (<><label className={`${labelCls} mt-3`}>Height, in feet</label><input inputMode="decimal" value={height} onChange={(e) => { setHeight(e.target.value); setErr(''); }} placeholder="10" className={inputCls} /></>)}
+        {unit === 'CY' && (<div className="grid grid-cols-2 gap-2 mt-3"><div><label className={labelCls}>Width, in feet</label><input inputMode="decimal" value={width} onChange={(e) => { setWidth(e.target.value); setErr(''); }} placeholder="2" className={inputCls} /></div><div><label className={labelCls}>Depth, in inches</label><input inputMode="decimal" value={depth} onChange={(e) => { setDepth(e.target.value); setErr(''); }} placeholder="12" className={inputCls} /></div></div>)}
+      </>)}
       {kind === 'area' && (<>
         <label className={`${labelCls} mt-3`}>Unit</label>
         <div className="grid grid-cols-3 gap-2">
@@ -941,9 +995,31 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
         {unit === 'CY' && (<><label className={`${labelCls} mt-3`}>Thickness, in inches</label><input inputMode="decimal" value={depth} onChange={(e) => { setDepth(e.target.value); setErr(''); }} placeholder="6" className={inputCls} /></>)}
       </>)}
       <div className="grid grid-cols-2 gap-2 mt-3">
-        <div><label className={labelCls}>Your price per {unit}</label><input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Can add later" className={inputCls} /></div>
+        <div><label className={labelCls}>{parts.length ? `Labor or own price per ${unit}` : `Your price per ${unit}`}</label><input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Can add later" className={inputCls} /></div>
         <div><label className={labelCls}>Extra for waste, %</label><input inputMode="decimal" value={waste} onChange={(e) => setWaste(e.target.value)} placeholder="0" className={inputCls} /></div>
       </div>
+      <label className={`${labelCls} mt-4`}>Also price with it (a build-up)</label>
+      <p className="text-[15px] text-white/75 leading-snug -mt-1 mb-2">Other things that come with every {unit} you measure, like block, grout and rebar for a wall. They follow the measurement by themselves.</p>
+      <div className="space-y-2">
+        {parts.map((p) => (
+          <div key={p.id} className="rounded-xl border border-white/20 bg-white/[0.04] p-2.5">
+            <div className="flex gap-2">
+              <input value={p.name} onChange={(e) => setPart(p.id, 'name', e.target.value)} placeholder="What, like 8 inch block" className="flex-1 min-w-0 min-h-[48px] px-3 rounded-lg bg-white/5 border border-white/20 text-[17px] focus:outline-none focus:border-[#C9A84C]" />
+              <button onClick={() => setParts((ps) => ps.filter((x) => x.id !== p.id))} aria-label="Remove this part" className="w-12 min-h-[48px] rounded-lg border border-white/20 flex items-center justify-center"><X size={20} /></button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              <label className="text-[13px] text-white/75">How many per {unit}<input inputMode="decimal" value={p.per} onChange={(e) => setPart(p.id, 'per', e.target.value)} placeholder="1.125" className="mt-1 w-full min-h-[48px] px-2.5 rounded-lg bg-white/5 border border-white/20 text-[17px] text-white focus:outline-none focus:border-[#C9A84C]" /></label>
+              <label className="text-[13px] text-white/75">Its unit<input value={p.unit} onChange={(e) => setPart(p.id, 'unit', e.target.value)} placeholder="EA" className="mt-1 w-full min-h-[48px] px-2.5 rounded-lg bg-white/5 border border-white/20 text-[17px] text-white focus:outline-none focus:border-[#C9A84C]" /></label>
+              <label className="text-[13px] text-white/75">Price each<input inputMode="decimal" value={p.unitCost} onChange={(e) => setPart(p.id, 'unitCost', e.target.value)} placeholder="0.00" className="mt-1 w-full min-h-[48px] px-2.5 rounded-lg bg-white/5 border border-white/20 text-[17px] text-white focus:outline-none focus:border-[#C9A84C]" /></label>
+            </div>
+          </div>
+        ))}
+        <button onClick={() => setParts((ps) => [...ps, { id: uid(), name: '', unit: 'EA', per: '1', unitCost: '' }])} className="w-full min-h-[48px] rounded-xl border-2 border-dashed border-white/30 text-[16px] font-semibold flex items-center justify-center gap-2"><Plus size={20} /> Add a part</button>
+      </div>
+      <button type="button" role="switch" aria-checked={alt} onClick={() => setAlt((v) => !v)} className="mt-4 w-full min-h-[52px] rounded-xl border border-white/20 px-3 flex items-center gap-3 text-left">
+        <span className={`w-7 h-7 rounded-md border-2 flex items-center justify-center shrink-0 ${alt ? 'bg-[#a78bfa] border-[#a78bfa] text-black' : 'border-white/50 text-transparent'}`}><Check size={18} /></span>
+        <span className="text-[16px] leading-snug">This is an alternate. Price it, but keep it out of the base bid.</span>
+      </button>
       <label className={`${labelCls} mt-3`}>Color on the sheet</label>
       <div className="flex flex-wrap gap-2">
         {TAKEOFF_COLORS.map((c) => <button key={c} onClick={() => setColor(c)} aria-label={`Color ${c}`} className={`w-12 h-12 rounded-full border-4 ${color === c ? 'border-white' : 'border-transparent'}`} style={{ background: c }} />)}
@@ -1075,6 +1151,10 @@ function BidSheet({ takeoffId, data, onChange, onClose }: { takeoffId: string; d
         <p className="text-[15px] text-white/85 leading-snug mt-0.5">Profit is {money(b.profit)}, which is {b.marginOfPrice.toFixed(1)}% of the bid price.</p>
         {b.belowFloor && <p className="text-[16px] font-bold text-red-100 leading-snug mt-1">This is below your floor of {p.floorPct}% profit. Raise the profit, or change the floor.</p>}
       </div>
+      {b.alternates.length > 0 && (<>
+        <p className="text-[15px] font-bold uppercase tracking-wide text-[#c4b5fd] mt-5 mb-1">Alternates (not in the bid price)</p>
+        {b.alternates.map((a, i) => <div key={i} className="flex items-center justify-between gap-3 py-1.5 border-t border-white/10"><span className="text-[16px] leading-snug break-words min-w-0">{a.name}</span><span className="text-[17px] font-bold shrink-0">add {money(a.price)}</span></div>)}
+      </>)}
       <p className="text-[15px] font-bold uppercase tracking-wide text-[#E5C76B] mt-5">Your floor</p>
       {row('Lowest profit you will bid at', 'floorPct', null, 'You get a red warning below this')}
       <button onClick={useAlways} className={`mt-4 w-full min-h-[52px] rounded-xl border text-[17px] font-semibold ${saved ? 'border-[#4ade80] text-[#8fe3a8]' : 'border-white/30'}`}>{saved ? 'Saved. New bids start with these.' : 'Use these numbers on every new bid'}</button>
@@ -1084,6 +1164,7 @@ function BidSheet({ takeoffId, data, onChange, onClose }: { takeoffId: string; d
 }
 
 function SendSheet({ takeoffId, data, planName, onClose }: { takeoffId: string; data: TakeoffData; planName: string; onClose: () => void }) {
+  const [withAlts, setWithAlts] = useState(false);
   const router = useRouter();
   const [q, setQ] = useState('');
   const [list, setList] = useState<Est[] | null>(null);
@@ -1091,9 +1172,10 @@ function SendSheet({ takeoffId, data, planName, onClose }: { takeoffId: string; 
   const [err, setErr] = useState('');
   const [warn, setWarn] = useState('');      // the estimate he tapped that a customer already has
   const [done, setDone] = useState<null | { added: number; estimate_id: string; estimate_number: string; total: number; fixed_price: boolean }>(null);
-  const lines = useMemo(() => takeoffLines(data), [data]);
+  const lines = useMemo(() => takeoffLines(data, 'From plans', withAlts), [data, withAlts]);
   const pr = data.pricing; const hasPricing = !!pr && (pr.overheadPct > 0 || pr.profitPct > 0 || pr.contingencyPct > 0);
   const [applyPricing, setApplyPricing] = useState(true);
+  const altCount = data.items.filter((i) => i.alt).length;
   const unpriced = lines.filter((l) => !(l.unit_cost > 0)).length;
   const unscaled = data.items.reduce((n, it) => n + itemQuantity(it, data.scales).unscaled, 0);
   useEffect(() => {
@@ -1108,7 +1190,7 @@ function SendSheet({ takeoffId, data, planName, onClose }: { takeoffId: string; 
     setBusy(e.id); setErr('');
     // The measuring is saved first so the server works from exactly what is on screen.
     await fetch('/api/admin/takeoffs/' + takeoffId, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data }) }).catch(() => null);
-    const r = await fetch('/api/admin/takeoffs/' + takeoffId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'export', estimate_id: e.id, customer_sees_ok: e.status !== 'draft', apply_pricing: hasPricing && applyPricing }) }).catch(() => null);
+    const r = await fetch('/api/admin/takeoffs/' + takeoffId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'export', estimate_id: e.id, customer_sees_ok: e.status !== 'draft', apply_pricing: hasPricing && applyPricing, include_alts: withAlts }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(''); setWarn('');
     if (!r || !r.ok) { setErr(d.error || 'That did not go through. Try again.'); return; }
@@ -1133,6 +1215,12 @@ function SendSheet({ takeoffId, data, planName, onClose }: { takeoffId: string; 
       <p className="text-[17px] leading-relaxed">{lines.length} line{lines.length === 1 ? '' : 's'} will be added. A draft is the safe place: no customer sees a draft.</p>
       {unpriced > 0 && <p className="text-[16px] text-[#f0a04b] leading-snug mt-1.5">{unpriced} {unpriced === 1 ? 'has' : 'have'} no price yet and will go in at $0 for you to price on the estimate.</p>}
       {unscaled > 0 && <p className="text-[16px] text-[#f0a04b] leading-snug mt-1.5">{unscaled} measurement{unscaled === 1 ? ' is' : 's are'} left out because the sheet has no scale.</p>}
+      {altCount > 0 && (
+        <button type="button" role="switch" aria-checked={withAlts} onClick={() => setWithAlts((v) => !v)} className="mt-3 w-full min-h-[52px] rounded-xl border border-white/20 px-3 flex items-center gap-3 text-left">
+          <span className={`w-7 h-7 rounded-md border-2 flex items-center justify-center shrink-0 ${withAlts ? 'bg-[#a78bfa] border-[#a78bfa] text-black' : 'border-white/50 text-transparent'}`}><Check size={18} /></span>
+          <span className="text-[16px] leading-snug">Also send the {altCount} alternate{altCount === 1 ? '' : 's'}. They add to the estimate total.</span>
+        </button>
+      )}
       {hasPricing && pr && (
         <button type="button" role="switch" aria-checked={applyPricing} onClick={() => setApplyPricing((v) => !v)} className="mt-3 w-full min-h-[52px] rounded-xl border border-white/20 px-3 flex items-center gap-3 text-left">
           <span className={`w-7 h-7 rounded-md border-2 flex items-center justify-center shrink-0 ${applyPricing ? 'bg-[#C9A84C] border-[#C9A84C] text-black' : 'border-white/50 text-transparent'}`}><Check size={18} /></span>
