@@ -424,3 +424,38 @@ export function markdownFromPlainParagraphs(html: string): string {
   }
   return looksLikeMarkdown(md) ? md : '';
 }
+
+/* ── Editing by block ─────────────────────────────────────────────────
+   The AI edits a scope by naming the blocks it changes (a heading, a
+   paragraph, a list, a table), never by sending the whole document back. */
+
+export type ScopeOp = { op: 'replace' | 'delete' | 'insert_after' | 'insert_before'; block: number; html?: string };
+
+/** The scope's top-level pieces in order; block numbers used by ScopeOp are 1-based positions in this list. */
+export function scopeBlocks(html: string): string[] {
+  return topLevel(String(html || '')).map((b) => b.html);
+}
+
+/** Applies operations that all refer to block numbers of the ORIGINAL html. */
+export function applyScopeOps(html: string, ops: ScopeOp[]): string {
+  const blocks = scopeBlocks(html);
+  const before: string[][] = blocks.map(() => []);
+  const after: string[][] = blocks.map(() => []);
+  const body: (string | null)[] = blocks.slice();
+  for (const o of ops) {
+    const i = Math.floor(Number(o.block)) - 1;
+    if (!(i >= 0 && i < blocks.length)) continue;
+    if (o.op === 'delete') body[i] = null;
+    else if (o.op === 'replace') body[i] = String(o.html || '');
+    else if (o.op === 'insert_after') after[i].push(String(o.html || ''));
+    else if (o.op === 'insert_before') before[i].push(String(o.html || ''));
+  }
+  return blocks.map((_, i) => before[i].join('') + (body[i] ?? '') + after[i].join('')).join('');
+}
+
+/** Which words and numbers a change takes out or puts in (plain comparison, no AI). */
+export function diffScope(beforeText: string, afterHtml: string): { removed: string[]; added: string[] } {
+  const b = String(beforeText || ''); const a = scopeText(afterHtml);
+  const bt = [...numbersOf(b), ...wordsOf(b)]; const at = [...numbersOf(a), ...wordsOf(a)];
+  return { removed: tally(minus(bt, at), 60), added: tally(minus(at, bt), 60) };
+}

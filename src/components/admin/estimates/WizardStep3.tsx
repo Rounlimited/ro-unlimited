@@ -11,10 +11,11 @@ import { Color } from '@tiptap/extension-color';
 import { TableKit } from '@tiptap/extension-table';
 import {
   Bold, Italic, Underline, List, ListOrdered, Link as LinkIcon, Heading2, Heading3, Table2,
-  Sparkles, FileUp, Undo2, Redo2, Trash2, Eye, Pencil, X, Check, Rows3, Columns3,
+  Sparkles, FileUp, Undo2, Send, ScanSearch, Redo2, Trash2, Eye, Pencil, X, Check, Rows3, Columns3,
 } from 'lucide-react';
 import ScopeView from '@/components/estimates/ScopeView';
 import ScopeOrganizer from '@/components/admin/estimates/ScopeOrganizer';
+import ScopeAssistant from '@/components/admin/estimates/ScopeAssistant';
 import { cleanScopeHtml, couldUseOrganizing, looksLikeMarkdown, looksScrambled, markdownFromPlainParagraphs, markdownToScopeHtml, scopeStats, scopeText } from '@/lib/scope-doc';
 
 interface Props {
@@ -33,6 +34,8 @@ interface Props {
 export default function WizardStep3({ content, onSave }: Props) {
   const [sheet, setSheet] = useState<null | 'tidy' | 'import'>(null);
   const [preview, setPreview] = useState(false);
+  const [ask, setAsk] = useState('');
+  const [assist, setAssist] = useState<null | { instruction: string }>(null);
   const [html, setHtml] = useState(content || '');
   const [dismissed, setDismissed] = useState(false);
   const [undoHtml, setUndoHtml] = useState<string | null>(null);
@@ -157,6 +160,25 @@ export default function WizardStep3({ content, onSave }: Props) {
         </button>
       </div>
 
+      {/* The AI working on what is already here: change something on request, or look it over and fix what came in wrong */}
+      {hasText && (
+        <div className="rounded-xl border border-white/15 bg-[#111] p-3">
+          <label htmlFor="scope-ask" className="flex items-center gap-2 text-[16px] font-semibold text-white mb-2"><Sparkles size={18} className="text-[#D4B965]" /> Ask the AI to change something</label>
+          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); const q = ask.trim(); if (q) { push(editor.getHTML(), true); setAssist({ instruction: q }); } }}>
+            <input id="scope-ask" value={ask} onChange={(e) => setAsk(e.target.value)} enterKeyHint="send"
+              placeholder="e.g. take out the date line at the top"
+              className="flex-1 min-w-0 min-h-[52px] rounded-lg bg-[#0a0a0a] border border-white/20 px-3.5 text-[17px] text-white placeholder:text-white/45 focus:outline-none focus:border-[#C9A84C]" />
+            <button type="submit" disabled={!ask.trim()} aria-label="Ask the AI"
+              className="shrink-0 min-w-[56px] min-h-[52px] px-4 rounded-lg bg-[#C9A84C] text-black text-[17px] font-bold flex items-center justify-center gap-2 disabled:opacity-35"><Send size={19} /> Ask</button>
+          </form>
+          <button type="button" onClick={() => { push(editor.getHTML(), true); setAssist({ instruction: '' }); }}
+            className="mt-2.5 w-full min-h-[52px] rounded-lg border border-white/25 text-white text-[17px] font-semibold flex items-center justify-center gap-2 active:bg-white/5">
+            <ScanSearch size={20} /> Have the AI look it over
+          </button>
+          <p className="mt-2 text-[14px] text-white/55 leading-snug">It shows you what it would change first. Nothing changes until you tap Apply. Each use takes a few cents of AI credit.</p>
+        </div>
+      )}
+
       {rawMarkdown && (
         <div className="rounded-xl border border-[#35d07f]/50 bg-[#35d07f]/10 px-4 py-3.5">
           <p className="text-[17px] font-semibold text-white leading-snug">This came in as plain text with the layout marks showing.</p>
@@ -188,7 +210,7 @@ export default function WizardStep3({ content, onSave }: Props) {
       {undoHtml !== null && (
         <div className="flex items-center gap-3 rounded-xl border border-[#35d07f]/40 bg-[#35d07f]/10 px-4 py-2.5">
           <Check size={20} className="text-[#5fe0a0] shrink-0" />
-          <p className="flex-1 text-[16px] text-white">The scope was replaced with the organized one.</p>
+          <p className="flex-1 text-[16px] text-white">The scope was changed.</p>
           <button type="button" onClick={() => { const b = undoHtml; setUndoHtml(null); editor.commands.setContent(b, { emitUpdate: false }); push(editor.getHTML(), true); }}
             className="min-h-[44px] px-3 rounded-lg text-[16px] font-bold text-white underline underline-offset-2">Put mine back</button>
           <button type="button" onClick={() => setUndoHtml(null)} aria-label="Dismiss" className="w-11 h-11 flex items-center justify-center text-white/70"><X size={19} /></button>
@@ -263,6 +285,12 @@ export default function WizardStep3({ content, onSave }: Props) {
           </div>
         )}
       </div>
+
+      {assist && (
+        <ScopeAssistant currentHtml={editor.getHTML()} instruction={assist.instruction}
+          onClose={() => setAssist(null)}
+          onApply={(next) => { setAssist(null); setAsk(''); replaceAll(next, true); }} />
+      )}
 
       {sheet && (
         <ScopeOrganizer mode={sheet} currentHtml={editor.getHTML()}
