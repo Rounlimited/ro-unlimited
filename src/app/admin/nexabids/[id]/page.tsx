@@ -616,7 +616,7 @@ export default function TakeoffPage() {
             printedQty: x.quantity || undefined, printedNote: x.quantity ? (x.source === 'table' ? `a table on ${x.sheet || 'the plans'}` : x.source === 'lump' ? 'priced as one lump' : `printed on ${x.sheet || 'the plans'}`) : undefined,
             hint: x.quantity ? undefined : (x.measure || undefined), hintPage: x.quantity ? undefined : (x.page || undefined), shapes: [] }; })] })); setSheet(null); }} />
       )}
-      {sheet === 'bid' && <BidSheet takeoffId={id} data={data} onChange={(p) => change((d) => ({ ...d, pricing: p }))} onClose={() => setSheet(null)} />}
+      {sheet === 'bid' && <BidSheet takeoffId={id} planName={name} data={data} onChange={(p) => change((d) => ({ ...d, pricing: p }))} onClose={() => setSheet(null)} />}
       {sheet === 'send' && <SendSheet takeoffId={id} data={data} planName={name} onClose={() => setSheet(null)} />}
     </div>
   );
@@ -935,6 +935,7 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
   useEffect(() => { fetch('/api/admin/takeoffs/' + tid, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'assemblies' }) }).then((r) => r.json()).then((d) => setSaved(Array.isArray(d.list) ? d.list : [])).catch(() => null); }, [tid]);
   const setPart = (id: string, k: 'name' | 'unit' | 'per' | 'unitCost', v: string) => setParts((ps) => ps.map((p) => (p.id === id ? { ...p, [k]: v } : p)));
   const [waste, setWaste] = useState(item?.wastePct ? String(item.wastePct) : '');
+  const [typed, setTyped] = useState(item?.printedQty ? String(item.printedQty) : '');
   const [color, setColor] = useState(item?.color || TAKEOFF_COLORS[colorIndex % TAKEOFF_COLORS.length]);
   const [err, setErr] = useState('');
   const [sure, setSure] = useState(false);
@@ -948,7 +949,8 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
     if (cleanParts.length) fetch('/api/admin/takeoffs/' + tid, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'assembly_save', assembly: { name: name.trim(), kind, unit, heightFt: Number(height) || undefined, widthFt: Number(width) || undefined, depthIn: Number(depth) || undefined, unitCost: Number(price) || 0, parts: cleanParts } }) }).catch(() => null);
     if (Number(price) > 0) fetch('/api/admin/takeoffs/' + (typeof window !== 'undefined' ? location.pathname.split('/').pop() : ''), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'remember_price', name: name.trim(), unit, price: Number(price) }) }).catch(() => null);
     onSave({ id: item?.id || uid(), name: name.trim().slice(0, 120), kind, unit, color, unitCost: Math.max(0, Number(price) || 0), depthIn: unit === 'CY' ? Number(depth) : undefined, heightFt: kind === 'length' && unit === 'SF' ? Number(height) : undefined, widthFt: kind === 'length' && unit === 'CY' ? Number(width) : undefined,
-      parts: cleanParts.length ? cleanParts : undefined, alt: alt || undefined, wastePct: Number(waste) > 0 ? Number(waste) : undefined, shapes: item?.shapes || [] });
+      parts: cleanParts.length ? cleanParts : undefined, alt: alt || undefined, wastePct: Number(waste) > 0 ? Number(waste) : undefined,
+      printedQty: Number(typed) > 0 ? Number(typed) : undefined, printedNote: Number(typed) > 0 ? (Number(typed) === item?.printedQty && item?.printedNote ? item.printedNote : 'typed in by you') : undefined, shapes: item?.shapes || [] });
   };
   return (
     <Sheet title={item ? 'Name and price' : 'What are you measuring?'} onClose={onClose}>
@@ -998,6 +1000,9 @@ function ItemSheet({ item, colorIndex, onSave, onDelete, onClose }: { item: Take
         <div><label className={labelCls}>{parts.length ? `Labor or own price per ${unit}` : `Your price per ${unit}`}</label><input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Can add later" className={inputCls} /></div>
         <div><label className={labelCls}>Extra for waste, %</label><input inputMode="decimal" value={waste} onChange={(e) => setWaste(e.target.value)} placeholder="0" className={inputCls} /></div>
       </div>
+      <label className={`${labelCls} mt-3`}>Already know the quantity? Type it ({unit})</label>
+      <input inputMode="decimal" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Leave empty to measure it" className={inputCls} />
+      <p className="text-[14px] text-white/70 leading-snug mt-1">Used until you measure it. Once measured, the two are compared.</p>
       <label className={`${labelCls} mt-4`}>Also price with it (a build-up)</label>
       <p className="text-[15px] text-white/75 leading-snug -mt-1 mb-2">Other things that come with every {unit} you measure, like block, grout and rebar for a wall. They follow the measurement by themselves.</p>
       <div className="space-y-2">
@@ -1124,7 +1129,34 @@ function SavedPrices({ q, onPick }: { q: string; onPick: (c: { name: string; uni
 }
 
 /** Cost of the work, then his overhead, profit and contingency on top, with the floor he will not bid under. */
-function BidSheet({ takeoffId, data, onChange, onClose }: { takeoffId: string; data: TakeoffData; onChange: (p: BidPricing) => void; onClose: () => void }) {
+/** The whole bid as plain text, by trade: what to send a supplier or keep for the file. */
+function quantityList(name: string, data: TakeoffData): string {
+  const b = bidTotals(data); const groups = new Map<string, string[]>();
+  for (const it of data.items) {
+    const c = itemCost(it, data.scales); if (!(c.qty > 0)) continue;
+    const g = it.alt ? 'Alternates' : it.group || 'Items'; const rows = groups.get(g) || [];
+    rows.push(`${it.name}: ${c.qty.toLocaleString('en-US')} ${it.unit}` + (it.unitCost > 0 ? ` x ${money(it.unitCost)} = ${money(c.main)}` : ''));
+    for (const p of c.parts) rows.push(`   ${p.name}: ${p.quantity.toLocaleString('en-US')} ${p.unit}` + (p.unitCost > 0 ? ` x ${money(p.unitCost)} = ${money(p.total)}` : ''));
+    groups.set(g, rows);
+  }
+  const out = [name, 'Quantities from the plans', ''];
+  for (const [g, rows] of Array.from(groups.entries())) out.push(g.toUpperCase(), ...rows, '');
+  out.push(`Cost of the work: ${money(b.cost)}`);
+  if (b.overhead) out.push(`Overhead ${b.pricing.overheadPct}%: ${money(b.overhead)}`);
+  if (b.profit) out.push(`Profit ${b.pricing.profitPct}%: ${money(b.profit)}`);
+  if (b.contingency) out.push(`Contingency ${b.pricing.contingencyPct}%: ${money(b.contingency)}`);
+  out.push(`Bid price: ${money(b.price)}`);
+  for (const a of b.alternates) out.push(`Alternate, ${a.name}: add ${money(a.price)}`);
+  return out.join('\n');
+}
+
+function BidSheet({ takeoffId, planName, data, onChange, onClose }: { takeoffId: string; planName: string; data: TakeoffData; onChange: (p: BidPricing) => void; onClose: () => void }) {
+  const [shared, setShared] = useState('');
+  const share = async () => {
+    const text = quantityList(planName, data);
+    try { if (navigator.share) { await navigator.share({ title: planName, text }); setShared('Shared.'); return; } } catch { /* closed the share sheet: fall through to copy */ }
+    try { await navigator.clipboard.writeText(text); setShared('Copied. Paste it into a text or an email.'); } catch { setShared('This phone would not share or copy it.'); }
+  };
   const b = bidTotals(data); const p = b.pricing;
   const [saved, setSaved] = useState(false);
   const set = (k: keyof BidPricing, v: string) => { setSaved(false); onChange({ ...p, [k]: Math.max(0, Number(v) || 0) }); };
@@ -1158,6 +1190,8 @@ function BidSheet({ takeoffId, data, onChange, onClose }: { takeoffId: string; d
       <p className="text-[15px] font-bold uppercase tracking-wide text-[#E5C76B] mt-5">Your floor</p>
       {row('Lowest profit you will bid at', 'floorPct', null, 'You get a red warning below this')}
       <button onClick={useAlways} className={`mt-4 w-full min-h-[52px] rounded-xl border text-[17px] font-semibold ${saved ? 'border-[#4ade80] text-[#8fe3a8]' : 'border-white/30'}`}>{saved ? 'Saved. New bids start with these.' : 'Use these numbers on every new bid'}</button>
+      <button onClick={share} className="mt-2 w-full min-h-[52px] rounded-xl border border-white/30 text-[17px] font-semibold">Share or copy the quantity list</button>
+      {shared && <p className="text-[15px] text-[#8fe3a8] mt-1.5">{shared}</p>}
       <button onClick={onClose} className="mt-2 w-full min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold">Done</button>
     </Sheet>
   );
