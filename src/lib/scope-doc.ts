@@ -241,3 +241,158 @@ export function couldUseOrganizing(html: string): boolean {
   const st = scopeStats(html);
   return st.words >= 220 && st.sections === 0;
 }
+
+/* ── Checking an organized scope against the original ─────────────────
+   Plain comparison, no AI. Every number in the original (quantities, sizes,
+   model numbers, dollar amounts, drawing references) must be in the result
+   the same number of times, and the result may not contain a number the
+   original didn't have. Words are checked one way only (nothing dropped),
+   because the result legitimately adds headings and column titles. */
+
+export type ScopeCheck = {
+  available: boolean;                 // false when there was no original text to compare (a photo, a scanned PDF)
+  numbers: number;                    // how many numbers the original has
+  words: number;
+  missingNumbers: string[];           // in the original, not in the result
+  addedNumbers: string[];             // in the result, not in the original
+  missingWords: string[];
+  ok: boolean;
+};
+
+const NUM_RE = /\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?/g;
+const WORD_RE = /[A-Za-z][A-Za-z'’]{2,}/g;
+
+const numbersOf = (text: string) => (text.match(NUM_RE) || []).map((n) => n.replace(/,/g, '').replace(/^0+(?=\d)/, ''));
+const wordsOf = (text: string) => (text.match(WORD_RE) || []).map((w) => w.toLowerCase().replace(/’/g, "'"));
+
+function minus(a: string[], b: string[]): string[] {
+  const left = new Map<string, number>();
+  for (const x of b) left.set(x, (left.get(x) || 0) + 1);
+  const out: string[] = [];
+  for (const x of a) { const n = left.get(x) || 0; if (n > 0) left.set(x, n - 1); else out.push(x); }
+  return out;
+}
+const tally = (list: string[], cap: number) => {
+  const m = new Map<string, number>();
+  for (const x of list) m.set(x, (m.get(x) || 0) + 1);
+  return Array.from(m.entries()).slice(0, cap).map(([v, n]) => (n > 1 ? `${v} (x${n})` : v));
+};
+
+/** `sourceText` is the original as plain text; `resultHtml` is the organized scope. */
+export function checkScope(sourceText: string, resultHtml: string): ScopeCheck {
+  // Page furniture a file repeats on every page is dropped on purpose; don't count it as lost.
+  // Numbering at the start of a line is layout, not content: "3. Mechanical" becomes section 3 on screen and
+  // "1." becomes a numbered list, so it is ignored on both sides.
+  const unnumber = (t: string) => t.replace(/^[ \t]*(?:section\s+)?\d{1,2}[.)][ \t]+(?=\S)/gim, '');
+  const src = unnumber(String(sourceText || '').replace(/\bpage\s+\d+\s*(?:of|\/)\s*\d+\b/gi, ' '));
+  const res = unnumber(scopeText(resultHtml).replace(/\bCHECK:/g, ' '));
+  const sn = numbersOf(src); const rn = numbersOf(res);
+  const sw = wordsOf(src); const rw = wordsOf(res);
+  if (sn.length + sw.length < 8) return { available: false, numbers: 0, words: 0, missingNumbers: [], addedNumbers: [], missingWords: [], ok: false };
+  const missingNumbers = minus(sn, rn); const addedNumbers = minus(rn, sn); const missingWords = minus(sw, rw);
+  // A file's text layer sometimes runs two neighbouring cells together ("10" and "24" read as "1024"), or splits
+  // one number in two. Those are the same digits, not a difference: pair them off.
+  const pairOff = (whole: string[], parts: string[]) => {
+    for (let i = whole.length - 1; i >= 0; i--) {
+      let done = false;
+      for (let x = 0; x < parts.length && !done; x++) {
+        if (!whole[i].startsWith(parts[x]) || whole[i] === parts[x]) continue;
+        const rest = whole[i].slice(parts[x].length);
+        const y = parts.findIndex((p, k) => k !== x && p === rest);
+        if (y >= 0) { for (const k of [x, y].sort((m, n) => n - m)) parts.splice(k, 1); whole.splice(i, 1); done = true; }
+      }
+    }
+  };
+  pairOff(missingNumbers, addedNumbers);
+  pairOff(addedNumbers, missingNumbers);
+  return {
+    available: true, numbers: sn.length, words: sw.length,
+    missingNumbers: tally(missingNumbers, 40), addedNumbers: tally(addedNumbers, 40), missingWords: tally(missingWords, 40),
+    ok: !missingNumbers.length && !addedNumbers.length && !missingWords.length,
+  };
+}
+
+/* ── Markdown ─────────────────────────────────────────────────────────
+   Another AI (or any writing tool) can hand over a scope as Markdown:
+   "#" headings, "|" tables, "-" lists. That is already structured, so it is
+   converted by plain code: exact, instant, and no AI charge. */
+
+export function looksLikeMarkdown(text: string): boolean {
+  const t = String(text || '');
+  if (/<(table|h[1-6]|p|div)\b/i.test(t)) return false;
+  const headings = (t.match(/^#{1,6}\s+\S/gm) || []).length;
+  const tableRule = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/m.test(t);
+  return tableRule || headings >= 2;
+}
+
+const mdEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function mdInline(raw: string): string {
+  let s = mdEsc(raw).replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+  s = s.replace(/`([^`]+)`/g, '$1');
+  s = s.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2">$1</a>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/__([^_]+)__/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[\s(])\*([^*\s][^*]*)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>').replace(/(^|[\s(])_([^_\s][^_]*)_(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>');
+  return s.replace(/\\([|*_#`\\-])/g, '$1').trim();
+}
+const mdCells = (line: string) => {
+  let t = line.trim();
+  if (t.startsWith('|')) t = t.slice(1);
+  if (t.endsWith('|') && !t.endsWith('\\|')) t = t.slice(0, -1);
+  return t.split(/(?<!\\)\|/).map((c) => mdInline(c));
+};
+
+export function markdownToScopeHtml(md: string): string {
+  const lines = String(md || '').replace(/\r\n?/g, '\n').split('\n');
+  const h1 = lines.filter((l) => /^#\s+\S/.test(l)).length;
+  const h2 = lines.filter((l) => /^##\s+\S/.test(l)).length;
+  const titleOnly = h1 === 1 && h2 > 0;       // one "#" over several "##": that one is the document title, not a section
+  const isRule = (l: string) => /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(l) && l.includes('-') && l.includes('|');
+  const out: string[] = [];
+  let para: string[] = [];
+  const flush = () => { if (para.length) { out.push('<p>' + mdInline(para.join(' ')) + '</p>'); para = []; } };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) { flush(); continue; }
+    if (/^\s*(```|~~~)/.test(line)) { flush(); continue; }
+    const h = line.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/);
+    if (h) {
+      flush();
+      const level = h[1].length; const text = mdInline(h[2]);
+      if (level === 1 && titleOnly) out.push('<p><strong>' + text + '</strong></p>');
+      else if (level === 1 || (level === 2 && (titleOnly || h1 === 0))) out.push('<h2>' + text + '</h2>');
+      else out.push('<h3>' + text + '</h3>');
+      continue;
+    }
+    if (line.includes('|') && i + 1 < lines.length && isRule(lines[i + 1])) {
+      flush();
+      const head = mdCells(line);
+      const rows: string[][] = [];
+      i += 2;
+      while (i < lines.length && lines[i].trim() && lines[i].includes('|')) { rows.push(mdCells(lines[i])); i++; }
+      i--;
+      const n = head.length;
+      out.push('<table><thead><tr>' + head.map((c) => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>'
+        + rows.map((r) => '<tr>' + Array.from({ length: n }, (_, k) => '<td>' + (r[k] ?? '') + '</td>').join('') + '</tr>').join('') + '</tbody></table>');
+      continue;
+    }
+    const li = line.match(/^\s*(?:([-*+])|(\d+)[.)])\s+(.*)$/);
+    if (li) {
+      flush();
+      const ordered = !!li[2];
+      const items: string[] = [];
+      while (i < lines.length) {
+        const m = lines[i].match(/^\s*(?:([-*+])|(\d+)[.)])\s+(.*)$/);
+        if (m && !!m[2] === ordered) { items.push(mdInline(m[3])); i++; continue; }
+        if (lines[i].trim() && /^\s{2,}\S/.test(lines[i]) && items.length) { items[items.length - 1] += ' ' + mdInline(lines[i]); i++; continue; }
+        break;
+      }
+      i--;
+      out.push((ordered ? '<ol>' : '<ul>') + items.map((t) => '<li>' + t + '</li>').join('') + (ordered ? '</ol>' : '</ul>'));
+      continue;
+    }
+    if (/^\s*([-*_])\s*(\1\s*){2,}$/.test(line)) { flush(); continue; }      // a horizontal rule
+    para.push(line.trim());
+  }
+  flush();
+  return out.join('');
+}

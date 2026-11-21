@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Sparkles, Upload, FileText, Check, RotateCcw, Loader2, ClipboardPaste, AlertTriangle, Table2 } from 'lucide-react';
 import ScopeView from '@/components/estimates/ScopeView';
-import { cleanScopeHtml, scopeStats, scopeText } from '@/lib/scope-doc';
+import { cleanScopeHtml, looksLikeMarkdown, scopeStats, scopeText, type ScopeCheck } from '@/lib/scope-doc';
 import { createClient as createBrowserSupabase } from '@/lib/supabase/client';
 
 /**
@@ -39,6 +39,8 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
   const [error, setError] = useState('');
   const [seconds, setSeconds] = useState(0);
   const [sending, setSending] = useState(false);
+  const [check, setCheck] = useState<ScopeCheck | null>(null);
+  const [viaAi, setViaAi] = useState(false);
   const pastedHtml = useRef('');           // the rich version of what was pasted (keeps real tables)
   const abort = useRef<AbortController | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -58,7 +60,7 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
   useEffect(() => () => abort.current?.abort(), []);
 
   const run = async (payload: Record<string, unknown>) => {
-    setPhase('working'); setResult(''); setError('');
+    setPhase('working'); setResult(''); setError(''); setCheck(null); setViaAi(!payload.direct);
     const ctl = new AbortController(); abort.current = ctl;
     try {
       const res = await fetch('/api/admin/estimates/scope-organize', {
@@ -84,6 +86,7 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
       }
       // The server ends a finished run with a DONE mark; without it the reply was cut off.
       const htmlOut = acc.split('\u0000')[0];
+      try { const c = (acc.split('\u0000CHECK:')[1] || '').split('\u0000')[0].trim(); if (c) setCheck(JSON.parse(c)); } catch { /* no check came back */ }
       const err = (acc.split('\u0000ERROR:')[1] || '').split('\u0000')[0] || (acc.includes('\u0000DONE') ? '' : 'It stopped part way, so the end may be missing. Tap Try again.');
       const clean = cleanScopeHtml(htmlOut.replace(/^\s*```(?:html)?/i, '').replace(/```\s*$/, ''));
       setResult(clean);
@@ -137,6 +140,8 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
   const retry = () => (mode === 'tidy' ? run({ html: currentHtml }) : setPhase('input'));
   const canGo = !!file || text.trim().length > 0;
   const isOffice = !!file && /\.(docx|txt|md|csv|html?)$/i.test(file.name);
+  // Already structured (Markdown, a Word file, pasted tables): it can go in exactly as written, with no AI and no charge.
+  const structured = file ? /\.(docx|md|html?)$/i.test(file.name) : (pastedHasTables || looksLikeMarkdown(text));
   const title = mode === 'tidy' ? 'Tidy up the scope' : 'Bring in a document';
 
   return (
@@ -167,7 +172,7 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
                 {text.length > 0 && (
                   <p className="mt-1.5 text-[15px] text-white/65">
                     {text.split(/\s+/).filter(Boolean).length.toLocaleString()} words in.
-                    {pastedHasTables ? ' The tables came through with it.' : ''}
+                    {pastedHasTables ? ' The tables came through with it.' : looksLikeMarkdown(text) ? ' This is already laid out (Markdown), so it can go in exactly, free.' : ''}
                   </p>
                 )}
               </div>
@@ -231,7 +236,34 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
                   </p>
                 </div>
               )}
-              <p className="text-[16px] text-white/70 mb-5 leading-relaxed">The wording and numbers are meant to be the same as yours, only rearranged. Read it over before it goes to a customer.</p>
+              {viaAi && check && check.available && check.ok && (
+                <div className="flex items-start gap-3 mb-4 rounded-xl bg-[#35d07f]/12 border border-[#35d07f]/45 px-4 py-3">
+                  <Check size={21} className="text-[#5fe0a0] shrink-0 mt-0.5" />
+                  <p className="text-[16px] text-white leading-snug"><strong>Checked against your original.</strong> All {check.numbers.toLocaleString()} numbers and {check.words.toLocaleString()} words are here, and nothing was added.</p>
+                </div>
+              )}
+              {viaAi && check && check.available && !check.ok && (
+                <div className="mb-4 rounded-xl bg-red-500/12 border border-red-500/50 px-4 py-3">
+                  <p className="flex items-center gap-2 text-[17px] font-bold text-white"><AlertTriangle size={21} className="text-red-300 shrink-0" /> The check found differences from your original</p>
+                  {check.missingNumbers.length > 0 && <p className="text-[16px] text-white mt-2 leading-snug"><strong>Numbers in your original that are not in this:</strong> {check.missingNumbers.join(', ')}</p>}
+                  {check.addedNumbers.length > 0 && <p className="text-[16px] text-white mt-2 leading-snug"><strong>Numbers in this that were not in your original:</strong> {check.addedNumbers.join(', ')}</p>}
+                  {check.missingWords.length > 0 && <p className="text-[16px] text-white mt-2 leading-snug"><strong>Words in your original that are not in this:</strong> {check.missingWords.join(', ')}</p>}
+                  <p className="text-[15px] text-white/75 mt-2 leading-snug">Look for these before you use it. Page headers and footers from a file are left out on purpose and can show up here.</p>
+                </div>
+              )}
+              {viaAi && (!check || !check.available) && (
+                <div className="flex items-start gap-3 mb-4 rounded-xl bg-[#f0a04b]/15 border border-[#f0a04b]/50 px-4 py-3">
+                  <AlertTriangle size={21} className="text-[#f0a04b] shrink-0 mt-0.5" />
+                  <p className="text-[16px] text-white leading-snug"><strong>This one could not be checked automatically</strong> (a photo or a scanned file has no text to compare). Read it against the original.</p>
+                </div>
+              )}
+              {!viaAi && (
+                <div className="flex items-start gap-3 mb-4 rounded-xl bg-[#35d07f]/12 border border-[#35d07f]/45 px-4 py-3">
+                  <Check size={21} className="text-[#5fe0a0] shrink-0 mt-0.5" />
+                  <p className="text-[16px] text-white leading-snug"><strong>Put in exactly as written.</strong> No AI was used, so nothing was reworded and there is no charge.</p>
+                </div>
+              )}
+              {viaAi && <p className="text-[16px] text-white/70 mb-5 leading-relaxed">The check confirms nothing was lost or added. It cannot tell if a value sits in the wrong column, so look over the tables.</p>}
               <ScopeView html={result} theme="dark" size={16} />
             </div>
           )}
@@ -249,11 +281,19 @@ export default function ScopeOrganizer({ mode, currentHtml, onUse, onClose }: {
         <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-2.5">
           {phase === 'input' && (
             <>
+              {structured && (
+                <button type="button" disabled={!canGo} onClick={() => startImport(true)}
+                  className="flex-1 min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold flex items-center justify-center gap-2 disabled:opacity-35 active:scale-[0.99]">
+                  <Check size={21} /> Put it in exactly (free)
+                </button>
+              )}
               <button type="button" disabled={!canGo} onClick={() => startImport(false)}
-                className="flex-1 min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold flex items-center justify-center gap-2 disabled:opacity-35 active:scale-[0.99]">
-                <Sparkles size={20} /> Organize it for me
+                className={structured
+                  ? 'min-h-[56px] px-5 rounded-xl border border-white/25 text-white text-[17px] font-semibold flex items-center justify-center gap-2 disabled:opacity-35 active:bg-white/5'
+                  : 'flex-1 min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold flex items-center justify-center gap-2 disabled:opacity-35 active:scale-[0.99]'}>
+                <Sparkles size={20} /> {structured ? 'Organize with AI (uses credit)' : 'Organize it for me'}
               </button>
-              {(isOffice || (!file && pastedHasTables)) && (
+              {!structured && isOffice && (
                 <button type="button" onClick={() => startImport(true)}
                   className="min-h-[56px] px-5 rounded-xl border border-white/25 text-white text-[17px] font-semibold active:bg-white/5">
                   Put it in as it is
