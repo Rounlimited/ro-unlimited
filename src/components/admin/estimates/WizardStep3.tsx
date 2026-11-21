@@ -35,6 +35,7 @@ export default function WizardStep3({ content, onSave }: Props) {
   const [sheet, setSheet] = useState<null | 'tidy' | 'import'>(null);
   const [preview, setPreview] = useState(false);
   const [ask, setAsk] = useState('');
+  const [clearSure, setClearSure] = useState(false);
   const [assist, setAssist] = useState<null | { instruction: string }>(null);
   const [html, setHtml] = useState(content || '');
   const [dismissed, setDismissed] = useState(false);
@@ -130,6 +131,17 @@ export default function WizardStep3({ content, onSave }: Props) {
     setUndoHtml(keepUndo && scopeText(before) ? before : null);
     setDismissed(true);
     setPreview(true);
+  };
+
+  // Empty the whole scope so a new one can go in. Second tap confirms; "Put mine back" brings it back.
+  const clearAll = () => {
+    if (!clearSure) { setClearSure(true); setTimeout(() => setClearSure(false), 6000); return; }
+    setClearSure(false);
+    const before = editor.getHTML();
+    editor.commands.clearContent(false);
+    push(editor.getHTML(), true);
+    setUndoHtml(scopeText(before) ? before : null);
+    setDismissed(false); setPreview(false);
   };
 
   const inTable = editor.isActive('table');
@@ -231,6 +243,12 @@ export default function WizardStep3({ content, onSave }: Props) {
               {stats.tables > 0 && <>{stats.tables} table{stats.tables === 1 ? '' : 's'} · </>}
               {stats.words.toLocaleString()} words
             </span>
+          )}
+          {hasText && (
+            <button type="button" onClick={clearAll}
+              className={`shrink-0 min-h-[44px] px-3.5 rounded-md text-[16px] font-semibold flex items-center gap-2 border ${clearSure ? 'bg-red-500 border-red-500 text-white' : 'border-red-400/50 text-red-300 active:bg-red-500/10'}`}>
+              <Trash2 size={17} /> {clearSure ? 'Tap again to clear it all' : 'Clear all'}
+            </button>
           )}
         </div>
 
