@@ -860,6 +860,60 @@ const WRITE_TOOLS = [
 
 const ALL_TOOLS = [...READ_TOOLS, ...INVOICE_READ_TOOLS, ...OPTIONS_TOOLS, ...PROGRESS_TOOLS, ...LETTER_TOOLS, ...WRITE_TOOLS];
 
+/* ── Signed contracts ─────────────────────────────────────────────────
+   Once the customer has signed, what they agreed to (scope, price, items, payment schedule) is not changed by
+   the assistant on its own. The first try is refused and remembered; the change goes through only when the
+   owner says yes in a LATER message, and it is written to the estimate's history. The check is done here in
+   code, so the model cannot wave itself through in the same breath. */
+const SIGNED_GUARD: Record<string, (i: any) => string | undefined> = {
+  update_estimate: (i) => i.id,
+  edit_estimate_scope: (i) => i.estimate_id || i.id,
+  add_line_items: (i) => i.estimate_id,
+  update_line_items: (i) => i.estimate_id,
+  delete_line_items: (i) => i.estimate_id,
+  set_payment_schedule: (i) => i.estimate_id,
+  update_estimate_status: (i) => i.id,
+};
+for (const t of ALL_TOOLS as any[]) {
+  if (SIGNED_GUARD[t.name] && t.input_schema?.properties) {
+    t.input_schema.properties.signed_change_confirmed = { type: 'boolean', description: 'Only for a SIGNED contract, and only after the tool refused once and the owner then clearly said yes in a later message. Never set it on a first try.' };
+  }
+}
+const SIGNED_ASK_MINUTES = 30;
+
+async function executeTool(name: string, input: any, supabase: ReturnType<typeof createAdminClient>, turnKey?: string): Promise<{ result: string; action?: { type: string; path: string; description: string } }> {
+  const idOf = SIGNED_GUARD[name];
+  let note = '';
+  const args = input && typeof input === 'object' ? input : {};
+  const internalOnly = name === 'update_estimate' && Object.keys(args).every((k) => ['id', 'notes', 'signed_change_confirmed'].includes(k));
+  const estId = idOf ? idOf(args) : undefined;
+  if (estId && !internalOnly) {
+    const { data: est } = await supabase.from('estimates').select('id, estimate_number, status, signed_at, signed_name').eq('id', estId).maybeSingle();
+    if (est && (est.signed_at || est.status === 'accepted')) {
+      const key = 'signed_change_ask_' + est.id;
+      const { data: row } = await supabase.from('app_settings').select('value').eq('key', key).maybeSingle();
+      const asked = row?.value as { turn?: string; at?: string } | null;
+      const fresh = !!asked?.at && Date.now() - new Date(asked.at).getTime() < SIGNED_ASK_MINUTES * 60000;
+      const allowed = args.signed_change_confirmed === true && !!turnKey && fresh && asked?.turn !== turnKey;
+      if (!allowed) {
+        if (!fresh || !asked?.turn) await supabase.from('app_settings').upsert({ key, value: { turn: turnKey || 'voice', at: new Date().toISOString() } }, { onConflict: 'key' });
+        const when = est.signed_at ? new Date(est.signed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' }) : '';
+        const who = est.signed_name && est.signed_name !== 'On file' ? ` by ${est.signed_name}` : '';
+        return { result: `NOT CHANGED. ${est.estimate_number} is a SIGNED CONTRACT${when ? ` (signed ${when}${who})` : ''}. The customer agreed to it as it stands and sees it on their Project Page, so nothing was saved. Tell him that in one or two plain sentences, say exactly what you were about to change, and ask if he wants the signed contract changed anyway. For added work or a different price, a change order the customer approves is the usual way. ${turnKey ? 'ONLY if he clearly says yes in his next message, make the same call again with signed_change_confirmed: true. Do not retry before he answers: it will be refused.' : 'A signed contract cannot be changed by voice. He can type it in the assistant or change it on the estimate screen.'}` };
+      }
+      await supabase.from('app_settings').delete().eq('key', key);
+      await supabase.from('estimate_status_history').insert({ estimate_id: est.id, old_status: est.status, new_status: est.status, notes: `Changed after signing, on the owner's say-so, through the assistant (${name.replace(/_/g, ' ')})` });
+      note = ' NOTE: this is a signed contract and the change is now on the customer\'s Project Page. It is recorded in the estimate history. Remind him to tell the customer.';
+    } else if (est && ['sent', 'viewed'].includes(est.status) && name !== 'update_estimate_status') {
+      note = ' NOTE: the customer has already been sent this one, so the change shows on their page right away. Mention that in your reply.';
+    }
+  }
+  const { signed_change_confirmed: _confirmed, ...clean } = args;      // the flag is for this check only, never a column
+  const out = await executeToolInner(name, estId !== undefined || SIGNED_GUARD[name] !== undefined ? clean : input, supabase);
+  if (note && typeof out.result === 'string' && !/^(Error|NOT CHANGED|Invalid|Estimate not found)/.test(out.result)) out.result += note;
+  return out;
+}
+
 // Trivial one-liner greetings on a fresh conversation don't need tools.
 // Everything else always gets the FULL tool set in deterministic order —
 // a stable tool list keeps xAI's automatic prompt-prefix caching hot.
@@ -872,7 +926,7 @@ function isTrivialGreeting(lastMessage: string, messageCount?: number): boolean 
 // ═══════════════════════════════════════════
 // TOOL EXECUTION
 // ═══════════════════════════════════════════
-async function executeTool(name: string, input: any, supabase: ReturnType<typeof createAdminClient>): Promise<{ result: string; action?: { type: string; path: string; description: string } }> {
+async function executeToolInner(name: string, input: any, supabase: ReturnType<typeof createAdminClient>): Promise<{ result: string; action?: { type: string; path: string; description: string } }> {
   switch (name) {
     // ── READ TOOLS ──
     case 'search_customers': {
@@ -927,7 +981,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
       const [{ data: lineItems }, { data: payments }, { data: history }] = await Promise.all([
         supabase.from('estimate_line_items').select('id, phase, description, category, quantity, unit, unit_cost, markup_percent, total, sort_order').eq('estimate_id', estimate.id).order('sort_order'),
         supabase.from('estimate_payment_schedules').select('id, milestone, due_description, percent, amount, sort_order').eq('estimate_id', estimate.id).order('sort_order'),
-        supabase.from('estimate_status_history').select('old_status, new_status, notes, changed_by, changed_at').eq('estimate_id', estimate.id).order('changed_at', { ascending: false }).limit(5),
+        supabase.from('estimate_status_history').select('old_status, new_status, notes, created_at').eq('estimate_id', estimate.id).order('created_at', { ascending: false }).limit(5),
       ]);
 
       return {
@@ -2166,8 +2220,7 @@ async function executeTool(name: string, input: any, supabase: ReturnType<typeof
         estimate_id: input.id,
         old_status: current.status,
         new_status: input.status,
-        notes: input.notes || null,
-        changed_by: 'ai-assistant',
+        notes: input.notes ? input.notes + ' (through the assistant)' : 'Changed through the assistant',
       });
 
       return { result: `Status updated: ${current.status} -> ${input.status}` };
@@ -2986,6 +3039,7 @@ Progress views: the Progress tab and the Jobs board both have a "Show $" button 
 The Job Room (/admin/jobs/<id>, tap any job on the Jobs board) is JR's behind-the-scenes view of one job — internal only, the customer never sees any of it: money position (contract / earned / SPENT / billed / paid) with a live margin (earned minus spent), tap-in job costs by category (materials, sub, labor, equipment, hauling, fuel, permits), the full job log including internal-only entries, private notes, days-on-job and rain days, how many times the customer has opened their page, a "See What They See" button, and the email-update button. Costs are the new piece: logging spends there is what makes the margin and Over Budget real numbers.
 Link controls: every customer link can be paused ('off' \u2014 for phone-call edits; same link resumes with 'on'), replaced ('new' \u2014 old dies instantly, CONFIRM with the user first), killed, or extended 60 days \u2014 set_link_status, or the Project Page button on the estimate page / Job Room (tabs: Share, People, What they see, Activity, More). Vocabulary for JR: the customer's page is their “Project Page”; a shared person's link is “their link”; the portal email is a “sign-in link”. People on this project: each shared person has Can view or Can approve; only the owner signs; “Let the customer invite people” is a per-job switch.
 SCOPE OF WORK: a scope can be laid out in numbered sections with real tables (he builds it on the Scope step of the estimate). get_estimate_details shows its outline. To change a scope that already exists: get_estimate_scope, then edit_estimate_scope naming only the blocks that change — never retype the whole scope, and never send a laid-out scope back through update_estimate (it is refused). Change only what he asked for; do not reword, reorder or "tidy" anything else, and never change a number he did not mention. Afterwards say in one or two plain lines what changed (use words_removed / words_added) and that he can say "put it back". "Put it back" / "undo that" → edit_estimate_scope { estimate_id, undo: true }. A brand-new or empty scope: update_estimate { id, scope_of_work } (plain text, or Markdown with ## headings and | tables for a laid-out one). A full rebuild from a PDF or a messy paste is done on the Scope step ("Reorganize the whole scope"), not here — point him there.
+SIGNED CONTRACTS: once the customer has signed (get_estimate_details shows signed_at, or status accepted) the scope, price, credits, line items and payment schedule are what they agreed to. Any tool that would change them is refused the first time. When that happens: tell him it is signed, by whom and when, say exactly what you were about to change, and ask if he wants the signed contract changed anyway — suggest a change order for added work or a new price. Only after he clearly says yes in his NEXT message, repeat the call with signed_change_confirmed: true. Never set that flag on a first try, never for a different change than the one he said yes to, and never talk him into it. Internal notes can be changed any time. One sent but not signed can be changed freely; just mention the customer sees it right away.
 FIXED PRICE — THE FAST PATH (how JR usually bids; default to this):
 When he gives a job and a price in one breath — "estimate for Miller, septic and drive, 42,500" — build it in ONE go with NO follow-up questions:
   1. search_customers with the name. Exactly one match → use it. Several → pick the obvious one and say which you used. None → create_customer { name } with the name exactly as he said it and continue — NO questions. Mention it in the reply ("new customer — add their phone/email whenever") and move on.
@@ -3639,6 +3693,8 @@ export async function POST(req: NextRequest) {
     // Always send the FULL tool set in deterministic order (stable prefix →
     // provider prompt caching stays hot). Only trivial greetings skip tools.
     const lastUserMsg = messages.filter((m: any) => m.role === 'user').pop()?.content || '';
+    // One key per message he sends: a yes to changing a signed contract only counts in a later message than the ask.
+    const turnKey = `${messages.filter((m: any) => m.role === 'user').length}:${JSON.stringify(lastUserMsg).length}:${JSON.stringify(lastUserMsg).slice(0, 60)}`;
     const selectedTools = isTrivialGreeting(typeof lastUserMsg === 'string' ? lastUserMsg : JSON.stringify(lastUserMsg), messages.length) ? [] : ALL_TOOLS;
 
     // Convert tools to OpenAI function-calling format (for Grok)
@@ -3723,7 +3779,7 @@ export async function POST(req: NextRequest) {
           const toolResults: any[] = [];
           const assistantContent = claudeData.content;
           for (const tool of toolBlocks) {
-            const { result, action } = await executeTool(tool.name, tool.input, supabase);
+            const { result, action } = await executeTool(tool.name, tool.input, supabase, turnKey);
             if (action) actions.push(action);
             toolResults.push({ type: 'tool_result', tool_use_id: tool.id, content: result });
           }
@@ -3889,7 +3945,7 @@ export async function POST(req: NextRequest) {
                   else apiMessages.push({ role: 'tool', tool_call_id: tc.id, content: errBody });
                   continue;
                 }
-                const { result, action } = await executeTool(tc.function.name, args, supabase);
+                const { result, action } = await executeTool(tc.function.name, args, supabase, turnKey);
                 if (action) actions.push(action);
                 const body = typeof result === 'string' ? result : JSON.stringify(result);
                 if (preferClaudeStream) claudeToolResults.push({ type: 'tool_result', tool_use_id: tc.id, content: body });
@@ -4004,7 +4060,7 @@ export async function POST(req: NextRequest) {
                 continue;
               }
               console.log(`[ai-chat] Executing tool: ${tc.function.name}`, JSON.stringify(args).substring(0, 200));
-              const { result, action } = await executeTool(tc.function.name, args, supabase);
+              const { result, action } = await executeTool(tc.function.name, args, supabase, turnKey);
               console.log(`[ai-chat] Tool result: ${tc.function.name}`, typeof result === 'string' ? result.substring(0, 150) : 'object');
               if (action) actions.push(action);
               apiMessages.push({
