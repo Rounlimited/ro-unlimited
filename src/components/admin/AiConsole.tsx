@@ -162,6 +162,7 @@ export default function AiConsole() {
   const [amt, setAmt] = useState('20');
   const [paying, setPaying] = useState(false);
   const [payMsg, setPayMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [sure, setSure] = useState<null | 'topup' | 'remove'>(null);
   const [autoOn, setAutoOn] = useState(false); const [autoBelow, setAutoBelow] = useState('5'); const [autoAmt, setAutoAmt] = useState('20');
   const reqIdRef = useRef('');
   const [voiceCtx, setVoiceCtx] = useState<AudioContext | null>(null);
@@ -235,7 +236,7 @@ export default function AiConsole() {
   }, []);
   const walletApi = (body: any) => fetch('/api/admin/ai-wallet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const newReqId = () => { reqIdRef.current = (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2, 12); };
-  const openWallet = () => { setSide(false); setPayMsg(null); newReqId(); setWalletOpen(true); loadWallet(); };
+  const openWallet = () => { setSide(false); setPayMsg(null); setSure(null); newReqId(); setWalletOpen(true); loadWallet(); };
   const cardSetup = async () => {
     setPaying(true); setPayMsg(null);
     try {
@@ -249,7 +250,8 @@ export default function AiConsole() {
     const n = Number(amt);
     const min = wallet?.min || 10; const max = wallet?.max || 500;
     if (!(n >= min && n <= max)) return setPayMsg({ ok: false, text: `Enter an amount from $${min} to $${max}.` });
-    if (!window.confirm(`Charge $${n.toFixed(2)} to the card ending in ${wallet?.card?.last4 || ''}?`)) return;
+    if (sure !== 'topup') { setPayMsg(null); setSure('topup'); return; }
+    setSure(null);
     setPaying(true); setPayMsg(null);
     try {
       // The same request id is re-sent if this is retried, so the card can't be charged twice for one tap.
@@ -266,7 +268,8 @@ export default function AiConsole() {
     setAutoOn(on); setPayMsg({ ok: true, text: on ? 'Automatic top-up is on.' : 'Automatic top-up is off.' }); loadWallet();
   };
   const removeCard = async () => {
-    if (!window.confirm('Remove the saved card? Automatic top-up will turn off.')) return;
+    if (sure !== 'remove') { setPayMsg(null); setSure('remove'); return; }
+    setSure(null);
     const r = await walletApi({ action: 'remove_card' });
     setPayMsg(r.ok ? { ok: true, text: 'Card removed.' } : { ok: false, text: 'Could not remove the card.' }); loadWallet();
   };
@@ -692,7 +695,7 @@ export default function AiConsole() {
                   <span><b>{wallet.card.brand || 'Card'}</b> ending in <b>{wallet.card.last4}</b></span>
                   <span style={{ display: 'flex', gap: 6 }}>
                     <button className="nxa-mini" style={{ flex: 'none', padding: '9px 14px' }} disabled={paying} onClick={cardSetup}>Change</button>
-                    <button className="nxa-mini" style={{ flex: 'none', padding: '9px 14px' }} disabled={paying} onClick={removeCard}>Remove</button>
+                    <button className="nxa-mini" style={{ flex: 'none', padding: '9px 14px' }} disabled={paying} onClick={removeCard}>{sure === 'remove' ? 'Tap again to remove' : 'Remove'}</button>
                   </span>
                 </div>
                 <div className="nxa-grp">Add credit</div>
@@ -702,7 +705,8 @@ export default function AiConsole() {
                   ))}
                 </div>
                 <input className="nxa-search" style={{ marginTop: 8 }} inputMode="decimal" placeholder={`Other amount ($${wallet.min}–$${wallet.max})`} value={amt} onChange={(e) => setAmt(e.target.value.replace(/[^0-9.]/g, ''))} />
-                <button className="nxa-btn" style={{ background: 'var(--grad)', color: '#04121f', border: 0 }} disabled={paying || !!wallet.on_hold} onClick={doTopUp}>{paying ? 'Charging the card…' : `Add $${Number(amt || 0).toFixed(2)} of credit`}</button>
+                <button className="nxa-btn" style={{ background: 'var(--grad)', color: '#04121f', border: 0 }} disabled={paying || !!wallet.on_hold} onClick={doTopUp}>{paying ? 'Charging the card…' : sure === 'topup' ? `Tap again to charge ${Number(amt || 0).toFixed(2)} to the card ending ${wallet?.card?.last4 || ''}` : `Add ${Number(amt || 0).toFixed(2)} of credit`}</button>
+                {sure === 'topup' && !paying && <button className="nxa-btn" onClick={() => setSure(null)}>Cancel</button>}
                 <div className="nxa-grp">Automatic top-up</div>
                 <div className="nxa-rackstat">
                   When credit drops below $<input className="nxa-search" style={{ display: 'inline-block', width: 76, minHeight: 44, padding: '6px 10px', margin: '0 4px' }} inputMode="numeric" value={autoBelow} onChange={(e) => setAutoBelow(e.target.value.replace(/\D/g, ''))} />
