@@ -2,7 +2,7 @@ import {
   LayoutDashboard, HardDrive, ClipboardList, Pencil, Camera, Settings,
   MessageCircle, FileText, Users, LifeBuoy, Briefcase, TrendingUp,
   HardHat, CalendarDays, FileCheck, Receipt, BarChart3, CreditCard,
-  Clock, Shield, Wrench, Package, Truck, Building2, PieChart, Mail, Newspaper, BookOpen,
+  Clock, Shield, Wrench, Package, Truck, Building2, PieChart, Mail, Newspaper, BookOpen, Ruler,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -33,6 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   // Files & Data
   { id: 'drive', label: 'RO Drive', icon: HardDrive, href: '/admin/drive', active: true, color: '#3b8dd4', bg: 'rgba(59,141,212,0.15)', group: 'files' },
   { id: 'documents', label: 'Documents', icon: FileText, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)', group: 'files' },
+  { id: 'takeoff', label: 'Bid from Plans', icon: Ruler, href: '/admin/takeoff', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW', group: 'files' },
   { id: 'materials', label: 'Cost Library', icon: Building2, href: '/admin/cost-library', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'files' },
   { id: 'suppliers', label: 'Vendors', icon: Package, href: '/admin/vendors', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', group: 'files' },
 

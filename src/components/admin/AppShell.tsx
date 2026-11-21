@@ -16,7 +16,7 @@ import {
   Users, FileText, Clock, Wrench, Package, TrendingUp,
   Settings, LifeBuoy, Lock, Search, X, ChevronDown, ChevronLeft,
   Briefcase, Shield, UserPlus, Truck, FileCheck, Target,
-  Megaphone, CreditCard, PieChart, Building2, Bell, Sparkles, Zap, LogOut, HardDrive, CheckSquare, Newspaper, DoorOpen, Star, BookOpen } from 'lucide-react';
+  Megaphone, CreditCard, PieChart, Building2, Bell, Sparkles, Zap, LogOut, HardDrive, CheckSquare, Newspaper, DoorOpen, Star, BookOpen, Ruler, } from 'lucide-react';
 
 interface AppIcon {
   id: string;
@@ -244,6 +244,7 @@ const APP_ICONS: AppIcon[] = [
   { id: 'portal', label: 'Customer Portal', icon: DoorOpen, href: '/admin/portal', active: true, color: '#D4B965', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'reviews', label: 'Reviews', icon: Star, href: '/admin/reviews', active: true, color: '#F5B83D', bg: 'rgba(245,184,61,0.15)', badge: 'NEW' },
   { id: 'dailylogs', label: 'Daily Logs', icon: FileCheck, active: false, color: '#666', bg: 'rgba(255,255,255,0.05)' },
+  { id: 'takeoff', label: 'Bid from Plans', icon: Ruler, href: '/admin/takeoff', active: true, color: '#E5C76B', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'documents', label: 'Letters', icon: FileText, href: '/admin/letters', active: true, color: '#C9A84C', bg: 'rgba(201,168,76,0.15)', badge: 'NEW' },
   { id: 'invoicing', label: 'Invoices', icon: Receipt, href: '/admin/invoices', active: true, color: '#35d07f', bg: 'rgba(53,208,127,0.15)', badge: 'NEW' },
   // NexaBooks (Nexa module, admin role only): /admin/nexabooks signs the person in to NexaBooks.
