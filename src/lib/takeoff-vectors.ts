@@ -106,32 +106,89 @@ export function snapPoint(v: SheetVectors | null, pt: Pt, r: number): { pt: Pt; 
 }
 
 /**
- * One tap on a line takes the whole run it belongs to: it follows connected pieces end to end, through bends,
- * and stops where the line branches or ends. Returns the run as points, or null if no line is under the tap.
+ * One tap on a line takes the whole run it belongs to: it follows connected pieces end to end, through bends.
+ * CAD files often break one line into many pieces and cross it with others, so where several pieces meet it
+ * carries straight on (within 15 degrees) if exactly one piece does, and stops otherwise.
  */
 export function traceRun(v: SheetVectors | null, pt: Pt, r: number): Pt[] | null {
   if (!v) return null;
   let first = -1; let fd = r;
   for (const s of near(v, pt, r)) { const [a, b] = seg(v, s); const q = closestOn(a, b, pt); const d = Math.hypot(q[0] - pt[0], q[1] - pt[1]); if (d < fd) { fd = d; first = s; } }
   if (first < 0) return null;
-  const tol = 0.6;
-  const k = (p: Pt) => `${Math.round(p[0] / tol)},${Math.round(p[1] / tol)}`;
-  const atEnd = (p: Pt): number[] => near(v, p, tol * 2).filter((s) => { const [a, b] = seg(v, s); return Math.hypot(a[0] - p[0], a[1] - p[1]) < tol || Math.hypot(b[0] - p[0], b[1] - p[1]) < tol; });
+  const tol = 1.0;
+  const k = (p: Pt) => `${Math.round(p[0] / 0.5)},${Math.round(p[1] / 0.5)}`;
+  const touching = (p: Pt): number[] => near(v, p, tol * 2).filter((s) => { const [a, b] = seg(v, s); return Math.hypot(a[0] - p[0], a[1] - p[1]) < tol || Math.hypot(b[0] - p[0], b[1] - p[1]) < tol; });
   const used = new Set<number>([first]);
-  const walk = (from: Pt): Pt[] => {
-    const pts: Pt[] = []; let p = from;
+  const walk = (from: Pt, prev: Pt): Pt[] => {
+    const pts: Pt[] = []; let p = from; let before = prev;
     for (let guard = 0; guard < 5000; guard++) {
-      const nxt = atEnd(p).filter((s) => !used.has(s));
-      if (nxt.length !== 1) break;                                         // the run ends, or it branches
-      const s = nxt[0]; used.add(s); const [a, b] = seg(v, s);
-      p = Math.hypot(a[0] - p[0], a[1] - p[1]) < tol ? b : a; pts.push(p);
+      const cand = touching(p).filter((s) => !used.has(s));
+      if (!cand.length) break;
+      const hx = p[0] - before[0], hy = p[1] - before[1]; const hl = Math.hypot(hx, hy) || 1;
+      const far = (s: number): Pt => { const [a, b] = seg(v, s); return Math.hypot(a[0] - p[0], a[1] - p[1]) < tol ? b : a; };
+      let pick = -1;
+      if (cand.length === 1) pick = cand[0];
+      else {
+        const straight = cand.filter((s) => { const q = far(s); const dx = q[0] - p[0], dy = q[1] - p[1]; const dl = Math.hypot(dx, dy) || 1; return (hx * dx + hy * dy) / (hl * dl) > 0.966; });
+        if (straight.length === 1) pick = straight[0];
+      }
+      if (pick < 0) break;
+      used.add(pick); before = p; p = far(pick); pts.push(p);
     }
     return pts;
   };
   const [a, b] = seg(v, first);
-  const back = walk(a).reverse(); const fwd = walk(b);
+  const back = walk(a, b).reverse(); const fwd = walk(b, a);
   const run = [...back, a, b, ...fwd];
   return run.filter((p, i) => i === 0 || k(p) !== k(run[i - 1]));
+}
+
+/* ── Symbols ──────────────────────────────────────────────────────────
+   A CAD symbol (a catch basin, a light, a door tag) is the same little drawing stamped again and again. Line
+   pieces that touch are grouped; a small group is a symbol candidate, described by how many pieces it has and
+   their lengths, which does not change when the symbol is moved or turned. */
+type Comp = { cx: number; cy: number; size: number; sig: string };
+const compCache = new WeakMap<SheetVectors, { of: Int32Array; comps: Comp[] }>();
+function components(v: SheetVectors) {
+  const hit = compCache.get(v); if (hit) return hit;
+  const parent = new Int32Array(v.count); for (let i = 0; i < v.count; i++) parent[i] = i;
+  const find = (x: number): number => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  const ends = new Map<number, number>();
+  for (let s = 0; s < v.count; s++) for (let e = 0; e < 2; e++) {
+    const kk = Math.round(v.segs[s * 4 + e * 2] * 2) * 200_003 + Math.round(v.segs[s * 4 + e * 2 + 1] * 2);
+    const o = ends.get(kk); if (o === undefined) ends.set(kk, s); else { const ra = find(s), rb = find(o); if (ra !== rb) parent[ra] = rb; }
+  }
+  const groups = new Map<number, number[]>();
+  for (let s = 0; s < v.count; s++) { const r = find(s); const g = groups.get(r); if (g) g.push(s); else groups.set(r, [s]); }
+  const of = new Int32Array(v.count).fill(-1); const comps: Comp[] = [];
+  groups.forEach((list) => {
+    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity; let total = 0; let mx = 0; let mn = Infinity;
+    for (const s of list) {
+      const ax = v.segs[s * 4], ay = v.segs[s * 4 + 1], bx = v.segs[s * 4 + 2], by = v.segs[s * 4 + 3];
+      x1 = Math.min(x1, ax, bx); y1 = Math.min(y1, ay, by); x2 = Math.max(x2, ax, bx); y2 = Math.max(y2, ay, by);
+      const l = Math.hypot(bx - ax, by - ay); total += l; mx = Math.max(mx, l); mn = Math.min(mn, l);
+    }
+    const size = Math.max(x2 - x1, y2 - y1);
+    const symbol = list.length >= 2 && list.length <= 400 && size >= 2 && size <= 90;
+    const idx = comps.length;
+    comps.push({ cx: (x1 + x2) / 2, cy: (y1 + y2) / 2, size, sig: symbol ? `${list.length}|${Math.round(total)}|${Math.round(mx * 2)}|${Math.round(mn * 2)}` : '' });
+    for (const s of list) of[s] = idx;
+  });
+  const out = { of, comps }; compCache.set(v, out); return out;
+}
+
+/** Tap one symbol: returns the middle of every matching symbol on the sheet (the tapped one first), or null. */
+export function matchSymbols(v: SheetVectors | null, pt: Pt, r: number): Pt[] | null {
+  if (!v) return null;
+  let first = -1; let fd = r;
+  for (const s of near(v, pt, r)) { const [a, b] = seg(v, s); const q = closestOn(a, b, pt); const d = Math.hypot(q[0] - pt[0], q[1] - pt[1]); if (d < fd) { fd = d; first = s; } }
+  if (first < 0) return null;
+  const { of, comps } = components(v);
+  const mine = comps[of[first]];
+  if (!mine || !mine.sig) return null;                          // too big or too simple to be a symbol
+  const same = comps.filter((c) => c.sig === mine.sig);
+  if (same.length > 2000) return null;
+  return [[mine.cx, mine.cy] as Pt, ...same.filter((c) => c !== mine).map((c) => [c.cx, c.cy] as Pt)];
 }
 
 /** The smallest closed outline on the drawing that contains the tap (a room, a slab, a paved area). */

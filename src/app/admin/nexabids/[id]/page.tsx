@@ -8,7 +8,7 @@ import {
   TAKEOFF_COLORS, UNITS_FOR, KIND_LABEL, PRINTED_SCALES, emptyTakeoff, normalizeTakeoff, itemQuantity, fmtQty, money,
   pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales,
 } from '@/lib/takeoff';
-import { readSheetVectors, snapPoint, traceRun, shapeAt, type SheetVectors } from '@/lib/takeoff-vectors';
+import { readSheetVectors, snapPoint, traceRun, shapeAt, matchSymbols, type SheetVectors } from '@/lib/takeoff-vectors';
 
 /**
  * Bid from Plans: the measuring screen. The plan sheet is drawn from the PDF; what he measures is drawn on top
@@ -46,6 +46,7 @@ export default function TakeoffPage() {
   const [snapOn, setSnapOn] = useState(true);
   const [pickMode, setPickMode] = useState<'points' | 'whole'>('points');
   const [snapMark, setSnapMark] = useState<null | { pt: Pt; kind: string }>(null);
+  const [foundNote, setFoundNote] = useState('');
   const [big, setBig] = useState(false);          // the sheet takes the whole screen, the list is put away
   const [found, setFound] = useState<{ label: string; feetPerInch: number; times: number }[]>([]);   // scales this sheet prints on itself
 
@@ -216,6 +217,22 @@ export default function TakeoffPage() {
     if (!size || raw[0] < 0 || raw[1] < 0 || raw[0] > size.w || raw[1] > size.h) return;
     const r = 14 / viewRef.current.k;                                   // 14 screen pixels, at any zoom
     // One tap takes a whole line run (length) or a whole outline (area), straight from the drawing
+    if (mode === 'draw' && active && pickMode === 'whole' && active.kind === 'count') {
+      // Tap one symbol and every matching one on the sheet is counted
+      const found = matchSymbols(vecRef.current, raw, r);
+      if (!found) { setSnapMark({ pt: raw, kind: 'miss' }); setTimeout(() => setSnapMark(null), 900); setFoundNote('No symbol there. Tap right on one, or switch to tapping each one.'); return; }
+      let added = 0;
+      change((d) => ({ ...d, items: d.items.map((it) => {
+        if (it.id !== active.id) return it;
+        const has = it.shapes.find((s) => s.page === page);
+        const old = has ? has.pts : [];
+        const fresh = found.filter((p) => !old.some((o) => Math.hypot(o[0] - p[0], o[1] - p[1]) < 3));
+        added = fresh.length;
+        return { ...it, shapes: has ? it.shapes.map((s) => (s === has ? { ...s, pts: [...s.pts, ...fresh] } : s)) : [...it.shapes, { id: uid(), page, pts: fresh }] };
+      }) }));
+      setFoundNote(`Found ${found.length} like it on this sheet. Check the green marks and undo any that are wrong.`);
+      return;
+    }
     if (mode === 'draw' && active && pickMode === 'whole' && active.kind !== 'count') {
       const got = active.kind === 'length' ? traceRun(vecRef.current, raw, r) : shapeAt(vecRef.current, raw);
       if (!got || got.length < (active.kind === 'area' ? 3 : 2)) { setSnapMark({ pt: raw, kind: 'miss' }); setTimeout(() => setSnapMark(null), 900); return; }
@@ -259,7 +276,7 @@ export default function TakeoffPage() {
       return { ...it, shapes: it.shapes.slice(0, -1) };
     }) }));
   };
-  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setPickMode('points'); };
+  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setPickMode('points'); setFoundNote(''); };
   const stop = () => { setDraft([]); setScalePts([]); setMode('move'); };
 
   const draftReadout = useMemo(() => {
@@ -361,6 +378,13 @@ export default function TakeoffPage() {
                 {draftReadout && <span className="text-[#E5C76B]"> {draftReadout}</span>}
               </p>
               <p className="text-[15px] text-white/75">Drag to move the sheet. Two fingers to zoom.{vecState === 'ready' && snapOn && pickMode === 'points' ? ' Taps snap to the drawing\u2019s corners and lines.' : ''}</p>
+              {mode === 'draw' && active && active.kind === 'count' && vecState === 'ready' && (
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <button onClick={() => { setPickMode('points'); setFoundNote(''); }} className={`min-h-[48px] rounded-xl border text-[16px] font-bold ${pickMode === 'points' ? 'border-[#C9A84C] bg-[#C9A84C]/20' : 'border-white/30'}`}>Tap each one</button>
+                  <button onClick={() => { setPickMode('whole'); setFoundNote(''); }} className={`min-h-[48px] rounded-xl border text-[16px] font-bold ${pickMode === 'whole' ? 'border-[#4ade80] bg-[#4ade80]/15' : 'border-white/30'}`}>Tap one, find the rest</button>
+                </div>
+              )}
+              {mode === 'draw' && foundNote && <p className="text-[16px] font-semibold text-[#8fe3a8] mt-2 leading-snug">{foundNote}</p>}
               {mode === 'draw' && active && active.kind !== 'count' && vecState === 'ready' && (
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   <button onClick={() => { setPickMode('points'); setDraft([]); }} className={`min-h-[48px] rounded-xl border text-[16px] font-bold ${pickMode === 'points' ? 'border-[#C9A84C] bg-[#C9A84C]/20' : 'border-white/30'}`}>{active.kind === 'area' ? 'Tap the corners' : 'Tap point by point'}</button>
