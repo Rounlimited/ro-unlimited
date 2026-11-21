@@ -2,13 +2,13 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Trash2, Loader2, Pencil, Send, AlertTriangle, Maximize, Minimize, ChevronDown, ChevronUp, Sparkles, List } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Ruler, Plus, Check, Undo2, X, Trash2, Loader2, Pencil, Send, AlertTriangle, Maximize, Minimize, ChevronDown, ChevronUp, Sparkles, List, HelpCircle } from 'lucide-react';
 import {
   type Pt, type TakeoffData, type TakeoffItem, type TakeoffKind, type TakeoffUnit,
   TAKEOFF_COLORS, UNITS_FOR, KIND_LABEL, PRINTED_SCALES, emptyTakeoff, normalizeTakeoff, itemQuantity, fmtQty, money,
-  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, bidTotals, itemCost, type ItemPart, type AiRead, type AiSheet, type BidPricing, type AiDraft, type DraftItem,
+  pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, bidTotals, itemCost, labelPoints, type SheetWord, type ItemPart, type AiRead, type AiSheet, type BidPricing, type AiDraft, type DraftItem,
 } from '@/lib/takeoff';
-import { readSheetVectors, snapPoint, traceRun, shapeAt, matchSymbols, type SheetVectors } from '@/lib/takeoff-vectors';
+import { readSheetVectors, snapPoint, traceRun, shapeAt, symbolAt, findSymbols, type SheetVectors, type SymbolKey } from '@/lib/takeoff-vectors';
 
 /**
  * Bid from Plans: the measuring screen. The plan sheet is drawn from the PDF; what he measures is drawn on top
@@ -17,6 +17,11 @@ import { readSheetVectors, snapPoint, traceRun, shapeAt, matchSymbols, type Shee
 type View = { k: number; x: number; y: number };
 type Est = { id: string; estimate_number: string; project_name: string | null; status: string; customer: { first_name: string | null; last_name: string | null; company_name: string | null } | null };
 const uid = () => Math.random().toString(36).slice(2, 10);
+/** The words printed on a sheet, each with where it sits (its middle), in the same units the measuring uses. */
+async function wordsOf(pg: any): Promise<SheetWord[]> {
+  const vp = pg.getViewport({ scale: 1 }); const tc = await pg.getTextContent();
+  return (tc.items || []).filter((i: any) => i.str && String(i.str).trim()).map((i: any) => { const [x, y] = vp.convertToViewportPoint(i.transform[4] + (i.width || 0) / 2, i.transform[5] + Math.abs(i.height || 0) / 2); return { s: String(i.str), x, y }; });
+}
 const inputCls = 'w-full min-h-[52px] px-4 rounded-xl bg-white/5 border border-white/20 text-[18px] text-white placeholder:text-white/40 focus:outline-none focus:border-[#C9A84C]';
 const labelCls = 'block text-[15px] font-semibold text-white/80 mb-1.5';
 
@@ -35,7 +40,7 @@ export default function TakeoffPage() {
   const [activeId, setActiveId] = useState('');
   const [draft, setDraft] = useState<Pt[]>([]);
   const [scalePts, setScalePts] = useState<Pt[]>([]);
-  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai' | 'bid' | 'draft'>(null);
+  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai' | 'bid' | 'draft' | 'others' | 'help'>(null);
   // What the AI read off the sheets (names, scales, schedules, notes), and whether this sign-in may start a read
   const [ai, setAi] = useState<AiRead | null>(null);
   const [canRead, setCanRead] = useState(false);
@@ -48,7 +53,14 @@ export default function TakeoffPage() {
   const vecRef = useRef<SheetVectors | null>(null);
   const [vecState, setVecState] = useState<'reading' | 'ready' | 'none'>('reading');
   const [snapOn, setSnapOn] = useState(true);
-  const [pickMode, setPickMode] = useState<'points' | 'whole'>('points');
+  const [pickMode, setPickMode] = useState<'points' | 'whole' | 'tag'>('points');
+  const [tagText, setTagText] = useState('');
+  const wordsRef = useRef<SheetWord[]>([]);
+  const [wordsPage, setWordsPage] = useState(0);
+  const [lastSearch, setLastSearch] = useState<null | { how: 'tag'; tag: string } | { how: 'symbol'; key: SymbolKey }>(null);
+  const [others, setOthers] = useState<{ page: number; pts: Pt[]; on: boolean }[]>([]);
+  const [searching, setSearching] = useState('');
+  const [moveStep, setMoveStep] = useState<null | 'pick' | { shape: string; idx: number }>(null);
   const [snapMark, setSnapMark] = useState<null | { pt: Pt; kind: string }>(null);
   const [foundNote, setFoundNote] = useState('');
   const [erase, setErase] = useState(false);     // the next tap removes the measurement under it
@@ -109,21 +121,25 @@ export default function TakeoffPage() {
     return () => clearTimeout(t);
   }, [data, id]);
 
+  // The first time anyone opens this screen, the short guide opens by itself
+  useEffect(() => { try { if (!localStorage.getItem('nexabids-help-1')) { localStorage.setItem('nexabids-help-1', '1'); setSheet('help'); } } catch { /* private mode */ } }, []);
+
   /* ── the AI plan reader ── */
   // 'Busy' only while the worker keeps reporting in; if it has gone quiet for 5 minutes the read is treated as stopped
   const aiFresh = !!ai?.updated_at && Date.now() - new Date(ai.updated_at).getTime() < 5 * 60000;
   const aiBusy = (ai?.status === 'queued' || ai?.status === 'working') && aiFresh;
   const bidDraft: AiDraft | null = ai?.draft || null;
+  const measureBusy = Object.values(ai?.measures || {}).some((m) => (m.status === 'queued' || m.status === 'working') && Date.now() - new Date(m.updated_at || 0).getTime() < 4 * 60000);
   const draftBusy = !!bidDraft && (bidDraft.status === 'queued' || bidDraft.status === 'working') && ai?.status !== 'error' && Date.now() - Math.max(new Date(bidDraft.updated_at || 0).getTime(), new Date(ai?.updated_at || 0).getTime()) < 12 * 60000;
   useEffect(() => {
-    if (!aiBusy && !draftBusy) return;
+    if (!aiBusy && !draftBusy && !measureBusy) return;
     const t = setInterval(async () => {
       const r = await fetch('/api/admin/takeoffs/' + id).catch(() => null);
       const row = r && r.ok ? await r.json().catch(() => null) : null;
       if (row?.ai) setAi(row.ai);
     }, 4000);
     return () => clearInterval(t);
-  }, [aiBusy, draftBusy, id]);
+  }, [aiBusy, draftBusy, measureBusy, id]);
   const startDraft = async () => {
     setAiNote('');
     const r = await fetch('/api/admin/takeoffs/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'draft' }) }).catch(() => null);
@@ -147,9 +163,10 @@ export default function TakeoffPage() {
     return out;
   }, [found, aiPage]);
   const barScale = !foundAll.length && (aiPage?.scales || []).some((q) => /bar|graphic/i.test(q.scale + ' ' + q.applies_to));
-  const addFromPlans = (nameIn: string, qty: number, unitIn: string, note: string) => {
+  const addFromPlans = (nameIn: string, qty: number, unitIn: string, note: string, hint?: string) => {
     const u = unitFromPrinted(unitIn);
-    change((d) => ({ ...d, items: [...d.items, { id: uid(), name: nameIn.slice(0, 120), kind: u.kind, unit: u.unit, color: TAKEOFF_COLORS[d.items.length % TAKEOFF_COLORS.length], unitCost: 0, printedQty: qty, printedNote: note, shapes: [] }] }));
+    change((d) => ({ ...d, items: [...d.items, { id: uid(), name: nameIn.slice(0, 120), kind: u.kind, unit: u.unit, color: TAKEOFF_COLORS[d.items.length % TAKEOFF_COLORS.length], unitCost: 0,
+      printedQty: qty > 0 ? qty : undefined, printedNote: qty > 0 ? note : undefined, hint: qty > 0 ? undefined : hint, hintPage: qty > 0 ? undefined : page, shapes: [] }] }));
   };
 
   /* ── draw the sheet ── */
@@ -170,7 +187,8 @@ export default function TakeoffPage() {
       vecRef.current = null; setVecState('reading');
       readSheetVectors(pg, opsRef.current).then((v) => { if (!dead) { vecRef.current = v; setVecState(v ? 'ready' : 'none'); } }).catch(() => { if (!dead) setVecState('none'); });
       setFound([]);
-      pg.getTextContent().then((tc: any) => { if (!dead) setFound(findPrintedScales((tc.items || []).map((i: any) => String(i.str || '')))); }).catch(() => null);
+      wordsRef.current = []; setWordsPage(0);
+      wordsOf(pg).then((w) => { if (!dead) { wordsRef.current = w; setWordsPage(page); setFound(findPrintedScales(w.map((x) => x.s))); } }).catch(() => { if (!dead) setWordsPage(page); });
       const v1 = pg.getViewport({ scale: 1 });
       setSize({ w: v1.width, h: v1.height });
       fit(v1.width, v1.height);
@@ -263,9 +281,91 @@ export default function TakeoffPage() {
   const active = data.items.find((i) => i.id === activeId) || null;
   const ftPerPt = Number(data.scales[String(page)]) || 0;
 
+  /* ── counting helpers ── */
+  const addCountPoints = (itemId: string, pageNo: number, pts: Pt[]) => {
+    change((d) => ({ ...d, items: d.items.map((it) => {
+      if (it.id !== itemId) return it;
+      const has = it.shapes.find((sh) => sh.page === pageNo);
+      const old = has ? has.pts : [];
+      const fresh = pts.filter((p) => !old.some((o) => Math.hypot(o[0] - p[0], o[1] - p[1]) < 3));
+      if (!fresh.length) return it;
+      return { ...it, shapes: has ? it.shapes.map((sh) => (sh === has ? { ...sh, pts: [...sh.pts, ...fresh] } : sh)) : [...it.shapes, { id: uid(), page: pageNo, pts: fresh }] };
+    }) }));
+  };
+  const countTag = () => {
+    if (!active) return;
+    const t = tagText.trim();
+    if (!t) { setFoundNote('Type the tag first, exactly as it is printed on the drawing.'); return; }
+    const pts = labelPoints(wordsRef.current, t);
+    if (!pts.length) { setFoundNote(`No "${t}" is printed on this sheet. Check the spelling, or tap each one instead.`); return; }
+    addCountPoints(active.id, page, pts);
+    setLastSearch({ how: 'tag', tag: t });
+    setFoundNote(`Counted ${pts.length} marked "${t}" on this sheet. Look at the marks, and use Remove one on any that sit in a legend or a table.`);
+  };
+  const searchOthers = async () => {
+    if (!lastSearch || !docRef.current) return;
+    setSearching('Looking through the other sheets…');
+    const res: { page: number; pts: Pt[]; on: boolean }[] = [];
+    for (let p = 1; p <= pages; p++) {
+      if (p === page) continue;
+      try {
+        const pg = await docRef.current.getPage(p);
+        const pts = lastSearch.how === 'tag' ? labelPoints(await wordsOf(pg), lastSearch.tag) : findSymbols(await readSheetVectors(pg, opsRef.current), lastSearch.key);
+        if (pts.length) res.push({ page: p, pts, on: false });
+      } catch { /* that sheet could not be read: skip it */ }
+    }
+    setSearching(''); setOthers(res); setSheet('others');
+  };
+
+  /* ── the AI tries one item: it marks the spot, the drawing's own lines do the measuring ── */
+  const startMeasure = async (it: TakeoffItem) => {
+    setAiNote('');
+    const r = await fetch('/api/admin/takeoffs/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'measure', page: it.hintPage || page, item: { id: it.id, name: it.name, kind: it.kind, hint: it.hint || '' } }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    if (!r || !r.ok) { setAiNote(d.error || 'Could not start that. Try again.'); return; }
+    setAi(d.ai);
+  };
+  useEffect(() => {
+    if (!size || vecState === 'reading' || wordsPage !== page) return;
+    for (const it of data.items) {
+      const m = ai?.measures?.[it.id];
+      if (!m || m.status !== 'done' || !m.found || m.page !== page || it.aiAt === m.updated_at) continue;
+      const pts = (m.points || []).map(([fx, fy]) => [fx * size.w, fy * size.h] as Pt);
+      let shapePts: Pt[] = []; let note = m.saw || '';
+      if (it.kind === 'count') {
+        const byTag = m.tag ? labelPoints(wordsRef.current, m.tag) : [];
+        if (byTag.length) { shapePts = byTag; note = `It counted the tag "${m.tag}" printed beside each one.`; }
+        else { const sym = pts[0] ? symbolAt(vecRef.current, pts[0], 16) : null; shapePts = sym ? sym.pts : pts.slice(0, 1); if (!sym) note = 'It found one but could not match the rest. Count the others yourself.'; }
+      } else {
+        let sn = pts.map((p) => snapPoint(vecRef.current, p, 10).pt);
+        if (sn.length > 2 && Math.hypot(sn[0][0] - sn[sn.length - 1][0], sn[0][1] - sn[sn.length - 1][1]) < 3) sn = sn.slice(0, -1);
+        if (sn.length >= (it.kind === 'area' ? 3 : 2)) shapePts = sn;
+      }
+      const sid = uid();
+      change((d) => ({ ...d, items: d.items.map((x) => (x.id !== it.id ? x : { ...x, aiAt: m.updated_at, aiNote: note.slice(0, 220), aiCheck: shapePts.length > 0, aiShape: shapePts.length ? sid : undefined, shapes: shapePts.length ? [...x.shapes, { id: sid, page, pts: shapePts }] : x.shapes })) }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ai, page, size, vecState, wordsPage, data.items]);
+
   const tap = (raw: Pt) => {
     if (!size || raw[0] < 0 || raw[1] < 0 || raw[0] > size.w || raw[1] > size.h) return;
     const r = 14 / viewRef.current.k;                                   // 14 screen pixels, at any zoom
+    if (mode === 'draw' && active && moveStep) {
+      const rr = 14 / viewRef.current.k;
+      if (moveStep === 'pick') {
+        let best: { shape: string; idx: number; pt: Pt } | null = null; let bd = rr * 3;
+        for (const sh of active.shapes) { if (sh.page !== page) continue; sh.pts.forEach((q, i) => { const d = Math.hypot(q[0] - raw[0], q[1] - raw[1]); if (d < bd) { bd = d; best = { shape: sh.id, idx: i, pt: q }; } }); }
+        const hit = best as { shape: string; idx: number; pt: Pt } | null;
+        if (!hit) { setFoundNote('No corner of this item is there. Tap right on the corner you want to move.'); return; }
+        setMoveStep({ shape: hit.shape, idx: hit.idx }); setSnapMark({ pt: hit.pt, kind: 'corner' }); setFoundNote('Got it. Now tap where that corner should be.');
+        return;
+      }
+      const to = snapOn ? snapPoint(vecRef.current, raw, rr).pt : raw;
+      const mv = moveStep;
+      change((d) => ({ ...d, items: d.items.map((it) => (it.id !== active.id ? it : { ...it, shapes: it.shapes.map((sh) => (sh.id !== mv.shape ? sh : { ...sh, pts: sh.pts.map((q, i) => (i === mv.idx ? to : q)) })) })) }));
+      setMoveStep(null); setSnapMark(null); setFoundNote('Moved.');
+      return;
+    }
     if (mode === 'draw' && active && erase) {
       // take away the one measurement of this item nearest the tap
       const dSeg = (a: Pt, b: Pt) => { const dx = b[0] - a[0], dy = b[1] - a[1]; const L = dx * dx + dy * dy; const t = L ? Math.max(0, Math.min(1, ((raw[0] - a[0]) * dx + (raw[1] - a[1]) * dy) / L)) : 0; return Math.hypot(a[0] + t * dx - raw[0], a[1] + t * dy - raw[1]); };
@@ -285,7 +385,8 @@ export default function TakeoffPage() {
     // One tap takes a whole line run (length) or a whole outline (area), straight from the drawing
     if (mode === 'draw' && active && pickMode === 'whole' && active.kind === 'count') {
       // Tap one symbol and every matching one on the sheet is counted
-      const found = matchSymbols(vecRef.current, raw, r);
+      const sym = symbolAt(vecRef.current, raw, r); const found = sym ? sym.pts : null;
+      if (sym) setLastSearch({ how: 'symbol', key: sym.key });
       if (!found) { setSnapMark({ pt: raw, kind: 'miss' }); setTimeout(() => setSnapMark(null), 900); setFoundNote('No symbol there. Tap right on one, or switch to tapping each one.'); return; }
       let added = 0;
       change((d) => ({ ...d, items: d.items.map((it) => {
@@ -342,8 +443,11 @@ export default function TakeoffPage() {
       return { ...it, shapes: it.shapes.slice(0, -1) };
     }) }));
   };
-  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setPickMode('points'); setFoundNote(''); setErase(false); };
-  const stop = () => { setDraft([]); setScalePts([]); setMode('move'); setErase(false); };
+  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setFoundNote(''); setErase(false); setMoveStep(null); setLastSearch(null);
+    // an item that came from a table says which tag to count: start there
+    const it = data.items.find((x) => x.id === itemId); const tg = it && it.kind === 'count' ? /marked (\S+) on the drawings/.exec(it.hint || '') : null;
+    if (tg) { setTagText(tg[1]); setPickMode('tag'); } else setPickMode('points'); };
+  const stop = () => { setDraft([]); setScalePts([]); setMode('move'); setErase(false); setMoveStep(null); };
 
   const draftReadout = useMemo(() => {
     if (!active || active.kind === 'count' || draft.length < 2) return '';
@@ -436,6 +540,7 @@ export default function TakeoffPage() {
                 {big ? <Minimize size={20} /> : <Maximize size={20} />}{big ? 'Show the list' : 'Full screen'}
               </button>
               <button onClick={() => fit(size.w, size.h)} className="min-h-[48px] px-3.5 rounded-xl bg-black/85 border border-white/35 text-[16px] font-bold">Whole sheet</button>
+              <button onClick={() => setSheet('help')} className="min-h-[48px] px-3.5 rounded-xl bg-black/85 border border-[#E5C76B]/70 text-[16px] font-bold flex items-center gap-2"><HelpCircle size={20} /> Help</button>
             </div>
           )}
 
@@ -454,10 +559,23 @@ export default function TakeoffPage() {
                 {draftReadout && <span className="text-[#E5C76B]"> {draftReadout}</span>}
               </p>
               <p className="text-[15px] text-white/75">Drag to move the sheet. Two fingers to zoom.{vecState === 'ready' && snapOn && pickMode === 'points' ? ' Taps snap to the drawing\u2019s corners and lines.' : ''}</p>
-              {mode === 'draw' && active && active.kind === 'count' && vecState === 'ready' && (
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <button onClick={() => { setPickMode('points'); setFoundNote(''); }} className={`min-h-[48px] rounded-xl border text-[16px] font-bold ${pickMode === 'points' ? 'border-[#C9A84C] bg-[#C9A84C]/20' : 'border-white/30'}`}>Tap each one</button>
-                  <button onClick={() => { setPickMode('whole'); setFoundNote(''); }} className={`min-h-[48px] rounded-xl border text-[16px] font-bold ${pickMode === 'whole' ? 'border-[#4ade80] bg-[#4ade80]/15' : 'border-white/30'}`}>Tap one, find the rest</button>
+              {mode === 'draw' && active && active.kind === 'count' && (
+                <div className="mt-2">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button onClick={() => { setPickMode('points'); setFoundNote(''); }} className={`min-h-[52px] rounded-xl border text-[15px] font-bold leading-tight px-1 ${pickMode === 'points' ? 'border-[#C9A84C] bg-[#C9A84C]/20' : 'border-white/30'}`}>Tap each one</button>
+                    <button disabled={vecState !== 'ready'} onClick={() => { setPickMode('whole'); setFoundNote(''); }} className={`min-h-[52px] rounded-xl border text-[15px] font-bold leading-tight px-1 disabled:opacity-40 ${pickMode === 'whole' ? 'border-[#4ade80] bg-[#4ade80]/15' : 'border-white/30'}`}>Tap one, find the rest</button>
+                    <button onClick={() => { setPickMode('tag'); setFoundNote(''); }} className={`min-h-[52px] rounded-xl border text-[15px] font-bold leading-tight px-1 ${pickMode === 'tag' ? 'border-[#4ade80] bg-[#4ade80]/15' : 'border-white/30'}`}>Count a tag</button>
+                  </div>
+                  {pickMode === 'tag' && (
+                    <div className="mt-2">
+                      <p className="text-[15px] text-white/85 leading-snug">If each one has the same letters printed beside it (like A, P-1 or CB), type them and every one on this sheet is counted.</p>
+                      <div className="flex gap-2 mt-1.5">
+                        <input value={tagText} onChange={(e) => setTagText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && countTag()} placeholder="The tag, like A" className="flex-1 min-w-0 min-h-[52px] px-3 rounded-xl bg-white/5 border border-white/30 text-[18px] text-white placeholder:text-white/40 focus:outline-none focus:border-[#4ade80]" />
+                        <button onClick={countTag} className="min-h-[52px] px-5 rounded-xl bg-[#4ade80] text-black text-[17px] font-bold">Count</button>
+                      </div>
+                    </div>
+                  )}
+                  {lastSearch && pages > 1 && <button disabled={!!searching} onClick={searchOthers} className="mt-2 w-full min-h-[48px] rounded-xl border border-[#4ade80]/70 text-[16px] font-bold disabled:opacity-60">{searching || 'Look on the other sheets too'}</button>}
                 </div>
               )}
               {mode === 'draw' && foundNote && <p className="text-[16px] font-semibold text-[#8fe3a8] mt-2 leading-snug">{foundNote}</p>}
@@ -528,16 +646,42 @@ export default function TakeoffPage() {
                     </span>
                     <span className="text-[14px] font-bold text-[#E5C76B] shrink-0">{on ? 'Measuring' : 'Measure'}</span>
                   </button>
+                  {(() => {
+                    const m = ai?.measures?.[it.id];
+                    const busy = !!m && (m.status === 'queued' || m.status === 'working') && Date.now() - new Date(m.updated_at || 0).getTime() < 4 * 60000;
+                    const where = (p?: number) => (p ? sheetLabel(p) || `sheet ${p}` : 'the sheet');
+                    if (busy) return <p className="px-3 pb-2.5 text-[15px] text-[#c4b5fd] flex items-center gap-2"><Loader2 size={18} className="animate-spin shrink-0" /> The AI is looking for it on {where(m!.page)}. About 20 seconds.</p>;
+                    if (it.aiCheck) return (
+                      <div className="mx-3 mb-2.5 rounded-lg border border-[#a78bfa]/70 bg-[#a78bfa]/12 p-2.5">
+                        <p className="text-[16px] font-bold leading-snug">The AI measured this. Check it on the sheet.</p>
+                        {it.aiNote && <p className="text-[14px] text-white/80 leading-snug mt-0.5">{it.aiNote}</p>}
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <button onClick={() => change((d) => ({ ...d, items: d.items.map((x) => (x.id === it.id ? { ...x, aiCheck: false } : x)) }))} className="min-h-[48px] rounded-lg bg-[#4ade80] text-black text-[16px] font-bold">Looks right</button>
+                          <button onClick={() => change((d) => ({ ...d, items: d.items.map((x) => (x.id === it.id ? { ...x, aiCheck: false, shapes: x.shapes.filter((sh) => sh.id !== x.aiShape), aiShape: undefined } : x)) }))} className="min-h-[48px] rounded-lg border border-white/30 text-[16px] font-semibold">Throw it away</button>
+                        </div>
+                      </div>
+                    );
+                    if (m?.status === 'done' && m.found && m.page !== page && it.aiAt !== m.updated_at) return <div className="px-3 pb-2.5"><button onClick={() => { stop(); setPage(m.page!); }} className="w-full min-h-[48px] rounded-lg bg-[#a78bfa]/25 border border-[#a78bfa]/70 text-[16px] font-bold">The AI marked it. See it on {where(m.page)}</button></div>;
+                    const said = m?.status === 'done' && !m.found ? `The AI could not find it on ${where(m.page)}${m.saw ? ': ' + m.saw : '.'}` : m?.status === 'error' ? `The AI could not do it: ${m.error || 'try again.'}` : it.aiAt && !it.aiShape && !it.shapes.length ? 'The AI could not make it out. Measure this one yourself.' : '';
+                    if (!canRead || it.shapes.length || it.printedQty) return said ? <p className="px-3 pb-2 text-[14px] text-[#f0a04b] leading-snug">{said}</p> : null;
+                    return (
+                      <div className="px-3 pb-2.5">
+                        {said && <p className="text-[14px] text-[#f0a04b] leading-snug mb-1.5">{said}</p>}
+                        <button onClick={() => startMeasure(it)} className="w-full min-h-[48px] rounded-lg bg-[#a78bfa]/20 border border-[#a78bfa]/70 text-[16px] font-bold flex items-center justify-center gap-2"><Sparkles size={18} /> Let the AI try it{it.hintPage && it.hintPage !== page ? ` on ${where(it.hintPage)}` : ''}</button>
+                      </div>
+                    );
+                  })()}
                   {!!it.hintPage && !it.shapes.length && !it.printedQty && (
                     <div className="px-3 pb-2.5">
                       <button onClick={() => { if (it.hintPage !== page) setPage(it.hintPage!); pick(it.id); }} className="w-full min-h-[48px] rounded-lg bg-[#f0a04b]/20 border border-[#f0a04b]/70 text-[16px] font-bold">Measure it on {sheetLabel(it.hintPage) || `sheet ${it.hintPage}`}</button>
                     </div>
                   )}
                   {it.id === activeId && (
-                    <div className="flex gap-2 px-3 pb-2.5">
+                    <div className="flex flex-wrap gap-2 px-3 pb-2.5">
                       <button onClick={() => { setEditing(it); setSheet('item'); }} className="flex-1 min-h-[48px] rounded-lg border border-white/25 text-[16px] font-semibold flex items-center justify-center gap-1.5"><Pencil size={18} /> Name and price</button>
                       <button onClick={undo} className="min-h-[48px] px-3 rounded-lg border border-white/25 text-[16px] font-semibold flex items-center gap-1.5"><Undo2 size={18} /> Undo last</button>
                       <button onClick={() => { if (!(mode === 'draw' && activeId === it.id)) pick(it.id); setErase(true); setFoundNote('Tap the one to remove.'); }} className={`min-h-[48px] px-3 rounded-lg border text-[16px] font-semibold flex items-center gap-1.5 ${erase ? 'border-red-400 bg-red-500/20' : 'border-white/25'}`}><Trash2 size={18} /> Remove one</button>
+                      {it.kind !== 'count' && it.shapes.some((sh) => sh.page === page) && <button onClick={() => { if (!(mode === 'draw' && activeId === it.id)) pick(it.id); setMoveStep('pick'); setFoundNote('Tap the corner you want to move.'); }} className={`min-h-[48px] px-3 rounded-lg border text-[16px] font-semibold ${moveStep ? 'border-[#4ade80] bg-[#4ade80]/15' : 'border-white/25'}`}>Move a corner</button>}
                     </div>
                   )}
                 </div>
@@ -616,6 +760,24 @@ export default function TakeoffPage() {
             printedQty: x.quantity || undefined, printedNote: x.quantity ? (x.source === 'table' ? `a table on ${x.sheet || 'the plans'}` : x.source === 'lump' ? 'priced as one lump' : `printed on ${x.sheet || 'the plans'}`) : undefined,
             hint: x.quantity ? undefined : (x.measure || undefined), hintPage: x.quantity ? undefined : (x.page || undefined), shapes: [] }; })] })); setSheet(null); }} />
       )}
+      {sheet === 'help' && <HelpSheet onClose={() => setSheet(null)} />}
+      {sheet === 'others' && active && (
+        <Sheet title="Found on other sheets" onClose={() => setSheet(null)}>
+          {others.length === 0 ? <p className="text-[17px] text-white/90 leading-relaxed">Nothing like it is drawn on the other sheets.</p> : (<>
+            <p className="text-[16px] text-[#f0a04b] leading-snug">The same thing is often drawn on more than one sheet. Only pick sheets that show a different part of the job, or it gets counted twice.</p>
+            <div className="mt-3 space-y-2">
+              {others.map((o, i) => (
+                <button key={o.page} type="button" role="switch" aria-checked={o.on} onClick={() => setOthers((list) => list.map((x, k) => (k === i ? { ...x, on: !x.on } : x)))}
+                  className={`w-full min-h-[56px] text-left rounded-xl border px-3 py-2 flex items-center gap-3 ${o.on ? 'border-[#4ade80] bg-[#4ade80]/12' : 'border-white/20 bg-white/[0.04]'}`}>
+                  <span className={`w-7 h-7 rounded-md border-2 flex items-center justify-center shrink-0 ${o.on ? 'bg-[#4ade80] border-[#4ade80] text-black' : 'border-white/50 text-transparent'}`}><Check size={18} /></span>
+                  <span className="flex-1 min-w-0"><span className="block text-[17px] font-bold leading-snug break-words">{sheetLabel(o.page) || `Sheet ${o.page}`}</span><span className="block text-[15px] text-white/80">{o.pts.length} found</span></span>
+                </button>
+              ))}
+            </div>
+            <button disabled={!others.some((o) => o.on)} onClick={() => { for (const o of others) if (o.on) addCountPoints(active.id, o.page, o.pts); setSheet(null); setFoundNote('Added. Open those sheets to check the marks.'); }} className="mt-4 w-full min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold disabled:opacity-40">Add {others.filter((o) => o.on).reduce((n, o) => n + o.pts.length, 0)} from the sheets I picked</button>
+          </>)}
+        </Sheet>
+      )}
       {sheet === 'bid' && <BidSheet takeoffId={id} planName={name} data={data} onChange={(p) => change((d) => ({ ...d, pricing: p }))} onClose={() => setSheet(null)} />}
       {sheet === 'send' && <SendSheet takeoffId={id} data={data} planName={name} onClose={() => setSheet(null)} />}
     </div>
@@ -633,6 +795,34 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
         {children}
       </div>
     </div>
+  );
+}
+
+/** A short guide in plain words, for someone who has never measured a plan on a screen. */
+function HelpSheet({ onClose }: { onClose: () => void }) {
+  const steps: [string, string][] = [
+    ['Set the scale', 'A plan is a small drawing of a big thing. Tap the orange "Set this sheet’s scale" button. If the app shows a green scale, tap "Use this". Do it once on each sheet you measure.'],
+    ['Add what you want to measure', 'Tap "Add something to measure" and give it a name, like "Sidewalk". Pick how it is measured: a length, an area, or a count.'],
+    ['Tap it out on the sheet', 'Drag with one finger to move the sheet. Pinch with two fingers to zoom in. A quick tap puts down a point. Zoom in before you tap: it is more exact. Tap "Finish this one" when you have gone all the way around.'],
+    ['Let the app do more of it', '"Tap a whole line" takes a whole line in one tap. "Tap one, find the rest" counts every matching symbol. "Count a tag" counts every place a tag like A or P-1 is printed.'],
+    ['Made a mistake?', '"Undo" takes back the last tap. "Remove one" takes away a measurement you tap. "Move a corner" lets you fix one corner.'],
+    ['Let the AI help', 'The purple button has the AI read every sheet and draft the list of things to price. On an item, "Let the AI try it" has the AI mark it for you. Always look at what it marked before you keep it.'],
+    ['Price it and send it', 'Type your price on each item. Tap the "Cost → Bid" bar to add overhead and profit. Then "Send to an estimate".'],
+  ];
+  return (
+    <Sheet title="How this works" onClose={onClose}>
+      <p className="text-[17px] text-white/90 leading-relaxed">You measure right on the plans, and the app adds it up into a bid. Nothing here can break anything, and every change is saved by itself.</p>
+      <ol className="mt-3 space-y-2.5">
+        {steps.map(([t, d], i) => (
+          <li key={i} className="rounded-xl border border-white/15 bg-white/[0.04] px-3 py-3 flex gap-3">
+            <span className="w-9 h-9 rounded-full bg-[#C9A84C] text-black text-[18px] font-extrabold flex items-center justify-center shrink-0">{i + 1}</span>
+            <span className="flex-1 min-w-0"><span className="block text-[18px] font-bold leading-snug">{t}</span><span className="block text-[16px] text-white/85 leading-relaxed mt-0.5">{d}</span></span>
+          </li>
+        ))}
+      </ol>
+      <p className="text-[15px] text-white/75 leading-snug mt-3">You can open this again any time with the Help button on the sheet.</p>
+      <button onClick={onClose} className="mt-3 w-full min-h-[56px] rounded-xl bg-[#C9A84C] text-black text-[18px] font-bold">Got it</button>
+    </Sheet>
   );
 }
 
@@ -764,7 +954,7 @@ function DraftSheet({ draft, have, onAdd, onClose }: { draft: AiDraft; have: str
 }
 
 /** Everything the AI read on one sheet, each thing with a way to use it. */
-function AiSheetView({ s, page, onScale, onAdd, onClose }: { s: AiSheet; page: number; onScale: (feetPerInch: number, label: string) => void; onAdd: (name: string, qty: number, unit: string, note: string) => void; onClose: () => void }) {
+function AiSheetView({ s, page, onScale, onAdd, onClose }: { s: AiSheet; page: number; onScale: (feetPerInch: number, label: string) => void; onAdd: (name: string, qty: number, unit: string, note: string, hint?: string) => void; onClose: () => void }) {
   const [open, setOpen] = useState(-1);
   const [added, setAdded] = useState<string[]>([]);
   const [scaled, setScaled] = useState('');
@@ -802,6 +992,7 @@ function AiSheetView({ s, page, onScale, onAdd, onClose }: { s: AiSheet; page: n
 
       {s.schedules.length > 0 && (<>
         <p className={head}>Tables on the sheet</p>
+        <p className="text-[15px] text-white/80 leading-snug mb-2">A table lists the kinds of a thing, not how many there are. Adding it puts each kind on your list to be counted on the drawing.</p>
         <div className="space-y-2">
           {s.schedules.map((t, i) => (
             <div key={i} className="rounded-xl border border-white/15 bg-white/[0.04]">
@@ -810,7 +1001,14 @@ function AiSheetView({ s, page, onScale, onAdd, onClose }: { s: AiSheet; page: n
                   <span className="block text-[17px] font-bold leading-snug break-words">{t.name}</span>
                   <span className="block text-[15px] text-white/75 leading-snug">{t.rows.length} row{t.rows.length === 1 ? '' : 's'} · tap to {open === i ? 'hide' : 'see'}</span>
                 </button>
-                <button disabled={added.includes('t' + i) || !t.rows.length} onClick={() => add('t' + i, t.name.replace(/\s*schedule\b/i, '').trim() || t.name, t.rows.length, 'EA', `${where}, ${t.name}: one per row. Check the count.`)} className="min-h-[48px] px-3 rounded-lg border border-[#C9A84C] text-[#E5C76B] text-[15px] font-bold shrink-0 disabled:opacity-50">{added.includes('t' + i) ? 'Added' : `Add ${t.rows.length} to list`}</button>
+                <button disabled={added.includes('t' + i) || !t.rows.length} onClick={() => {
+                  // A table lists KINDS, not how many. Each kind goes on the list to be counted on the drawing, unless the table has its own quantity column.
+                  const qi = t.columns.findIndex((c) => /^(qty\.?|quantity|count|no\.?|number|total)$/i.test(c.trim()));
+                  const base = t.name.replace(/\s*schedule\b/i, '').trim() || t.name;
+                  t.rows.forEach((rw) => { const q = qi >= 0 ? Number(String(rw[qi] || '').replace(/[^0-9.]/g, '')) : 0; const tag = String(rw[0] || '').trim();
+                    onAdd(`${base} ${tag}`.trim() + (rw[1] && rw[1] !== tag && rw[1].length < 44 ? `, ${rw[1]}` : ''), q > 0 ? q : 0, 'EA', `${where}, ${t.name}`, tag ? `Count every one marked ${tag} on the drawings` : 'Count them on the drawings'); });
+                  setAdded((a) => [...a, 't' + i]);
+                }} className="min-h-[48px] px-3 rounded-lg border border-[#C9A84C] text-[#E5C76B] text-[15px] font-bold shrink-0 disabled:opacity-50 max-w-[46%] leading-tight">{added.includes('t' + i) ? 'Added' : `Add its ${t.rows.length} kind${t.rows.length === 1 ? '' : 's'} to count`}</button>
               </div>
               {open === i && (
                 <div className="overflow-x-auto border-t border-white/10">

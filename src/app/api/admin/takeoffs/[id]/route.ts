@@ -58,6 +58,22 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     await admin.from('takeoffs').update({ ai }).eq('id', t.id);
     return NextResponse.json({ ok: true, ai });
   }
+  // The AI marks where one item is on a sheet; the app then measures it from the drawing's own lines
+  if (body.action === 'measure') {
+    const user = await getServerUser(req).catch(() => null);
+    if (!mayRead(user?.email)) return fail('The AI is not switched on for this sign-in yet.', 403);
+    const { data: t } = await admin.from('takeoffs').select('id, file_path, ai').eq('id', params.id).maybeSingle();
+    if (!t?.file_path) return fail('Those plans are not here any more.', 404);
+    const it = body.item || {}; const page = Math.floor(Number(body.page)) || 0;
+    if (!it.id || !it.name || !['count', 'area', 'length'].includes(it.kind) || page < 1) return fail('Pick the item and the sheet first.');
+    const now = new Date().toISOString(); const cur = (t.ai || {}) as any;
+    const { error: jErr } = await admin.from('ai_sub_jobs').insert({ user_id: user!.id, user_email: user!.email || null, status: 'queued', status_label: 'Looking for it on the sheet…',
+      payload: { kind: 'measure_item', takeoff_id: t.id, file_path: t.file_path, page, item: { id: String(it.id).slice(0, 40), name: String(it.name).slice(0, 140), kind: it.kind, hint: String(it.hint || '').slice(0, 240) } } });
+    if (jErr) return fail('Could not start that. Try again.', 500);
+    const ai = { ...cur, measures: { ...(cur.measures || {}), [String(it.id)]: { status: 'queued', page, updated_at: now } } };
+    await admin.from('takeoffs').update({ ai }).eq('id', t.id);
+    return NextResponse.json({ ok: true, ai });
+  }
   // Draft (or re-draft) the list of things to price from a set that has already been read
   if (body.action === 'draft') {
     const user = await getServerUser(req).catch(() => null);

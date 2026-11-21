@@ -177,18 +177,164 @@ function components(v: SheetVectors) {
   const out = { of, comps }; compCache.set(v, out); return out;
 }
 
-/** Tap one symbol: returns the middle of every matching symbol on the sheet (the tapped one first), or null. */
-export function matchSymbols(v: SheetVectors | null, pt: Pt, r: number): Pt[] | null {
+/* A symbol is recognised two ways, because CAD files draw them differently:
+   "group": its line pieces touch each other and nothing else (a stand-alone symbol);
+   "box":   it has a closed outline (a square light fixture, a round manhole); it is described by the outline's size
+            and by the pieces drawn wholly inside it, so wiring or pipe running into it does not change it. */
+export type SymbolKey = { how: 'group' | 'box'; sig: string } | { how: 'pattern'; segs: number[]; r: number };
+
+type Box = { cx: number; cy: number; w: number; h: number; sig: string };
+const boxCache = new WeakMap<SheetVectors, Box[]>();
+function boxes(v: SheetVectors): Box[] {
+  const hit = boxCache.get(v); if (hit) return hit;
+  const out: Box[] = [];
+  for (const poly of v.shapes) {
+    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    for (const q of poly) { x1 = Math.min(x1, q[0]); y1 = Math.min(y1, q[1]); x2 = Math.max(x2, q[0]); y2 = Math.max(y2, q[1]); }
+    const w = x2 - x1, h = y2 - y1;
+    if (w < 3 || h < 3 || w > 90 || h > 90) continue;
+    // pieces drawn wholly inside the outline (a little slack for the outline itself)
+    const m = 0.4; let n = 0; let len = 0;
+    const seen = new Set<number>();
+    for (let cx = Math.floor(x1 / v.cell); cx <= Math.floor(x2 / v.cell); cx++) for (let cy = Math.floor(y1 / v.cell); cy <= Math.floor(y2 / v.cell); cy++) {
+      for (const sg of v.grid.get(key(cx, cy)) || []) {
+        if (seen.has(sg)) continue; seen.add(sg);
+        const ax = v.segs[sg * 4], ay = v.segs[sg * 4 + 1], bx = v.segs[sg * 4 + 2], by = v.segs[sg * 4 + 3];
+        if (ax >= x1 - m && ax <= x2 + m && bx >= x1 - m && bx <= x2 + m && ay >= y1 - m && ay <= y2 + m && by >= y1 - m && by <= y2 + m) { n++; len += Math.hypot(bx - ax, by - ay); }
+      }
+    }
+    const lo = Math.min(w, h), hi = Math.max(w, h);
+    out.push({ cx: (x1 + x2) / 2, cy: (y1 + y2) / 2, w, h, sig: `${Math.round(lo)}x${Math.round(hi)}|${poly.length}|${n}|${Math.round(len / 2)}` });
+  }
+  boxCache.set(v, out); return out;
+}
+const spread = (pts: Pt[]): Pt[] => { const out: Pt[] = []; for (const p of pts) if (!out.some((o) => Math.hypot(o[0] - p[0], o[1] - p[1]) < 2.5)) out.push(p); return out; };
+
+/* "pattern": the symbol's own pieces, measured from its middle. Anywhere on a sheet where all of those pieces are
+   drawn again (moved, or turned to any angle) is the same symbol. Pieces that merely run INTO it (a wire, a pipe) are
+   not part of the pattern, and a place with much more drawn inside it is a different symbol (a square with an X is
+   not a plain square). */
+function patternsAt(v: SheetVectors, pt: Pt): { segs: number[]; r: number; at: Pt }[] {
+  const pool = near(v, pt, 44).map((sg) => seg(v, sg));
+  const inside = (R: number, c: Pt) => pool.filter(([p, q]) => Math.hypot(p[0] - c[0], p[1] - c[1]) <= R && Math.hypot(q[0] - c[0], q[1] - c[1]) <= R);
+  // Grow a circle from the tap. Each time nothing new falls wholly inside it for a while, that is the edge of
+  // something: first an inner part (a dot), later the whole symbol. Every such edge is a candidate pattern.
+  const out: { segs: number[]; r: number; at: Pt }[] = []; let lastN = 0;
+  for (let t = 4; t <= 34; t += 1) {
+    const n = inside(t, pt).length;
+    if (n < 2 || n === lastN || n !== inside(t + 4, pt).length) continue;
+    lastN = n;
+    let picked = inside(t, pt);
+    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    for (const [p, q] of picked) { x1 = Math.min(x1, p[0], q[0]); y1 = Math.min(y1, p[1], q[1]); x2 = Math.max(x2, p[0], q[0]); y2 = Math.max(y2, p[1], q[1]); }
+    const c: Pt = [(x1 + x2) / 2, (y1 + y2) / 2];
+    const rad = Math.max(...picked.map(([p, q]) => Math.max(Math.hypot(p[0] - c[0], p[1] - c[1]), Math.hypot(q[0] - c[0], q[1] - c[1])))) + 0.6;
+    picked = inside(rad, c);
+    if (picked.length < 2 || picked.length > 140 || rad < 2) continue;
+    const segs: number[] = [];
+    for (const [p, q] of picked) segs.push(p[0] - c[0], p[1] - c[1], q[0] - c[0], q[1] - c[1]);
+    out.push({ segs, r: rad, at: c });
+  }
+  return out.reverse().slice(0, 4);          // the whole symbol first
+}
+function findPattern(v: SheetVectors, segs: number[], r: number): Pt[] {
+  const n = segs.length / 4; if (n < 2) return [];
+  const lens: number[] = []; let total = 0;
+  for (let i = 0; i < n; i++) { const l = Math.hypot(segs[i * 4 + 2] - segs[i * 4], segs[i * 4 + 3] - segs[i * 4 + 1]); lens.push(l); total += l; }
+  // start from the longest pieces (up to three different lengths), in case one of them is a stray wire
+  const order = lens.map((l, i) => i).sort((x, y) => lens[y] - lens[x]);
+  const anchors: number[] = [];
+  for (const i of order) { if (lens[i] < 1.2) break; if (!anchors.some((k) => Math.abs(lens[k] - lens[i]) < 0.5)) anchors.push(i); if (anchors.length === 3) break; }
+  if (!anchors.length) return [];
+  const tol = 1.1;
+  const hasSeg = (px: number, py: number, qx: number, qy: number) => {
+    for (const sg of near(v, [px, py], tol)) {
+      const ax = v.segs[sg * 4], ay = v.segs[sg * 4 + 1], bx = v.segs[sg * 4 + 2], by = v.segs[sg * 4 + 3];
+      if ((Math.abs(ax - px) < tol && Math.abs(ay - py) < tol && Math.abs(bx - qx) < tol && Math.abs(by - qy) < tol) || (Math.abs(bx - px) < tol && Math.abs(by - py) < tol && Math.abs(ax - qx) < tol && Math.abs(ay - qy) < tol)) return true;
+    }
+    return false;
+  };
+  const tried = new Set<string>(); const out: Pt[] = [];
+  for (const ai of anchors) {
+    const La = lens[ai]; const lenTol = Math.max(0.35, La * 0.015);
+    const amx = (segs[ai * 4] + segs[ai * 4 + 2]) / 2, amy = (segs[ai * 4 + 1] + segs[ai * 4 + 3]) / 2;
+    const ath = Math.atan2(segs[ai * 4 + 3] - segs[ai * 4 + 1], segs[ai * 4 + 2] - segs[ai * 4]);
+    for (let sg = 0; sg < v.count; sg++) {
+      const ax = v.segs[sg * 4], ay = v.segs[sg * 4 + 1], bx = v.segs[sg * 4 + 2], by = v.segs[sg * 4 + 3];
+      if (Math.abs(Math.hypot(bx - ax, by - ay) - La) > lenTol) continue;
+      const mx = (ax + bx) / 2, my = (ay + by) / 2; const base = Math.atan2(by - ay, bx - ax);
+      for (const th of [base, base + Math.PI]) {
+        const rot = th - ath; const co = Math.cos(rot), si = Math.sin(rot);
+        const cx = mx - (amx * co - amy * si), cy = my - (amx * si + amy * co);
+        const k = Math.round(cx) + ',' + Math.round(cy) + ',' + Math.round(((rot % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) / 0.09);
+        if (tried.has(k)) continue; tried.add(k);
+        if (out.some((o) => Math.hypot(o[0] - cx, o[1] - cy) < Math.max(2.5, r * 0.5))) continue;
+        // how much of the pattern's line is drawn here, by length
+        let got = 0; let lost = 0;
+        for (let i = 0; i < n && lost <= total * 0.1; i++) {
+          const px = cx + segs[i * 4] * co - segs[i * 4 + 1] * si, py = cy + segs[i * 4] * si + segs[i * 4 + 1] * co;
+          const qx = cx + segs[i * 4 + 2] * co - segs[i * 4 + 3] * si, qy = cy + segs[i * 4 + 2] * si + segs[i * 4 + 3] * co;
+          if (hasSeg(px, py, qx, qy)) got += lens[i]; else lost += lens[i];
+        }
+        if (got < total * 0.9) continue;
+        // a place with a lot more line drawn wholly inside it is a different symbol (a square with an X in it)
+        let inLen = 0;
+        for (const o of near(v, [cx, cy], r)) { const [p1, p2] = seg(v, o); if (Math.hypot(p1[0] - cx, p1[1] - cy) <= r && Math.hypot(p2[0] - cx, p2[1] - cy) <= r) inLen += Math.hypot(p2[0] - p1[0], p2[1] - p1[1]); }
+        if (inLen > total * 1.25 + 3) continue;
+        out.push([cx, cy]);
+        if (out.length > 3000) return out;
+      }
+    }
+  }
+  return out;
+}
+
+/** Every place on this sheet where the described symbol is drawn. */
+export function findSymbols(v: SheetVectors | null, k: SymbolKey): Pt[] {
+  if (!v) return [];
+  if (k.how === 'pattern') return findPattern(v, k.segs, k.r);
+  if (k.how === 'group') return spread(components(v).comps.filter((c) => c.sig === k.sig).map((c) => [c.cx, c.cy] as Pt));
+  return spread(boxes(v).filter((bx) => bx.sig === k.sig).map((bx) => [bx.cx, bx.cy] as Pt));
+}
+
+/** What symbol is under the tap: its description (to look for it elsewhere) and every match on this sheet, tapped one first. */
+export function symbolAt(v: SheetVectors | null, pt: Pt, r: number): { key: SymbolKey; pts: Pt[] } | null {
   if (!v) return null;
+  const cands: { key: SymbolKey; at: Pt }[] = [];
   let first = -1; let fd = r;
-  for (const s of near(v, pt, r)) { const [a, b] = seg(v, s); const q = closestOn(a, b, pt); const d = Math.hypot(q[0] - pt[0], q[1] - pt[1]); if (d < fd) { fd = d; first = s; } }
-  if (first < 0) return null;
-  const { of, comps } = components(v);
-  const mine = comps[of[first]];
-  if (!mine || !mine.sig) return null;                          // too big or too simple to be a symbol
-  const same = comps.filter((c) => c.sig === mine.sig);
-  if (same.length > 2000) return null;
-  return [[mine.cx, mine.cy] as Pt, ...same.filter((c) => c !== mine).map((c) => [c.cx, c.cy] as Pt)];
+  for (const sg of near(v, pt, r)) { const [p1, p2] = seg(v, sg); const q = closestOn(p1, p2, pt); const d = Math.hypot(q[0] - pt[0], q[1] - pt[1]); if (d < fd) { fd = d; first = sg; } }
+  if (first >= 0) { const { of, comps } = components(v); const mine = comps[of[first]]; if (mine && mine.sig) cands.push({ key: { how: 'group', sig: mine.sig }, at: [mine.cx, mine.cy] }); }
+  // the smallest closed outline the tap is in (or right beside)
+  let best: Box | null = null;
+  for (const bx of boxes(v)) {
+    if (pt[0] < bx.cx - bx.w / 2 - r || pt[0] > bx.cx + bx.w / 2 + r || pt[1] < bx.cy - bx.h / 2 - r || pt[1] > bx.cy + bx.h / 2 + r) continue;
+    if (!best || bx.w * bx.h < best.w * best.h) best = bx;
+  }
+  if (best) cands.push({ key: { how: 'box', sig: best.sig }, at: [best.cx, best.cy] });
+  // its own pieces as a pattern: the most dependable way, so it wins a tie
+  let pats = patternsAt(v, pt);
+  if (!pats.length && first >= 0) { const [p1, p2] = seg(v, first); pats = patternsAt(v, closestOn(p1, p2, pt)); }
+  // the biggest pattern (the whole symbol) that is drawn at least twice on the sheet is the answer
+  for (const pat of pats) {
+    const key: SymbolKey = { how: 'pattern', segs: pat.segs.map((x) => Math.round(x * 100) / 100), r: Math.round(pat.r * 100) / 100 };
+    const all = findPattern(v, pat.segs, pat.r);
+    if (all.length >= 2 && all.length <= 2000) { const mine = all.reduce((bi, p, i) => (Math.hypot(p[0] - pat.at[0], p[1] - pat.at[1]) < Math.hypot(all[bi][0] - pat.at[0], all[bi][1] - pat.at[1]) ? i : bi), 0); return { key, pts: [all[mine], ...all.filter((_, i) => i !== mine)] }; }
+  }
+  let out: { key: SymbolKey; pts: Pt[] } | null = null;
+  for (const c of cands) {
+    const all = findSymbols(v, c.key);
+    if (all.length > 2000) continue;
+    const mine = all.reduce((bi, p, i) => (Math.hypot(p[0] - c.at[0], p[1] - c.at[1]) < Math.hypot(all[bi][0] - c.at[0], all[bi][1] - c.at[1]) ? i : bi), 0);
+    const pts = all.length ? [all[mine], ...all.filter((_, i) => i !== mine)] : [c.at];
+    if (!out || pts.length > out.pts.length) out = { key: c.key, pts };
+  }
+  return out;
+}
+
+/** Tap one symbol: the middle of every matching symbol on the sheet (the tapped one first), or null. */
+export function matchSymbols(v: SheetVectors | null, pt: Pt, r: number): Pt[] | null {
+  const m = symbolAt(v, pt, r);
+  return m ? m.pts : null;
 }
 
 /** The smallest closed outline on the drawing that contains the tap (a room, a slab, a paved area). */

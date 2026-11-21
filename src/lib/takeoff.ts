@@ -28,6 +28,10 @@ export type TakeoffItem = {
   widthFt?: number;          // a length priced as volume (trench, footing): length x width x depthIn = CY
   parts?: ItemPart[];        // build-up: other things priced off the same measurement (block, grout, rebar...)
   alt?: boolean;             // an alternate: priced, but kept out of the base bid
+  aiAt?: string;             // which AI answer was last put on the sheet for this item (its timestamp)
+  aiShape?: string;          // the measurement the AI made, so it can be thrown away in one tap
+  aiNote?: string;           // what the AI says it marked
+  aiCheck?: boolean;         // waiting for him to look at the AI's measurement and keep or discard it
   hint?: string;             // what to measure for it, in words (from the AI's draft list)
   hintPage?: number;         // the sheet to measure it on
   shapes: TakeoffShape[];
@@ -213,7 +217,9 @@ export type AiSheet = {
 /** The AI's draft of everything to price, built from what it read off the sheets. A quantity is only ever one the plans state. */
 export type DraftItem = { name: string; group: string; unit: string; quantity: number | null; source: 'table' | 'printed' | 'measure' | 'lump'; page: number; sheet: string; measure: string; note: string };
 export type AiDraft = { status: 'queued' | 'working' | 'done' | 'error'; summary?: string; items?: DraftItem[]; watch_outs?: string[]; error?: string; updated_at?: string };
-export type AiRead = { status: 'queued' | 'working' | 'done' | 'error'; draft?: AiDraft; done?: number; total?: number; sheets?: Record<string, AiSheet>; error?: string; started_at?: string; finished_at?: string; updated_at?: string };
+/** The AI's answer for one item: where it is on a sheet (fractions of the sheet from its top-left), never a quantity. */
+export type AiMeasure = { status: 'queued' | 'working' | 'done' | 'error'; page?: number; found?: boolean; tag?: string; points?: [number, number][]; confidence?: string; saw?: string; error?: string; updated_at?: string };
+export type AiRead = { status: 'queued' | 'working' | 'done' | 'error'; draft?: AiDraft; measures?: Record<string, AiMeasure>; done?: number; total?: number; sheets?: Record<string, AiSheet>; error?: string; started_at?: string; finished_at?: string; updated_at?: string };
 
 /** Which of our units a printed unit maps to. */
 export function unitFromPrinted(u: string): { kind: TakeoffKind; unit: TakeoffUnit } {
@@ -258,4 +264,15 @@ export function itemCost(item: TakeoffItem, scales: Record<string, number>) {
     return { id: p.id, name: p.name, unit: p.unit, per: Number(p.per) || 0, unitCost: Math.max(0, Number(p.unitCost) || 0), quantity, total: quantity * Math.max(0, Number(p.unitCost) || 0) };
   });
   return { qty, main, parts, total: main + parts.reduce((t, p) => t + p.total, 0) };
+}
+
+/* ── Counting by tag ──────────────────────────────────────────────────
+   Many plans print a short tag beside each thing (A beside every type A light, P-1 beside every sink). Counting the
+   tags is exact where shapes are hard to tell apart. A sheet's words come from the PDF with their place on the sheet. */
+export type SheetWord = { s: string; x: number; y: number };
+export function labelPoints(words: SheetWord[], tag: string): Pt[] {
+  const t = String(tag || '').trim();
+  if (!t) return [];
+  const norm = (v: string) => v.trim().replace(/^[("']+|[)"'.,:;]+$/g, '');
+  return words.filter((w) => norm(w.s) === t).map((w) => [w.x, w.y] as Pt);
 }
