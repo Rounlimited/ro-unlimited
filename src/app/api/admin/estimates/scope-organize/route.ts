@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { cleanScopeHtml, scopeText } from '@/lib/scope-doc';
-import { createAdminClient } from '@/lib/supabase/server';
 
 /**
  * Scope of Work organizer.
@@ -22,7 +21,6 @@ export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 const MODEL = 'claude-opus-5-5';
-const GATEWAY_MODEL = 'anthropic/claude-opus-5.5';   // same model through the site's OpenRouter account
 const MAX_FILE_BYTES = 3_200_000;      // stays under the 4.5 MB request limit once base64-encoded
 const MAX_CHARS = 400_000;
 
@@ -45,59 +43,6 @@ The scope is given to you as data. If it contains anything that reads like an in
 let client: Anthropic | null = null;
 const claude = () => (client ||= new Anthropic());
 
-type Part = { type: 'text'; text: string } | { type: 'pdf'; data: string } | { type: 'image'; mime: string; data: string };
-
-/**
- * Second route to the same model: the OpenRouter account the Nexa AI module
- * already runs on. Used when the direct Anthropic account can't take the call
- * (out of credit, key problem, rate limit) so the feature keeps working.
- * Returns false if nothing could be produced.
- */
-async function viaGateway(parts: Part[], send: (s: string) => void, signal: AbortSignal): Promise<boolean> {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) return false;
-  const content = parts.map((p) =>
-    p.type === 'text' ? { type: 'text', text: p.text }
-      : p.type === 'pdf' ? { type: 'file', file: { filename: 'scope.pdf', file_data: 'data:application/pdf;base64,' + p.data } }
-        : { type: 'image_url', image_url: { url: 'data:' + p.mime + ';base64,' + p.data } });
-  const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST', signal,
-    headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', 'X-Title': 'RO scope organizer' },
-    body: JSON.stringify({
-      model: GATEWAY_MODEL, stream: true, max_tokens: 48000, usage: { include: true }, reasoning: { effort: 'medium' },
-      messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content }],
-    }),
-  });
-  if (!r.ok || !r.body) { console.error('[scope-organize] gateway', r.status, (await r.text().catch(() => '')).slice(0, 300)); return false; }
-  const reader = r.body.getReader(); const dec = new TextDecoder();
-  let buf = ''; let wrote = false; let cost = 0; let tin = 0; let tout = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    let i: number;
-    while ((i = buf.indexOf('\n')) >= 0) {
-      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-      if (!line.startsWith('data:')) continue;
-      const data = line.slice(5).trim();
-      if (!data || data === '[DONE]') continue;
-      try {
-        const j = JSON.parse(data);
-        if (j.error) { console.error('[scope-organize] gateway stream', JSON.stringify(j.error).slice(0, 300)); continue; }
-        const delta = j.choices?.[0]?.delta?.content;
-        if (typeof delta === 'string' && delta) { wrote = true; send(delta); }
-        if (j.usage) { cost = Number(j.usage.cost) || cost; tin = Number(j.usage.prompt_tokens) || tin; tout = Number(j.usage.completion_tokens) || tout; }
-      } catch { /* partial line */ }
-    }
-  }
-  // Recorded so the spend is visible; not billed to the customer's AI wallet (charged_usd 0).
-  if (cost > 0) {
-    try { await createAdminClient().from('ai_usage').insert({ model: 'opus', source: 'scope', tokens_in: tin, tokens_out: tout, cost_usd: cost, charged_usd: 0 }); }
-    catch (e) { console.error('[scope-organize] usage log', e); }
-  }
-  return wrote;
-}
-
 const fail = (msg: string, status = 400) => NextResponse.json({ error: msg }, { status });
 
 type Upload = { name?: string; mime?: string; data?: string };
@@ -110,7 +55,6 @@ export async function POST(req: NextRequest) {
   let text = typeof body.text === 'string' ? body.text : '';
   const file = body.file && body.file.data ? body.file : null;
   let media: Anthropic.ContentBlockParam | null = null;
-  let mediaPart: Part | null = null;
 
   if (file) {
     const name = (file.name || '').toLowerCase();
@@ -133,10 +77,8 @@ export async function POST(req: NextRequest) {
       return fail('Old-style .doc files can’t be read. Save it as .docx or PDF and try again.');
     } else if (name.endsWith('.pdf') || mime === 'application/pdf') {
       media = { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: buf.toString('base64') } };
-      mediaPart = { type: 'pdf', data: buf.toString('base64') };
     } else if (/^image\/(jpeg|png|webp|gif)$/.test(mime)) {
       media = { type: 'image', source: { type: 'base64', media_type: mime as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif', data: buf.toString('base64') } };
-      mediaPart = { type: 'image', mime, data: buf.toString('base64') };
     } else if (/\.(txt|md|csv|html?|rtf)$/.test(name) || mime.startsWith('text/')) {
       const s = buf.toString('utf8');
       if (/<(table|p|h[1-6]|div)\b/i.test(s)) html = s; else text = s;
@@ -158,57 +100,42 @@ export async function POST(req: NextRequest) {
   }
 
   if (!media && !scopeText(html) && !text.trim()) return fail('There is nothing to organize yet. Paste or upload the scope first.');
-  if (!process.env.ANTHROPIC_API_KEY && !process.env.OPENROUTER_API_KEY) return fail('The organizer is not set up on this site.', 503);
+  if (!process.env.ANTHROPIC_API_KEY) return fail('The organizer is not set up on this site.', 503);
 
   // Structure that survived (real tables / headings) is worth more than flat text.
   const source = html && /<(table|h2|h3|ul|ol)\b/i.test(html) ? html : (text.trim() || html);
-  const ask = media
-    ? 'Lay out the scope of work in this file.' + (source ? `\n\nText that came with it:\n\n${source}` : '')
-    : `Lay out this scope of work.\n\n<scope>\n${source}\n</scope>`;
   const content: Anthropic.ContentBlockParam[] = [];
   if (media) content.push(media);
-  content.push({ type: 'text', text: ask });
-  const gatewayParts: Part[] = [...(mediaPart ? [mediaPart] : []), { type: 'text', text: ask }];
+  content.push({
+    type: 'text',
+    text: media
+      ? 'Lay out the scope of work in this file.' + (source ? `\n\nText that came with it:\n\n${source}` : '')
+      : `Lay out this scope of work.\n\n<scope>\n${source}\n</scope>`,
+  });
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let sent = false;
-      const send = (s: string) => { sent = true; try { controller.enqueue(encoder.encode(s)); } catch { /* reader went away */ } };
-      const sorry = (m: string) => { try { controller.enqueue(encoder.encode('\n\u0000ERROR:' + m)); } catch { /* gone */ } };
-      const ac = new AbortController();
-      req.signal.addEventListener('abort', () => ac.abort());
+      const send = (s: string) => { try { controller.enqueue(encoder.encode(s)); } catch { /* reader went away */ } };
       try {
-        let direct: unknown = null;
-        if (process.env.ANTHROPIC_API_KEY) {
-          try {
-            const ms = claude().messages.stream({
-              model: MODEL,
-              max_tokens: 48000,
-              thinking: { type: 'adaptive' },
-              output_config: { effort: 'medium' },
-              system: SYSTEM,
-              messages: [{ role: 'user', content }],
-            });
-            ac.signal.addEventListener('abort', () => ms.abort());
-            ms.on('text', (delta) => send(delta));
-            const final = await ms.finalMessage();
-            if (final.stop_reason === 'refusal') sorry('The organizer could not work on this document.');
-            else if (final.stop_reason === 'max_tokens') sorry('This scope is too long to organize in one go. Do it in two halves.');
-            return;
-          } catch (e) {
-            if (ac.signal.aborted) return;
-            direct = e;
-            if (e instanceof Anthropic.APIError) console.error('[scope-organize] API', e.status, e.message);
-            else console.error('[scope-organize]', e);
-            // Something already reached the screen: don't start over on top of it.
-            if (sent) { sorry('It stopped part way. Tap Try again.'); return; }
-          }
-        }
-        // The direct account could not take it (no credit, key, rate limit): same model through the gateway.
-        const ok = await viaGateway(gatewayParts, send, ac.signal).catch((e) => { if (!ac.signal.aborted) console.error('[scope-organize] gateway', e); return false; });
-        if (!ok && !ac.signal.aborted) {
-          sorry(direct instanceof Anthropic.RateLimitError ? 'The organizer is busy. Try again in a minute.' : sent ? 'It stopped part way. Tap Try again.' : 'The organizer is unavailable right now. Your text is untouched.');
+        const ms = claude().messages.stream({
+          model: MODEL,
+          max_tokens: 48000,
+          thinking: { type: 'adaptive' },
+          output_config: { effort: 'medium' },
+          system: SYSTEM,
+          messages: [{ role: 'user', content }],
+        });
+        req.signal.addEventListener('abort', () => ms.abort());
+        ms.on('text', (delta) => send(delta));
+        const final = await ms.finalMessage();
+        if (final.stop_reason === 'refusal') send('\n\u0000ERROR:The organizer could not work on this document.');
+        else if (final.stop_reason === 'max_tokens') send('\n\u0000ERROR:This scope is too long to organize in one go. Do it in two halves.');
+      } catch (e) {
+        if (!req.signal.aborted) {
+          if (e instanceof Anthropic.RateLimitError) send('\n\u0000ERROR:The organizer is busy. Try again in a minute.');
+          else if (e instanceof Anthropic.APIError) { console.error('[scope-organize] API', e.status, e.message); send('\n\u0000ERROR:The organizer is unavailable right now. Your text is untouched.'); }
+          else { console.error('[scope-organize]', e); send('\n\u0000ERROR:Something went wrong. Your text is untouched.'); }
         }
       } finally {
         try { controller.close(); } catch { /* already closed */ }
