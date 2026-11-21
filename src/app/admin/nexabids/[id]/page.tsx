@@ -8,7 +8,7 @@ import {
   TAKEOFF_COLORS, UNITS_FOR, KIND_LABEL, PRINTED_SCALES, emptyTakeoff, normalizeTakeoff, itemQuantity, fmtQty, money,
   pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, bidTotals, itemCost, bidCsv, labelPoints, type SheetWord, type ItemPart, type AiRead, type AiSheet, type BidPricing, type AiDraft, type DraftItem,
 } from '@/lib/takeoff';
-import { readSheetVectors, snapPoint, traceRun, shapeAt, symbolAt, symbolInBox, findSymbols, type SheetVectors, type SymbolKey } from '@/lib/takeoff-vectors';
+import { readSheetVectors, snapPoint, traceRun, shapeAt, fillOptions, symbolAt, symbolInBox, findSymbols, type SheetVectors, type SymbolKey } from '@/lib/takeoff-vectors';
 
 /**
  * Bid from Plans: the measuring screen. The plan sheet is drawn from the PDF; what he measures is drawn on top
@@ -61,7 +61,8 @@ export default function TakeoffPage() {
   const [others, setOthers] = useState<{ page: number; pts: Pt[]; on: boolean }[]>([]);
   const [searching, setSearching] = useState('');
   const [moveStep, setMoveStep] = useState<null | 'pick' | { shape: string; idx: number }>(null);
-  const [minusNext, setMinusNext] = useState(false);                  // the next shape is a take-away (an opening)
+  const [minusNext, setMinusNext] = useState(false);
+  const [lastFill, setLastFill] = useState<null | { item: string; shape: string; options: { pts: Pt[]; area: number }[]; at: number }>(null);   // the last tapped-in space and the other outlines it could be                  // the next shape is a take-away (an opening)
   const [boxStart, setBoxStart] = useState<Pt | null>(null);          // first corner of the box drawn around one symbol
   // Ask the AI: his questions about this bid and its answers
   const [askJob, setAskJob] = useState('');
@@ -439,10 +440,13 @@ export default function TakeoffPage() {
       return;
     }
     if (mode === 'draw' && active && pickMode === 'whole' && active.kind !== 'count') {
-      const got = active.kind === 'length' ? traceRun(vecRef.current, raw, r) : shapeAt(vecRef.current, raw);
-      if (!got || got.length < (active.kind === 'area' ? 3 : 2)) { setSnapMark({ pt: raw, kind: 'miss' }); setTimeout(() => setSnapMark(null), 900); return; }
-      change((d) => ({ ...d, items: d.items.map((it) => (it.id === active.id ? { ...it, shapes: [...it.shapes, { id: uid(), page, pts: got, minus: minusNext || undefined }] } : it)) }));
+      const fill = active.kind === 'area' ? fillOptions(vecRef.current, raw) : null;
+      const got = active.kind === 'length' ? traceRun(vecRef.current, raw, r) : fill ? fill.options[fill.pick].pts : shapeAt(vecRef.current, raw);
+      if (!got || got.length < (active.kind === 'area' ? 3 : 2)) { setSnapMark({ pt: raw, kind: 'miss' }); setTimeout(() => setSnapMark(null), 900); if (active.kind === 'area') setFoundNote('The app could not find the edges around that spot. Tap in open space inside it, or tap each corner yourself.'); return; }
+      const sid = uid();
+      change((d) => ({ ...d, items: d.items.map((it) => (it.id === active.id ? { ...it, shapes: [...it.shapes, { id: sid, page, pts: got, minus: minusNext || undefined }] } : it)) }));
       setMinusNext(false);
+      if (fill) { setLastFill({ item: active.id, shape: sid, options: fill.options, at: fill.pick }); setFoundNote(fill.options.length > 1 ? 'Filled to the lines around it. Look at the edges. If it took too much or too little, press Smaller or Bigger.' : 'Filled to the lines around it. Look at the edges before you keep it.'); } else setLastFill(null);
       return;
     }
     const sn = snapOn ? snapPoint(vecRef.current, raw, r) : { pt: raw, kind: 'none' as const };
@@ -482,7 +486,12 @@ export default function TakeoffPage() {
       return { ...it, shapes: it.shapes.slice(0, -1) };
     }) }));
   };
-  const pick = (itemId: string) => { setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setFoundNote(''); setErase(false); setMoveStep(null); setLastSearch(null); setBoxStart(null); setMinusNext(false);
+  const refill = (step: number) => {
+    if (!lastFill) return; const at = lastFill.at + step; const o = lastFill.options[at]; if (!o) return;
+    change((d) => ({ ...d, items: d.items.map((it) => (it.id === lastFill.item ? { ...it, shapes: it.shapes.map((sh) => (sh.id === lastFill.shape ? { ...sh, pts: o.pts } : sh)) } : it)) }));
+    setLastFill({ ...lastFill, at });
+  };
+  const pick = (itemId: string) => { setLastFill(null); setDraft([]); setScalePts([]); setActiveId(itemId); setMode('draw'); setFoundNote(''); setErase(false); setMoveStep(null); setLastSearch(null); setBoxStart(null); setMinusNext(false);
     // an item that came from a table says which tag to count: start there
     const it = data.items.find((x) => x.id === itemId); const tg = it && it.kind === 'count' ? /marked (\S+) on the drawings/.exec(it.hint || '') : null;
     if (tg) { setTagText(tg[1]); setPickMode('tag'); } else setPickMode('points'); };
@@ -619,10 +628,16 @@ export default function TakeoffPage() {
                 </div>
               )}
               {mode === 'draw' && foundNote && <p className="text-[16px] font-semibold text-[#8fe3a8] mt-2 leading-snug">{foundNote}</p>}
+              {mode === 'draw' && lastFill && lastFill.options.length > 1 && active && lastFill.item === active.id && active.shapes.some((sh) => sh.id === lastFill.shape) && (
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <button disabled={lastFill.at >= lastFill.options.length - 1} onClick={() => refill(1)} className="min-h-[48px] rounded-xl border border-[#4ade80]/70 text-[16px] font-bold disabled:opacity-35">Smaller</button>
+                  <button disabled={lastFill.at <= 0} onClick={() => refill(-1)} className="min-h-[48px] rounded-xl border border-[#4ade80]/70 text-[16px] font-bold disabled:opacity-35">Bigger</button>
+                </div>
+              )}
               {mode === 'draw' && active && active.kind !== 'count' && vecState === 'ready' && (
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   <button onClick={() => { setPickMode('points'); setDraft([]); }} className={`min-h-[48px] rounded-xl border text-[16px] font-bold ${pickMode === 'points' ? 'border-[#C9A84C] bg-[#C9A84C]/20' : 'border-white/30'}`}>{active.kind === 'area' ? 'Tap the corners' : 'Tap point by point'}</button>
-                  <button onClick={() => { setPickMode('whole'); setDraft([]); }} className={`min-h-[48px] rounded-xl border text-[16px] font-bold ${pickMode === 'whole' ? 'border-[#4ade80] bg-[#4ade80]/15' : 'border-white/30'}`}>{active.kind === 'area' ? 'Tap inside a shape' : 'Tap a whole line'}</button>
+                  <button onClick={() => { setPickMode('whole'); setDraft([]); }} className={`min-h-[48px] rounded-xl border text-[16px] font-bold ${pickMode === 'whole' ? 'border-[#4ade80] bg-[#4ade80]/15' : 'border-white/30'}`}>{active.kind === 'area' ? 'Tap inside to fill it' : 'Tap a whole line'}</button>
                 </div>
               )}
               {vecState === 'ready' && !(mode === 'draw' && pickMode === 'whole') && (
@@ -892,7 +907,7 @@ function HelpSheet({ onClose }: { onClose: () => void }) {
     ['Set the scale', 'A plan is a small drawing of a big thing. Tap the orange "Set this sheet’s scale" button. If the app shows a green scale, tap "Use this". Do it once on each sheet you measure.'],
     ['Add what you want to measure', 'Tap "Add something to measure" and give it a name, like "Sidewalk". Pick how it is measured: a length, an area, or a count.'],
     ['Tap it out on the sheet', 'Drag with one finger to move the sheet. Pinch with two fingers to zoom in. A quick tap puts down a point. Zoom in before you tap: it is more exact. Tap "Finish this one" when you have gone all the way around.'],
-    ['Let the app do more of it', '"Tap a whole line" takes a whole line in one tap. "Box one, find the rest": tap two corners of a box around one symbol and every matching one is counted. "Count a tag" counts every place a tag like A or P-1 is printed.'],
+    ['Let the app do more of it', '"Tap inside to fill it" measures a room or a paved area from one tap in the middle of it; Smaller and Bigger step between the outlines it found. "Tap a whole line" takes a whole line in one tap. "Box one, find the rest": tap two corners of a box around one symbol and every matching one is counted. "Count a tag" counts every place a tag like A or P-1 is printed.'],
     ['Made a mistake?', '"Undo" takes back the last tap. "Remove one" takes away a measurement you tap. "Move a corner" lets you fix one corner.'],
     ['Let the AI help', 'The purple button has the AI read every sheet and draft the list of things to price. On an item, "Let the AI try it" has the AI mark it for you and then check its own marks. Always look at what it marked before you keep it. "Ask the AI" lets you ask it anything about the sheet, and it tells you how sure it is.'],
     ['Price it and send it', 'Type your price on each item. Tap the "Cost → Bid" bar to add overhead and profit. Then "Send to an estimate".'],

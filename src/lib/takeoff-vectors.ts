@@ -15,6 +15,7 @@ const ap = (m: M, x: number, y: number): Pt => [m[0] * x + m[2] * y + m[4], m[1]
 export type SheetVectors = {
   segs: Float32Array;            // x1,y1,x2,y2 per segment
   count: number;
+  wid?: Float32Array;            // drawn thickness of each segment, in points
   shapes: Pt[][];                // closed outlines (closed paths and rectangles)
   grid: Map<number, number[]>;   // cell -> segment numbers
   cell: number;
@@ -29,15 +30,17 @@ export async function readSheetVectors(page: any, OPS: any): Promise<SheetVector
   const base = page.getViewport({ scale: 1 }).transform as M;
   let ctm: M = [1, 0, 0, 1, 0, 0];
   const stack: M[] = [];
+  let lw = 1; const lws: number[] = []; const wid: number[] = [];
   const segs: number[] = [];
   const shapes: Pt[][] = [];
-  const push = (a: Pt, b: Pt) => { if (segs.length / 4 < MAX_SEGS && Math.hypot(b[0] - a[0], b[1] - a[1]) > 0.3) segs.push(a[0], a[1], b[0], b[1]); };
+  const push = (a: Pt, b: Pt) => { if (segs.length / 4 < MAX_SEGS && Math.hypot(b[0] - a[0], b[1] - a[1]) > 0.3) { segs.push(a[0], a[1], b[0], b[1]); wid.push(lw * Math.sqrt(Math.abs(ctm[0] * ctm[3] - ctm[1] * ctm[2]))); } };
   const P = (x: number, y: number) => { const q = ap(ctm, x, y); return ap(base, q[0], q[1]); };
 
   for (let i = 0; i < list.fnArray.length; i++) {
     const fn = list.fnArray[i]; const args = list.argsArray[i];
-    if (fn === OPS.save) stack.push(ctm);
-    else if (fn === OPS.restore) ctm = stack.pop() || [1, 0, 0, 1, 0, 0];
+    if (fn === OPS.save) { stack.push(ctm); lws.push(lw); }
+    else if (fn === OPS.restore) { ctm = stack.pop() || [1, 0, 0, 1, 0, 0]; lw = lws.pop() ?? lw; }
+    else if (fn === OPS.setLineWidth) lw = Number(args?.[0]) || 0;
     else if (fn === OPS.transform) ctm = mul(ctm, args as M);
     else if (fn === OPS.paintFormXObjectBegin) { stack.push(ctm); if (Array.isArray(args?.[0]) && args[0].length === 6) ctm = mul(ctm, args[0] as M); }
     else if (fn === OPS.paintFormXObjectEnd) ctm = stack.pop() || [1, 0, 0, 1, 0, 0];
@@ -74,7 +77,7 @@ export async function readSheetVectors(page: any, OPS: any): Promise<SheetVector
       const kk = key(cx, cy); const a = grid.get(kk); if (a) a.push(s); else grid.set(kk, [s]);
     }
   }
-  return { segs: f, count, shapes: shapes.filter((p) => polyArea(p) > 4), grid, cell };
+  return { segs: f, count, wid: new Float32Array(wid), shapes: shapes.filter((p) => polyArea(p) > 4), grid, cell };
 }
 
 const polyArea = (p: Pt[]) => { let a = 0; for (let i = 0; i < p.length; i++) { const q = p[(i + 1) % p.length]; a += p[i][0] * q[1] - q[0] * p[i][1]; } return Math.abs(a) / 2; };
@@ -380,4 +383,141 @@ export function shapeAt(v: SheetVectors | null, pt: Pt): Pt[] | null {
     const a = polyArea(poly); if (a < ba) { ba = a; best = poly; }
   }
   return best;
+}
+
+/* ── Fill: flood the space around a tap out to the lines that enclose it ── */
+type Raster = { w: number; h: number; x0: number; y0: number; res: number; wall: Uint8Array; grown: Map<number, Uint8Array> };
+const rasterCache = new WeakMap<SheetVectors, { tiers: number[]; map: Map<number, Raster> }>();
+const FILL_LEVELS = [1, 3, 6, 12, 20, 30];        // how far (in cells) the lines are thickened, which closes gaps twice that wide
+let fillSeen: Uint8Array | null = null; let fillStack: Int32Array | null = null;
+
+/** Line thicknesses worth trying on their own, heaviest first; the last one (0) is every line. */
+function tiersOf(v: SheetVectors): number[] {
+  if (!v.wid) return [0];
+  const len = new Map<number, number>(); let total = 0;
+  for (let i = 0; i < v.count; i++) { const k = Math.round(v.wid[i] * 100) / 100; const l = Math.hypot(v.segs[i * 4 + 2] - v.segs[i * 4], v.segs[i * 4 + 3] - v.segs[i * 4 + 1]); len.set(k, (len.get(k) || 0) + l); total += l; }
+  const ws = Array.from(len.keys()).sort((a, b) => b - a); const out: number[] = []; let cum = 0;
+  for (const wd of ws) { cum += len.get(wd)!; if (cum > total * 0.03 && cum < total * 0.97 && wd > 0) out.push(wd); }
+  return [...out.slice(0, 3), 0];
+}
+function rasterOf(v: SheetVectors, minW: number): Raster | null {
+  let c = rasterCache.get(v); if (!c) { c = { tiers: tiersOf(v), map: new Map() }; rasterCache.set(v, c); }
+  const hit = c.map.get(minW); if (hit) return hit;
+  let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+  for (let i = 0; i < v.count * 4; i += 2) { const x = v.segs[i], y = v.segs[i + 1]; if (x < x1) x1 = x; if (x > x2) x2 = x; if (y < y1) y1 = y; if (y > y2) y2 = y; }
+  if (!(x2 > x1) || !(y2 > y1)) return null;
+  let res = 1; while (((x2 - x1) / res + 8) * ((y2 - y1) / res + 8) > 5_000_000) res *= 1.25;
+  const x0 = x1 - 4 * res, y0 = y1 - 4 * res;
+  const w = Math.ceil((x2 - x1) / res) + 8, h = Math.ceil((y2 - y1) / res) + 8;
+  const wall = new Uint8Array(w * h);
+  for (let s = 0; s < v.count; s++) {
+    if (minW > 0 && v.wid && v.wid[s] < minW - 0.005) continue;
+    const ax = (v.segs[s * 4] - x0) / res, ay = (v.segs[s * 4 + 1] - y0) / res, bx = (v.segs[s * 4 + 2] - x0) / res, by = (v.segs[s * 4 + 3] - y0) / res;
+    const n = Math.max(1, Math.ceil(Math.max(Math.abs(bx - ax), Math.abs(by - ay)) * 2));
+    for (let i = 0; i <= n; i++) { const x = Math.floor(ax + ((bx - ax) * i) / n), y = Math.floor(ay + ((by - ay) * i) / n); if (x >= 0 && y >= 0 && x < w && y < h) wall[y * w + x] = 1; }
+  }
+  const r: Raster = { w, h, x0, y0, res, wall, grown: new Map() };
+  c.map.set(minW, r); return r;
+}
+/** Every cell within d cells (square reach) of a set cell. */
+function grow(src: Uint8Array, w: number, h: number, d: number): Uint8Array {
+  const mid = new Uint8Array(w * h), out = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) { const o = y * w; let last = -1e9; for (let x = 0; x < w; x++) { if (src[o + x]) last = x; if (x - last <= d) mid[o + x] = 1; } last = 1e9; for (let x = w - 1; x >= 0; x--) { if (src[o + x]) last = x; if (last - x <= d) mid[o + x] = 1; } }
+  for (let x = 0; x < w; x++) { let last = -1e9; for (let y = 0; y < h; y++) { if (mid[y * w + x]) last = y; if (y - last <= d) out[y * w + x] = 1; } last = 1e9; for (let y = h - 1; y >= 0; y--) { if (mid[y * w + x]) last = y; if (last - y <= d) out[y * w + x] = 1; } }
+  return out;
+}
+/** Straightens a traced outline (a closed ring): drops points within tol of the line between the points kept. */
+function simplify(p: Pt[], tol: number): Pt[] {
+  if (p.length < 4) return p;
+  let far = 0, fd = -1;
+  for (let i = 1; i < p.length; i++) { const d = Math.hypot(p[i][0] - p[0][0], p[i][1] - p[0][1]); if (d > fd) { fd = d; far = i; } }
+  const q = [...p, p[0]]; const keep = new Uint8Array(q.length); keep[0] = 1; keep[far] = 1;
+  const st: [number, number][] = [[0, far], [far, p.length]];
+  while (st.length) {
+    const [i, j] = st.pop()!; let m = -1, md = tol;
+    for (let k = i + 1; k < j; k++) { const c = closestOn(q[i], q[j], q[k]); const d = Math.hypot(c[0] - q[k][0], c[1] - q[k][1]); if (d > md) { md = d; m = k; } }
+    if (m > 0) { keep[m] = 1; st.push([i, m], [m, j]); }
+  }
+  return p.filter((_, i) => keep[i]);
+}
+
+function fillOnce(v: SheetVectors, R: Raster, pt: Pt, d: number): { pts: Pt[]; area: number } | 'leak' | null {
+  const { w, h, res } = R; const tx = Math.floor((pt[0] - R.x0) / res), ty = Math.floor((pt[1] - R.y0) / res);
+  if (tx < 1 || ty < 1 || tx >= w - 1 || ty >= h - 1) return null;
+  let g = R.grown.get(d); if (!g) { g = grow(R.wall, w, h, d); R.grown.set(d, g); }
+  if (g[ty * w + tx]) return null;                                     // the tap is on a line, or the space is too narrow for this
+  if (!fillSeen || fillSeen.length !== w * h) { fillSeen = new Uint8Array(w * h); fillStack = new Int32Array(w * h); } else fillSeen.fill(0);
+  const seen = fillSeen, st = fillStack!; let n = 0, cells = 0; let bx1 = tx, bx2 = tx, by1 = ty, by2 = ty; const cap = w * h * 0.4;
+  st[n++] = ty * w + tx; seen[ty * w + tx] = 1;
+  while (n) {
+    const c = st[--n]; cells++; const x = c % w, y = (c - x) / w;
+    if (x === 0 || y === 0 || x === w - 1 || y === h - 1 || cells > cap) return 'leak';
+    if (x < bx1) bx1 = x; if (x > bx2) bx2 = x; if (y < by1) by1 = y; if (y > by2) by2 = y;
+    if (!g[c - 1] && !seen[c - 1]) { seen[c - 1] = 1; st[n++] = c - 1; }
+    if (!g[c + 1] && !seen[c + 1]) { seen[c + 1] = 1; st[n++] = c + 1; }
+    if (!g[c - w] && !seen[c - w]) { seen[c - w] = 1; st[n++] = c - w; }
+    if (!g[c + w] && !seen[c + w]) { seen[c + w] = 1; st[n++] = c + w; }
+  }
+  if (cells < 12) return null;
+  // a window around what was filled, grown back out to the lines
+  const ox = Math.max(0, bx1 - d - 2), oy = Math.max(0, by1 - d - 2); const ww = Math.min(w, bx2 + d + 3) - ox, wh = Math.min(h, by2 + d + 3) - oy;
+  const sub = new Uint8Array(ww * wh); for (let y = by1; y <= by2; y++) for (let x = bx1; x <= bx2; x++) if (seen[y * w + x]) sub[(y - oy) * ww + (x - ox)] = 1;
+  const full = grow(sub, ww, wh, d);
+  let sx = -1, sy = -1; for (let i = 0; i < ww * wh; i++) if (full[i]) { sx = i % ww; sy = (i - sx) / ww; break; }
+  if (sx < 0) return null;
+  const at = (x: number, y: number) => x >= 0 && y >= 0 && x < ww && y < wh && full[y * ww + x] === 1;
+  const DX = [1, 0, -1, 0], DY = [0, 1, 0, -1];
+  const L = [[0, -1], [0, 0], [-1, 0], [-1, -1]], Rr = [[0, 0], [-1, 0], [-1, -1], [0, -1]];
+  // walk the outside edge, keeping the filled cells on the right
+  const ring: Pt[] = [[sx, sy]]; let x = sx, y = sy, dir = 0, steps = 0;
+  do {
+    let nd = dir;
+    if (at(x + L[dir][0], y + L[dir][1])) nd = (dir + 3) % 4; else if (!at(x + Rr[dir][0], y + Rr[dir][1])) nd = (dir + 1) % 4;
+    if (nd !== dir) { ring.push([x, y]); dir = nd; }
+    x += DX[dir]; y += DY[dir];
+  } while (++steps < 2_000_000 && !(x === sx && y === sy));
+  if (ring.length < 3) return null;
+  let pts = simplify(ring.map((p) => [R.x0 + (p[0] + ox) * res, R.y0 + (p[1] + oy) * res] as Pt), 1.6 * res);
+  pts = pts.map((p) => { const s = snapPoint(v, p, 3.2 * res); return s.kind === 'corner' ? s.pt : p; });   // onto the drawing's own corners
+  pts = pts.filter((p, i) => { const q = pts[(i + pts.length - 1) % pts.length]; return Math.hypot(p[0] - q[0], p[1] - q[1]) > 0.5; });
+  pts = simplify(pts, 0.8 * res);
+  return pts.length < 3 ? null : { pts, area: polyArea(pts) };
+}
+
+/**
+ * Tap inside a space (a room, a slab, paving): every sensible outline around the tap, biggest first, and which one to
+ * show first. Heavy lines are tried alone first, because walls are drawn heavy and notes thin; gaps are closed in steps,
+ * so a doorway does not let the fill run into the next room.
+ */
+export function fillOptions(v: SheetVectors | null, pt: Pt): { options: { pts: Pt[]; area: number }[]; pick: number } | null {
+  if (!v) return null;
+  if (!rasterOf(v, 0)) return null;
+  const big = (r: ReturnType<typeof fillOptionsAt>) => !!r && r.options[0].area >= 1500;
+  const first = fillOptionsAt(v, pt); if (big(first)) return first;
+  // the tap is on lettering or inside a little tag box: look just beside it
+  for (const reach of [16, 32]) for (let a = 0; a < 8; a++) {
+    const r = fillOptionsAt(v, [pt[0] + Math.cos((a * Math.PI) / 4) * reach, pt[1] + Math.sin((a * Math.PI) / 4) * reach]);
+    if (big(r)) return r;
+  }
+  return first;
+}
+function fillOptionsAt(v: SheetVectors, pt: Pt): { options: { pts: Pt[]; area: number }[]; pick: number } | null {
+  const tiers = rasterCache.get(v)!.tiers; const found: { pts: Pt[]; area: number }[] = [];
+  for (const t of tiers) {
+    const R = rasterOf(v, t); if (!R) continue;
+    for (const d of FILL_LEVELS) {
+      const f = fillOnce(v, R, pt, d);
+      if (f === null) break; if (f === 'leak') continue;
+      if (!found.some((o) => Math.abs(o.area - f.area) < Math.max(o.area, f.area) * 0.08)) found.push(f);
+    }
+  }
+  if (!found.length) return null;
+  found.sort((a, b) => b.area - a.area);
+  // show first: the smallest tidy outline (few corners, fills most of its own box, not a sliver); otherwise the biggest
+  let pick = 0;
+  found.forEach((o, i) => {
+    const xs = o.pts.map((p) => p[0]), ys = o.pts.map((p) => p[1]); const bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
+    if (o.pts.length <= 14 && Math.min(bw, bh) >= 24 && o.area >= bw * bh * 0.55) pick = i;
+  });
+  return { options: found, pick };
 }
