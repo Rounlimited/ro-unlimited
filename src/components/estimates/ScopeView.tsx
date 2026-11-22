@@ -134,7 +134,7 @@ export default function ScopeView({ html, theme = 'light', size = 15, className 
               {allClosed ? 'Open all' : 'Close all'}
             </button>
           </div>
-          <div ref={barRef} className={`sticky z-20 -mx-2 px-2 py-2 mb-4 border-b backdrop-blur ${t.bar}`} style={{ top: stickTop }}>
+          <div ref={barRef} className={`sticky z-20 -mx-2 px-2 py-2 mb-4 border-b backdrop-blur ${t.bar}`} style={stickTop > 0 ? { top: stickTop } : { top: 0, paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}>
             <div ref={rowRef} className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {titled.map((s, i) => (
                 <button key={s.id} type="button" data-chip={s.id} onClick={() => jump(s.id)} aria-current={active === s.id ? 'true' : undefined}

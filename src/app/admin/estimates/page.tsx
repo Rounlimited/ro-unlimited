@@ -64,14 +64,20 @@ interface Estimate {
 }
 
 const STATUS_TABS = [
-  { id: 'all', label: 'All' },
+  { id: 'pending', label: 'Pending' },
   { id: 'draft', label: 'Drafts' },
-  { id: 'sent', label: 'Sent' },
-  { id: 'viewed', label: 'Viewed' },
-  { id: 'accepted', label: 'Accepted' },
-  { id: 'declined', label: 'Declined' },
-  { id: 'expired', label: 'Expired' },
+  { id: 'paused', label: 'Paused' },
+  { id: 'closed', label: 'Declined' },
+  { id: 'all', label: 'All' },
 ] as const;
+
+/** Which list an estimate belongs in. An accepted one is a job now, so it is not in any estimates list. */
+function bucketOf(e: any): 'pending' | 'draft' | 'paused' | 'closed' | 'won' {
+  if (e.status === 'accepted' || e.signed_at) return 'won';
+  if (e.status === 'draft') return 'draft';
+  if (e.status === 'sent' || e.status === 'viewed') return e.link_enabled === false ? 'paused' : 'pending';
+  return 'closed';
+}
 
 const DIVISION_OPTIONS = [
   { value: 'all', label: 'All Divisions' },
@@ -85,8 +91,8 @@ const DIVISION_OPTIONS = [
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; label: string }> = {
   draft:    { bg: 'bg-white/5',       text: 'text-white/40',    border: 'border-white/10',   label: 'Draft' },
-  sent:     { bg: 'bg-blue-500/10',   text: 'text-blue-400',    border: 'border-blue-500/20', label: 'Sent' },
-  viewed:   { bg: 'bg-amber-500/10',  text: 'text-amber-400',   border: 'border-amber-500/20', label: 'Viewed' },
+  sent:     { bg: 'bg-blue-500/10',   text: 'text-blue-400',    border: 'border-blue-500/20', label: 'Pending · not opened' },
+  viewed:   { bg: 'bg-amber-500/10',  text: 'text-amber-400',   border: 'border-amber-500/20', label: 'Pending · opened' },
   accepted: { bg: 'bg-green-500/10',  text: 'text-green-400',   border: 'border-green-500/20', label: 'Accepted' },
   declined: { bg: 'bg-red-500/10',    text: 'text-red-400',     border: 'border-red-500/20', label: 'Declined' },
   expired:  { bg: 'bg-white/5',       text: 'text-white/30',    border: 'border-white/10',   label: 'Expired' },
@@ -152,7 +158,7 @@ export default function EstimatesPage() {
   const { isDesktop } = useDeviceContext();
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<string>('pending');
   const [needsOnly, setNeedsOnly] = useState(false);
   useEffect(() => { try { if (new URLSearchParams(window.location.search).get('needs') === '1') setNeedsOnly(true); } catch {} }, []);
   const [search, setSearch] = useState('');
@@ -201,7 +207,6 @@ export default function EstimatesPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (activeTab !== 'all') params.set('status', activeTab);
       if (divisionFilter !== 'all') params.set('division', divisionFilter);
       if (search) params.set('search', search);
 
@@ -218,11 +223,12 @@ export default function EstimatesPage() {
 
   useEffect(() => {
     fetchEstimates();
-  }, [activeTab, divisionFilter]);
+  }, [divisionFilter]);
 
   // Client-side search filtering
   const filtered = useMemo(() => {
-    const base = needsOnly ? estimates.filter((e) => waitingDays(e) != null).sort((a, b) => (waitingDays(b) || 0) - (waitingDays(a) || 0)) : estimates;
+    const inTab = estimates.filter((e) => { const b = bucketOf(e); return b !== 'won' && (activeTab === 'all' || b === activeTab); });
+    const base = needsOnly ? estimates.filter((e) => bucketOf(e) === 'pending' && waitingDays(e) != null).sort((a, b) => (waitingDays(b) || 0) - (waitingDays(a) || 0)) : inTab;
     if (!search) return base;
     const q = search.toLowerCase();
     return base.filter((e) => {
@@ -237,28 +243,32 @@ export default function EstimatesPage() {
         companyName.includes(q)
       );
     });
-  }, [estimates, search, needsOnly]);
+  }, [estimates, search, needsOnly, activeTab]);
 
   // Compute stats from all estimates (not filtered)
   const stats = useMemo(() => {
     const all = estimates;
-    const drafts = all.filter((e) => e.status === 'draft');
-    const pending = all.filter((e) => e.status === 'sent' || e.status === 'viewed');
-    const accepted = all.filter((e) => e.status === 'accepted');
+    const drafts = all.filter((e) => bucketOf(e) === 'draft');
+    const pending = all.filter((e) => bucketOf(e) === 'pending');
+    const accepted = all.filter((e) => bucketOf(e) === 'won');
+    const paused = all.filter((e) => bucketOf(e) === 'paused');
     const sum = (arr: Estimate[]) => arr.reduce((s, e) => s + (e.total || 0), 0);
     return {
       total:        { count: all.length,      value: sum(all) },
       drafts:       { count: drafts.length,   value: sum(drafts) },
       pending:      { count: pending.length,  value: sum(pending) },
       accepted:     { count: accepted.length, value: sum(accepted) },
+      paused:       { count: paused.length, value: sum(paused) },
+      opened:       pending.filter((e) => (e.view_count || 0) > 0).length,
     };
   }, [estimates]);
 
   // Tab counts
   const tabCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: estimates.length };
+    const counts: Record<string, number> = { all: 0 };
     for (const e of estimates) {
-      counts[e.status] = (counts[e.status] || 0) + 1;
+      const b = bucketOf(e); if (b === 'won') continue;
+      counts[b] = (counts[b] || 0) + 1; counts.all++;
     }
     return counts;
   }, [estimates]);
@@ -326,10 +336,10 @@ export default function EstimatesPage() {
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {[
-            { label: 'Total Estimates', count: stats.total.count, value: stats.total.value, color: '#C9A84C' },
-            { label: 'Drafts', count: stats.drafts.count, value: stats.drafts.value, color: '#6b7280' },
-            { label: 'Sent / Pending', count: stats.pending.count, value: stats.pending.value, color: '#3b8dd4' },
-            { label: 'Accepted', count: stats.accepted.count, value: stats.accepted.value, color: '#22c55e' },
+            { label: `Pending · ${stats.opened} opened by the customer`, count: stats.pending.count, value: stats.pending.value, color: '#3b8dd4' },
+            { label: 'Drafts, not sent yet', count: stats.drafts.count, value: stats.drafts.value, color: '#9ca3af' },
+            { label: 'Paused', count: stats.paused.count, value: stats.paused.value, color: '#f59e0b' },
+            { label: 'Accepted · now in Jobs', count: stats.accepted.count, value: stats.accepted.value, color: '#22c55e' },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -339,7 +349,7 @@ export default function EstimatesPage() {
                 className="absolute top-0 left-0 right-0 h-[2px]"
                 style={{ background: stat.color }}
               />
-              <p className="text-[12px] text-white/30 mb-1 font-medium">{stat.label}</p>
+              <p className="text-[14px] text-white/70 mb-1 font-medium leading-snug">{stat.label}</p>
               <p className="text-[22px] font-bold text-white leading-tight">
                 {loading ? '--' : stat.count}
               </p>
@@ -356,7 +366,7 @@ export default function EstimatesPage() {
           if (!waiting.length && !needsOnly) return null;
           const value = waiting.reduce((s, e) => s + (e.total || 0), 0);
           return (
-            <button onClick={() => { setNeedsOnly(!needsOnly); if (!needsOnly) setActiveTab('all'); }}
+            <button onClick={() => { setNeedsOnly(!needsOnly); if (!needsOnly) setActiveTab('pending'); }}
               className="w-full text-left rounded-xl p-4 mb-4 flex items-center gap-3 transition-colors"
               style={{ background: needsOnly ? 'rgba(249,115,22,0.18)' : 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,' + (needsOnly ? '0.7' : '0.4') + ')' }}>
               <AlertTriangle size={22} className="text-orange-300 flex-shrink-0" />
@@ -368,24 +378,32 @@ export default function EstimatesPage() {
           );
         })()}
 
+        {/* Accepted estimates are jobs: they live in Jobs, not here */}
+        {!loading && stats.accepted.count > 0 && (
+          <Link href="/admin/jobs" className="block rounded-xl px-4 py-3 mb-4 border border-green-500/40 bg-green-500/10">
+            <span className="block text-[17px] font-bold text-white">{stats.accepted.count} accepted {stats.accepted.count === 1 ? 'estimate is a job' : 'estimates are jobs'} now · {formatCurrency(stats.accepted.value)}</span>
+            <span className="block text-[15px] text-white/70">Once a customer accepts, it moves out of this list. Tap to open Jobs.</span>
+          </Link>
+        )}
+
         {/* Status filter tabs */}
-        <div className="flex gap-1 bg-[#111] border border-white/5 rounded-xl p-1 mb-4 overflow-x-auto">
+        <div className="flex gap-1 bg-[#111] border border-white/5 rounded-xl p-1 mb-2 overflow-x-auto">
           {STATUS_TABS.map((tab) => {
             const count = tabCounts[tab.id] || 0;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all whitespace-nowrap ${
+                onClick={() => { setActiveTab(tab.id); setNeedsOnly(false); }}
+                className={`flex items-center gap-1.5 px-4 min-h-[48px] rounded-lg text-[16px] font-semibold transition-all whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'bg-white/10 text-white'
-                    : 'text-white/30 hover:text-white/50'
+                    ? 'bg-white/15 text-white'
+                    : 'text-white/60 hover:text-white/80'
                 }`}
               >
                 {tab.label}
                 {!loading && count > 0 && (
-                  <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
-                    activeTab === tab.id ? 'bg-white/10 text-white/70' : 'bg-white/5 text-white/20'
+                  <span className={`text-[14px] px-2 py-0.5 rounded-full ${
+                    activeTab === tab.id ? 'bg-white/15 text-white' : 'bg-white/10 text-white/60'
                   }`}>
                     {count}
                   </span>
@@ -394,6 +412,7 @@ export default function EstimatesPage() {
             );
           })}
         </div>
+        <p className="text-[15px] text-white/65 leading-snug mb-4 px-1">{activeTab === 'pending' ? 'Sent to the customer and waiting on their answer. The pills show how many times they opened it and when.' : activeTab === 'draft' ? 'Not sent yet. Only you can see these.' : activeTab === 'paused' ? 'Sent, but you paused the customer link. They see a “please contact RO Unlimited” page until you turn it back on.' : activeTab === 'closed' ? 'The customer passed, or it ran out.' : 'Everything that is not a job yet.'}</p>
 
         {/* Search + Division filter */}
         <div className="flex gap-3 mb-5">
@@ -503,7 +522,7 @@ export default function EstimatesPage() {
               </thead>
               <tbody>
                 {sorted.map(estimate => {
-                  const statusCfg = STATUS_CONFIG[estimate.status] || STATUS_CONFIG.draft;
+                  const statusCfg = bucketOf(estimate) === 'paused' ? { bg: 'bg-amber-500/10', text: 'text-amber-300', border: 'border-amber-500/30', label: 'Paused' } : STATUS_CONFIG[estimate.status] || STATUS_CONFIG.draft;
                   const divCfg = divisionCfg(estimate.division);
                   const DivIcon = divCfg.icon;
                   const customerName = estimate.customer ? `${estimate.customer.first_name} ${estimate.customer.last_name}` : 'No Customer';
@@ -561,7 +580,7 @@ export default function EstimatesPage() {
           /* ── Mobile Card View ── */
           <div className="space-y-2">
             {filtered.map((estimate) => {
-              const statusCfg = STATUS_CONFIG[estimate.status] || STATUS_CONFIG.draft;
+              const statusCfg = bucketOf(estimate) === 'paused' ? { bg: 'bg-amber-500/10', text: 'text-amber-300', border: 'border-amber-500/30', label: 'Paused' } : STATUS_CONFIG[estimate.status] || STATUS_CONFIG.draft;
               const divCfg = divisionCfg(estimate.division);
               const DivIcon = divCfg.icon;
               const customerName = estimate.customer
