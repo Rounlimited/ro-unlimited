@@ -131,6 +131,21 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     }
     return NextResponse.json({ list });
   }
+  // Starting lists: the usual items for a kind of job, saved once and used to start the next bid
+  if (body.action === 'lists' || body.action === 'list_save' || body.action === 'list_delete') {
+    const { data: d } = await admin.from('app_settings').select('value').eq('key', 'nexabids_lists').maybeSingle();
+    let list: any[] = Array.isArray((d?.value as any)?.list) ? (d!.value as any).list : [];
+    const nm = String(body.name || '').trim().slice(0, 80); const key = nm.toLowerCase();
+    if (body.action === 'list_save') {
+      if (!nm || !Array.isArray(body.items) || !body.items.length) return fail('Give the list a name first.');
+      const keep = ['name', 'kind', 'unit', 'color', 'unitCost', 'depthIn', 'wastePct', 'group', 'heightFt', 'widthFt', 'parts', 'alt', 'laborHrs', 'laborRate', 'pitch', 'hint'];
+      const items = body.items.slice(0, 150).filter((i: any) => i && i.name && i.kind && i.unit).map((i: any) => Object.fromEntries(keep.filter((k) => i[k] !== undefined && i[k] !== null && i[k] !== '').map((k) => [k, i[k]])));
+      list = [{ name: nm, items, saved_at: new Date().toISOString() }, ...list.filter((x) => String(x.name).toLowerCase() !== key)].slice(0, 30);
+      await admin.from('app_settings').upsert({ key: 'nexabids_lists', value: { list } }, { onConflict: 'key' });
+    }
+    if (body.action === 'list_delete' && nm) { list = list.filter((x) => String(x.name).toLowerCase() !== key); await admin.from('app_settings').upsert({ key: 'nexabids_lists', value: { list } }, { onConflict: 'key' }); }
+    return NextResponse.json({ list });
+  }
   // Remembers what he charges for something, so the next bid can fill it in
   if (body.action === 'remember_price') {
     const name = String(body.name || '').trim().slice(0, 120); const price = Number(body.price) || 0; const unit = String(body.unit || 'EA').slice(0, 8);

@@ -42,7 +42,8 @@ export default function TakeoffPage() {
   const [activeId, setActiveId] = useState('');
   const [draft, setDraft] = useState<Pt[]>([]);
   const [scalePts, setScalePts] = useState<Pt[]>([]);
-  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai' | 'bid' | 'draft' | 'others' | 'help' | 'ask' | 'report'>(null);
+  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai' | 'bid' | 'draft' | 'others' | 'help' | 'ask' | 'report' | 'lists'>(null);
+  const [tipsOpen, setTipsOpen] = useState(() => { try { return Number(localStorage.getItem('nexabids-fill-tips') || 0) < 4; } catch { return true; } });
   const [comparing, setComparing] = useState(false);
   const [reportBusy, setReportBusy] = useState('');
   const [reportNote, setReportNote] = useState('');
@@ -509,7 +510,8 @@ export default function TakeoffPage() {
       const sid = uid();
       change((d) => ({ ...d, items: d.items.map((it) => (it.id === active.id ? { ...it, shapes: [...it.shapes, { id: sid, page, pts: got, minus: minusNext || undefined }] } : it)) }));
       setMinusNext(false);
-      if (fill) { setLastFill({ item: active.id, shape: sid, options: fill.options, at: fill.pick }); setFoundNote('Colored in. Now look at it on the sheet.'); } else setLastFill(null);
+      if (fill) { try { localStorage.setItem('nexabids-fill-tips', String(Number(localStorage.getItem('nexabids-fill-tips') || 0) + 1)); } catch { /* private window */ }
+      setLastFill({ item: active.id, shape: sid, options: fill.options, at: fill.pick }); setFoundNote('Colored in. Now look at it on the sheet.'); } else setLastFill(null);
       return;
     }
     const sn = snapOn ? snapPoint(vecRef.current, raw, r) : { pt: raw, kind: 'none' as const };
@@ -699,11 +701,13 @@ export default function TakeoffPage() {
                     <p className="text-[16px] text-white/90 leading-snug">Tap in the <b>middle</b> of the room or area, on open space, not on writing. The app colors it in out to the walls.</p>
                   ) : (<>
                     <p className="text-[16px] font-bold leading-snug">{active.shapes.filter((sh) => sh.page === page && !sh.minus).length} colored {active.shapes.filter((sh) => sh.page === page && !sh.minus).length === 1 ? 'piece' : 'pieces'} on this sheet · {fmtQty(itemQuantity(active, data.scales).quantity, active.unit)} {active.unit} so far</p>
-                    <ul className="mt-1.5 space-y-1.5 text-[16px] text-white/90 leading-snug">
+                    {!tipsOpen && <button onClick={() => setTipsOpen(true)} className="mt-1.5 min-h-[44px] text-[16px] font-semibold text-[#8fe3a8] underline underline-offset-4">Something look wrong? Show what to do</button>}
+                    {tipsOpen && <ul className="mt-1.5 space-y-1.5 text-[16px] text-white/90 leading-snug">
                       <li><b className="text-[#8fe3a8]">Part of the room still white?</b> Tap the white part. It gets colored and added to the total. Keep tapping until the whole room is colored.</li>
                       <li><b className="text-[#8fe3a8]">Colored too much?</b> Press {lastFill && lastFill.options.length > 1 ? 'Smaller' : 'Undo'}{lastFill && lastFill.options.length > 1 ? '' : ', then zoom in and tap again'}.</li>
                       <li><b className="text-[#8fe3a8]">Edges look wrong?</b> Press Undo, then use "Tap the corners" and tap each corner yourself. That is always exact.</li>
-                    </ul>
+                      <li><button onClick={() => setTipsOpen(false)} className="min-h-[40px] text-[15px] font-semibold text-white/70 underline underline-offset-4">Hide these steps</button></li>
+                    </ul>}
                   </>)}
                 </div>
               )}
@@ -759,6 +763,7 @@ export default function TakeoffPage() {
                 <button onClick={() => { setReportNote(''); setSheet('report'); }} className="min-h-[64px] text-left rounded-xl border border-white/30 bg-white/5 px-3 py-2"><span className="block text-[16px] font-bold leading-snug">Make a report</span><span className="block text-[14px] text-white/85 leading-snug">A PDF to print or send</span></button>
               </div>
             )}
+            {pages > 0 && <button onClick={() => setSheet('lists')} className="w-full min-h-[56px] text-left rounded-xl border border-white/25 bg-white/5 px-3 py-2"><span className="block text-[16px] font-bold leading-snug">Starting lists</span><span className="block text-[14px] text-white/85 leading-snug">{data.items.length ? 'Save this list for the next job like it, or add a saved one' : 'Start with the usual items for this kind of job'}</span></button>}
             {ai?.status === 'done' && <DraftCard draft={bidDraft} busy={draftBusy} canRead={canRead} taken={!!data.draftTaken} onStart={startDraft} onOpen={() => setSheet('draft')} />}
             {data.items.length === 0 && <p className="text-[16px] text-white/80 leading-snug px-1">Add what you want to measure: a pipe run, a slab, catch basins. Then tap it out on the sheet.</p>}
             {data.items.length > 8 && <p className="text-[15px] text-white/80 px-1">{readyCount} of {data.items.length} have a quantity. {data.items.length - readyCount} still to measure.</p>}
@@ -909,6 +914,8 @@ export default function TakeoffPage() {
             hint: x.quantity ? undefined : (x.measure || undefined), hintPage: x.quantity ? undefined : (x.page || undefined), shapes: [] }; })] })); setSheet(null); }} />
       )}
       {sheet === 'help' && <HelpSheet onClose={() => setSheet(null)} />}
+      {sheet === 'lists' && <ListsSheet takeoffId={id} items={data.items} onClose={() => setSheet(null)}
+        onAdd={(its) => { change((d) => { const have = new Set(d.items.map((x) => x.name.trim().toLowerCase())); const fresh = its.filter((x) => x && x.name && !have.has(String(x.name).trim().toLowerCase())).map((x, i) => ({ ...x, id: uid(), color: x.color || TAKEOFF_COLORS[(d.items.length + i) % TAKEOFF_COLORS.length], unitCost: Number(x.unitCost) || 0, shapes: [] })); return { ...d, items: [...d.items, ...fresh] }; }); }} />}
       {comparing && docRef.current && <NexaCompare doc={docRef.current} page={page} pageLabel={sheetLabel(page) || `Sheet ${page} of ${pages}`} items={data.items} onClose={() => setComparing(false)} />}
       {sheet === 'report' && (
         <Sheet title="Make a report" onClose={() => setSheet(null)}>
@@ -993,6 +1000,38 @@ function AskSheet({ chat, busy, label, error, where, about, onAsk, onReview, onC
         </div>
         {chat.length > 0 && !busy && <button onClick={onClear} className="mt-2 w-full min-h-[44px] rounded-lg text-[15px] text-white/70 font-semibold">Start a new conversation</button>}
       </div>
+    </Sheet>
+  );
+}
+
+/** Starting lists: the usual items for a kind of job. Save the list from a finished bid; start the next one from it. */
+function ListsSheet({ takeoffId, items, onAdd, onClose }: { takeoffId: string; items: TakeoffItem[]; onAdd: (items: any[]) => void; onClose: () => void }) {
+  const [list, setList] = useState<{ name: string; items: any[] }[] | null>(null);
+  const [nm, setNm] = useState(''); const [note, setNote] = useState(''); const [sure, setSure] = useState('');
+  const call = async (body: Record<string, unknown>) => { const r = await fetch('/api/admin/takeoffs/' + takeoffId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null); const d = r ? await r.json().catch(() => ({})) : {}; if (r && r.ok && Array.isArray(d.list)) { setList(d.list); return true; } setNote(d.error || 'Could not reach the server. Try again.'); return false; };
+  useEffect(() => { call({ action: 'lists' }); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  return (
+    <Sheet title="Starting lists" onClose={onClose}>
+      <p className="text-[16px] text-white/85 leading-snug">A starting list is the usual things you price on one kind of job, with your prices and build-ups, but no measurements. Start the next job like it with one tap, then measure.</p>
+      {note && <p className="mt-2 text-[16px] font-semibold text-[#8fe3a8] leading-snug">{note}</p>}
+      <p className="mt-3 text-[15px] font-bold uppercase tracking-wide text-white/60">Your saved lists</p>
+      {list === null ? <p className="mt-1 text-[16px] text-white/70 flex items-center gap-2"><Loader2 size={18} className="animate-spin" /> Loading…</p>
+        : !list.length ? <p className="mt-1 text-[16px] text-white/80 leading-snug">None yet. When a bid has the items you always use for that kind of job, save it below.</p>
+        : <div className="mt-1 space-y-2">{list.map((l) => (
+          <div key={l.name} className="rounded-xl border border-white/20 bg-white/[0.04] p-3">
+            <p className="text-[18px] font-bold leading-snug break-words">{l.name}</p>
+            <p className="text-[14px] text-white/75 leading-snug">{l.items.length} item{l.items.length === 1 ? '' : 's'}: {l.items.slice(0, 4).map((i) => i.name).join(', ')}{l.items.length > 4 ? '…' : ''}</p>
+            <div className="mt-2 flex gap-2">
+              <button onClick={() => { onAdd(l.items); setNote(`Added the items from "${l.name}" that were not already on this bid. Close this and measure them.`); }} className="flex-1 min-h-[50px] rounded-lg bg-[#C9A84C] text-black text-[17px] font-bold">Add to this bid</button>
+              <button onClick={async () => { if (sure !== l.name) { setSure(l.name); return; } setSure(''); if (await call({ action: 'list_delete', name: l.name })) setNote(`"${l.name}" was deleted.`); }} className={`min-h-[50px] px-3 rounded-lg border text-[15px] font-semibold ${sure === l.name ? 'border-red-400 bg-red-500/25' : 'border-white/25'}`}>{sure === l.name ? 'Tap again to delete' : 'Delete'}</button>
+            </div>
+          </div>))}</div>}
+      <p className="mt-4 text-[15px] font-bold uppercase tracking-wide text-white/60">Save this bid's list</p>
+      {!items.length ? <p className="mt-1 text-[16px] text-white/80 leading-snug">This bid has no items yet, so there is nothing to save.</p> : (<>
+        <p className="mt-1 text-[15px] text-white/80 leading-snug">Saves the {items.length} item{items.length === 1 ? '' : 's'} on this bid with their prices and build-ups. Measurements are not saved.</p>
+        <input value={nm} onChange={(e) => setNm(e.target.value)} placeholder="Name it, like Restroom building" className="mt-2 w-full min-h-[54px] px-4 rounded-xl bg-white/5 border border-white/25 text-[18px] text-white placeholder:text-white/40 focus:outline-none focus:border-[#C9A84C]" />
+        <button disabled={!nm.trim()} onClick={async () => { if (await call({ action: 'list_save', name: nm.trim(), items })) { setNote(`Saved as "${nm.trim()}".`); setNm(''); } }} className="mt-2 w-full min-h-[54px] rounded-xl border border-[#C9A84C] text-[17px] font-bold disabled:opacity-40">Save as a starting list</button>
+      </>)}
     </Sheet>
   );
 }

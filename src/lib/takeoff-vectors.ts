@@ -116,7 +116,7 @@ export function snapPoint(v: SheetVectors | null, pt: Pt, r: number): { pt: Pt; 
  * CAD files often break one line into many pieces and cross it with others, so where several pieces meet it
  * carries straight on (within 15 degrees) if exactly one piece does, and stops otherwise.
  */
-export function traceRun(v: SheetVectors | null, pt: Pt, r: number): Pt[] | null {
+export function traceRun(v: SheetVectors | null, pt: Pt, r: number, gap = 14): Pt[] | null {
   if (!v) return null;
   let first = -1; let fd = r;
   for (const s of near(v, pt, r)) { const [a, b] = seg(v, s); const q = closestOn(a, b, pt); const d = Math.hypot(q[0] - pt[0], q[1] - pt[1]); if (d < fd) { fd = d; first = s; } }
@@ -129,8 +129,22 @@ export function traceRun(v: SheetVectors | null, pt: Pt, r: number): Pt[] | null
     const pts: Pt[] = []; let p = from; let before = prev;
     for (let guard = 0; guard < 5000; guard++) {
       const cand = touching(p).filter((s) => !used.has(s));
-      if (!cand.length) break;
       const hx = p[0] - before[0], hy = p[1] - before[1]; const hl = Math.hypot(hx, hy) || 1;
+      if (!cand.length) {
+        // the line stops here. If it carries on straight ahead after a small gap (a dashed line, or a break for a label), jump the gap.
+        let jump = -1, jd = gap + 0.01; let land: Pt | null = null;
+        for (const s of near(v, [p[0] + (hx / hl) * gap * 0.5, p[1] + (hy / hl) * gap * 0.5], gap)) {
+          if (used.has(s)) continue; const [a2, b2] = seg(v, s);
+          for (const [e, o] of [[a2, b2], [b2, a2]] as [Pt, Pt][]) {
+            const dx = e[0] - p[0], dy = e[1] - p[1]; const dl = Math.hypot(dx, dy); if (dl <= tol || dl >= jd) continue;
+            if ((hx * dx + hy * dy) / (hl * dl) < 0.985) continue;                         // not straight ahead
+            const ox = o[0] - e[0], oy = o[1] - e[1]; const ol = Math.hypot(ox, oy) || 1; if ((hx * ox + hy * oy) / (hl * ol) < 0.966) continue;   // it does not carry on the same way
+            jump = s; jd = dl; land = e;
+          }
+        }
+        if (jump < 0 || !land) break;
+        before = p; p = land; pts.push(p); continue;
+      }
       const far = (s: number): Pt => { const [a, b] = seg(v, s); return Math.hypot(a[0] - p[0], a[1] - p[1]) < tol ? b : a; };
       let pick = -1;
       if (cand.length === 1) pick = cand[0];
