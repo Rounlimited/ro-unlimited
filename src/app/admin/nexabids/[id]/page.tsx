@@ -310,6 +310,16 @@ export default function TakeoffPage() {
   const active = data.items.find((i) => i.id === activeId) || null;
   const ftPerPt = Number(data.scales[String(page)]) || 0;
 
+  useEffect(() => {
+    try {
+      const probe = document.createElement('div'); probe.style.cssText = 'position:fixed;bottom:0;height:0;padding-bottom:env(safe-area-inset-bottom,0px);visibility:hidden';
+      document.body.appendChild(probe); const told = parseFloat(getComputedStyle(probe).paddingBottom) || 0; probe.remove();
+      const android = /Android/i.test(navigator.userAgent); const fills = window.innerHeight >= window.screen.height - 2;
+      document.documentElement.style.setProperty('--nxb-nav', android && fills && told < 1 ? '52px' : '0px');
+    } catch { /* leave it */ }
+    return () => { try { document.documentElement.style.removeProperty('--nxb-nav'); } catch { /* fine */ } };
+  }, []);
+
   /* ── Ask the AI ── */
   const ask = async (text: string, about?: { name: string; note: string } | null, whole?: boolean) => {
     const q = text.trim(); if (!q || askJob) return;
@@ -548,7 +558,7 @@ export default function TakeoffPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] bg-[#0a0a0a] text-white flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="fixed inset-0 z-[60] bg-[#0a0a0a] text-white flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), var(--nxb-nav, 0px))' }}>
       {/* top bar */}
       <div className="flex items-center gap-2 px-2 py-2 border-b border-white/10 bg-[#111]">
         <button onClick={() => router.push('/admin/nexabids')} aria-label="Back to plans" className="w-12 h-12 rounded-xl flex items-center justify-center active:bg-white/10 shrink-0"><ArrowLeft size={24} /></button>
@@ -888,8 +898,8 @@ export default function TakeoffPage() {
 
 function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-[80] bg-black/75 flex items-end sm:items-center justify-center p-2" onClick={onClose}>
-      <div className="w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-2xl bg-[#141414] border border-white/20 p-4" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[80] bg-black/75 flex items-end sm:items-center justify-center p-2" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)', paddingBottom: 'calc(max(env(safe-area-inset-bottom, 0px), var(--nxb-nav, 0px)) + 8px)' }} onClick={onClose}>
+      <div className="w-full max-w-lg max-h-full overflow-y-auto rounded-2xl bg-[#141414] border border-white/20 p-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 mb-3">
           <h2 className="flex-1 text-[21px] font-bold leading-tight">{title}</h2>
           <button onClick={onClose} aria-label="Close" className="w-12 h-12 rounded-xl flex items-center justify-center active:bg-white/10"><X size={24} /></button>
