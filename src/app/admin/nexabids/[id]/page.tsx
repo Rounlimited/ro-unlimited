@@ -8,6 +8,8 @@ import {
   TAKEOFF_COLORS, UNITS_FOR, KIND_LABEL, PRINTED_SCALES, emptyTakeoff, normalizeTakeoff, itemQuantity, fmtQty, money,
   pathLength, polygonArea, scaleFromKnown, scaleFromPrinted, scaleWords, parseFeet, takeoffLines, findPrintedScales, qtyAgreement, unitFromPrinted, bidTotals, itemCost, bidCsv, labelPoints, type SheetWord, type ItemPart, type AiRead, type AiSheet, type BidPricing, type AiDraft, type DraftItem,
 } from '@/lib/takeoff';
+import NexaCompare from '@/components/admin/NexaCompare';
+import { buildReport, drawMarks } from '@/lib/takeoff-report';
 import { readSheetVectors, snapPoint, traceRun, shapeAt, fillOptions, symbolAt, symbolInBox, findSymbols, type SheetVectors, type SymbolKey } from '@/lib/takeoff-vectors';
 
 /**
@@ -40,7 +42,10 @@ export default function TakeoffPage() {
   const [activeId, setActiveId] = useState('');
   const [draft, setDraft] = useState<Pt[]>([]);
   const [scalePts, setScalePts] = useState<Pt[]>([]);
-  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai' | 'bid' | 'draft' | 'others' | 'help' | 'ask'>(null);
+  const [sheet, setSheet] = useState<null | 'scale' | 'item' | 'send' | 'sheets' | 'ai' | 'bid' | 'draft' | 'others' | 'help' | 'ask' | 'report'>(null);
+  const [comparing, setComparing] = useState(false);
+  const [reportBusy, setReportBusy] = useState('');
+  const [reportNote, setReportNote] = useState('');
   // What the AI read off the sheets (names, scales, schedules, notes), and whether this sign-in may start a read
   const [ai, setAi] = useState<AiRead | null>(null);
   const [canRead, setCanRead] = useState(false);
@@ -319,6 +324,33 @@ export default function TakeoffPage() {
     } catch { /* leave it */ }
     return () => { try { document.documentElement.style.removeProperty('--nxb-nav'); } catch { /* fine */ } };
   }, []);
+
+  /* ── Report: a PDF with the quantity list and every marked sheet ── */
+  const makeReport = async (withPrices: boolean) => {
+    if (reportBusy) return; setReportNote(''); setReportBusy('Writing the list…');
+    try {
+      const doc = docRef.current; if (!doc) throw new Error('doc');
+      const blob = await buildReport({
+        name, data, withPrices, pages, sheetLabel, onStep: setReportBusy,
+        sheetImage: async (p, numbers) => {
+          const pg = await doc.getPage(p); const vp1 = pg.getViewport({ scale: 1 }); const k = Math.min(2000 / vp1.width, 2000 / vp1.height); const vp = pg.getViewport({ scale: k });
+          const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height); const ctx = c.getContext('2d'); if (!ctx) return null;
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+          await pg.render({ canvasContext: ctx, viewport: vp }).promise;
+          drawMarks(ctx, data.items, p, k, numbers);
+          const jb: Blob | null = await new Promise((res) => c.toBlob((x) => res(x), 'image/jpeg', 0.82)); if (!jb) return null;
+          const out = { jpeg: new Uint8Array(await jb.arrayBuffer()), w: c.width, h: c.height }; c.width = 1; c.height = 1; return out;
+        },
+      });
+      const fileName = (name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 60) || 'bid') + '-report.pdf';
+      const file = new File([blob], fileName, { type: 'application/pdf' });
+      let shared = false;
+      try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); shared = true; } } catch { /* he closed the share sheet, or it is not allowed here: save it instead */ }
+      if (!shared) { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 8000); }
+      setReportNote(shared ? 'Report sent to the app you picked.' : `Saved as ${fileName}. Look in your Downloads. From there you can print it or send it.`);
+    } catch { setReportNote('Could not make the report. Try again.'); }
+    setReportBusy('');
+  };
 
   /* ── Ask the AI ── */
   const ask = async (text: string, about?: { name: string; note: string } | null, whole?: boolean) => {
@@ -721,6 +753,12 @@ export default function TakeoffPage() {
                 <span className="flex-1 min-w-0"><span className="block text-[17px] font-bold leading-snug">Ask the AI about this sheet</span><span className="block text-[15px] text-white/85 leading-snug">{(data.chat || []).length ? 'Carry on the conversation' : 'What to check, what is missing, how sure it is'}</span></span>
               </button>
             )}
+            {pages > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => setComparing(true)} className="min-h-[64px] text-left rounded-xl border border-[#f59e0b]/60 bg-[#f59e0b]/10 px-3 py-2"><span className="block text-[16px] font-bold leading-snug">New version of this sheet?</span><span className="block text-[14px] text-white/85 leading-snug">See what changed</span></button>
+                <button onClick={() => { setReportNote(''); setSheet('report'); }} className="min-h-[64px] text-left rounded-xl border border-white/30 bg-white/5 px-3 py-2"><span className="block text-[16px] font-bold leading-snug">Make a report</span><span className="block text-[14px] text-white/85 leading-snug">A PDF to print or send</span></button>
+              </div>
+            )}
             {ai?.status === 'done' && <DraftCard draft={bidDraft} busy={draftBusy} canRead={canRead} taken={!!data.draftTaken} onStart={startDraft} onOpen={() => setSheet('draft')} />}
             {data.items.length === 0 && <p className="text-[16px] text-white/80 leading-snug px-1">Add what you want to measure: a pipe run, a slab, catch basins. Then tap it out on the sheet.</p>}
             {data.items.length > 8 && <p className="text-[15px] text-white/80 px-1">{readyCount} of {data.items.length} have a quantity. {data.items.length - readyCount} still to measure.</p>}
@@ -871,6 +909,17 @@ export default function TakeoffPage() {
             hint: x.quantity ? undefined : (x.measure || undefined), hintPage: x.quantity ? undefined : (x.page || undefined), shapes: [] }; })] })); setSheet(null); }} />
       )}
       {sheet === 'help' && <HelpSheet onClose={() => setSheet(null)} />}
+      {comparing && docRef.current && <NexaCompare doc={docRef.current} page={page} pageLabel={sheetLabel(page) || `Sheet ${page} of ${pages}`} items={data.items} onClose={() => setComparing(false)} />}
+      {sheet === 'report' && (
+        <Sheet title="Make a report" onClose={() => setSheet(null)}>
+          <p className="text-[17px] leading-relaxed">This makes one PDF file: the list of everything measured, then each sheet you marked with your marks drawn on it and numbered to match the list. Print it, or send it to a supplier, a sub or the customer.</p>
+          {data.items.every((it) => !it.shapes.length && !(Number(it.printedQty) > 0)) && <p className="mt-2 text-[16px] text-[#fcd34d] leading-snug">Nothing is measured yet, so the report would be empty. Measure something first.</p>}
+          <button disabled={!!reportBusy} onClick={() => makeReport(false)} className="mt-3 w-full min-h-[64px] rounded-xl bg-[#C9A84C] text-black px-3 text-left disabled:opacity-50"><span className="block text-[18px] font-bold leading-snug">Quantities only</span><span className="block text-[15px] leading-snug">No prices. Safe to send to a supplier for a quote.</span></button>
+          <button disabled={!!reportBusy} onClick={() => makeReport(true)} className="mt-2 w-full min-h-[64px] rounded-xl border border-white/30 px-3 text-left disabled:opacity-50"><span className="block text-[18px] font-bold leading-snug">With my prices</span><span className="block text-[15px] text-white/85 leading-snug">Shows your costs, overhead and profit. For you, not for customers.</span></button>
+          {reportBusy && <p className="mt-3 text-[17px] text-[#7dd3fc] flex items-center gap-2"><Loader2 size={22} className="animate-spin shrink-0" /> {reportBusy}</p>}
+          {reportNote && <p className="mt-3 text-[17px] font-semibold text-[#8fe3a8] leading-snug">{reportNote}</p>}
+        </Sheet>
+      )}
       {sheet === 'ask' && <AskSheet chat={data.chat || []} busy={!!askJob} label={askLabel} error={askErr} where={sheetLabel(page) || `sheet ${page}`} about={askAbout}
         onAsk={(t) => ask(t)} onReview={() => ask('Check my whole bid. What is missing, what looks doubled, and what looks too low or too high?', null, true)} onClear={() => { change((d) => ({ ...d, chat: [] })); setAskAbout(null); }} onClose={() => setSheet(null)} />}
       {sheet === 'others' && active && (
