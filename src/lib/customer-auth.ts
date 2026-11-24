@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { cookies } from 'next/headers';
 import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
-import { buildEmailHtml, getFromHeader, DEFAULT_FROM_EMAIL, fetchEmailAccounts, logEmail } from '@/lib/email';
+import { buildEmailHtml, getFromHeader, DEFAULT_FROM_EMAIL, fetchEmailAccounts, logEmail, linkFallback } from '@/lib/email';
 
 /**
  * Customer sign-in for the portal (rounlimited.com/my) — passwordless.
@@ -42,7 +42,7 @@ export async function requestLoginLink(emailRaw: string, next?: string | null): 
   const bodyHtml = `
     <p style="margin:0 0 16px">Hi ${esc(name)},</p>
     <p style="margin:0 0 20px">Tap the button to open your projects. The link works for 30 minutes and signs you in on this device for 90 days.</p>
-    <p style="margin:0 0 28px"><a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">Open My Projects</a></p>
+    <p style="margin:0 0 28px"><a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">Open My Projects</a></p>${linkFallback(link)}
     <p style="margin:0;color:#666;font-size:14px">Didn't ask for this? Ignore it — nothing happens unless the link is opened.</p>`;
   try {
     await fetchEmailAccounts();

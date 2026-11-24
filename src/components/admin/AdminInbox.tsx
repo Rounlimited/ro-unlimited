@@ -20,6 +20,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { emailHtmlToText } from "@/lib/email-text";
 import { useRouter } from "next/navigation";
 import {
   Inbox, Send, FileEdit, Star, Trash2, AlertOctagon, Archive,
@@ -171,6 +172,13 @@ function chipStyle(color: string): React.CSSProperties {
 }
 const fmtSize = (b: number) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 const cleanPreview = (s: string) => (s || "").replace(/\[image:[^\]]*\]/gi, " ").replace(/\s+/g, " ").trim();
+// FORWARD_KEEPS_LINKS: our own estimate, invoice and project emails keep only a one-line note as their text, so a
+// forward built from that note lost the button and its link. Emails we sent are rebuilt from the real email instead.
+const forwardText = (m: Message) => {
+  const fromHtml = m.body_html ? emailHtmlToText(m.body_html) : "";
+  if (m.direction === "outbound" && fromHtml) return fromHtml;
+  return m.body_text || fromHtml || snippet(m);
+};
 const snippet = (m: Message) => cleanPreview(m.body_text || (m.body_html || "").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ")).slice(0, 160);
 const sortNewest = (a: Thread, b: Thread) => new Date(b.latest_message).getTime() - new Date(a.latest_message).getTime();
 
@@ -899,7 +907,7 @@ export default function AdminInbox() {
     } else if (mode === "forward" && msg) {
       setComposeTo("");
       setComposeSubject(`Fwd: ${msg.subject.replace(/^fwd?:\s*/i, "")}`);
-      setComposeBody(`\n\n---------- Forwarded message ----------\nFrom: ${msg.from_email}\nDate: ${new Date(msg.created_at).toLocaleString()}\nSubject: ${msg.subject}\nTo: ${msg.to_email}\n\n${msg.body_text || snippet(msg)}`);
+      setComposeBody(`\n\n---------- Forwarded message ----------\nFrom: ${msg.from_email}\nDate: ${new Date(msg.created_at).toLocaleString()}\nSubject: ${msg.subject}\nTo: ${msg.to_email}\n\n${forwardText(msg)}`);
       setComposeOrig(msg);
     }
     goToView("compose");

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail } from '@/lib/email';
+import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail, linkFallback } from '@/lib/email';
 import { Resend } from 'resend';
 import { shouldEmailCustomer } from '@/lib/customer-auth';
 
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       <p style="margin:0 0 28px">
         <a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;
           padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">View Full Report</a>
-      </p>
+      </p>${linkFallback(link)}
       <p style="margin:0;color:#666">Questions any time — (864) 304-0139.</p>`;
 
     await fetchEmailAccounts();

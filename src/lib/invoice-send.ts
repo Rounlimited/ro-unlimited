@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server';
-import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail } from '@/lib/email';
+import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail, linkFallback } from '@/lib/email';
 import { Resend } from 'resend';
 import { generateInvoicePDF } from '@/lib/invoice-pdf';
 import { newShareToken } from '@/lib/invoices';
@@ -78,7 +78,7 @@ export async function sendInvoiceEmail(
           <a href="${viewLink}" style="color:#000;text-decoration:none;font-size:14px;font-weight:700;display:inline-block;">View Invoice Online</a>
         </td>
       </tr>
-    </table>
+    </table>${linkFallback(viewLink)}
     <p style="color:#999;font-size:13px;margin-top:20px;">${invoice.payment_instructions || 'Checks payable to RO Unlimited Construction & Development. For ACH or payment questions, call (864) 304-0139.'}</p>
   `;
 

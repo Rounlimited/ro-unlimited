@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
-import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail } from '@/lib/email';
+import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail, linkFallback } from '@/lib/email';
 import { Resend } from 'resend';
+import { emailHtmlToText } from '@/lib/email-text';
 import crypto from 'crypto';
 
 type RouteContext = { params: { id: string } };
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
             <a href="${viewLink}?from=email" target="_blank" style="display:block;padding:16px 36px;color:#000000;text-decoration:none;font-size:17px;font-weight:700;border-radius:10px;">${label}</a>
           </td>
         </tr>
-      </table>`;
+      </table>${linkFallback(viewLink)}`;
 
     // The LINK is the estimate. It's where they review, pick options, sign,
     // and later follow the whole job — so the email points at exactly one
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       to_email: to_email,
       subject,
       body_html: html,
-      body_text: `Estimate ${estimate.estimate_number}${message ? ` — ${message}` : ''}`,
+      body_text: emailHtmlToText(html),
       folder: 'sent',
       has_attachments: false,
       read: true,

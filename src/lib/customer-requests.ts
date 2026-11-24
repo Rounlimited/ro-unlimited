@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
-import { buildEmailHtml, getFromHeader, DEFAULT_FROM_EMAIL, fetchEmailAccounts, logEmail } from '@/lib/email';
+import { buildEmailHtml, getFromHeader, DEFAULT_FROM_EMAIL, fetchEmailAccounts, logEmail, linkFallback } from '@/lib/email';
 import { notifyTeam } from '@/lib/alerts';
 
 /**
@@ -48,7 +48,7 @@ export async function createRequest(args: { estimateId: string; kind: RequestKin
           <p style="margin:0 0 12px">To keep ${esc(project)} moving we need:</p>
           <p style="margin:0 0 16px;padding:12px 16px;background:#fdf6e7;border-left:3px solid #C9A84C;font-size:18px;font-weight:bold;color:#222">${esc(title)}${due ? `<span style="display:block;font-size:14px;font-weight:normal;color:#8a6d20;margin-top:4px">Needed by ${esc(due)}</span>` : ''}</p>
           ${row.details ? `<p style="margin:0 0 16px;color:#444">${esc(row.details)}</p>` : ''}
-          <p style="margin:0 0 28px"><a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">${kind === 'document' ? 'Upload It Here' : 'Open Your Project Page'}</a></p>
+          <p style="margin:0 0 28px"><a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">${kind === 'document' ? 'Upload It Here' : 'Open Your Project Page'}</a></p>${linkFallback(link)}
           <p style="margin:0;color:#666">You can send it right from your phone on that page. Questions — (864) 304-0139.</p>`;
         const resend = new Resend(process.env.RESEND_API_KEY);
         const { error: sendErr } = await resend.emails.send({ from: getFromHeader(DEFAULT_FROM_EMAIL), to: c.email, subject, html: buildEmailHtml(name, bodyHtml, subject, DEFAULT_FROM_EMAIL) });

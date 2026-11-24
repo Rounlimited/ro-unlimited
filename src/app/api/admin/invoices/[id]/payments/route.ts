@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { reconcilePayments } from '@/lib/invoices';
-import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail } from '@/lib/email';
+import { buildEmailHtml, getFromHeader, fetchEmailAccounts, DEFAULT_FROM_EMAIL, logEmail, linkFallback } from '@/lib/email';
 import { Resend } from 'resend';
 import { generateInvoicePDF } from '@/lib/invoice-pdf';
 
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             <tr><td style="background-color:#C9A84C;border-radius:6px;padding:12px 28px;">
               <a href="${viewLink}" style="color:#000;text-decoration:none;font-size:14px;font-weight:700;display:inline-block;">View ${isPaid ? 'Receipt' : 'Invoice'} Online</a>
             </td></tr>
-          </table>` : ''}
+          </table>${linkFallback(viewLink)}` : ''}
         `;
         const html = buildEmailHtml(name || 'Customer', bodyContent, subject, senderEmail);
 

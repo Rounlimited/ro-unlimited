@@ -271,6 +271,13 @@ export function buildEmailHtml(toName: string, bodyHtml: string, subject: string
 </html>`;
 }
 
+// LINK_FALLBACK: a button is only a styled link. If a mail program drops the styling, blocks it, or the email
+// gets forwarded as plain words, the reader still needs the address, so it is also written out under every button.
+export function linkFallback(url: string): string {
+  if (!url) return '';
+  return `<p style="margin:4px 0 20px;color:#bbbbbb;font-size:14px;line-height:1.6;">If the button doesn't open, use this link:<br><a href="${url}" style="color:#C9A84C;text-decoration:underline;word-break:break-all;">${url}</a></p>`;
+}
+
 export function stripHtml(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, '\n')

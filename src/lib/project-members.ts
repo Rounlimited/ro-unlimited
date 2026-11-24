@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
-import { buildEmailHtml, getFromHeader, DEFAULT_FROM_EMAIL, fetchEmailAccounts, logEmail } from '@/lib/email';
+import { buildEmailHtml, getFromHeader, DEFAULT_FROM_EMAIL, fetchEmailAccounts, logEmail, linkFallback } from '@/lib/email';
 
 /**
  * People on this project — extra people the owner's Project Page is shared
@@ -164,7 +164,7 @@ export async function sendMemberInvite(m: Member): Promise<{ ok: true } | { erro
     <p style="margin:0 0 16px">Hi ${esc(m.name.split(' ')[0] || m.name)},</p>
     <p style="margin:0 0 16px">RO Unlimited added you to the project page for <strong>${esc(proj)}</strong>${owner ? ` (${esc(owner)})` : ''}. It shows progress, what’s coming up, permits and inspections, and updates with photos.</p>
     <p style="margin:0 0 20px">${m.role === 'approver' ? 'You can also approve changes and send documents from the page.' : 'You can view the page and ask questions.'}</p>
-    <p style="margin:0 0 28px"><a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">Open the Project Page</a></p>
+    <p style="margin:0 0 28px"><a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">Open the Project Page</a></p>${linkFallback(link)}
     <p style="margin:0;color:#666;font-size:14px">This link is just for you — please don’t forward it. You can also sign in any time at rounlimited.com/my with this email.</p>`;
   try {
     await fetchEmailAccounts();

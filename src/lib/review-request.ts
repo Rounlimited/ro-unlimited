@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
-import { buildEmailHtml, getFromHeader, DEFAULT_FROM_EMAIL, fetchEmailAccounts, logEmail } from '@/lib/email';
+import { buildEmailHtml, getFromHeader, DEFAULT_FROM_EMAIL, fetchEmailAccounts, logEmail, linkFallback } from '@/lib/email';
 import { shouldEmailCustomer } from '@/lib/customer-auth';
 import { esc, logLine } from '@/lib/customer-notify';
 
@@ -46,7 +46,7 @@ export async function sendReviewRequest(estimateId: string, by: string, force = 
       <p style="margin:0 0 16px">Hi ${esc(name)},</p>
       <p style="margin:0 0 16px;font-size:17px;color:#222">Thank you for letting RO Unlimited handle <strong>${esc(project)}</strong>. We appreciate the work.</p>
       <p style="margin:0 0 20px;font-size:17px;color:#222">If you have a minute, would you share your honest experience in a Google review? It is how neighbors and other builders find a contractor they can trust, and every review is read by the owner.</p>
-      <p style="margin:0 0 24px"><a href="${go}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:16px 32px;border-radius:10px;font-weight:bold;font-size:18px">Write a Google review</a></p>
+      <p style="margin:0 0 24px"><a href="${go}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:16px 32px;border-radius:10px;font-weight:bold;font-size:18px">Write a Google review</a></p>${linkFallback(go)}
       <p style="margin:0 0 16px;color:#666;font-size:15px">It takes about a minute and works from your phone. If anything about the job was not right, please call us first at (864) 304-0139 so we can make it right.</p>
       <p style="margin:0;color:#222">Thank you,<br>JR &amp; the RO Unlimited team</p>`;
     const resend = new Resend(process.env.RESEND_API_KEY);

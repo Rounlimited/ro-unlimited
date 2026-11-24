@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 import { createAdminClient } from '@/lib/supabase/server';
-import { buildEmailHtml, getFromHeader, DEFAULT_FROM_EMAIL, fetchEmailAccounts, logEmail } from '@/lib/email';
+import { buildEmailHtml, getFromHeader, DEFAULT_FROM_EMAIL, fetchEmailAccounts, logEmail, linkFallback } from '@/lib/email';
 import { rollUpProgress } from '@/lib/reporting';
 
 /**
@@ -138,7 +138,7 @@ export async function replyToQuestion(args: {
       <p style="margin:0 0 20px;padding:12px 16px;background:#fdf6e7;border-left:3px solid #C9A84C;color:#222;font-size:17px;white-space:pre-line">${esc(text)}</p>
       <p style="margin:0 0 28px">
         <a href="${link}" style="display:inline-block;background:#C9A84C;color:#000;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:bold;font-size:16px">Open Your Project Page</a>
-      </p>
+      </p>${linkFallback(link)}
       <p style="margin:0;color:#666">Reply right there with any follow-up, or call (864) 304-0139.</p>`;
     const resend = new Resend(process.env.RESEND_API_KEY);
     const { error: sendErr } = await resend.emails.send({ from: getFromHeader(sender), to, subject, html: buildEmailHtml(name, bodyHtml, subject, sender) });
