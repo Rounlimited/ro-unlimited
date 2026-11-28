@@ -39,8 +39,8 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       `${IMG}/jr-tapping-sleeve.jpg`,
       `${IMG}/jr-ductile-iron-valve.jpg`,
       `${IMG}/jr-valve-trench.jpg`,
-      `${SUB}/waterline-bedded-pipe.jpg`,
-      `${SUB}/waterline-crew-install.jpg`,
+      `${IMG}/real/ro-tapping-sleeve-angle.jpg`,
+      `${IMG}/real/ro-ductile-valve-blue.jpg`,
     ],
     overview: [
       {
@@ -184,13 +184,13 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     tagline: 'Domestic Service and Fire Mains, Bedded and Tested to Spec',
     heroDescription:
       'Once the tap is made, you still need pipe from the main to the building — usually two lines. A domestic service feeds restrooms, kitchens, and equipment. A private fire service main feeds the sprinkler system and any on-site hydrants, and it answers to the fire code rather than the water authority. RO Unlimited installs both in ductile iron and C900 PVC, bedded, restrained, pressure-tested, disinfected, and cleared for service.',
-    heroImage: `${SUB}/waterline-bedded-pipe.jpg`,
+    heroImage: `${IMG}/real/ro-pvc-line-trench.jpg`,
     cardImage: `${IMG}/jr-ductile-iron-valve.jpg`,
     galleryImages: [
-      `${SUB}/waterline-bedded-pipe.jpg`,
-      `${SUB}/waterline-trench-bedding.jpg`,
-      `${SUB}/pvc-pipe-stock.jpg`,
-      `${SUB}/waterline-crew-install.jpg`,
+      `${IMG}/real/ro-pvc-line-trench.jpg`,
+      `${IMG}/real/ro-crew-trencher.jpg`,
+      `${IMG}/real/ro-ductile-valve-blue.jpg`,
+      `${IMG}/real/ro-utility-trench-at-building.jpg`,
       `${IMG}/jr-ductile-iron-valve.jpg`,
       `${IMG}/jr-valve-trench.jpg`,
     ],
@@ -286,13 +286,13 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     heroDescription:
       'A commercial sanitary sewer is three things working together: laterals running from each building, a gravity main collecting them, and manholes at every bend and junction so the line can be inspected, cleaned, and cameraed for the next fifty years. It all runs on gravity, which means every inch of fall matters. RO Unlimited builds to whichever sewer authority owns the line you tie into — ReWa around Greenville, OJRSA out in Oconee, the county and city systems over in Georgia — and to the state permit that goes with it. We test it, camera it, and hand you the closeout package.',
     heroImage: `${IMG}/jr-sewer-lateral.jpg`,
-    cardImage: `${SUB}/pvc-pipe-stock.jpg`,
+    cardImage: `${IMG}/real/ro-crew-sewer-pipe.jpg`,
     galleryImages: [
       `${IMG}/jr-sewer-lateral.jpg`,
-      `${SUB}/pvc-pipe-stock.jpg`,
-      `${SUB}/sewer-structures-hdpe.jpg`,
-      `${SUB}/waterline-trench-bedding.jpg`,
-      `${SUB}/waterline-crew-install.jpg`,
+      `${IMG}/real/ro-crew-sewer-pipe.jpg`,
+      `${IMG}/real/ro-sewer-wye-trench.jpg`,
+      `${IMG}/real/ro-pvc-line-trench.jpg`,
+      `${IMG}/real/ro-utility-trench-at-building.jpg`,
       `${IMG}/jr-underslab-rough.jpg`,
     ],
     overview: [
@@ -391,9 +391,9 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       `${IMG}/px-37627673.jpg`,
       `${IMG}/px-37627672.jpg`,
       `${SUB}/storm-hdpe-outfall.jpg`,
-      `${SUB}/storm-clogged-inlet.jpg`,
-      `${SUB}/storm-catch-basin-grate.jpg`,
-      `${SUB}/sewer-structures-hdpe.jpg`,
+      `${IMG}/real/ro-silt-fence.jpg`,
+      `${IMG}/real/ro-hydroseed-slope.jpg`,
+      `${IMG}/real/ro-construction-entrance.jpg`,
     ],
     overview: [
       {
@@ -487,14 +487,14 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     heroDescription:
       'A commercial septic system does the same job as a house system, but it is sized from the building’s actual daily water use rather than a bedroom count — and past 1,500 gallons a day, South Carolina requires a licensed professional engineer to design it. RO Unlimited holds a South Carolina Tier 2 onsite wastewater license, which is the level that state requires for commercial systems, large systems, pump systems, grease traps, and repairs. A Tier 1 installer cannot legally touch any of it. We are licensed in South Carolina and Georgia, so when the parcel sits over in Georgia we run it through that state’s onsite program instead.',
     heroImage: `${IMG}/jr-septic-tank-set.jpg`,
-    cardImage: `${SUB}/septic-soil-evaluation.jpg`,
+    cardImage: `${IMG}/real/ro-septic-tank-yard.jpg`,
     galleryImages: [
       `${IMG}/jr-septic-tank-set.jpg`,
-      `${SUB}/septic-soil-evaluation.jpg`,
-      `${SUB}/waterline-trench-bedding.jpg`,
-      `${SUB}/pvc-pipe-stock.jpg`,
+      `${IMG}/real/ro-sewer-wye-trench.jpg`,
+      `${IMG}/real/ro-crew-loading-skid-steer.jpg`,
+      `${IMG}/real/ro-pvc-line-trench.jpg`,
       `${IMG}/jr-sewer-lateral.jpg`,
-      `${SUB}/waterline-crew-install.jpg`,
+      `${IMG}/real/ro-mass-excavation.jpg`,
     ],
     overview: [
       {
@@ -592,8 +592,8 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       `${SUB}/grease-commercial-kitchen.jpg`,
       `${SUB}/grease-fog-source.jpg`,
       `${IMG}/jr-underslab-rough.jpg`,
-      `${SUB}/pvc-pipe-stock.jpg`,
-      `${SUB}/sewer-structures-hdpe.jpg`,
+      `${IMG}/real/ro-crew-sewer-pipe.jpg`,
+      `${IMG}/real/ro-utility-trench-at-building.jpg`,
     ],
     overview: [
       {
