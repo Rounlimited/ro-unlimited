@@ -60,8 +60,9 @@ export default function SiteVisitorBeacon() {
     };
     const onScrollInter = () => { onScroll(); const n = Date.now(); if (n - lastMove > 700) { inter++; lastMove = n; } };
     const onMove = () => { const n = Date.now(); if (n - lastMove > 1500) { inter++; lastMove = n; } };
-    const onTap = (e: Event) => {
-      inter++;
+    const onTap = () => { inter++; };
+    // REAL_CLICKS: a finger landing on a link while scrolling is not a tap on it. Only a finished click is listed.
+    const onClick = (e: Event) => {
       const el = (e.target as HTMLElement | null)?.closest?.('a,button');
       if (el && clicks.length < 30) {
         const href = (el as HTMLAnchorElement).getAttribute?.('href') || '';
@@ -82,13 +83,14 @@ export default function SiteVisitorBeacon() {
     addEventListener('scroll', onScrollInter, { passive: true });
     addEventListener('pointermove', onMove, { passive: true });
     addEventListener('pointerdown', onTap, { passive: true });
+    addEventListener('click', onClick, { passive: true, capture: true });
     addEventListener('keydown', onKey);
     document.addEventListener('visibilitychange', onVis);
     const onHide = () => finish(true);
     addEventListener('pagehide', onHide);
     onScroll();
     return () => {
-      removeEventListener('scroll', onScrollInter); removeEventListener('pointermove', onMove); removeEventListener('pointerdown', onTap);
+      removeEventListener('scroll', onScrollInter); removeEventListener('pointermove', onMove); removeEventListener('pointerdown', onTap); removeEventListener('click', onClick, { capture: true });
       removeEventListener('keydown', onKey); document.removeEventListener('visibilitychange', onVis); removeEventListener('pagehide', onHide);
       if (!ended) finish(false);   // moving to another page inside the site
     };
