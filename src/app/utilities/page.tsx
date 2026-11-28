@@ -30,13 +30,13 @@ const TICKER = 'WATER MAIN TAPS \u2022 DUCTILE IRON \u2022 C900 PVC \u2022 SANIT
 const CAPABILITIES = [
   { num: '01', slug: 'water-main-taps', title: 'Water Main Taps & Hot Taps', img: '/images/utilities/jr-hot-tap.jpg',
     desc: 'Live-main connections without shutting the system down. Tapping sleeves, valves, and pressure connections done under license.' },
-  { num: '02', slug: 'water-lines', title: 'Ductile Iron & C900 Water Lines', img: '/images/utilities/jr-ductile-iron-valve.jpg',
+  { num: '02', slug: 'water-lines', title: 'Ductile Iron & C900 Water Lines', img: '/images/utilities/real/ro-vest-pipe-work.jpg',
     desc: 'Black bolted ductile iron and big-bore C900 PVC \u2014 domestic service and fire lines, bedded, restrained, and pressure-tested to spec.' },
   { num: '03', slug: 'sanitary-sewer', title: 'Sanitary Sewer Installation', img: '/images/utilities/real/ro-crew-sewer-pipe.jpg',
     desc: 'Gravity sewer mains, laterals, and manholes \u2014 laser-graded fall, tied into municipal systems clean the first time.' },
   { num: '04', slug: 'storm-drainage', title: 'Storm Drainage Systems', img: '/images/utilities/px-37627672.jpg',
     desc: 'PVC and black corrugated HDPE storm runs, catch basins, and drainage structures \u2014 the package that gets your site through inspection.' },
-  { num: '05', slug: 'commercial-septic', title: 'Tier 2 Septic Systems', img: '/images/utilities/jr-septic-tank-set.jpg',
+  { num: '05', slug: 'commercial-septic', title: 'Tier 2 Septic Systems', img: '/images/utilities/real/ro-crew-setting-tank.jpg',
     desc: 'Engineered and conventional septic under a South Carolina Tier 2 license \u2014 commercial-scale systems, pump tanks, and drain fields.' },
   { num: '06', slug: 'grease-interceptors', title: 'Commercial Grease Traps', img: '/images/utilities/jr-grease-interceptor.jpg',
     desc: 'Interceptors and grease traps for restaurants and QSR builds \u2014 sized, set, plumbed, and inspection-ready.' },
@@ -51,11 +51,11 @@ const PROCESS = [
 
 // RO's own photos only (crew in RO shirts first). No stock in this strip.
 const GALLERY = [
-  '/images/utilities/real/ro-crew-sewer-pipe.jpg',
+  '/images/utilities/real/ro-vest-pipe-work.jpg',
   '/images/utilities/jr-hot-tap.jpg',
-  '/images/utilities/real/ro-crew-trencher.jpg',
-  '/images/utilities/jr-tapping-sleeve.jpg',
-  '/images/utilities/real/ro-pvc-line-trench.jpg',
+  '/images/utilities/real/ro-crew-at-trench.jpg',
+  '/images/utilities/real/ro-crew-setting-tank.jpg',
+  '/images/utilities/real/ro-crew-sewer-pipe.jpg',
   '/images/utilities/jr-grease-interceptor.jpg',
 ];
 
@@ -203,8 +203,8 @@ export default function UtilitiesPage() {
 
       {/* â•â•â• HERO â•â•â• */}
       <section ref={heroRef} className="relative min-h-[100svh] flex flex-col overflow-hidden">
-        <Image src="/images/utilities/real/ro-crew-sewer-pipe-tall.jpg" alt="RO Unlimited crew carrying sewer pipe on a job site" fill priority className="object-cover sm:hidden" sizes="100vw" style={{ zIndex: 0 }} />
-        <Image src="/images/utilities/real/ro-crew-loading-skid-steer.jpg" alt="RO Unlimited crew loading a track loader for a utility job" fill priority className="object-cover hidden sm:block" sizes="100vw" style={{ zIndex: 0 }} />
+        <Image src="/images/utilities/real/ro-crew-at-trench-tall.jpg" alt="RO Unlimited crew member checking an open utility trench" fill priority className="object-cover sm:hidden" sizes="100vw" style={{ zIndex: 0 }} />
+        <Image src="/images/utilities/real/ro-crew-setting-tank.jpg" alt="RO Unlimited crew setting a tank with an excavator" fill priority className="object-cover hidden sm:block" sizes="100vw" style={{ zIndex: 0 }} />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to right, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.92) 30%, rgba(10,10,10,0.6) 55%, rgba(0,0,0,0.15) 80%)' }} />
         <div className="absolute inset-0" style={{ zIndex: 1, background: 'linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, transparent 20%, transparent 75%, rgba(10,10,10,0.95) 100%)' }} />
         <div className="absolute top-1/3 left-1/4 w-[700px] h-[700px] pointer-events-none" style={{ zIndex: 2, background: 'radial-gradient(circle, rgba(201,168,76,0.05) 0%, transparent 70%)' }} />
@@ -422,7 +422,7 @@ export default function UtilitiesPage() {
 
       {/* â•â•â• CTA â•â•â• */}
       <section ref={ctaRef} className="py-24 sm:py-32 relative border-t border-ro-gray-800 overflow-hidden">
-        <Image src="/images/utilities/real/ro-crew-sewer-pipe.jpg" alt="" fill className="object-cover opacity-15" sizes="100vw" aria-hidden="true" />
+        <Image src="/images/utilities/real/ro-crew-at-trench.jpg" alt="" fill className="object-cover opacity-15" sizes="100vw" aria-hidden="true" />
         <div className="absolute inset-0 bg-gradient-to-b from-ro-black via-ro-black/80 to-ro-black" />
         <div className="cta-inner relative z-10 max-w-3xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-ro-white font-heading text-3xl sm:text-5xl tracking-tight uppercase leading-[0.95] mb-6">Put Your Utilities<br /><span className="gradient-text-gold">In Licensed Hands</span></h2>

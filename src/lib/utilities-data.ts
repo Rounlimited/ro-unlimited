@@ -40,7 +40,7 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
       `${IMG}/jr-ductile-iron-valve.jpg`,
       `${IMG}/jr-valve-trench.jpg`,
       `${IMG}/real/ro-tapping-sleeve-angle.jpg`,
-      `${IMG}/real/ro-ductile-valve-blue.jpg`,
+      `${IMG}/real/ro-vest-pipe-work.jpg`,
     ],
     overview: [
       {
@@ -184,13 +184,13 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     tagline: 'Domestic Service and Fire Mains, Bedded and Tested to Spec',
     heroDescription:
       'Once the tap is made, you still need pipe from the main to the building — usually two lines. A domestic service feeds restrooms, kitchens, and equipment. A private fire service main feeds the sprinkler system and any on-site hydrants, and it answers to the fire code rather than the water authority. RO Unlimited installs both in ductile iron and C900 PVC, bedded, restrained, pressure-tested, disinfected, and cleared for service.',
-    heroImage: `${IMG}/real/ro-pvc-line-trench.jpg`,
+    heroImage: `${IMG}/real/ro-crew-at-trench.jpg`,
     cardImage: `${IMG}/jr-ductile-iron-valve.jpg`,
     galleryImages: [
-      `${IMG}/real/ro-pvc-line-trench.jpg`,
+      `${IMG}/real/ro-crew-at-trench.jpg`,
+      `${IMG}/real/ro-vest-pipe-work.jpg`,
       `${IMG}/real/ro-crew-trencher.jpg`,
-      `${IMG}/real/ro-ductile-valve-blue.jpg`,
-      `${IMG}/real/ro-utility-trench-at-building.jpg`,
+      `${IMG}/real/ro-pvc-line-trench.jpg`,
       `${IMG}/jr-ductile-iron-valve.jpg`,
       `${IMG}/jr-valve-trench.jpg`,
     ],
@@ -486,13 +486,13 @@ export const UTILITY_SUB_SERVICES: UtilitySubService[] = [
     tagline: 'The License Level South Carolina Requires for Commercial Work',
     heroDescription:
       'A commercial septic system does the same job as a house system, but it is sized from the building’s actual daily water use rather than a bedroom count — and past 1,500 gallons a day, South Carolina requires a licensed professional engineer to design it. RO Unlimited holds a South Carolina Tier 2 onsite wastewater license, which is the level that state requires for commercial systems, large systems, pump systems, grease traps, and repairs. A Tier 1 installer cannot legally touch any of it. We are licensed in South Carolina and Georgia, so when the parcel sits over in Georgia we run it through that state’s onsite program instead.',
-    heroImage: `${IMG}/jr-septic-tank-set.jpg`,
+    heroImage: `${IMG}/real/ro-crew-setting-tank.jpg`,
     cardImage: `${IMG}/real/ro-septic-tank-yard.jpg`,
     galleryImages: [
+      `${IMG}/real/ro-crew-setting-tank.jpg`,
       `${IMG}/jr-septic-tank-set.jpg`,
       `${IMG}/real/ro-sewer-wye-trench.jpg`,
       `${IMG}/real/ro-crew-loading-skid-steer.jpg`,
-      `${IMG}/real/ro-pvc-line-trench.jpg`,
       `${IMG}/jr-sewer-lateral.jpg`,
       `${IMG}/real/ro-mass-excavation.jpg`,
     ],
