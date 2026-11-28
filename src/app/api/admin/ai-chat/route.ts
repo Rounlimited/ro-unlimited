@@ -10,6 +10,7 @@ import { rollUpProgress, cadenceLabel } from '@/lib/reporting';
 import { LETTER_TYPES } from '@/lib/letters';
 import { summarizeVisits, eventSentence, fmtSeconds, timeAgo } from '@/lib/doc-events-summary';
 import { getTraffic } from '@/lib/cloudflare-analytics';
+import { visitorReport } from '@/lib/visitor-report';
 import { computeInsights } from '@/lib/analytics-insights';
 import { recalcEstimateTotals, syncScheduleAmounts } from '@/lib/estimates';
 import { resolveCustomerName } from '@/lib/customers';
@@ -295,6 +296,8 @@ const READ_TOOLS = [
     input_schema: { type: 'object' as const, properties: { days: { type: 'number', description: 'Window in days (default 30)' } } } },
   { name: 'get_website_traffic', description: 'Website traffic (Cloudflare, bots removed): visits/page views by day, most-read pages, referrers, countries, devices. Use for "how is the website doing", "where do visitors come from".',
     input_schema: { type: 'object' as const, properties: { days: { type: 'number', description: 'Window in days (default 30)' } } } },
+  { name: 'find_website_visitors', description: 'The visitor log for the public website: each real person who looked at rounlimited.com in a time window, with when, the town their connection shows, home internet or cell data, phone or computer, how they arrived (typed the address / Google / an email link), and every page with reading time and scroll depth. Staff devices and robots are separated out. Use for "I gave someone my card yesterday at 11, did they look at the site", "who was on the site today", "did anyone from Easley visit". Read only.',
+    input_schema: { type: 'object' as const, properties: { since: { type: 'string', description: 'Start of the window in Eastern time, like 2026-11-27T11:00. Default: 24 hours ago.' }, until: { type: 'string', description: 'End of the window in Eastern time. Default: now.' } } } },
   { name: 'get_industry_news', description: "Today's curated construction news: the featured picks with why-it-matters lines, ticker headlines, Tricks-of-the-Trade videos, material price moves (BLS m/m) and any Upstate weather alerts. Filter by category (local, codes, safety, trade, tech, equipment, business, tricks) or search by keyword. Use for \"what's in the news\", \"any code changes\", \"what's lumber doing\".",
     input_schema: { type: 'object' as const, properties: { category: { type: 'string', description: 'local | codes | safety | trade | tech | equipment | business | tricks' }, query: { type: 'string', description: 'Keyword search in headlines' }, limit: { type: 'number', description: 'Max items (default 12)' } } } },
   { name: 'get_material_prices', description: 'Current producer-price moves for lumber, steel, concrete, diesel, copper, gypsum (month over month, BLS). Use for pricing bids and "what are material prices doing".',
@@ -882,7 +885,7 @@ for (const t of ALL_TOOLS as any[]) {
 const SIGNED_ASK_MINUTES = 30;
 
 /** Look-up tools offered to the Claude app through the RO connector (test). Nothing here changes data. */
-const MCP_READ_TOOLS = ['search_customers', 'search_estimates', 'get_estimate_details', 'get_estimate_scope', 'search_invoices', 'get_invoice_details', 'get_ar_summary', 'list_tasks', 'get_business_stats', 'get_customer_activity', 'search_cost_library', 'get_job_weather', 'list_open_questions'];
+const MCP_READ_TOOLS = ['search_customers', 'search_estimates', 'get_estimate_details', 'get_estimate_scope', 'search_invoices', 'get_invoice_details', 'get_ar_summary', 'list_tasks', 'get_business_stats', 'get_customer_activity', 'search_cost_library', 'get_job_weather', 'list_open_questions', 'find_website_visitors'];
 
 /* ── Claude through the owner's own subscription (TEST) ───────────────
    Model 'claude-sub' does not call any pay-per-use service. The question is put in a queue (ai_sub_jobs) and a
@@ -2827,6 +2830,10 @@ async function executeToolInner(name: string, input: any, supabase: ReturnType<t
       return { result: lines.join('\n') };
     }
 
+    case 'find_website_visitors': {
+      return { result: await visitorReport(supabase, input.since, input.until) };
+    }
+
     case 'get_industry_news': {
       const limit = Math.min(30, Number(input.limit) || 12);
       let q = supabase.from('news_items').select('source_name, category, is_local, title, url, summary, published_at, featured, ticker, ai_take, ai_tag, score').eq('hidden', false).order('published_at', { ascending: false }).limit(limit * 3);
@@ -3193,9 +3200,9 @@ const INVOICE_TOOL_NAMES = new Set(['search_invoices','get_invoice_details','get
 const ESTIMATE_TOOL_NAMES = new Set(['create_estimate','get_estimate_details','search_estimates','add_line_items','update_line_items','delete_line_items','update_estimate','get_estimate_scope','edit_estimate_scope','update_estimate_status','set_payment_schedule','send_estimate','duplicate_estimate','check_estimate_pricing','set_link_status','search_cost_library','search_templates','search_disclaimers','generate_share_link']);
 const TASK_TOOL_NAMES = new Set(['create_task','list_tasks','complete_task','snooze_task','update_task','delete_task','get_daily_briefing']);
 
-const ANALYTICS_TOOL_NAMES = new Set(['get_customer_activity', 'get_analytics_overview', 'get_website_traffic', 'get_industry_news', 'get_material_prices', 'get_alert_routing', 'refresh_news', 'get_ai_balance']);
+const ANALYTICS_TOOL_NAMES = new Set(['get_customer_activity', 'get_analytics_overview', 'get_website_traffic', 'find_website_visitors', 'get_industry_news', 'get_material_prices', 'get_alert_routing', 'refresh_news', 'get_ai_balance']);
 const PROMPT_ANALYTICS = `<analytics_and_news>
-The app tracks what customers do with estimate/invoice links: opens, PDF views vs downloads, device, city, reading time, whether they scrolled to the price, signatures, messages, email opens (staff previews never count). Use get_customer_activity for one document, get_analytics_overview for the big picture + follow-up list + plain-English insights, get_website_traffic for the public site. The Analytics page (/admin/analytics) has the charts and PostHog visitor behaviour (session replays); the dashboard ticker + /admin/news carry curated industry news with a Tricks-of-the-Trade lane — get_industry_news reads it, get_material_prices gives BLS price moves for bids. Alerts (push + bell) go out on first open / PDF download / signature, routed per app_settings (get_alert_routing to see who). Estimates have an estimate_date (the date shown on the document when it differs from entry day) — set via update_estimate. Users can change Text Size and Ticker Speed per login in Settings.
+The app tracks what customers do with estimate/invoice links: opens, PDF views vs downloads, device, city, reading time, whether they scrolled to the price, signatures, messages, email opens (staff previews never count). Use get_customer_activity for one document, get_analytics_overview for the big picture + follow-up list + plain-English insights, get_website_traffic for the public site's totals, and find_website_visitors for WHO visited: when JR asks whether a lead looked at the site ("I handed a guy a card yesterday at 11", "did the Easley guy look"), call find_website_visitors from that time until now, then answer in plain words: list the real people in a small table (when, where it shows, device, how they arrived, what they read), say which one fits the lead best and why using the reading notes in the result, and say plainly if nobody fits. Never present a guess as certain, and remind him the log cannot name a person. The Analytics page (/admin/analytics) has the charts and PostHog visitor behaviour (session replays); the dashboard ticker + /admin/news carry curated industry news with a Tricks-of-the-Trade lane — get_industry_news reads it, get_material_prices gives BLS price moves for bids. Alerts (push + bell) go out on first open / PDF download / signature, routed per app_settings (get_alert_routing to see who). Estimates have an estimate_date (the date shown on the document when it differs from entry day) — set via update_estimate. Users can change Text Size and Ticker Speed per login in Settings.
 </analytics_and_news>`;
 
 const PROMPT_LICENSES = `<company_licenses>
@@ -3237,7 +3244,7 @@ const TOOL_STATUS_LABELS: Record<string, string> = {
   search_vendors: 'Searching vendors…', get_activity_log: 'Checking recent activity…',
   search_cost_library: 'Checking cost library…', web_search: 'Searching the web…',
   get_customer_activity: 'Checking what the customer did…', get_analytics_overview: 'Crunching the numbers…',
-  get_website_traffic: 'Checking website traffic…', get_industry_news: 'Reading the news…',
+  get_website_traffic: 'Checking website traffic…', find_website_visitors: 'Reading the visitor log…', get_industry_news: 'Reading the news…',
   get_material_prices: 'Checking material prices…', get_alert_routing: 'Checking alert routing…',
   refresh_news: 'Refreshing the news feeds…',
   property_lookup: 'Looking up the property…', save_memory: 'Saving that…',
