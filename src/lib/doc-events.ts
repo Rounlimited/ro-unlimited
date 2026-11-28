@@ -239,8 +239,17 @@ export async function recordDocumentEvent(args: RecordArgs): Promise<RecordResul
     //  2. a data-centre city, on a desktop, minutes after an email about this document.
     // Recorded like a staff preview (internal) so nothing counts it, and tagged scanner.
     let scanner = false;
+    let promote: any[] = [];
     if (!internal && SCANNABLE.includes(event) && !(args.meta && (args.meta as any).member_id)) {
       try {
+        // PROVED_HUMAN: this address already scrolled this document, so it is a person (a company VPN, not a robot).
+        let proved = false;
+        if (visitor.ip_hash) {
+          const { data: p } = await supabase.from('document_events').select('id').eq('doc_id', doc.id).eq('ip_hash', visitor.ip_hash)
+            .contains('meta', { proved: true }).gte('created_at', new Date(Date.now() - 30 * 86400000).toISOString()).limit(1);
+          proved = !!(p && p.length);
+        }
+        if (proved) throw new Error('person');
         const ip = (req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for') || '').split(',')[0].trim();
         const { networkFor } = await import('@/lib/site-visitors');
         const net = await networkFor(ip, visitor.ip_hash);
@@ -257,6 +266,17 @@ export async function recordDocumentEvent(args: RecordArgs): Promise<RecordResul
           if (before && before.length) scanner = true;
         }
       } catch { /* when unsure, it is a person */ }
+      // A robot never scrolls. Scrolling, or reaching the total or the sign block, proves a person:
+      // count this event and bring back the earlier ones from the same visit.
+      const m: any = args.meta || {};
+      const proof = (event === 'time_on_page' && Number(m.max_scroll) > 0) || (event === 'section_seen' && (m.section === 'total' || m.section === 'sign'));
+      if (scanner && proof && visitor.ip_hash) {
+        scanner = false;
+        const { data: earlier } = await supabase.from('document_events').select('id, event, meta, created_at').eq('doc_id', doc.id).eq('ip_hash', visitor.ip_hash)
+          .contains('meta', { scanner: true }).gte('created_at', new Date(Date.now() - 2 * 3600_000).toISOString());
+        promote = earlier || [];
+        args.meta = { ...m, proved: true };
+      }
       if (scanner) internal = true;
     }
 
@@ -282,8 +302,16 @@ export async function recordDocumentEvent(args: RecordArgs): Promise<RecordResul
 
     if (internal || automated) return { internal, visitor, isFirstView: false, scanner };
 
+    // Bring back a visit first taken for a robot (see PROVED_HUMAN): un-mark its events and count its opens.
+    let promotedViews = 0;
+    for (const e of promote) {
+      const { scanner: _s, automated: _a, ...rest } = (e.meta || {}) as any;
+      await supabase.from('document_events').update({ internal: false, meta: { ...rest, proved: true } }).eq('id', e.id);
+      if (e.event === 'link_view') promotedViews++;
+    }
+
     const table = docType === 'estimate' ? 'estimates' : 'invoices';
-    const isView = event === 'link_view';
+    const isView = event === 'link_view' || promotedViews > 0;
     const isPdf = event === 'pdf_view' || event === 'pdf_download';
     let isFirstView = false;
 
@@ -299,7 +327,12 @@ export async function recordDocumentEvent(args: RecordArgs): Promise<RecordResul
         last_viewed_device: describeDevice(visitor) || null,
         last_viewed_location: describeLocation(visitor) || null,
       };
-      if (isView) { patch.view_count = (cur?.view_count || 0) + 1; if (!cur?.first_viewed_at) patch.first_viewed_at = now; }
+      if (isView) { patch.view_count = (cur?.view_count || 0) + (event === 'link_view' ? 1 : 0) + promotedViews; if (!cur?.first_viewed_at) patch.first_viewed_at = now; }
+      // the page already loaded as a 'robot', so the usual flip to opened was skipped: do it here
+      if (promotedViews > 0 && docType === 'estimate' && doc.status === 'sent') {
+        patch.status = 'viewed'; patch.viewed_at = now;
+        await supabase.from('estimate_status_history').insert({ estimate_id: doc.id, old_status: 'sent', new_status: 'viewed', notes: 'Customer opened estimate link' });
+      }
       if (isPdf) patch.pdf_count = (cur?.pdf_count || 0) + 1;
       await supabase.from(table).update(patch).eq('id', doc.id);
     }
