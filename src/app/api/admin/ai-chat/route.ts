@@ -21,7 +21,7 @@ import { listInspections, createInspection, updateInspection } from '@/lib/inspe
 import { getChecklist, sendHandover, createServiceReminder, listServiceDue } from '@/lib/handover';
 import { LICENSES, STATES_LICENSED, LICENSE_CLASSIFICATION_COUNT } from '@/lib/licenses';
 import { headers as nextHeaders } from 'next/headers';
-import { hostedModel, estimateCost, AI_MARKUP } from '@/lib/ai-models';
+import { hostedModel, estimateCost, AI_MARKUP, hostedAiOn, openRouterKey } from '@/lib/ai-models';
 import { getBalance, maybeAutoTopUp, walletConfigured } from '@/lib/ai-wallet';
 import { applyScopeOps, cleanScopeHtml, diffScope, looksLikeMarkdown, markdownToScopeHtml, scopeBlocks, scopeText, sectionRanges, type ScopeOp } from '@/lib/scope-doc';
 
@@ -3574,6 +3574,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, charged_usd: Math.round(cost * AI_MARKUP * 100) / 100, stop });
     }
 
+    // CLAUDE_ONLY: every question goes to Claude through the subscription worker; voice (pay-per-use) is off.
+    if (!hostedAiOn()) {
+      if (mode === 'voice_turn' || mode === 'voice_live_start' || mode === 'voice_warm' || mode === 'voice_tool') return NextResponse.json({ error: 'Voice is switched off while the assistant runs on Claude only. Type your question instead.' }, { status: 503 });
+      if (!mayUseSub(user.email)) return NextResponse.json({ error: 'The assistant runs on Claude only right now, and that is set up for the owner and JR sign-ins.' }, { status: 403 });
+      reqBody.model = 'claude-sub';
+    }
+
     // Started now so it runs while a spoken turn is being transcribed
     const memoriesPromise = supabase
       .from('ai_memories')
@@ -3587,7 +3594,7 @@ export async function POST(req: NextRequest) {
     let voiceHeard = '';
     let voiceSttCost = 0;
     if (mode === 'voice_turn') {
-      const orKeyV = process.env.OPENROUTER_API_KEY;
+      const orKeyV = openRouterKey();
       if (!orKeyV) return NextResponse.json({ error: 'Voice is not set up yet.' }, { status: 503 });
       const b64 = typeof audio?.data === 'string' ? audio.data : '';
       if (!b64 || b64.length > 8_000_000) return NextResponse.json({ error: 'No audio received.' }, { status: 400 });
@@ -3897,7 +3904,7 @@ export async function POST(req: NextRequest) {
     // ═══ STREAMING MODE — NDJSON events: {type:'delta'|'status'|'done'|'error'} ═══
     // Gateway model picked in the new assistant screen: everything hosted runs
     // through the one OpenRouter account. Old callers (no `model`) are unchanged.
-    const orKey = process.env.OPENROUTER_API_KEY;
+    const orKey = openRouterKey();
     const gwModel = orKey ? hostedModel(model) : null;
     const gwUsage = { tokens_in: 0, tokens_out: 0, cost: 0, cached: 0, seen: false };
     const gwOpts = gwModel ? {

@@ -24,6 +24,14 @@ export type AiModel = {
 export const AI_MARKUP = Number(process.env.AI_MARKUP || 1.6);
 export const DEFAULT_MODEL = 'haiku';
 
+/**
+ * CLAUDE_ONLY: the owner wants the admin app on Claude only for now (flat subscription, no pay-per-use).
+ * Pay-per-use AI (OpenRouter, xAI) stays off unless AI_HOSTED=on is set. Every place that would call it
+ * asks for the key through openRouterKey(), which is empty while it is off.
+ */
+export const hostedAiOn = () => process.env.AI_HOSTED === 'on';
+export const openRouterKey = () => (hostedAiOn() ? process.env.OPENROUTER_API_KEY || '' : '');
+
 export const HOSTED_MODELS: AiModel[] = [
   { key: 'haiku', slug: 'anthropic/claude-haiku-5.5', label: 'Claude Haiku 5.5', short: 'Fast', group: 'recommended',
     best: 'Fast and low cost. Good for everyday questions and quick lookups.', in: 0.10, out: 0.50, vision: true },

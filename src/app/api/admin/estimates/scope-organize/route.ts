@@ -1,3 +1,4 @@
+import { openRouterKey } from '@/lib/ai-models';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkScope, cleanScopeHtml, looksLikeMarkdown, markdownToScopeHtml, scopeBlocks, scopeText, type ScopeOp, type ScopeRule } from '@/lib/scope-doc';
 import { createAdminClient, getServerUser } from '@/lib/supabase/server';
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
   if (body.action === 'review') {
     const doc = cleanScopeHtml(typeof body.html === 'string' ? body.html : '').slice(0, MAX_CHARS);
     if (!scopeText(doc)) return fail('There is nothing to look over yet.');
-    const key = process.env.OPENROUTER_API_KEY;
+    const key = openRouterKey();
     if (!key) return fail('The AI look-over is not set up on this site.', 503);
     const user = await getServerUser(req).catch(() => null);
     try {
@@ -192,7 +193,7 @@ export async function POST(req: NextRequest) {
   if (body.action === 'lines') {
     const doc = cleanScopeHtml(typeof body.html === 'string' ? body.html : '').slice(0, MAX_CHARS);
     if (!scopeText(doc)) return fail('There is nothing in the scope yet.');
-    const key = process.env.OPENROUTER_API_KEY;
+    const key = openRouterKey();
     if (!key) return fail('The AI is not set up on this site.', 503);
     const user = await getServerUser(req).catch(() => null);
     try {
@@ -250,7 +251,7 @@ export async function POST(req: NextRequest) {
     const blocks = scopeBlocks(raw);
     if (!blocks.length || !scopeText(raw)) return fail('There is nothing in the scope yet.');
     const instruction = String(body.instruction || '').trim().slice(0, 2000);
-    const key = process.env.OPENROUTER_API_KEY;
+    const key = openRouterKey();
     if (!key) return fail('The AI is not set up on this site.', 503);
     const user = await getServerUser(req).catch(() => null);
     try {
@@ -373,7 +374,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!media && !scopeText(html) && !text.trim()) return fail('There is nothing to organize yet. Paste or upload the scope first.');
-  const key = process.env.OPENROUTER_API_KEY;
+  const key = openRouterKey();
   if (!key) return fail('The organizer is not set up on this site.', 503);
 
   // Prepaid AI credit, same rule as the assistant: once credit has been bought, an empty balance stops it.

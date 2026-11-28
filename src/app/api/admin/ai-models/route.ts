@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, getServerUser } from '@/lib/supabase/server';
-import { HOSTED_MODELS, DEFAULT_MODEL, AI_MARKUP, rackConfig } from '@/lib/ai-models';
+import { HOSTED_MODELS, DEFAULT_MODEL, AI_MARKUP, rackConfig, hostedAiOn, openRouterKey } from '@/lib/ai-models';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
   const user = await getServerUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const hostedReady = !!process.env.OPENROUTER_API_KEY;
-  const models = HOSTED_MODELS.map((m) => ({
+  const hostedReady = !!openRouterKey();
+  const models = (hostedAiOn() ? HOSTED_MODELS : []).map((m) => ({
     key: m.key, label: m.label, short: m.short, group: m.group, best: m.best, vision: m.vision,
     price_in: Math.round(m.in * AI_MARKUP * 100) / 100,
     price_out: Math.round(m.out * AI_MARKUP * 100) / 100,
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   // TEST, owner's sign-in only: Claude answered on NexaVision's rack through the owner's own Claude subscription.
   const testers = (process.env.CLAUDE_SUB_TESTERS || 'admin@nexavisiongroup.com').split(',').map((s) => s.trim().toLowerCase());
   if (user.email && testers.includes(user.email.toLowerCase())) {
-    models.unshift({ key: 'claude-sub', label: 'Claude Opus (subscription, test)', short: 'Sub', group: 'recommended', vision: false, price_in: 0, price_out: 0,
+    models.unshift({ key: 'claude-sub', label: hostedAiOn() ? 'Claude Opus (subscription, test)' : 'Claude Opus', short: 'Sub', group: 'recommended', vision: false, price_in: 0, price_out: 0,
       best: 'Answered on the rack through your Claude subscription. No per-use charge. Slower to start. Only your sign-in sees this.' });
   }
 
@@ -49,5 +49,6 @@ export async function GET(req: NextRequest) {
     month = { charged_usd: Math.round((data || []).reduce((s, r: any) => s + Number(r.charged_usd || 0), 0) * 100) / 100, messages: (data || []).length };
   } catch { /* table missing — show zero */ }
 
-  return NextResponse.json({ hostedReady, defaultModel: DEFAULT_MODEL, models, rack, month, user: { email: user.email || null } });
+  if (!hostedAiOn()) rack = { configured: false, online: false, models: [] };
+  return NextResponse.json({ hostedReady, defaultModel: hostedAiOn() ? DEFAULT_MODEL : 'claude-sub', models, rack, month, user: { email: user.email || null } });
 }

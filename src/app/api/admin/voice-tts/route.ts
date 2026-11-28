@@ -1,3 +1,4 @@
+import { openRouterKey } from '@/lib/ai-models';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerUser } from '@/lib/supabase/server';
 
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   const user = await getServerUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const key = process.env.OPENROUTER_API_KEY;
+  const key = openRouterKey();
   if (!key) return NextResponse.json({ error: 'Voice is not set up yet.' }, { status: 503 });
   const b = await req.json().catch(() => ({}));
   const text = typeof b.text === 'string' ? b.text.trim().slice(0, 1200) : '';

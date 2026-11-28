@@ -44,7 +44,7 @@ export async function visitorReport(supabase: any, sinceIn: unknown, untilIn?: u
   const until = parseEastern(untilIn) || new Date();
   if (until.getTime() - since.getTime() > 31 * 86400e3) return 'That window is too long. Ask for 31 days or less.';
   const { data: pvs, error } = await supabase.from('site_pageviews')
-    .select('visitor_id, created_at, path, source, referrer, visible_ms, max_scroll, interactions, clicks, city, region, country, network, network_type, device_type, os, browser, screen')
+    .select('visitor_id, created_at, path, source, referrer, visible_ms, max_scroll, interactions, clicks, city, region, country, postal, network, network_type, device_type, os, browser, screen')
     .gte('created_at', since.toISOString()).lte('created_at', until.toISOString()).order('created_at', { ascending: true }).limit(4000);
   if (error) return `Could not read the visitor log: ${error.message}`;
   const list: any[] = pvs || [];
@@ -66,7 +66,7 @@ export async function visitorReport(supabase: any, sinceIn: unknown, untilIn?: u
       const taps = Array.isArray(p.clicks) ? p.clicks.filter((c: string) => c && c.trim()).slice(0, 6) : [];
       return `   ${clock(p.created_at)}  ${p.path}  (${dur(p.visible_ms)}, scrolled ${p.max_scroll || 0}%)${taps.length ? `  tapped: ${taps.join('; ')}` : ''}`;
     });
-    const head = `${when(f.created_at)} | shows as ${[f.city, f.region].filter(Boolean).join(', ') || f.country || 'unknown place'} | ${connectionWords(f)} | ${deviceWords(f)} | arrived by: ${f.source || 'unknown'}`;
+    const head = `${when(f.created_at)} | shows as ${[f.city, f.region].filter(Boolean).join(', ') || f.country || 'unknown place'}${f.postal ? ` (ZIP ${f.postal})` : ''} | ${connectionWords(f)} | ${deviceWords(f)} | arrived by: ${f.source || 'unknown'}`;
     const extra = [
       v.known_name ? `This device has opened an estimate or invoice link before: ${v.known_name}.` : '',
       v.first_seen && new Date(v.first_seen).getTime() < since.getTime() - 3600e3 ? `Has been on the site before (first seen ${when(v.first_seen)}).` : 'First time this device has been on the site.',
@@ -89,9 +89,10 @@ export async function visitorReport(supabase: any, sinceIn: unknown, untilIn?: u
 HOW TO READ THIS (use these when answering)
 - The place is where the internet connection shows, not where the person stands. Home internet is usually within a town or two: Spectrum/Charter customers in Easley, Pickens or Powdersville often show as Greenville or Anderson.
 - Cell data is far off: a phone on Verizon, AT&T or T-Mobile in upstate SC often shows as Charlotte or Atlanta. So a cell-data visit from Charlotte or Atlanta can be a local person.
-- "Typed in / bookmark / app" means they typed the address or tapped it from a text message or a business card QR code. Someone handed a business card arrives this way. "Google search" means they searched, so that is less likely to be the person holding the card.
+- "Typed in / bookmark / app" means they typed the address or tapped it from a text message or a business card QR code. Someone handed a business card often arrives this way. "Google search" means they searched: many people holding a card just Google the company name, so a Google visit can be the card holder too. Do not rule a visit out because it came from Google.
 - "Email from RO" means they tapped a link in an email sent from the inbox.
-- A visit of a few seconds with 0% scroll is a bounce. Reading several pages for a minute or more is real interest.
+- The ZIP code is the best guess at the connection's location. For home internet it is usually right to within a town or so.
+- A visit of a few seconds is not a rejection. Someone who already talked to JR often just checks that the company is real and leaves. Reading several pages for a minute or more is real interest.
 - This log cannot name a person. It can only narrow it down by time, place, connection, device and how they arrived. Say which visit fits best and why, and say plainly when none fits.
 - If nobody fits, the person has not looked at the site yet. That is not the website losing them.`);
   return out.join('\n');
