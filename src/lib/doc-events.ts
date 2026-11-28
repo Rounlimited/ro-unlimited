@@ -135,7 +135,12 @@ const DATACENTER_CITIES = new Set([
   'columbus', 'dublin', 'san francisco', 'seattle', 'santa clara', 'mountain view',
   'redmond', 'quincy', 'omaha', 'cheyenne', 'kansas city', 'north bergen',
   'secaucus', 'sterling', 'chantilly', 'reston', 'amsterdam', 'frankfurt',
+  'moses lake', 'boydton', 'dulles town center', 'dulles', 'san antonio', 'west des moines', 'manassas', 'leesburg',
 ]);
+
+/** Things only a person does. A scanner never signs, writes a message or picks an option. */
+const SCANNABLE: DocEvent[] = ['link_view', 'email_clicked', 'section_seen', 'time_on_page', 'pdf_view'];
+const SCAN_AFTER_EMAIL_MS = 15 * 60_000;
 
 export function looksLikeDatacenter(v: { city?: string | null }): boolean {
   return !!v.city && DATACENTER_CITIES.has(v.city.trim().toLowerCase());
@@ -165,7 +170,7 @@ interface RecordArgs {
   internal?: boolean;
 }
 
-export interface RecordResult { internal: boolean; visitor: Visitor; isFirstView: boolean }
+export interface RecordResult { internal: boolean; visitor: Visitor; isFirstView: boolean; scanner?: boolean }
 
 /**
  * Log one event. For customer (non-internal) events this also bumps the
@@ -227,6 +232,34 @@ export async function recordDocumentEvent(args: RecordArgs): Promise<RecordResul
     // say where they are — it does NOT mean it was not a person. Suppress the
     // location, keep the view. describeLocation() already returns empty here.
 
+    // SCANNER_VIEWS: company email filters open every link in a new email before the
+    // person sees it, from a data centre, on a desktop browser. Gray's estimates showed
+    // "opened" 15 seconds after sending, from Iowa and Virginia. Two ways to know:
+    //  1. the internet address belongs to a hosting company (looked up, cached), or
+    //  2. a data-centre city, on a desktop, minutes after an email about this document.
+    // Recorded like a staff preview (internal) so nothing counts it, and tagged scanner.
+    let scanner = false;
+    if (!internal && SCANNABLE.includes(event) && !(args.meta && (args.meta as any).member_id)) {
+      try {
+        const ip = (req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for') || '').split(',')[0].trim();
+        const { networkFor } = await import('@/lib/site-visitors');
+        const net = await networkFor(ip, visitor.ip_hash);
+        if (net.type === 'hosting') scanner = true;
+        else if (visitor.device_type === 'Desktop' && looksLikeDatacenter(visitor) && net.type !== 'residential' && net.type !== 'mobile') {
+          const { data: mail } = await supabase.from('document_events').select('created_at').eq('doc_id', doc.id)
+            .in('event', ['email_delivered', 'email_opened']).gte('created_at', new Date(Date.now() - SCAN_AFTER_EMAIL_MS).toISOString()).limit(1);
+          if (mail && mail.length) scanner = true;
+        }
+        // Same address already judged a scanner on this document in the last half hour
+        if (!scanner && visitor.ip_hash) {
+          const { data: before } = await supabase.from('document_events').select('id').eq('doc_id', doc.id).eq('ip_hash', visitor.ip_hash)
+            .contains('meta', { scanner: true }).gte('created_at', new Date(Date.now() - 30 * 60_000).toISOString()).limit(1);
+          if (before && before.length) scanner = true;
+        }
+      } catch { /* when unsure, it is a person */ }
+      if (scanner) internal = true;
+    }
+
     const h = req.headers;
     const geoExtra: Record<string, string> = {};
     for (const [k, name] of [['cf-postal-code', 'postal_code'], ['cf-metro-code', 'metro_code'], ['cf-timezone', 'timezone'], ['cf-region', 'region_name']] as const) {
@@ -242,11 +275,12 @@ export async function recordDocumentEvent(args: RecordArgs): Promise<RecordResul
       meta: {
         ...(args.meta || {}),
         ...(Object.keys(geoExtra).length ? { geo: geoExtra } : {}),
-        ...(automated ? { automated: true } : {}),
+        ...(automated || scanner ? { automated: true } : {}),
+        ...(scanner ? { scanner: true } : {}),
       },
     });
 
-    if (internal || automated) return { internal, visitor, isFirstView: false };
+    if (internal || automated) return { internal, visitor, isFirstView: false, scanner };
 
     const table = docType === 'estimate' ? 'estimates' : 'invoices';
     const isView = event === 'link_view';

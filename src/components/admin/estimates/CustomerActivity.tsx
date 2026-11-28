@@ -113,7 +113,8 @@ function VisitCard({ visit: v }: { visit: Visit }) {
           <Icon size={14} className="text-[#C9A84C]" />
           <span className="font-medium">{v.device || 'Unknown device'}</span>
           {v.location && <span className="text-white/40 flex items-center gap-1"><MapPin size={11} />{v.location}</span>}
-          {v.internal ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-white/5 text-white/40">staff preview</span>
+          {v.scanner ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-white/5 text-white/60">email security robot, not the customer</span>
+          : v.internal ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-white/5 text-white/40">staff preview</span>
             : v.visit_number > 1 ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-[#C9A84C]/10 text-[#C9A84C]">visit #{v.visit_number}</span> : null}
         </div>
         <div className="flex items-center gap-3 text-[12px] text-white/35">

@@ -13,6 +13,8 @@ export interface Visit {
   started_at: string; ended_at: string;
   visitor_id: string | null; device: string; location: string;
   internal: boolean;
+  /** an email security filter checking the link, not a person */
+  scanner?: boolean;
   seconds: number | null; max_scroll: number | null;
   sections: string[]; pdf_views: number; pdf_downloads: number;
   events: DocEventRow[];
@@ -54,7 +56,10 @@ export function summarizeVisits(rows: DocEventRow[]): Summary {
 
   for (const e of asc) {
     if (e.event.startsWith('email_')) {
-      const k = e.event.replace('email_', '') as keyof typeof email; if (k in email) email[k] = true;
+      const k = e.event.replace('email_', '') as keyof typeof email;
+      // an automatic open, or a scanner following the link, is not the customer
+      const robot = !!e.meta?.automated && (k === 'opened' || k === 'clicked');
+      if (k in email && !robot) email[k] = true;
       continue;
     }
     const key = e.visitor_id || `anon-${e.device_type}-${e.city}-${e.internal}`;
@@ -64,7 +69,7 @@ export function summarizeVisits(rows: DocEventRow[]): Summary {
       perVisitor[key] = (perVisitor[key] || 0) + 1;
       v = {
         started_at: e.created_at, ended_at: e.created_at, visitor_id: e.visitor_id,
-        device: deviceLabel(e), location: locationLabel(e), internal: e.internal,
+        device: deviceLabel(e), location: locationLabel(e), internal: e.internal, scanner: !!e.meta?.scanner,
         seconds: null, max_scroll: null, sections: [], pdf_views: 0, pdf_downloads: 0, events: [],
         visit_number: perVisitor[key],
       };
@@ -99,7 +104,7 @@ export function summarizeVisits(rows: DocEventRow[]): Summary {
 
 export function eventSentence(e: DocEventRow): string {
   switch (e.event) {
-    case 'link_view': return 'Opened the link';
+    case 'link_view': return e.meta?.scanner ? 'Link checked by an email security filter (not a person)' : 'Opened the link';
     case 'pdf_view': return 'Viewed the PDF';
     case 'pdf_download': return 'Downloaded the PDF';
     case 'section_seen': return e.meta?.section === 'total' ? 'Scrolled to the total' : e.meta?.section === 'sign' ? 'Reached the sign block' : `Read the ${e.meta?.section || 'page'}`;

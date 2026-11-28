@@ -79,10 +79,18 @@ export async function POST(req: NextRequest) {
           const { createAdminClient } = await import('@/lib/supabase/server');
           const sb = createAdminClient();
           const click = event.data?.click || {};
+          let automated = false;
+          if (mapped === 'email_opened') {
+            const { data: del } = await sb.from('document_events').select('created_at, meta').eq('doc_id', docId).eq('event', 'email_delivered').order('created_at', { ascending: false }).limit(5);
+            const mine = (del || []).find((d: any) => d.meta?.resend_id && d.meta.resend_id === event.data?.email_id) || (del || [])[0];
+            const at = mine ? new Date(mine.meta?.at || mine.created_at).getTime() : 0;
+            const openedAt = new Date(event.created_at || Date.now()).getTime();
+            if (at && openedAt - at < 120_000) automated = true;
+          }
           await sb.from('document_events').insert({
             doc_type: docType, doc_id: docId, event: mapped, internal: false,
             user_agent: click.userAgent ? String(click.userAgent).slice(0, 300) : null,
-            meta: { resend_id: event.data?.email_id || null, to: event.data?.to || null, link: click.link || null, at: event.created_at || null },
+            meta: { resend_id: event.data?.email_id || null, to: event.data?.to || null, link: click.link || null, at: event.created_at || null, ...(automated ? { automated: true } : {}) },
           });
         } catch (e) { console.error('[resend webhook] document event failed', e); }
       }
